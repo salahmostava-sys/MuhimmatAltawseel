@@ -1,0 +1,10 @@
+export { default as SettingsHubPage } from '@modules/pages/SettingsHub';
+export { default as ProfilePage } from '@modules/pages/ProfilePage';
+export { default as SalarySchemesPage } from '@modules/pages/SalarySchemes';
+export { default as UsersAndPermissionsPage } from '@modules/pages/UsersAndPermissions';
+export { default as GeneralSettingsContent } from "@modules/pages/settings-hub/GeneralSettingsContent";
+export { default as SchemesContent } from "@modules/pages/settings-hub/SchemesContent";
+export { default as UsersContent } from "@modules/pages/settings-hub/UsersContent";
+export { default as ProfileSettingsContent } from "@modules/pages/settings-hub/ProfileSettingsContent";
+export { default as CompanySettingsContent } from "@modules/pages/settings-hub/CompanySettingsContent";
+export { default as ActivityLogContent } from "@modules/pages/settings-hub/ActivityLogContent";
