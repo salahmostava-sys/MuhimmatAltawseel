@@ -195,6 +195,23 @@ export function OrdersSpreadsheetToolbar(props: Props) {
             )}
           </Button>
         )}
+        {isMonthLocked && canEdit && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1 h-8 text-xs px-2 text-success border-success/40 hover:bg-success/10"
+            onClick={onLockMonth}
+            disabled={lockingMonth}
+          >
+            {lockingMonth ? (
+              <>
+                <Loader2 size={13} className="animate-spin" /> جاري الفتح...
+              </>
+            ) : (
+              <>🔓 فتح الشهر</>
+            )}
+          </Button>
+        )}
         {canShowLock && (
           <Button
             size="sm"

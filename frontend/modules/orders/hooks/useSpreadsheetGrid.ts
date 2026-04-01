@@ -206,20 +206,31 @@ export function useSpreadsheetGrid() {
 
   const handleLockMonth = async () => {
     const my = monthYear(year, month);
-    if (!isPastMonth(year, month) || isMonthLocked) return;
     setLockingMonth(true);
     try {
-      await orderService.lockMonth(my);
+      if (isMonthLocked) {
+        // Unlock month
+        await orderService.unlockMonth(my);
+        setIsMonthLocked(false);
+        toast.success('تم فتح الشهر بنجاح');
+      } else {
+        // Lock month (only if past month)
+        if (!isPastMonth(year, month)) {
+          toast.error('لا يمكن قفل الشهر الحالي أو المستقبلي');
+          setLockingMonth(false);
+          return;
+        }
+        await orderService.lockMonth(my);
+        setIsMonthLocked(true);
+        setCellPopover(null);
+        toast.success('تم قفل الشهر بنجاح');
+      }
     } catch (e: unknown) {
-      setLockingMonth(false);
-      const message = e instanceof Error ? e.message : 'فشل قفل الشهر';
+      const message = e instanceof Error ? e.message : 'فشل العملية';
       toast.error(TOAST_ERROR_GENERIC, { description: message });
-      return;
+    } finally {
+      setLockingMonth(false);
     }
-    setLockingMonth(false);
-    setIsMonthLocked(true);
-    setCellPopover(null);
-    toast.success(TOAST_SUCCESS_ACTION);
   };
 
   const seqColMin = 36;

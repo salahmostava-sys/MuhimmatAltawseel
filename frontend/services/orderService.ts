@@ -300,4 +300,9 @@ export const orderService = {
     );
     if (error) throw toServiceError(error, 'orderService.lockMonth');
   },
+
+  unlockMonth: async (month_year: string) => {
+    const { error } = await supabase.from('locked_months').delete().eq('month_year', month_year);
+    if (error) throw toServiceError(error, 'orderService.unlockMonth');
+  },
 };

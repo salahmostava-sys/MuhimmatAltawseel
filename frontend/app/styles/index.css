@@ -5,6 +5,18 @@
 @tailwind utilities;
 
 @layer base {
+  * {
+    font-family: 'Segoe UI', Tahoma, 'Noto Sans Arabic', 'Droid Arabic Kufi', sans-serif;
+  }
+  
+  html {
+    font-family: 'Segoe UI', Tahoma, 'Noto Sans Arabic', 'Droid Arabic Kufi', sans-serif;
+  }
+  
+  body {
+    font-family: 'Segoe UI', Tahoma, 'Noto Sans Arabic', 'Droid Arabic Kufi', sans-serif;
+  }
+  
   :root {
     /* ─── High-End Editorial Dashboard — Light Palette ─────────── */
 
