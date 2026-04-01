@@ -51,10 +51,17 @@ export const calculatePlatformSalary = ({
   const appId = appNameToId[platformName];
   const appRules = appId ? rulesMap[appId] || [] : [];
   const ruleResult = salaryService.applyPricingRules(appRules, orders);
-  if (ruleResult.matchedRule) return Math.round(ruleResult.salary);
+  if (ruleResult.matchedRule) {
+    console.log(`[Salary] ${platformName}: matched pricing rule, salary=${ruleResult.salary}`);
+    return Math.round(ruleResult.salary);
+  }
 
   const scheme = appSchemeMap[platformName];
-  if (!scheme) return 0;
+  console.log(`[Salary] ${platformName}: orders=${orders}, scheme=`, scheme);
+  if (!scheme) {
+    console.log(`[Salary] ${platformName}: NO SCHEME - returning 0`);
+    return 0;
+  }
 
   if (scheme.scheme_type === 'fixed_monthly') {
     const alreadyCalculated = wasFixedSchemeAlreadyCalculated(
@@ -68,14 +75,22 @@ export const calculatePlatformSalary = ({
     return salaryService.calculateFixedMonthlySalary(scheme.monthly_amount || 0, attendanceDays);
   }
 
-  if (orders === 0) return 0;
-  if (!scheme.salary_scheme_tiers) return 0;
-  return salaryService.calculateTierSalary(
+  if (orders === 0) {
+    console.log(`[Salary] ${platformName}: orders=0 - returning 0`);
+    return 0;
+  }
+  if (!scheme.salary_scheme_tiers) {
+    console.log(`[Salary] ${platformName}: NO TIERS - returning 0`);
+    return 0;
+  }
+  const calculatedSalary = salaryService.calculateTierSalary(
     orders,
     scheme.salary_scheme_tiers as SalarySchemeTier[],
     scheme.target_orders,
     scheme.target_bonus
   );
+  console.log(`[Salary] ${platformName}: calculated=${calculatedSalary}`);
+  return calculatedSalary;
 };
 
 export const buildSavedMap = (savedRecords: Array<{ employee_id: string; is_approved: boolean; net_salary: number }> | null | undefined) => {
