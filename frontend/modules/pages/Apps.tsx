@@ -424,11 +424,12 @@ const Apps = () => {
                 <div
                   key={app.id}
                   onClick={() => isActiveInMonth && handleSelectApp(app)}
-                  className={`relative rounded-2xl text-center transition-all cursor-pointer group overflow-hidden border
+                  className={`relative rounded-2xl text-center transition-all cursor-pointer group overflow-hidden border text-white
                     ${!isActiveInMonth ? 'opacity-50 grayscale hover:grayscale-0' : 'shadow-sm hover:shadow-md hover:scale-[1.01]'}
-                    ${isSelected ? 'ring-2 ring-primary border-primary' : 'border-border'}`}
+                    ${isSelected ? 'ring-2 ring-primary border-primary' : 'border-white/20'}`}
+                  style={{ backgroundColor: app.brand_color, color: app.text_color }}
                 >
-                  <div className="p-5 h-full bg-card">
+                  <div className="p-5 h-full">
                     {/* Action buttons */}
                     {permissions.can_edit && (
                       <div
@@ -437,21 +438,21 @@ const Apps = () => {
                       >
                         <button
                           onClick={e => { e.stopPropagation(); setModalApp(app); }}
-                          className="w-7 h-7 bg-muted rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
+                          className="w-7 h-7 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white hover:text-black transition-colors"
                           title="تعديل"
                         >
                           <Edit2 size={12} />
                         </button>
                         <button
                           onClick={e => handleToggleMonthlyActive(app, e)}
-                          className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${isActiveInMonth ? 'bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white'}`}
+                          className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${isActiveInMonth ? 'bg-white/20 backdrop-blur-sm hover:bg-rose-500 hover:text-white' : 'bg-white/20 backdrop-blur-sm hover:bg-emerald-500 hover:text-white'}`}
                           title={isActiveInMonth ? 'تعطيل لهذا الشهر' : 'تفعيل لهذا الشهر'}
                         >
                           {isActiveInMonth ? <PowerOff size={12} /> : <Power size={12} />}
                         </button>
                         <button
                           onClick={e => { e.stopPropagation(); setDeleteApp(app); }}
-                          className="w-7 h-7 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center hover:bg-rose-600 hover:text-white transition-colors"
+                          className="w-7 h-7 bg-white/20 backdrop-blur-sm text-white rounded-full flex items-center justify-center hover:bg-rose-600 hover:text-white transition-colors"
                           title="أرشفة نهائية"
                         >
                           <Trash2 size={12} />
@@ -460,28 +461,27 @@ const Apps = () => {
                     )}
 
                     <div
-                      className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center text-xl font-bold shadow-sm"
-                      style={{ backgroundColor: `${app.brand_color}15`, color: app.brand_color }}
+                      className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center text-xl font-bold shadow-sm bg-white/20"
                     >
                       {app.name.charAt(0)}
                     </div>
 
-                    <h3 className="font-bold text-sm text-foreground truncate">{app.name}</h3>
+                    <h3 className="font-bold text-sm truncate" style={{ color: app.text_color }}>{app.name}</h3>
                     
                     <div className="mt-3 space-y-1">
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-muted-foreground">المناديب العمليين</span>
-                        <span className="font-bold text-foreground">{app.employeeCount || 0}</span>
+                        <span style={{ color: app.text_color, opacity: 0.8 }}>المناديب العمليين</span>
+                        <span className="font-bold" style={{ color: app.text_color }}>{app.employeeCount || 0}</span>
                       </div>
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-muted-foreground">إجمالي الطلبات</span>
-                        <span className="font-bold text-primary">{app.ordersCount?.toLocaleString() || 0}</span>
+                        <span style={{ color: app.text_color, opacity: 0.8 }}>إجمالي الطلبات</span>
+                        <span className="font-bold" style={{ color: app.text_color }}>{app.ordersCount?.toLocaleString() || 0}</span>
                       </div>
                     </div>
 
                     {!isActiveInMonth && (
-                      <div className="absolute inset-0 bg-background/40 flex items-center justify-center backdrop-blur-[1px]">
-                        <span className="bg-muted text-muted-foreground px-2 py-1 rounded-lg text-[10px] font-bold border border-border">غير مفعلة للشهر</span>
+                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center backdrop-blur-[1px]">
+                        <span className="bg-black/50 text-white px-2 py-1 rounded-lg text-[10px] font-bold border border-white/20">غير مفعلة للشهر</span>
                       </div>
                     )}
                   </div>
