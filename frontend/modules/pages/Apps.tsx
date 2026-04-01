@@ -178,6 +178,61 @@ const AppModal = ({ app, onClose, onSaved }: AppModalProps) => {
               {form.name || 'اسم التطبيق'}
             </div>
           </div>
+
+          {/* Custom Columns Section */}
+          <div className="border-t border-border pt-4 mt-2">
+            <Label className="text-sm mb-2 block flex items-center gap-2">
+              <Columns size={14} />
+              أعمدة المستقطعات المخصصة
+            </Label>
+            <p className="text-[11px] text-muted-foreground mb-3">
+              الأعمدة دى هتظهر فى جدول الرواتب تحت قسم المستقطعات (مثال: غرامات، تأمين، إلخ)
+            </p>
+            
+            <div className="space-y-2 mb-3">
+              {customColumns.map((col) => (
+                <div key={col.key} className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2">
+                  <span className="flex-1 text-sm">{col.label}</span>
+                  <button
+                    onClick={() => removeColumn(col.key)}
+                    className="p-1.5 text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                    title="حذف"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+              {customColumns.length === 0 && (
+                <p className="text-[11px] text-muted-foreground/60 italic">لا يوجد أعمدة مخصصة</p>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <Input
+                value={newColLabel}
+                onChange={(e) => setNewColLabel(e.target.value)}
+                placeholder="اسم العمود (مثال: تأمين، غرامات تأخير)"
+                className="flex-1 text-sm"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addColumn();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addColumn}
+                disabled={!newColLabel.trim()}
+                className="gap-1"
+              >
+                <PlusCircle size={14} />
+                إضافة
+              </Button>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center justify-between px-6 py-4 border-t border-border sticky bottom-0 bg-card">
