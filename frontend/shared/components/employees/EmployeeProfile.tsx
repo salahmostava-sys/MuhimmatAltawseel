@@ -1,12 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, User, FileText, Wallet, CreditCard, Clock, Package, DollarSign, ExternalLink, Loader2, ChevronDown, ChevronUp, TrendingUp } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/components/ui/tabs';
 import { differenceInDays, parseISO } from 'date-fns';
 import { useSignedUrl, extractStoragePath } from '@shared/hooks/useSignedUrl';
-import { supabase } from '@services/supabase/client';
-import { useAuth } from '@app/providers/AuthContext';
-import { logError } from '@shared/lib/logger';
+import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
+import { useQueryErrorToast } from '@shared/hooks/useQueryErrorToast';
+import {
+  employeeProfileService,
+  type EmployeeProfileAdvance,
+  type EmployeeProfileApp,
+  type EmployeeProfileDailyOrder,
+  type EmployeeProfileSalaryRecord,
+} from '@services/employeeProfileService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Employee {
@@ -39,53 +46,11 @@ interface Employee {
   base_salary: number;
 }
 
-interface Advance {
-  id: string;
-  amount: number;
-  monthly_amount: number;
-  disbursement_date: string;
-  first_deduction_month: string;
-  status: string;
-  note?: string | null;
-  advance_installments?: Installment[];
-}
+type Advance = EmployeeProfileAdvance;
 
-interface Installment {
-  id: string;
-  month_year: string;
-  amount: number;
-  status: string;
-  deducted_at?: string | null;
-}
-
-interface SalaryRecord {
-  id: string;
-  month_year: string;
-  base_salary: number;
-  allowances: number;
-  attendance_deduction: number;
-  advance_deduction: number;
-  external_deduction: number;
-  manual_deduction: number;
-  net_salary: number;
-  is_approved: boolean;
-}
-
-interface EmployeeApp {
-  id: string;
-  app_id: string;
-  status: string;
-  username?: string | null;
-  apps?: { name: string } | null;
-}
-
-interface DailyOrder {
-  id: string;
-  date: string;
-  orders_count: number;
-  app_id: string;
-  apps?: { name: string; brand_color?: string | null } | null;
-}
+type SalaryRecord = EmployeeProfileSalaryRecord;
+type EmployeeApp = EmployeeProfileApp;
+type DailyOrder = EmployeeProfileDailyOrder;
 
 interface MonthlyOrders {
   month: string;           // YYYY-MM
@@ -217,16 +182,11 @@ function groupOrdersByMonth(orders: DailyOrder[]): MonthlyOrders[] {
 }
 
 const EmployeeProfile = ({ employee, onBack }: Props) => {
-  const { user, session, authLoading } = useAuth();
-  const enabled = !!session && !!user && !authLoading;
+  const { enabled, userId } = useAuthQueryGate();
+  const uid = authQueryUserId(userId);
   const [activeTab, setActiveTab] = useState('basic');
-  const [advances, setAdvances] = useState<Advance[]>([]);
-  const [salaries, setSalaries] = useState<SalaryRecord[]>([]);
-  const [employeeApps, setEmployeeApps] = useState<EmployeeApp[]>([]);
-  const [dailyOrders, setDailyOrders] = useState<DailyOrder[]>([]);
   const [expandedAdv, setExpandedAdv] = useState<string | null>(null);
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
   // Signed URL for personal photo (used in profile header)
   const personalPhotoPath = extractStoragePath(employee.personal_photo_url);
@@ -236,57 +196,20 @@ const EmployeeProfile = ({ employee, onBack }: Props) => {
     ? differenceInDays(parseISO(employee.residency_expiry), new Date())
     : null;
 
-  // Fetch related data when tabs accessed
-  useEffect(() => {
-    if (!enabled) {
-      if (!authLoading) setLoading(false);
-      return;
-    }
+  const relatedDataQuery = useQuery({
+    queryKey: ['employee-profile', uid, employee.id] as const,
+    enabled,
+    staleTime: 60_000,
+    queryFn: async () => employeeProfileService.getRelatedData(employee.id),
+  });
 
-    setLoading(true);
-    void (async () => {
-      try {
-        const [advRes, salRes, appRes, ordRes] = await Promise.all([
-          supabase
-            .from('advances')
-            .select('*, advance_installments(*)')
-            .eq('employee_id', employee.id)
-            .order('disbursement_date', { ascending: false }),
-          supabase
-            .from('salary_records')
-            .select('*')
-            .eq('employee_id', employee.id)
-            .order('month_year', { ascending: false }),
-          supabase
-            .from('employee_apps')
-            .select('*, apps(name)')
-            .eq('employee_id', employee.id),
-          supabase
-            .from('daily_orders')
-            .select('id, date, orders_count, app_id, apps(name, brand_color)')
-            .eq('employee_id', employee.id)
-            .order('date', { ascending: false }),
-        ]);
-        if (advRes.error) throw advRes.error;
-        if (salRes.error) throw salRes.error;
-        if (appRes.error) throw appRes.error;
-        if (ordRes.error) throw ordRes.error;
+  useQueryErrorToast(relatedDataQuery.isError, relatedDataQuery.error, undefined, relatedDataQuery.refetch);
 
-        if (advRes.data) setAdvances(advRes.data as Advance[]);
-        if (salRes.data) setSalaries(salRes.data as SalaryRecord[]);
-        if (appRes.data) setEmployeeApps(appRes.data as EmployeeApp[]);
-        if (ordRes.data) setDailyOrders(ordRes.data as DailyOrder[]);
-      } catch (err) {
-        logError('[EmployeeProfile] fetch failed', err);
-        setAdvances([]);
-        setSalaries([]);
-        setEmployeeApps([]);
-        setDailyOrders([]);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [employee.id, enabled, authLoading]);
+  const advances: Advance[] = relatedDataQuery.data?.advances ?? [];
+  const salaries: SalaryRecord[] = relatedDataQuery.data?.salaries ?? [];
+  const employeeApps: EmployeeApp[] = relatedDataQuery.data?.employeeApps ?? [];
+  const dailyOrders: DailyOrder[] = relatedDataQuery.data?.dailyOrders ?? [];
+  const loading = relatedDataQuery.isLoading;
 
   return (
     <div className="space-y-5">

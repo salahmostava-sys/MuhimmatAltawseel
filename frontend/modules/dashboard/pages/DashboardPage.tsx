@@ -38,6 +38,7 @@ import { DashboardAiSummaryCard } from '@modules/dashboard/components/DashboardA
 import { DashboardTrendInsight } from '@modules/dashboard/components/DashboardTrendInsight';
 import { buildOperationalActions } from '@modules/dashboard/lib/operationalActionItems';
 import { AttendanceChart } from '@modules/dashboard/components/AttendanceChart';
+import { logError } from '@shared/lib/logger';
 import { AlertsWidget } from '@modules/dashboard/components/AlertsWidget';
 import { TopEmployees } from '@modules/dashboard/components/TopEmployees';
 import { DashboardSupervisorTargetsCard } from '@modules/dashboard/components/DashboardSupervisorTargetsCard';
@@ -808,7 +809,11 @@ const fetchDashboardKpis = async (
       : [];
 
   if (supervisorPerformanceResult.status === 'rejected') {
-    console.warn('[DashboardPage] supervisor targets are unavailable, continuing without card data.', supervisorPerformanceResult.reason);
+    logError(
+      '[DashboardPage] supervisor targets are unavailable, continuing without card data.',
+      supervisorPerformanceResult.reason,
+      { level: 'warn' },
+    );
   }
 
   type DashboardRpcShape = {

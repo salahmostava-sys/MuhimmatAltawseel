@@ -187,9 +187,8 @@ export const salaryService = {
   },
 
   getPricingRules: async (appId: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
-      .from('pricing_rules')
+    const { data, error } = await supabase
+      .from('pricing_rules' as never)
       .select('id, app_id, min_orders, max_orders, rule_type, rate_per_order, fixed_salary, is_active, priority')
       .eq('app_id', appId)
       .eq('is_active', true)

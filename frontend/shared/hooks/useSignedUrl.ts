@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@services/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import { logError } from '@shared/lib/logger';
-import { sanitizeStoragePath } from '@shared/lib/storagePath';
+import { storageService } from '@services/storageService';
 
 export const extractStoragePath = (value: string | null | undefined): string | null => {
   if (!value) return null;
@@ -16,54 +15,27 @@ export const extractStoragePath = (value: string | null | undefined): string | n
 };
 
 export const useSignedUrl = (bucket: string, path: string | null | undefined) => {
-  const [signedUrl, setSignedUrl] = useState<string | null>(null);
-  const [hookError, setHookError] = useState<Error | null>(null);
+  const query = useQuery({
+    queryKey: ['storage', 'signed-url', bucket, path ?? '__none__'] as const,
+    enabled: Boolean(path),
+    staleTime: 4 * 60_000,
+    gcTime: 10 * 60_000,
+    retry: false,
+    queryFn: async () => {
+      try {
+        return await storageService.createSignedUrl(bucket, path!, 300);
+      } catch (error) {
+        logError('[useSignedUrl] createSignedUrl failed', error, { meta: { bucket, path } });
+        throw error;
+      }
+    },
+  });
 
-  if (hookError) {
-    throw hookError;
+  if (query.error) {
+    throw query.error;
   }
 
-  useEffect(() => {
-    let isMounted = true;
-    const run = async () => {
-      if (!path) {
-        setSignedUrl(null);
-        setHookError(null);
-        return;
-      }
-      const safePath = sanitizeStoragePath(path);
-      if (!safePath) {
-        const invalidPathError = new Error('Invalid storage path');
-        logError('[useSignedUrl] invalid storage path', invalidPathError, { meta: { bucket } });
-        setSignedUrl(null);
-        setHookError(invalidPathError);
-        return;
-      }
-      if (safePath.includes('..') || safePath.startsWith('/') || !/^[A-Za-z0-9/_\-.]+$/.test(safePath)) {
-        const unsafePathError = new Error('Unsafe storage path');
-        logError('[useSignedUrl] unsafe storage path', unsafePathError, { meta: { bucket } });
-        setSignedUrl(null);
-        setHookError(unsafePathError);
-        return;
-      }
-      const { data, error } = await supabase.storage.from(bucket).createSignedUrl(safePath, 300);
-      if (!isMounted) return;
-      if (error) {
-        logError('[useSignedUrl] createSignedUrl failed', error);
-        setSignedUrl(null);
-        setHookError(error);
-        return;
-      }
-      setHookError(null);
-      setSignedUrl(data.signedUrl);
-    };
-    run();
-    return () => {
-      isMounted = false;
-    };
-  }, [bucket, path]);
-
-  return signedUrl;
+  return query.data ?? null;
 };
 
 export default useSignedUrl;

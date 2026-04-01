@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { MessageSquare, X, Send, Loader2 } from 'lucide-react';
-import { supabase } from '@services/supabase/client';
+import { useMutation } from '@tanstack/react-query';
+import { Loader2, MessageSquare, Send, X } from 'lucide-react';
 import { useAuth } from '@app/providers/AuthContext';
 import { cn } from '@shared/lib/utils';
-import { logError } from '@shared/lib/logger';
+import { aiChatService, type AiChatMessage } from '@services/aiChatService';
+import { getErrorMessage } from '@services/serviceError';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -11,43 +12,17 @@ interface Message {
   id: string;
 }
 
-let msgSeq = 0;
-const mkId = () => `msg-${++msgSeq}`;
+let messageSequence = 0;
+const nextMessageId = () => `msg-${++messageSequence}`;
 
 const WELCOME_MESSAGE: Message = {
   id: 'welcome',
   role: 'assistant',
   content:
-    'مرحباً! أنا مساعدك الذكي 🤖\nيمكنني الإجابة على أسئلة مثل:\n- كم عدد المناديب النشطين؟\n- ما حالة المركبات؟\n- كم طلباً اليوم؟',
+    'مرحباً! أنا مساعدك الذكي.\nيمكنني الإجابة على أسئلة مثل:\n- كم عدد المناديب النشطين؟\n- ما حالة المركبات؟\n- كم طلباً اليوم؟',
 };
 
 const SUGGESTIONS = ['كم مندوب نشط؟', 'حالة المركبات', 'طلبات اليوم'];
-
-type AiChatResponse = { message?: string; error?: string };
-
-async function formatInvokeError(error: unknown): Promise<string> {
-  const base = 'عذراً، حدث خطأ في الاتصال. حاول مرة أخرى.';
-  const err = error as { message?: string; context?: Response };
-  if (err.context instanceof Response) {
-    try {
-      const j = (await err.context.clone().json()) as { error?: string };
-      const e = j.error ?? '';
-      if (e.includes('OPENAI_API_KEY')) {
-        return 'المساعد غير مهيأ على الخادم (مفتاح الذكاء الاصطناعي). راجع إعدادات Supabase أو تواصل مع المسؤول.';
-      }
-      if (e.includes('Unauthorized') || err.context.status === 401) {
-        return 'انتهت الجلسة أو غير مصرّح. حدّث الصفحة أو سجّل الدخول من جديد.';
-      }
-      if (e.length > 0 && e.length < 200) return `تعذر إكمال الطلب: ${e}`;
-    } catch {
-      /* ignore */
-    }
-  }
-  if ((error as Error)?.message?.includes('Failed to fetch')) {
-    return 'تعذر الاتصال بالخادم. تحقق من الشبكة أو من نشر دالة ai-chat على Supabase.';
-  }
-  return base;
-}
 
 export function AiChatWidget() {
   const { session } = useAuth();
@@ -55,69 +30,61 @@ export function AiChatWidget() {
   const [hasOpened, setHasOpened] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const chatMutation = useMutation({
+    mutationFn: async (chatMessages: AiChatMessage[]) => aiChatService.sendMessage(chatMessages),
+    onSuccess: (content) => {
+      setMessages((current) => [...current, { id: nextMessageId(), role: 'assistant', content }]);
+    },
+    onError: (error) => {
+      setMessages((current) => [
+        ...current,
+        {
+          id: nextMessageId(),
+          role: 'assistant',
+          content: getErrorMessage(error, 'عذراً، حدث خطأ في الاتصال. حاول مرة أخرى.'),
+        },
+      ]);
+    },
+  });
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading]);
+  }, [messages, chatMutation.isPending]);
 
   useEffect(() => {
     if (isOpen) inputRef.current?.focus();
   }, [isOpen]);
 
   const sendMessage = useCallback(
-    async (text?: string) => {
+    (text?: string) => {
       const content = (text ?? input).trim();
-      if (!content || isLoading) return;
+      if (!content || chatMutation.isPending) return;
 
-      const userMsg: Message = { id: mkId(), role: 'user', content };
-      const newMessages = [...messages, userMsg];
-      setMessages(newMessages);
+      const userMessage: Message = { id: nextMessageId(), role: 'user', content };
+      const nextMessages = [...messages, userMessage];
+      const payloadMessages = nextMessages
+        .filter((message) => message.id !== 'welcome')
+        .map((message) => ({ role: message.role, content: message.content }));
+
+      setMessages(nextMessages);
       setInput('');
-      setIsLoading(true);
-
-      try {
-        const payloadMessages = newMessages
-          .filter((m) => m.id !== 'welcome')
-          .map((m) => ({ role: m.role, content: m.content }));
-
-        const { data, error } = await supabase.functions.invoke<AiChatResponse>('ai-chat', {
-          body: { messages: payloadMessages },
-        });
-
-        if (error) {
-          logError('[AiChatWidget] ai-chat invoke failed', error);
-          const errText = await formatInvokeError(error);
-          setMessages((prev) => [...prev, { id: mkId(), role: 'assistant', content: errText }]);
-          return;
-        }
-
-        const text = data?.message ?? data?.error ?? 'لا يوجد رد';
-        setMessages((prev) => [...prev, { id: mkId(), role: 'assistant', content: text }]);
-      } catch (e) {
-        logError('[AiChatWidget] sendMessage failed', e);
-        setMessages((prev) => [
-          ...prev,
-          { id: mkId(), role: 'assistant', content: 'عذراً، حدث خطأ في الاتصال. حاول مرة أخرى.' },
-        ]);
-      } finally {
-        setIsLoading(false);
-      }
+      chatMutation.mutate(payloadMessages);
     },
-    [input, isLoading, messages],
+    [chatMutation, input, messages],
   );
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
       sendMessage();
     }
   };
 
   const toggleOpen = () => {
-    setIsOpen((o) => !o);
+    setIsOpen((current) => !current);
     if (!hasOpened) setHasOpened(true);
   };
 
@@ -127,118 +94,114 @@ export function AiChatWidget() {
 
   return (
     <>
-      {/* ── Floating Toggle Button ─────────────────── */}
       <button
         onClick={toggleOpen}
         className={cn(
           'fixed bottom-5 left-5 z-[9999] flex items-center justify-center',
-          'w-13 h-13 rounded-full shadow-lg transition-all duration-300',
+          'h-13 w-13 rounded-full shadow-lg transition-all duration-300',
           'bg-primary text-primary-foreground hover:scale-105 active:scale-95',
           !hasOpened && !isOpen && 'animate-pulse',
         )}
         aria-label="مساعد مهمات التوصيل"
+        type="button"
       >
         {isOpen ? <X size={22} /> : <MessageSquare size={22} />}
       </button>
 
-      {/* ── Chat Panel ─────────────────────────────── */}
       {isOpen && (
         <div
           dir="rtl"
           className={cn(
             'fixed bottom-20 left-5 z-[9999]',
-            'w-[350px] h-[500px] max-h-[80vh] max-w-[calc(100vw-2.5rem)]',
-            'flex flex-col rounded-2xl shadow-2xl overflow-hidden',
-            'border border-border bg-background',
+            'flex h-[500px] max-h-[80vh] w-[350px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl',
+            'border border-border bg-background shadow-2xl',
           )}
         >
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground shrink-0">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <span className="text-base">🤖</span>
-              <span>مساعد مهمات التوصيل</span>
+          <div className="shrink-0 bg-primary px-4 py-3 text-primary-foreground">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <span className="text-base">AI</span>
+                <span>مساعد مهمات التوصيل</span>
+              </div>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="rounded-full p-1 transition-colors hover:bg-white/20"
+                aria-label="إغلاق"
+                type="button"
+              >
+                <X size={16} />
+              </button>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="p-1 rounded-full hover:bg-white/20 transition-colors"
-              aria-label="إغلاق"
-            >
-              <X size={16} />
-            </button>
           </div>
 
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-3">
-            {messages.map((msg) => (
+          <div className="flex-1 space-y-3 overflow-y-auto p-3">
+            {messages.map((message) => (
               <div
-                key={msg.id}
+                key={message.id}
                 className={cn(
-                  'max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap',
-                  msg.role === 'user'
-                    ? 'mr-auto bg-primary text-primary-foreground rounded-tl-sm'
-                    : 'ml-auto bg-muted text-foreground rounded-tr-sm',
+                  'max-w-[85%] whitespace-pre-wrap rounded-xl px-3.5 py-2.5 text-sm leading-relaxed',
+                  message.role === 'user'
+                    ? 'mr-auto rounded-tl-sm bg-primary text-primary-foreground'
+                    : 'ml-auto rounded-tr-sm bg-muted text-foreground',
                 )}
               >
-                {msg.content}
+                {message.content}
               </div>
             ))}
 
-            {/* Suggestion Chips */}
-            {showSuggestions && !isLoading && (
+            {showSuggestions && !chatMutation.isPending && (
               <div className="flex flex-wrap gap-2 pr-1">
-                {SUGGESTIONS.map((s) => (
+                {SUGGESTIONS.map((suggestion) => (
                   <button
-                    key={s}
-                    onClick={() => sendMessage(s)}
+                    key={suggestion}
+                    onClick={() => sendMessage(suggestion)}
                     className={cn(
-                      'text-xs px-3 py-1.5 rounded-full border border-primary/30',
-                      'text-primary bg-primary/5 hover:bg-primary/10 transition-colors',
+                      'rounded-full border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs text-primary transition-colors hover:bg-primary/10',
                     )}
+                    type="button"
                   >
-                    {s}
+                    {suggestion}
                   </button>
                 ))}
               </div>
             )}
 
-            {/* Typing Indicator */}
-            {isLoading && (
-              <div className="ml-auto flex items-center gap-1.5 bg-muted rounded-xl px-3.5 py-2.5 w-fit rounded-tr-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:0ms]" />
-                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:150ms]" />
-                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:300ms]" />
+            {chatMutation.isPending && (
+              <div className="ml-auto flex w-fit items-center gap-1.5 rounded-xl rounded-tr-sm bg-muted px-3.5 py-2.5">
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:0ms]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:150ms]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:300ms]" />
               </div>
             )}
 
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input Bar */}
-          <div className="shrink-0 border-t border-border p-2.5 flex items-center gap-2 bg-background">
+          <div className="flex shrink-0 items-center gap-2 border-t border-border bg-background p-2.5">
             <input
               ref={inputRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(event) => setInput(event.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="اسأل عن النظام..."
-              disabled={isLoading}
+              disabled={chatMutation.isPending}
               className={cn(
-                'flex-1 text-sm bg-muted/50 border border-border rounded-lg px-3 py-2',
+                'flex-1 rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm',
                 'placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary',
                 'disabled:opacity-60',
               )}
             />
             <button
               onClick={() => sendMessage()}
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim() || chatMutation.isPending}
               className={cn(
-                'shrink-0 w-9 h-9 flex items-center justify-center rounded-lg',
-                'bg-primary text-primary-foreground transition-all',
-                'hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed',
+                'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-all',
+                'hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40',
               )}
               aria-label="إرسال"
+              type="button"
             >
-              {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+              {chatMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
             </button>
           </div>
         </div>

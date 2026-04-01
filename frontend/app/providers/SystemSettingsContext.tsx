@@ -1,7 +1,8 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from 'react';
-import { supabase } from '@services/supabase/client';
+import { createContext, useContext, useEffect, ReactNode, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@app/providers/AuthContext';
 import { logError } from '@shared/lib/logger';
+import { settingsHubService } from '@services/settingsHubService';
 
 interface SystemSettings {
   id: string;
@@ -48,37 +49,36 @@ const SystemSettingsContext = createContext<SystemSettingsContextType>({
 export const SystemSettingsProvider = ({ children }: { children: ReactNode }) => {
   const { user, session, authLoading } = useAuth();
   const enabled = !!session && !!user && !authLoading;
-  const [settings, setSettings] = useState<SystemSettings | null>(null);
-  const [loading, setLoading] = useState(true);
+  const query = useQuery({
+    queryKey: ['system-settings', user?.id ?? '__guest__'] as const,
+    enabled,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      try {
+        const data = await settingsHubService.getSystemSettings();
+        return (data as SystemSettings | null) ?? defaults;
+      } catch (error) {
+        logError('[SystemSettingsContext] fetch settings failed', error);
+        return defaults;
+      }
+    },
+  });
 
-  const fetchSettings = useCallback(async () => {
-    if (!enabled) {
-      setLoading(authLoading);
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from('system_settings')
-      .select('*')
-      .limit(1)
-      .maybeSingle();
-    if (error) {
-      logError('[SystemSettingsContext] fetch settings failed', error);
-    }
-    setSettings((data as unknown as SystemSettings) ?? defaults);
-    setLoading(false);
-  }, [enabled, authLoading]);
-
-  useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
-
-  const s = settings ?? defaults;
+  const s = query.data ?? defaults;
+  const loading = enabled ? query.isLoading : authLoading;
   const projectName = s.project_name_ar;
   const projectSubtitle = s.project_subtitle_ar;
   const contextValue = useMemo<SystemSettingsContextType>(
-    () => ({ settings: s, projectName, projectSubtitle, loading, refresh: fetchSettings }),
-    [s, projectName, projectSubtitle, loading, fetchSettings]
+    () => ({
+      settings: s,
+      projectName,
+      projectSubtitle,
+      loading,
+      refresh: async () => {
+        await query.refetch();
+      },
+    }),
+    [s, projectName, projectSubtitle, loading, query]
   );
 
   // Sync browser title

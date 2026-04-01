@@ -1,163 +1,137 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@services/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@app/providers/AuthContext';
-import { logger } from '@shared/lib/logger';
+import { permissionsService, type PagePermission } from '@services/permissionsService';
 
 type AppRole = 'admin' | 'hr' | 'finance' | 'operations' | 'viewer';
 
-interface PagePermission {
-  can_view: boolean;
-  can_edit: boolean;
-  can_delete: boolean;
-}
+const DENY_ALL: PagePermission = {
+  can_view: false,
+  can_edit: false,
+  can_delete: false,
+};
 
 // Default permissions per role per page
 const DEFAULT_PERMISSIONS: Record<AppRole, Record<string, PagePermission>> = {
   admin: {
-    employees:          { can_view: true,  can_edit: true,  can_delete: true  },
-    attendance:         { can_view: true,  can_edit: true,  can_delete: true  },
-    orders:             { can_view: true,  can_edit: true,  can_delete: true  },
-    ai_analytics:       { can_view: true,  can_edit: true,  can_delete: true  },
-    salaries:           { can_view: true,  can_edit: true,  can_delete: true  },
-    advances:           { can_view: true,  can_edit: true,  can_delete: true  },
-    deductions:         { can_view: true,  can_edit: true,  can_delete: true  },
-    vehicles:           { can_view: true,  can_edit: true,  can_delete: true  },
-    alerts:             { can_view: true,  can_edit: true,  can_delete: true  },
-    settings:           { can_view: true,  can_edit: true,  can_delete: true  },
-    apps:               { can_view: true,  can_edit: true,  can_delete: true  },
-    platform_accounts:  { can_view: true,  can_edit: true,  can_delete: true  },
-    violation_resolver: { can_view: true,  can_edit: true,  can_delete: true  },
-    vehicle_assignment: { can_view: true,  can_edit: true,  can_delete: true  },
-    fuel:               { can_view: true,  can_edit: true,  can_delete: true  },
-    maintenance:        { can_view: true,  can_edit: true,  can_delete: true  },
-    employee_tiers:     { can_view: true,  can_edit: true,  can_delete: true  },
+    employees: { can_view: true, can_edit: true, can_delete: true },
+    attendance: { can_view: true, can_edit: true, can_delete: true },
+    orders: { can_view: true, can_edit: true, can_delete: true },
+    ai_analytics: { can_view: true, can_edit: true, can_delete: true },
+    salaries: { can_view: true, can_edit: true, can_delete: true },
+    advances: { can_view: true, can_edit: true, can_delete: true },
+    deductions: { can_view: true, can_edit: true, can_delete: true },
+    vehicles: { can_view: true, can_edit: true, can_delete: true },
+    alerts: { can_view: true, can_edit: true, can_delete: true },
+    settings: { can_view: true, can_edit: true, can_delete: true },
+    apps: { can_view: true, can_edit: true, can_delete: true },
+    platform_accounts: { can_view: true, can_edit: true, can_delete: true },
+    violation_resolver: { can_view: true, can_edit: true, can_delete: true },
+    vehicle_assignment: { can_view: true, can_edit: true, can_delete: true },
+    fuel: { can_view: true, can_edit: true, can_delete: true },
+    maintenance: { can_view: true, can_edit: true, can_delete: true },
+    employee_tiers: { can_view: true, can_edit: true, can_delete: true },
   },
   hr: {
-    employees:          { can_view: true,  can_edit: true,  can_delete: false },
-    attendance:         { can_view: true,  can_edit: true,  can_delete: false },
-    orders:             { can_view: true,  can_edit: false, can_delete: false },
-    ai_analytics:       { can_view: true,  can_edit: false, can_delete: false },
-    salaries:           { can_view: true,  can_edit: false, can_delete: false },
-    advances:           { can_view: true,  can_edit: false, can_delete: false },
-    deductions:         { can_view: false, can_edit: false, can_delete: false },
-    vehicles:           { can_view: true,  can_edit: false, can_delete: false },
-    alerts:             { can_view: true,  can_edit: true,  can_delete: false },
-    settings:           { can_view: false, can_edit: false, can_delete: false },
-    apps:               { can_view: true,  can_edit: false, can_delete: false },
-    platform_accounts:  { can_view: true,  can_edit: true,  can_delete: false },
+    employees: { can_view: true, can_edit: true, can_delete: false },
+    attendance: { can_view: true, can_edit: true, can_delete: false },
+    orders: { can_view: true, can_edit: false, can_delete: false },
+    ai_analytics: { can_view: true, can_edit: false, can_delete: false },
+    salaries: { can_view: true, can_edit: false, can_delete: false },
+    advances: { can_view: true, can_edit: false, can_delete: false },
+    deductions: { can_view: false, can_edit: false, can_delete: false },
+    vehicles: { can_view: true, can_edit: false, can_delete: false },
+    alerts: { can_view: true, can_edit: true, can_delete: false },
+    settings: { can_view: false, can_edit: false, can_delete: false },
+    apps: { can_view: true, can_edit: false, can_delete: false },
+    platform_accounts: { can_view: true, can_edit: true, can_delete: false },
     violation_resolver: { can_view: false, can_edit: false, can_delete: false },
-    vehicle_assignment: { can_view: true,  can_edit: false, can_delete: false },
-    fuel:               { can_view: true,  can_edit: false, can_delete: false },
-    maintenance:        { can_view: false, can_edit: false, can_delete: false },
-    employee_tiers:     { can_view: true,  can_edit: true,  can_delete: true  },
+    vehicle_assignment: { can_view: true, can_edit: false, can_delete: false },
+    fuel: { can_view: true, can_edit: false, can_delete: false },
+    maintenance: { can_view: false, can_edit: false, can_delete: false },
+    employee_tiers: { can_view: true, can_edit: true, can_delete: true },
   },
   finance: {
-    employees:          { can_view: true,  can_edit: false, can_delete: false },
-    attendance:         { can_view: true,  can_edit: false, can_delete: false },
-    orders:             { can_view: true,  can_edit: false, can_delete: false },
-    ai_analytics:       { can_view: true,  can_edit: false, can_delete: false },
-    salaries:           { can_view: true,  can_edit: true,  can_delete: false },
-    advances:           { can_view: true,  can_edit: true,  can_delete: false },
-    deductions:         { can_view: true,  can_edit: true,  can_delete: false },
-    vehicles:           { can_view: false, can_edit: false, can_delete: false },
-    alerts:             { can_view: true,  can_edit: false, can_delete: false },
-    settings:           { can_view: false, can_edit: false, can_delete: false },
-    apps:               { can_view: true,  can_edit: false, can_delete: false },
-    platform_accounts:  { can_view: true,  can_edit: false, can_delete: false },
-    violation_resolver: { can_view: true,  can_edit: true,  can_delete: true  },
-    vehicle_assignment: { can_view: true,  can_edit: false, can_delete: false },
-    fuel:               { can_view: true,  can_edit: true,  can_delete: true  },
-    maintenance:        { can_view: true,  can_edit: false, can_delete: false },
-    employee_tiers:     { can_view: true,  can_edit: false, can_delete: false },
+    employees: { can_view: true, can_edit: false, can_delete: false },
+    attendance: { can_view: true, can_edit: false, can_delete: false },
+    orders: { can_view: true, can_edit: false, can_delete: false },
+    ai_analytics: { can_view: true, can_edit: false, can_delete: false },
+    salaries: { can_view: true, can_edit: true, can_delete: false },
+    advances: { can_view: true, can_edit: true, can_delete: false },
+    deductions: { can_view: true, can_edit: true, can_delete: false },
+    vehicles: { can_view: false, can_edit: false, can_delete: false },
+    alerts: { can_view: true, can_edit: false, can_delete: false },
+    settings: { can_view: false, can_edit: false, can_delete: false },
+    apps: { can_view: true, can_edit: false, can_delete: false },
+    platform_accounts: { can_view: true, can_edit: false, can_delete: false },
+    violation_resolver: { can_view: true, can_edit: true, can_delete: true },
+    vehicle_assignment: { can_view: true, can_edit: false, can_delete: false },
+    fuel: { can_view: true, can_edit: true, can_delete: true },
+    maintenance: { can_view: true, can_edit: false, can_delete: false },
+    employee_tiers: { can_view: true, can_edit: false, can_delete: false },
   },
   operations: {
-    employees:          { can_view: true,  can_edit: false, can_delete: false },
-    attendance:         { can_view: false, can_edit: false, can_delete: false },
-    orders:             { can_view: true,  can_edit: true,  can_delete: false },
-    ai_analytics:       { can_view: true,  can_edit: false, can_delete: false },
-    salaries:           { can_view: false, can_edit: false, can_delete: false },
-    advances:           { can_view: false, can_edit: false, can_delete: false },
-    deductions:         { can_view: false, can_edit: false, can_delete: false },
-    vehicles:           { can_view: true,  can_edit: true,  can_delete: false },
-    alerts:             { can_view: true,  can_edit: false, can_delete: false },
-    settings:           { can_view: false, can_edit: false, can_delete: false },
-    apps:               { can_view: true,  can_edit: false, can_delete: false },
-    platform_accounts:  { can_view: true,  can_edit: false, can_delete: false },
+    employees: { can_view: true, can_edit: false, can_delete: false },
+    attendance: { can_view: false, can_edit: false, can_delete: false },
+    orders: { can_view: true, can_edit: true, can_delete: false },
+    ai_analytics: { can_view: true, can_edit: false, can_delete: false },
+    salaries: { can_view: false, can_edit: false, can_delete: false },
+    advances: { can_view: false, can_edit: false, can_delete: false },
+    deductions: { can_view: false, can_edit: false, can_delete: false },
+    vehicles: { can_view: true, can_edit: true, can_delete: false },
+    alerts: { can_view: true, can_edit: false, can_delete: false },
+    settings: { can_view: false, can_edit: false, can_delete: false },
+    apps: { can_view: true, can_edit: false, can_delete: false },
+    platform_accounts: { can_view: true, can_edit: false, can_delete: false },
     violation_resolver: { can_view: false, can_edit: false, can_delete: false },
-    vehicle_assignment: { can_view: true,  can_edit: false, can_delete: false },
-    fuel:               { can_view: true,  can_edit: false, can_delete: false },
-    maintenance:        { can_view: true,  can_edit: true,  can_delete: true  },
-    employee_tiers:     { can_view: true,  can_edit: false, can_delete: false },
+    vehicle_assignment: { can_view: true, can_edit: false, can_delete: false },
+    fuel: { can_view: true, can_edit: false, can_delete: false },
+    maintenance: { can_view: true, can_edit: true, can_delete: true },
+    employee_tiers: { can_view: true, can_edit: false, can_delete: false },
   },
   viewer: {
-    employees:          { can_view: false, can_edit: false, can_delete: false },
-    attendance:         { can_view: false, can_edit: false, can_delete: false },
-    orders:             { can_view: false, can_edit: false, can_delete: false },
-    ai_analytics:       { can_view: false, can_edit: false, can_delete: false },
-    salaries:           { can_view: false, can_edit: false, can_delete: false },
-    advances:           { can_view: false, can_edit: false, can_delete: false },
-    deductions:         { can_view: false, can_edit: false, can_delete: false },
-    vehicles:           { can_view: false, can_edit: false, can_delete: false },
-    alerts:             { can_view: true,  can_edit: false, can_delete: false },
-    settings:           { can_view: false, can_edit: false, can_delete: false },
-    apps:               { can_view: false, can_edit: false, can_delete: false },
-    platform_accounts:  { can_view: false, can_edit: false, can_delete: false },
+    employees: { can_view: false, can_edit: false, can_delete: false },
+    attendance: { can_view: false, can_edit: false, can_delete: false },
+    orders: { can_view: false, can_edit: false, can_delete: false },
+    ai_analytics: { can_view: false, can_edit: false, can_delete: false },
+    salaries: { can_view: false, can_edit: false, can_delete: false },
+    advances: { can_view: false, can_edit: false, can_delete: false },
+    deductions: { can_view: false, can_edit: false, can_delete: false },
+    vehicles: { can_view: false, can_edit: false, can_delete: false },
+    alerts: { can_view: true, can_edit: false, can_delete: false },
+    settings: { can_view: false, can_edit: false, can_delete: false },
+    apps: { can_view: false, can_edit: false, can_delete: false },
+    platform_accounts: { can_view: false, can_edit: false, can_delete: false },
     violation_resolver: { can_view: false, can_edit: false, can_delete: false },
     vehicle_assignment: { can_view: false, can_edit: false, can_delete: false },
-    fuel:               { can_view: false, can_edit: false, can_delete: false },
-    maintenance:        { can_view: true,  can_edit: false, can_delete: false },
-    employee_tiers:     { can_view: false, can_edit: false, can_delete: false },
+    fuel: { can_view: false, can_edit: false, can_delete: false },
+    maintenance: { can_view: true, can_edit: false, can_delete: false },
+    employee_tiers: { can_view: false, can_edit: false, can_delete: false },
   },
 };
 
 export const usePermissions = (pageKey: string) => {
   const { user, role } = useAuth();
-  const [permissions, setPermissions] = useState<PagePermission>({ can_view: false, can_edit: false, can_delete: false });
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) {
-      setPermissions({ can_view: false, can_edit: false, can_delete: false });
-      setLoading(false);
-      return;
-    }
-    if (!role) {
-      // Authenticated but no role assigned yet — deny until admin grants a role (matches RLS).
-      setPermissions({ can_view: false, can_edit: false, can_delete: false });
-      setLoading(false);
-      return;
-    }
+  const query = useQuery({
+    queryKey: ['permissions', user?.id ?? '__none__', role ?? '__none__', pageKey] as const,
+    enabled: Boolean(user?.id && role),
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<PagePermission> => {
+      if (!user?.id || !role) return DENY_ALL;
 
-    const fetchPermissions = async () => {
-      // Try to get custom permissions from DB
-      const { data, error } = await supabase
-        .from('user_permissions')
-        .select('can_view, can_edit, can_delete')
-        .eq('user_id', user.id)
-        .eq('permission_key', pageKey)
-        .maybeSingle();
+      const customPermission = await permissionsService.getUserPermission(user.id, pageKey);
+      if (customPermission) return customPermission;
 
-      if (error) {
-        logger.error('[usePermissions] user_permissions query failed', error, {
-          meta: { pageKey, userId: user.id },
-        });
-        setPermissions({ can_view: false, can_edit: false, can_delete: false });
-        setLoading(false);
-        return;
-      }
+      const defaults = DEFAULT_PERMISSIONS[role as AppRole] || DEFAULT_PERMISSIONS.viewer;
+      return defaults[pageKey] || DENY_ALL;
+    },
+  });
 
-      if (data) {
-        setPermissions({ can_view: data.can_view, can_edit: data.can_edit, can_delete: data.can_delete });
-      } else {
-        // Fall back to role defaults
-        const defaults = DEFAULT_PERMISSIONS[role as AppRole] || DEFAULT_PERMISSIONS.viewer;
-        setPermissions(defaults[pageKey] || { can_view: false, can_edit: false, can_delete: false });
-      }
-      setLoading(false);
-    };
+  const fallbackPermission =
+    role != null ? (DEFAULT_PERMISSIONS[role as AppRole] || DEFAULT_PERMISSIONS.viewer)[pageKey] || DENY_ALL : DENY_ALL;
 
-    fetchPermissions();
-  }, [user, role, pageKey]);
+  const permissions = !user || !role ? DENY_ALL : query.data || fallbackPermission;
+  const loading = Boolean(user && role) ? query.isLoading : false;
 
   return { permissions, loading, isAdmin: role === 'admin' };
 };

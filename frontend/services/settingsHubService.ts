@@ -21,6 +21,12 @@ const EXPORT_TABLE_ALLOWLIST = new Set([
 ]);
 
 export const settingsHubService = {
+  getCurrentUserId: async () => {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw toServiceError(error, 'settingsHubService.getCurrentUserId');
+    return data.session?.user?.id ?? null;
+  },
+
   getAuditLogs: async (from: number, to: number, filterAction: string, filterTable: string, search: string) => {
     let query = supabase
       .from('audit_log')
@@ -116,6 +122,34 @@ export const settingsHubService = {
     return data;
   },
   getCompanyLogoPublicUrl: (path: string) => supabase.storage.from('avatars').getPublicUrl(path),
+  getSystemSettings: async () => {
+    const { data, error } = await supabase
+      .from('system_settings')
+      .select('*')
+      .limit(1)
+      .maybeSingle();
+    if (error) throw toServiceError(error, 'settingsHubService.getSystemSettings');
+    return data;
+  },
+  saveSystemSettings: async (
+    settingsId: string | null | undefined,
+    payload: {
+      project_name_ar: string;
+      project_name_en: string;
+      default_language: string;
+      logo_url: string | null;
+      iqama_alert_days: number;
+    },
+  ) => {
+    if (settingsId) {
+      const { error } = await supabase.from('system_settings').update(payload).eq('id', settingsId);
+      if (error) throw toServiceError(error, 'settingsHubService.saveSystemSettings.update');
+      return;
+    }
+
+    const { error } = await supabase.from('system_settings').insert(payload);
+    if (error) throw toServiceError(error, 'settingsHubService.saveSystemSettings.insert');
+  },
   updateSystemLogo: async (settingsId: string, logoUrl: string | null) => {
     const { error } = await supabase.from('system_settings').update({ logo_url: logoUrl }).eq('id', settingsId);
     if (error) throw toServiceError(error, 'settingsHubService.updateSystemLogo');
@@ -125,7 +159,7 @@ export const settingsHubService = {
     if (error) throw toServiceError(error, 'settingsHubService.updateTradeRegister');
   },
   createTradeRegister: async (payload: Record<string, unknown>) => {
-    const { data, error } = await supabase.from('trade_registers').insert(payload).select().single();
+    const { data, error } = await supabase.from('trade_registers' as never).insert(payload as never).select().single();
     if (error) throw toServiceError(error, 'settingsHubService.createTradeRegister');
     return data;
   },
@@ -134,7 +168,7 @@ export const settingsHubService = {
     if (!EXPORT_TABLE_ALLOWLIST.has(table)) {
       throw toServiceError(new Error('Table is not allowed for export'), 'settingsHubService.exportTableRows');
     }
-    const { data, error } = await supabase.from(table).select('*');
+    const { data, error } = await supabase.from(table as never).select('*');
     if (error) throw toServiceError(error, 'settingsHubService.exportTableRows');
     return data ?? [];
   },

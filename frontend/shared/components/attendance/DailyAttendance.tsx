@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { CalendarIcon, UserCheck, Save } from "lucide-react";
@@ -12,8 +13,9 @@ import { toast } from "@shared/components/ui/sonner";
 import { TOAST_SUCCESS_ACTION, TOAST_SUCCESS_EDIT } from "@shared/lib/toastMessages";
 import { useLanguage } from "@app/providers/LanguageContext";
 import { usePermissions } from "@shared/hooks/usePermissions";
+import { authQueryUserId, useAuthQueryGate } from "@shared/hooks/useAuthQueryGate";
+import { useQueryErrorToast } from "@shared/hooks/useQueryErrorToast";
 import attendanceService from "@services/attendanceService";
-import { supabase } from "@services/supabase/client";
 import { logError } from "@shared/lib/logger";
 import { filterAttendanceRosterEmployees } from "@shared/lib/employeeVisibility";
 import {
@@ -37,6 +39,8 @@ interface Props {
 const DailyAttendance = ({ selectedMonth, selectedYear }: Props) => {
   const { isRTL } = useLanguage();
   const { permissions } = usePermissions("attendance");
+  const { enabled, userId } = useAuthQueryGate();
+  const uid = authQueryUserId(userId);
   const dateLocale = ar;
   const statusLabels = STATUS_LABELS_AR;
 
@@ -87,50 +91,19 @@ const DailyAttendance = ({ selectedMonth, selectedYear }: Props) => {
     const fetchBase = async () => {
       setLoading(true);
       try {
-        const [empRes, appRes, empAppsRes] = await Promise.all([
-          supabase
-            .from("employees")
-            .select("id, name, salary_type, job_title, sponsorship_status, probation_end_date")
-            .eq("status", "active")
-            .order("name"),
-          supabase
-            .from("apps")
-            .select("id, name, logo_url")
-            .eq("is_active", true)
-            .order("name"),
-          supabase
-            .from("employee_apps")
-            .select("employee_id, app_id"),
-        ]);
+        const baseData = await attendanceService.getDailyAttendanceBase();
 
-        let employeeRows: Employee[] = [];
-        if (empRes.error) {
-          // Fallback to minimum fields in case some optional columns are blocked by RLS/permissions.
-          const fallbackRes = await supabase
-            .from("employees")
-            .select("id, name, sponsorship_status, probation_end_date")
-            .eq("status", "active")
-            .order("name");
-          if (fallbackRes.error) throw fallbackRes.error;
-          employeeRows = (fallbackRes.data as Employee[]) ?? [];
-        } else {
-          employeeRows = (empRes.data as Employee[]) ?? [];
-        }
-        setEmployeeSource(employeeRows);
+        setEmployeeSource((baseData.employees as Employee[]) ?? []);
 
-        if (appRes.error) throw appRes.error;
-        if (appRes.data) setApps(appRes.data as App[]);
+        setApps((baseData.apps as App[]) ?? []);
 
         // Build map: appId → Set<employeeId>
-        if (empAppsRes.error) throw empAppsRes.error;
-        if (empAppsRes.data) {
-          const map: Record<string, Set<string>> = {};
-          for (const row of empAppsRes.data) {
-            if (!map[row.app_id]) map[row.app_id] = new Set();
-            map[row.app_id].add(row.employee_id);
-          }
-          setAppEmployeeIds(map);
+        const map: Record<string, Set<string>> = {};
+        for (const row of baseData.employeeApps ?? []) {
+          if (!map[row.app_id]) map[row.app_id] = new Set();
+          map[row.app_id].add(row.employee_id);
         }
+        setAppEmployeeIds(map);
       } catch (e) {
         logError('[DailyAttendance] fetchBase failed', e);
       } finally {
@@ -150,18 +123,37 @@ const DailyAttendance = ({ selectedMonth, selectedYear }: Props) => {
     ? allEmployees.filter(e => appEmployeeIds[selectedAppId]?.has(e.id))
     : allEmployees;
 
+  const dateStr = format(date, "yyyy-MM-dd");
+
+  const recordsQuery = useQuery({
+    queryKey: ["attendance", uid, "daily-records", dateStr] as const,
+    enabled: enabled && allEmployees.length > 0,
+    staleTime: 0,
+    queryFn: async () => attendanceService.getDailyAttendanceRecords(dateStr),
+  });
+
+  useQueryErrorToast(recordsQuery.isError, recordsQuery.error, undefined, recordsQuery.refetch);
+
   // ── Load attendance records for selected date ──
   useEffect(() => {
-    if (allEmployees.length === 0) return;
-    const dateStr = format(date, "yyyy-MM-dd");
-    supabase
-      .from("attendance")
-      .select("*")
-      .eq("date", dateStr)
-      .then(({ data }) => {
-        setRecords(mapAttendanceData(allEmployees, data as Array<{ employee_id: string; status?: string | null; check_in?: string | null; check_out?: string | null; note?: string | null }>));
-      });
-  }, [date, allEmployees]);
+    if (allEmployees.length === 0) {
+      setRecords({});
+      return;
+    }
+
+    setRecords(
+      mapAttendanceData(
+        allEmployees,
+        (recordsQuery.data as Array<{
+          employee_id: string;
+          status?: string | null;
+          check_in?: string | null;
+          check_out?: string | null;
+          note?: string | null;
+        }> | undefined) ?? [],
+      ),
+    );
+  }, [allEmployees, recordsQuery.data]);
 
   const updateRecord = (empId: string, field: keyof AttendanceRecord, value: string | null) => {
     setRecords(prev => ({ ...prev, [empId]: { ...prev[empId], [field]: value } }));

@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Sparkles, Flame, UserCheck, type LucideIcon } from 'lucide-react';
-import { supabase } from '@services/supabase/client';
+import { analyticsService } from '@services/analyticsService';
 import { useOrders } from '@shared/hooks/useOrders';
 import { useAnalytics } from '@shared/hooks/useAnalytics';
 import { predictOrders } from '@shared/lib/predictOrders';
@@ -64,11 +64,7 @@ export function DashboardOrdersInsights() {
   const empQ = useQuery({
     queryKey: ['dashboard-orders-insights-employee', uid, topEmployeeId],
     enabled: enabled && !!topEmployeeId,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('employees').select('name').eq('id', topEmployeeId!).maybeSingle();
-      if (error) throw error;
-      return data?.name ?? null;
-    },
+    queryFn: async () => analyticsService.getEmployeeName(topEmployeeId!),
     staleTime: 60_000,
   });
 

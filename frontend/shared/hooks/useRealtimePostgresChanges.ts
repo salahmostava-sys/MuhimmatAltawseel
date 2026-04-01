@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { supabase } from '@services/supabase/client';
+import { realtimeService } from '@services/realtimeService';
 
 /** Tables backing Dashboard KPIs + analytics (invalidate on change; read-heavy). */
 export const REALTIME_TABLES_DASHBOARD = [
@@ -27,14 +27,6 @@ export function useRealtimePostgresChanges(
   onEventRef.current = onEvent;
 
   useEffect(() => {
-    const channel = supabase.channel(channelName);
-    const handler = () => onEventRef.current();
-    tables.forEach((table) => {
-      channel.on('postgres_changes', { event: '*', schema: 'public', table }, handler);
-    });
-    channel.subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return realtimeService.subscribeToTables(channelName, tables, () => onEventRef.current());
   }, [channelName, tables]);
 }

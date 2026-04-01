@@ -1,6 +1,6 @@
 import { supabase } from '@services/supabase/client';
 import type { Json } from '@services/supabase/types';
-import { toServiceError } from '@services/serviceError';
+import { handleSupabaseError } from '@services/serviceError';
 
 export interface AppUpsertPayload {
   name: string;
@@ -18,7 +18,7 @@ export const appService = {
       .from('apps')
       .select('id, name, name_en, brand_color, text_color, is_active, custom_columns')
       .order('name');
-    if (error) throw toServiceError(error, 'appService.getAll');
+    if (error) handleSupabaseError(error, 'appService.getAll');
     return data ?? [];
   },
 
@@ -30,7 +30,7 @@ export const appService = {
       // .eq('is_archived', false) // Table 'apps' might not have 'is_archived' yet either, checking types...
       .order('name');
     
-    if (appsError) throw toServiceError(appsError, 'appService.getMonthlyApps.apps');
+    if (appsError) handleSupabaseError(appsError, 'appService.getMonthlyApps.apps');
 
     // 2. We'll consider an app "active this month" if it's generally active,
     // until we have a formal monthly activation table.
@@ -42,12 +42,12 @@ export const appService = {
 
   create: async (payload: AppUpsertPayload) => {
     const { error } = await supabase.from('apps').insert(payload);
-    if (error) throw toServiceError(error, 'appService.create');
+    if (error) handleSupabaseError(error, 'appService.create');
   },
 
   update: async (id: string, payload: AppUpsertPayload) => {
     const { error } = await supabase.from('apps').update(payload).eq('id', id);
-    if (error) throw toServiceError(error, 'appService.update');
+    if (error) handleSupabaseError(error, 'appService.update');
   },
 
   toggleMonthlyActive: async (appId: string, _monthYear: string, isActive: boolean) => {
@@ -56,13 +56,13 @@ export const appService = {
       .from('apps')
       .update({ is_active: isActive })
       .eq('id', appId);
-    if (error) throw toServiceError(error, 'appService.toggleMonthlyActive');
+    if (error) handleSupabaseError(error, 'appService.toggleMonthlyActive');
   },
 
   delete: async (id: string) => {
     // Permanent delete since we don't have is_archived yet
     const { error } = await supabase.from('apps').delete().eq('id', id);
-    if (error) throw toServiceError(error, 'appService.delete');
+    if (error) handleSupabaseError(error, 'appService.delete');
   },
 
   countActiveEmployeeApps: async (appId: string) => {
@@ -71,7 +71,7 @@ export const appService = {
       .select('id', { count: 'exact', head: true })
       .eq('app_id', appId)
       .eq('status', 'active');
-    if (error) throw toServiceError(error, 'appService.countActiveEmployeeApps');
+    if (error) handleSupabaseError(error, 'appService.countActiveEmployeeApps');
     return count ?? 0;
   },
 
@@ -81,7 +81,7 @@ export const appService = {
       .select('employee_id, employees!inner(id, name, status, sponsorship_status)')
       .eq('app_id', appId)
       .eq('status', 'active');
-    if (error) throw toServiceError(error, 'appService.getActiveEmployeeAppsWithEmployees');
+    if (error) handleSupabaseError(error, 'appService.getActiveEmployeeAppsWithEmployees');
     return data ?? [];
   },
 
@@ -93,18 +93,29 @@ export const appService = {
       .eq('app_id', appId)
       .gte('date', startDate)
       .lte('date', endDate);
-    if (error) throw toServiceError(error, 'appService.getEmployeeMonthlyOrders');
+    if (error) handleSupabaseError(error, 'appService.getEmployeeMonthlyOrders');
+    return data ?? [];
+  },
+
+  getMonthlyOrdersForApp: async (appId: string, startDate: string, endDate: string) => {
+    const { data, error } = await supabase
+      .from('daily_orders')
+      .select('employee_id, orders_count')
+      .eq('app_id', appId)
+      .gte('date', startDate)
+      .lte('date', endDate);
+    if (error) handleSupabaseError(error, 'appService.getMonthlyOrdersForApp');
     return data ?? [];
   },
 
   assignScheme: async (appId: string, schemeId: string | null) => {
     const { error } = await supabase.from('apps').update({ scheme_id: schemeId }).eq('id', appId);
-    if (error) throw toServiceError(error, 'appService.assignScheme');
+    if (error) handleSupabaseError(error, 'appService.assignScheme');
   },
 
   getActiveWithScheme: async () => {
     const { data, error } = await supabase.from('apps').select('id, name, scheme_id').eq('is_active', true).order('name');
-    if (error) throw toServiceError(error, 'appService.getActiveWithScheme');
+    if (error) handleSupabaseError(error, 'appService.getActiveWithScheme');
     return data ?? [];
   },
 
@@ -113,7 +124,7 @@ export const appService = {
       .from('apps')
       .select('id, name, scheme_id, salary_schemes(id, name, name_en, status, scheme_type, monthly_amount, target_orders, target_bonus, salary_scheme_tiers(id, from_orders, to_orders, price_per_order, tier_order, tier_type, incremental_threshold, incremental_price))')
       .eq('is_active', true);
-    if (error) throw toServiceError(error, 'appService.getActiveWithSalarySchemes');
+    if (error) handleSupabaseError(error, 'appService.getActiveWithSalarySchemes');
     return data ?? [];
   },
 
@@ -125,7 +136,7 @@ export const appService = {
       .eq('app_id', appId)
       .eq('month_year', monthYear)
       .maybeSingle();
-    if (error) throw toServiceError(error, 'appService.getAppTargetForMonth');
+    if (error) handleSupabaseError(error, 'appService.getAppTargetForMonth');
     return data?.target_orders ?? null;
   },
 };

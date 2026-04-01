@@ -3,16 +3,16 @@ import { supabase } from './services/supabase/client';
 async function checkTables() {
   const { error } = await supabase.from('app_monthly_activations').select('*').limit(1);
   if (error) {
-    console.error('Table app_monthly_activations error:', error.message);
+    process.stderr.write(`Table app_monthly_activations error: ${error.message}\n`);
   } else {
-    console.log('Table app_monthly_activations exists.');
+    process.stdout.write('Table app_monthly_activations exists.\n');
   }
 
   const { error: targetError } = await supabase.from('app_targets').select('*').limit(1);
   if (targetError) {
-    console.error('Table app_targets error:', targetError.message);
+    process.stderr.write(`Table app_targets error: ${targetError.message}\n`);
   } else {
-    console.log('Table app_targets exists.');
+    process.stdout.write('Table app_targets exists.\n');
   }
 }
 

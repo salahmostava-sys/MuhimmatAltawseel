@@ -15,7 +15,6 @@ import { usePermissions } from '@shared/hooks/usePermissions';
 import { useAuth } from '@app/providers/AuthContext';
 import { validateUploadFile } from '@shared/lib/validation';
 import { settingsHubService } from '@services/settingsHubService';
-import { supabase } from '@services/supabase/client';
 import { brandLogoSrc } from '@shared/lib/brandLogo';
 import { getErrorMessage } from '@shared/lib/query';
 import { logError } from '@shared/lib/logger';
@@ -87,10 +86,8 @@ export default function ProjectSettings() {
       if (removeLogo) {
         logo_url = null;
       } else if (logoFile) {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        const uid = user?.id ?? session?.user?.id;
+        const sessionUserId = await settingsHubService.getCurrentUserId();
+        const uid = user?.id ?? sessionUserId;
         if (!uid) {
           setSaving(false);
           toast.error(TOAST_ERROR_GENERIC, {
@@ -122,18 +119,7 @@ export default function ProjectSettings() {
         iqama_alert_days: iqamaAlertDays,
       };
 
-      if (settings?.id) {
-        const { error } = await supabase
-          .from('system_settings')
-          .update(payload)
-          .eq('id', settings.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('system_settings')
-          .insert(payload);
-        if (error) throw error;
-      }
+      await settingsHubService.saveSystemSettings(settings?.id, payload);
 
       clearLogoObjectUrl();
       setLogoFile(null);

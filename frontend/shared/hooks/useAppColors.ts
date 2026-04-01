@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@services/supabase/client';
-import { logError } from '@shared/lib/logger';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { appService } from '@services/appService';
+import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 
 export interface CustomColumn {
   key: string;
@@ -18,16 +19,33 @@ export interface AppColorData {
 
 const FALLBACK_COLORS = ['#2563eb', '#16a34a', '#9333ea', '#ea580c', '#0891b2', '#dc2626'];
 
-export const invalidateAppColorsCache = () => {
-  // Keep compatibility with pages that trigger a refresh signal after app updates.
-  if (typeof globalThis !== 'undefined') {
-    globalThis.dispatchEvent(new CustomEvent('app-colors:invalidate'));
-  }
+export const appColorsQueryKey = (userId: string) => ['apps', userId, 'colors'] as const;
+
+const normalizeCustomColumns = (value: unknown): CustomColumn[] => {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((item) => {
+    if (
+      item &&
+      typeof item === 'object' &&
+      typeof (item as { key?: unknown }).key === 'string' &&
+      typeof (item as { label?: unknown }).label === 'string'
+    ) {
+      return [
+        {
+          key: (item as { key: string }).key,
+          label: (item as { label: string }).label,
+        },
+      ];
+    }
+
+    return [];
+  });
 };
 
 export const getAppColor = (apps: AppColorData[], appName: string) => {
-  const idx = Math.max(0, apps.findIndex((a) => a.name === appName));
-  const app = apps.find((a) => a.name === appName);
+  const idx = Math.max(0, apps.findIndex((app) => app.name === appName));
+  const app = apps.find((item) => item.name === appName);
   const brand = app?.brand_color || FALLBACK_COLORS[idx % FALLBACK_COLORS.length];
   const text = app?.text_color || '#ffffff';
   return {
@@ -39,48 +57,32 @@ export const getAppColor = (apps: AppColorData[], appName: string) => {
 };
 
 export const useAppColors = () => {
-  const [apps, setApps] = useState<AppColorData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { enabled, userId } = useAuthQueryGate();
+  const uid = authQueryUserId(userId);
 
-  useEffect(() => {
-    let mounted = true;
-    const run = async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('apps')
-          .select('id, name, brand_color, text_color, is_active, custom_columns')
-          .order('name');
-        if (error) throw error;
-        if (!mounted) return;
-        const normalized = (data || []).map((app, index) => ({
-          id: app.id,
-          name: app.name,
-          brand_color: app.brand_color || FALLBACK_COLORS[index % FALLBACK_COLORS.length],
-          text_color: app.text_color || '#ffffff',
-          is_active: app.is_active ?? true,
-          custom_columns: Array.isArray(app.custom_columns) ? app.custom_columns : [],
-        })) as AppColorData[];
-        setApps(normalized);
-      } catch (err) {
-        logError('[useAppColors] load failed', err);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-    void run();
-    const onInvalidate = () => {
-      void run();
-    };
-    globalThis.addEventListener('app-colors:invalidate', onInvalidate);
-    return () => {
-      mounted = false;
-      globalThis.removeEventListener('app-colors:invalidate', onInvalidate);
-    };
-  }, []);
+  const query = useQuery({
+    queryKey: appColorsQueryKey(uid),
+    enabled,
+    staleTime: 30 * 60_000,
+    gcTime: 60 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    queryFn: async (): Promise<AppColorData[]> => {
+      const apps = await appService.getAll();
+      return apps.map((app, index) => ({
+        id: app.id,
+        name: app.name,
+        brand_color: app.brand_color || FALLBACK_COLORS[index % FALLBACK_COLORS.length],
+        text_color: app.text_color || '#ffffff',
+        is_active: app.is_active ?? true,
+        custom_columns: normalizeCustomColumns(app.custom_columns),
+      }));
+    },
+  });
 
-  const activeApps = useMemo(() => apps.filter((a) => a.is_active), [apps]);
-  return { apps, activeApps, loading };
+  const apps = query.data ?? [];
+  const activeApps = useMemo(() => apps.filter((app) => app.is_active), [apps]);
+  return { apps, activeApps, loading: query.isLoading };
 };
 
 export default useAppColors;
