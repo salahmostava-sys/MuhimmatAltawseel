@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { routesManifest, routeGroupTitleAr, routePermission, type RouteGroup } from './routesManifest';
+import { PERMISSION_PAGE_ENTRIES } from '@shared/constants/permissionPages';
 
 describe('routesManifest', () => {
   it('uses unique paths for sidebar entries', () => {
@@ -19,6 +20,15 @@ describe('routesManifest', () => {
     for (const r of routesManifest) {
       if (!r.sidebar || !r.permission) continue;
       expect(r.permission).toBe(routePermission(r.permission.replace(/^view_/, '')));
+    }
+  });
+
+  it('keeps permission-page entries in sync with gated routes', () => {
+    const entryKeys = new Set(PERMISSION_PAGE_ENTRIES.map((entry) => entry.key));
+
+    for (const route of routesManifest) {
+      if (!route.sidebar || !route.permission) continue;
+      expect(entryKeys.has(route.permission.replace(/^view_/, ''))).toBe(true);
     }
   });
 

@@ -80,9 +80,9 @@ export const useAppColors = () => {
     },
   });
 
-  const apps = query.data ?? [];
-  const activeApps = useMemo(() => apps.filter((app) => app.is_active), [apps]);
-  return { apps, activeApps, loading: query.isLoading };
+  const apps = query.data;
+  const activeApps = useMemo(() => (apps ?? []).filter((app) => app.is_active), [apps]);
+  return { apps: apps ?? [], activeApps, loading: query.isLoading };
 };
 
 export default useAppColors;

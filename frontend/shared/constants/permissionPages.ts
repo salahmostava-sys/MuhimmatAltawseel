@@ -5,6 +5,7 @@ export const PERMISSION_PAGE_ENTRIES: { key: string; labelAr: string; labelEn: s
   { key: 'employees', labelAr: 'الموظفون', labelEn: 'Employees' },
   { key: 'attendance', labelAr: 'الحضور والانصراف', labelEn: 'Attendance' },
   { key: 'ai_analytics', labelAr: 'تحليلات ذكية', labelEn: 'AI analytics' },
+  { key: 'finance_dashboard', labelAr: 'لوحة التحكم المالية', labelEn: 'Finance dashboard' },
   { key: 'orders', labelAr: 'الطلبات', labelEn: 'Orders' },
   { key: 'salaries', labelAr: 'الرواتب', labelEn: 'Salaries' },
   { key: 'advances', labelAr: 'السلف', labelEn: 'Advances' },

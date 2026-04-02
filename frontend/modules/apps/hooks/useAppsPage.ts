@@ -36,9 +36,9 @@ export const useAppsPage = () => {
     queryFn: async () => appsPageService.getAppsOverview(monthYear),
   });
 
-  const apps = appsQuery.data ?? [];
+  const apps = appsQuery.data;
   const selectedApp = useMemo(
-    () => apps.find((app) => app.id === selectedAppId) ?? null,
+    () => apps?.find((app) => app.id === selectedAppId) ?? null,
     [apps, selectedAppId],
   );
 
@@ -121,7 +121,7 @@ export const useAppsPage = () => {
   return {
     permissions,
     monthYear,
-    apps,
+    apps: apps ?? [],
     appsLoading: appsQuery.isLoading,
     selectedApp,
     appEmployees: employeesQuery.data ?? [],

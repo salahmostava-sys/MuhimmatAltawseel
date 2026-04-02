@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { routesManifest } from '@app/routesManifest';
 
 const mockAuthState = vi.hoisted(() => ({
   user: null as { id: string } | null,
@@ -92,6 +93,19 @@ describe('DEFAULT_PERMISSIONS role matrix', () => {
   it('operations cannot access salaries', () => {
     const permissions = DEFAULT_PERMISSIONS.operations.salaries;
     expect(permissions.can_view).toBe(false);
+  });
+
+  it('covers every gated route in the default permission matrix', () => {
+    const pageKeys = routesManifest
+      .filter((route) => route.permission)
+      .map((route) => route.permission!.replace(/^view_/, ''));
+
+    const roles = Object.keys(DEFAULT_PERMISSIONS) as AppRole[];
+    for (const role of roles) {
+      for (const pageKey of pageKeys) {
+        expect(DEFAULT_PERMISSIONS[role]).toHaveProperty(pageKey);
+      }
+    }
   });
 });
 
@@ -266,5 +280,21 @@ describe('usePermissions hook', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.permissions.can_view).toBe(true);
     expect(result.current.permissions.can_edit).toBe(true);
+  });
+
+  it('finance role can access the finance dashboard', async () => {
+    mockAuthState.user = { id: 'u1' };
+    mockAuthState.role = 'finance';
+
+    const { result } = renderHook(() => usePermissions('finance_dashboard'), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.permissions).toEqual({
+      can_view: true,
+      can_edit: true,
+      can_delete: false,
+    });
   });
 });
