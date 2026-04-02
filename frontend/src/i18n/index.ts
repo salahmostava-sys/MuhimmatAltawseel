@@ -1,4 +1,2 @@
-import '@app/i18n';
-
-export {};
+export { default } from '@app/i18n';
 
