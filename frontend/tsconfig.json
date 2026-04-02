@@ -8,6 +8,9 @@
       "@app/*": [
         "./app/*"
       ],
+      "@src/*": [
+        "./src/*"
+      ],
       "@services/*": [
         "./services/*"
       ],

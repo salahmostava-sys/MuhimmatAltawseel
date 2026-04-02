@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { differenceInDays, format, parseISO } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from '@shared/components/ui/sonner';
@@ -134,39 +134,42 @@ export const usePlatformAccountsPage = () => {
   const [historyAccount, setHistoryAccount] = useState<PlatformAccountView | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
 
-  const applyEmployeeToAccountForm = (employeeId: string | null) => {
-    if (!employeeId) {
+  const applyEmployeeToAccountForm = useCallback(
+    (employeeId: string | null) => {
+      if (!employeeId) {
+        setAccountForm((current) => ({
+          ...current,
+          employee_id: null,
+          account_username: '',
+          iqama_number: '',
+          iqama_expiry_date: '',
+        }));
+        return;
+      }
+
+      const employee = employeesFull.find((item) => item.id === employeeId);
+      if (!employee) return;
+
       setAccountForm((current) => ({
         ...current,
-        employee_id: null,
-        account_username: '',
-        iqama_number: '',
-        iqama_expiry_date: '',
+        employee_id: employeeId,
+        account_username: employee.name.trim(),
+        iqama_number: employee.national_id?.trim() || '',
+        iqama_expiry_date: employee.residency_expiry
+          ? String(employee.residency_expiry).slice(0, 10)
+          : '',
       }));
-      return;
-    }
+    },
+    [employeesFull],
+  );
 
-    const employee = employeesFull.find((item) => item.id === employeeId);
-    if (!employee) return;
-
-    setAccountForm((current) => ({
-      ...current,
-      employee_id: employeeId,
-      account_username: employee.name.trim(),
-      iqama_number: employee.national_id?.trim() || '',
-      iqama_expiry_date: employee.residency_expiry
-        ? String(employee.residency_expiry).slice(0, 10)
-        : '',
-    }));
-  };
-
-  const openAddAccount = () => {
+  const openAddAccount = useCallback(() => {
     setEditingAccount(null);
     setAccountForm(buildNewAccountForm());
     setAccountDialog(true);
-  };
+  }, []);
 
-  const openEditAccount = (account: PlatformAccountView) => {
+  const openEditAccount = useCallback((account: PlatformAccountView) => {
     setEditingAccount(account);
     setAccountForm({
       employee_id: account.employee_id ?? null,
@@ -179,7 +182,7 @@ export const usePlatformAccountsPage = () => {
       notes: account.notes ?? '',
     });
     setAccountDialog(true);
-  };
+  }, []);
 
   const accountEmployeeSelectValue = accountForm.employee_id
     ? String(accountForm.employee_id)
@@ -189,17 +192,20 @@ export const usePlatformAccountsPage = () => {
     Boolean(accountForm.employee_id) &&
     !employeesFull.some((employee) => employee.id === accountForm.employee_id);
 
-  const toggleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir((current) => (current === 'asc' ? 'desc' : 'asc'));
-      return;
-    }
+  const toggleSort = useCallback(
+    (key: SortKey) => {
+      if (sortKey === key) {
+        setSortDir((current) => (current === 'asc' ? 'desc' : 'asc'));
+        return;
+      }
 
-    setSortKey(key);
-    setSortDir('asc');
-  };
+      setSortKey(key);
+      setSortDir('asc');
+    },
+    [sortKey],
+  );
 
-  const saveAccount = async () => {
+  const saveAccount = useCallback(async () => {
     if (!accountForm.app_id) {
       toast.error(TOAST_ERROR_GENERIC, { description: 'يرجى اختيار المنصة' });
       return;
@@ -261,9 +267,9 @@ export const usePlatformAccountsPage = () => {
     toast.success(editingAccount ? TOAST_SUCCESS_EDIT : TOAST_SUCCESS_ADD);
     setAccountDialog(false);
     void refetchPageData();
-  };
+  }, [accountForm, editingAccount, refetchPageData]);
 
-  const openAssign = (account: PlatformAccountView) => {
+  const openAssign = useCallback((account: PlatformAccountView) => {
     setAssignTarget(account);
     setAssignForm({
       employee_id: '',
@@ -271,9 +277,9 @@ export const usePlatformAccountsPage = () => {
       notes: '',
     });
     setAssignDialog(true);
-  };
+  }, []);
 
-  const saveAssign = async () => {
+  const saveAssign = useCallback(async () => {
     if (!assignTarget) return;
 
     if (!assignForm.employee_id || !assignForm.start_date) {
@@ -320,9 +326,9 @@ export const usePlatformAccountsPage = () => {
     } finally {
       setSavingAssign(false);
     }
-  };
+  }, [assignForm, assignTarget, user?.id, refetchPageData]);
 
-  const openHistory = async (account: PlatformAccountView) => {
+  const openHistory = useCallback(async (account: PlatformAccountView) => {
     setHistoryAccount(account);
     setHistoryDialog(true);
     setHistoryLoading(true);
@@ -369,7 +375,7 @@ export const usePlatformAccountsPage = () => {
     } finally {
       setHistoryLoading(false);
     }
-  };
+  }, [employeesFull]);
 
   const filteredAccounts = useMemo(
     () =>
@@ -421,6 +427,12 @@ export const usePlatformAccountsPage = () => {
     [search, platformFilter, filterStatus],
   );
 
+  const clearFilters = useCallback(() => {
+    setSearch('');
+    setFilterStatus('all');
+    setPlatformFilter('all');
+  }, []);
+
   return {
     perms,
     loading,
@@ -469,10 +481,6 @@ export const usePlatformAccountsPage = () => {
     historyLoading,
     historyGroups,
     openHistory,
-    clearFilters: () => {
-      setSearch('');
-      setFilterStatus('all');
-      setPlatformFilter('all');
-    },
+    clearFilters,
   };
 };

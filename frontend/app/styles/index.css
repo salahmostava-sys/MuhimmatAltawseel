@@ -5,16 +5,22 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Typography tokens (shared across app) */
+    --font-sans: 'Segoe UI', Tahoma, 'Noto Sans Arabic', 'Droid Arabic Kufi', sans-serif;
+    --font-ar: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
+  }
+
   * {
-    font-family: 'Segoe UI', Tahoma, 'Noto Sans Arabic', 'Droid Arabic Kufi', sans-serif;
+    font-family: var(--font-sans);
   }
   
   html {
-    font-family: 'Segoe UI', Tahoma, 'Noto Sans Arabic', 'Droid Arabic Kufi', sans-serif;
+    font-family: var(--font-sans);
   }
   
   body {
-    font-family: 'Segoe UI', Tahoma, 'Noto Sans Arabic', 'Droid Arabic Kufi', sans-serif;
+    font-family: var(--font-sans);
   }
   
   :root {

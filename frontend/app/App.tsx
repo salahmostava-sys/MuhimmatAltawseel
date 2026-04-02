@@ -3,56 +3,50 @@ import { ChunkRecoveryBootstrap } from "@app/components/ChunkRecoveryBootstrap";
 import { Toaster } from "react-hot-toast";
 import { TooltipProvider } from "@shared/components/ui/tooltip";
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { AuthProvider } from "@app/providers/AuthContext";
-import { LanguageProvider } from "@app/providers/LanguageContext";
-import { ThemeProvider } from "@app/providers/ThemeContext";
-import { SystemSettingsProvider } from "@app/providers/SystemSettingsContext";
-import ProtectedRoute from "@shared/components/ProtectedRoute";
-import PageGuard from "@shared/components/PageGuard";
-import ErrorBoundary from "@shared/components/ErrorBoundary";
+import { Navigate, RouterProvider, createBrowserRouter, Outlet, useLocation } from "react-router-dom";
+import { AuthProvider } from "@src/context/AuthContext";
+import { LanguageProvider } from "@src/context/LanguageContext";
+import { ThemeProvider } from "@src/context/ThemeContext";
+import { SystemSettingsProvider } from "@src/context/SystemSettingsContext";
+import ProtectedRoute from "@src/components/ProtectedRoute";
+import PageGuard from "@src/components/PageGuard";
+import ErrorBoundary from "@src/components/ErrorBoundary";
 import { ErrorContextSync } from "@app/components/ErrorContextSync";
-import { TemporalProvider } from "@app/providers/TemporalContext";
-import DashboardLayout from "@shared/components/AppLayout";
-import AuthLayout from "@app/layout/AuthLayout";
-import Loading from "@shared/components/Loading";
+import { TemporalProvider } from "@src/context/TemporalContext";
+import DashboardLayout from "@src/layouts/DashboardLayout";
+import PublicLayout from "@src/layouts/PublicLayout";
+import Loading from "@src/components/Loading";
 import { emitAuthFailure, isStrictUnauthenticatedError } from "@shared/lib/auth/authFailureBus";
-import "@app/i18n";
+import "@src/i18n";
 
-const Login = lazy(() => import("@modules/pages/Login"));
-const ForgotPassword = lazy(() => import("@modules/pages/ForgotPassword"));
-const ResetPassword = lazy(() => import("@modules/pages/ResetPassword"));
-const Dashboard = lazy(() => import("@modules/pages/Dashboard"));
-const Employees = lazy(() => import("@modules/employees/pages/EmployeesPage"));
-const Attendance = lazy(() => import("@modules/pages/Attendance"));
-const Orders = lazy(() => import("@modules/orders/pages/OrdersPage"));
-const Salaries = lazy(() => import("@modules/salaries/pages/SalariesPage"));
-const Advances = lazy(() => import("@modules/advances/pages/AdvancesPage"));
-const FuelPage = lazy(() => import("@modules/fuel/pages/FuelPage"));
-const MaintenancePage = lazy(() => import("@modules/maintenance/pages/MaintenancePage"));
-const Apps = lazy(() => import("@modules/pages/Apps"));
-const Alerts = lazy(() => import("@modules/pages/Alerts"));
-const SettingsHub = lazy(() => import("@modules/pages/SettingsHub"));
-const ViolationResolverPage = lazy(() => import("@modules/violations/pages/ViolationResolverPage"));
-const Motorcycles = lazy(() => import("@modules/pages/Motorcycles"));
-const VehicleAssignment = lazy(() => import("@modules/pages/VehicleAssignment"));
-const EmployeeTiers = lazy(() => import("@modules/pages/EmployeeTiers"));
-const PlatformAccounts = lazy(() => import("@modules/pages/PlatformAccounts"));
-const AiAnalytics = lazy(() => import("@modules/pages/AiAnalyticsPage"));
-const FinanceDashboard = lazy(() => import("@modules/finance/pages/FinanceDashboard"));
-const ProfilePage = lazy(() => import("@modules/pages/ProfilePage"));
-const NotFound = lazy(() => import("@modules/pages/NotFound"));
+const Login = lazy(() => import("@src/pages/Login"));
+const ForgotPassword = lazy(() => import("@src/pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("@src/pages/ResetPassword"));
+const Dashboard = lazy(() => import("@src/pages/Dashboard"));
+const Employees = lazy(() => import("@src/pages/Employees"));
+const Attendance = lazy(() => import("@src/pages/Attendance"));
+const Orders = lazy(() => import("@src/pages/Orders"));
+const Salaries = lazy(() => import("@src/pages/Salaries"));
+const Advances = lazy(() => import("@src/pages/Advances"));
+const FuelPage = lazy(() => import("@src/pages/Fuel"));
+const MaintenancePage = lazy(() => import("@src/pages/Maintenance"));
+const Apps = lazy(() => import("@src/pages/Apps"));
+const Alerts = lazy(() => import("@src/pages/Alerts"));
+const SettingsHub = lazy(() => import("@src/pages/SettingsHub"));
+const ViolationResolverPage = lazy(() => import("@src/pages/ViolationResolver"));
+const Motorcycles = lazy(() => import("@src/pages/Motorcycles"));
+const VehicleAssignment = lazy(() => import("@src/pages/VehicleAssignment"));
+const EmployeeTiers = lazy(() => import("@src/pages/EmployeeTiers"));
+const PlatformAccounts = lazy(() => import("@src/pages/PlatformAccounts"));
+const AiAnalytics = lazy(() => import("@src/pages/AiAnalytics"));
+const FinanceDashboard = lazy(() => import("@src/pages/FinanceDashboard"));
+const ProfilePage = lazy(() => import("@src/pages/Profile"));
+const NotFound = lazy(() => import("@src/pages/NotFound"));
 
 const PageLoader = () => {
   const location = useLocation();
   const resetKey = `${location.pathname}${location.search}`;
   return <Loading minHeightClassName="min-h-[300px]" resetKey={resetKey} />;
-};
-
-const RootLoader = () => {
-  const location = useLocation();
-  const resetKey = `${location.pathname}${location.search}`;
-  return <Loading minHeightClassName="min-h-screen" className="bg-background" resetKey={resetKey} />;
 };
 
 const handleGlobalAuthError = (source: "query" | "mutation", error: unknown) => {
@@ -78,87 +72,125 @@ const queryClient = new QueryClient({
   },
 });
 
+const DashboardRouteShell = () => (
+  <DashboardLayout>
+    <ErrorBoundary>
+      <Suspense fallback={<PageLoader />}>
+        <Outlet />
+      </Suspense>
+    </ErrorBoundary>
+  </DashboardLayout>
+);
+
+const router = createBrowserRouter([
+  {
+    path: "/login",
+    element: (
+      <PublicLayout>
+        <Login />
+      </PublicLayout>
+    ),
+  },
+  {
+    path: "/forgot-password",
+    element: (
+      <PublicLayout>
+        <ForgotPassword />
+      </PublicLayout>
+    ),
+  },
+  {
+    path: "/reset-password",
+    element: (
+      <PublicLayout>
+        <ResetPassword />
+      </PublicLayout>
+    ),
+  },
+  { path: "/forgot", element: <Navigate to="/forgot-password" replace /> },
+  { path: "/forget-password", element: <Navigate to="/forgot-password" replace /> },
+  { path: "/reset", element: <Navigate to="/reset-password" replace /> },
+  { path: "/resetpass", element: <Navigate to="/reset-password" replace /> },
+
+  {
+    path: "/*",
+    element: (
+      <ProtectedRoute>
+        <DashboardRouteShell />
+      </ProtectedRoute>
+    ),
+    children: [
+      { index: true, element: <Dashboard /> },
+      { path: "employees", element: <PageGuard pageKey="employees"><Employees /></PageGuard> },
+      { path: "attendance", element: <PageGuard pageKey="attendance"><Attendance /></PageGuard> },
+      { path: "orders", element: <PageGuard pageKey="orders"><Orders /></PageGuard> },
+      { path: "salaries", element: <PageGuard pageKey="salaries"><Salaries /></PageGuard> },
+      { path: "advances", element: <PageGuard pageKey="advances"><Advances /></PageGuard> },
+      { path: "motorcycles", element: <PageGuard pageKey="vehicles"><Motorcycles /></PageGuard> },
+      {
+        path: "vehicle-assignment",
+        element: <PageGuard pageKey="vehicle_assignment"><VehicleAssignment /></PageGuard>,
+      },
+      { path: "fuel", element: <PageGuard pageKey="fuel"><FuelPage /></PageGuard> },
+      { path: "maintenance", element: <PageGuard pageKey="maintenance"><MaintenancePage /></PageGuard> },
+      { path: "apps", element: <PageGuard pageKey="apps"><Apps /></PageGuard> },
+      { path: "alerts", element: <PageGuard pageKey="alerts"><Alerts /></PageGuard> },
+      { path: "employee-tiers", element: <PageGuard pageKey="employee_tiers"><EmployeeTiers /></PageGuard> },
+      {
+        path: "platform-accounts",
+        element: <PageGuard pageKey="platform_accounts"><PlatformAccounts /></PageGuard>,
+      },
+      { path: "ai-analytics", element: <PageGuard pageKey="ai_analytics"><AiAnalytics /></PageGuard> },
+      {
+        path: "finance-dashboard",
+        element: <PageGuard pageKey="finance_dashboard"><FinanceDashboard /></PageGuard>,
+      },
+      { path: "profile", element: <ProfilePage /> },
+      { path: "profile-page", element: <Navigate to="/profile" replace /> },
+      { path: "settings", element: <PageGuard pageKey="settings"><SettingsHub /></PageGuard> },
+      { path: "settings/general", element: <Navigate to="/settings?tab=general" replace /> },
+      { path: "settings/schemes", element: <Navigate to="/settings?tab=schemes" replace /> },
+      { path: "settings/users", element: <Navigate to="/settings?tab=users" replace /> },
+      { path: "settings/permissions", element: <Navigate to="/settings?tab=users" replace /> },
+      { path: "settings/profile", element: <Navigate to="/profile" replace /> },
+      { path: "activity-log", element: <Navigate to="/settings?tab=activity" replace /> },
+      { path: "reports", element: <Navigate to="/settings?tab=activity" replace /> },
+      { path: "vehicles", element: <Navigate to="/motorcycles" replace /> },
+      { path: "vehicle-tracking", element: <Navigate to="/motorcycles" replace /> },
+      { path: "deductions", element: <Navigate to="/advances" replace /> },
+      {
+        path: "violation-resolver",
+        element: <PageGuard pageKey="violation_resolver"><ViolationResolverPage /></PageGuard>,
+      },
+      { path: "*", element: <NotFound /> },
+    ],
+  },
+]);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ChunkRecoveryBootstrap />
     <ThemeProvider>
       <TooltipProvider>
         <Toaster position="top-center" />
-        <BrowserRouter
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true,
-          }}
-        >
-          <AuthProvider>
-            <ErrorContextSync />
-            <LanguageProvider>
-              <TemporalProvider>
-                <SystemSettingsProvider>
-                  <ErrorBoundary>
-                    <Suspense fallback={<RootLoader />}>
-                      <Routes>
-                        <Route path="/login" element={<AuthLayout><Login /></AuthLayout>} />
-                        <Route path="/forgot-password" element={<AuthLayout><ForgotPassword /></AuthLayout>} />
-                        <Route path="/reset-password" element={<AuthLayout><ResetPassword /></AuthLayout>} />
-                        <Route path="/forgot" element={<Navigate to="/forgot-password" replace />} />
-                        <Route path="/forget-password" element={<Navigate to="/forgot-password" replace />} />
-                        <Route path="/reset" element={<Navigate to="/reset-password" replace />} />
-                        <Route path="/resetpass" element={<Navigate to="/reset-password" replace />} />
-                        <Route
-                          path="/*"
-                          element={
-                            <ProtectedRoute>
-                              <DashboardLayout>
-                                <ErrorBoundary>
-                                  <Suspense fallback={<PageLoader />}>
-                                    <Routes>
-                                      <Route path="/" element={<Dashboard />} />
-                                      <Route path="/employees" element={<PageGuard pageKey="employees"><Employees /></PageGuard>} />
-                                      <Route path="/attendance" element={<PageGuard pageKey="attendance"><Attendance /></PageGuard>} />
-                                      <Route path="/orders" element={<PageGuard pageKey="orders"><Orders /></PageGuard>} />
-                                      <Route path="/salaries" element={<PageGuard pageKey="salaries"><Salaries /></PageGuard>} />
-                                      <Route path="/advances" element={<PageGuard pageKey="advances"><Advances /></PageGuard>} />
-                                      <Route path="/motorcycles" element={<PageGuard pageKey="vehicles"><Motorcycles /></PageGuard>} />
-                                      <Route path="/vehicle-assignment" element={<PageGuard pageKey="vehicle_assignment"><VehicleAssignment /></PageGuard>} />
-                                      <Route path="/fuel" element={<PageGuard pageKey="fuel"><FuelPage /></PageGuard>} />
-                                      <Route path="/maintenance" element={<PageGuard pageKey="maintenance"><MaintenancePage /></PageGuard>} />
-                                      <Route path="/apps" element={<PageGuard pageKey="apps"><Apps /></PageGuard>} />
-                                      <Route path="/alerts" element={<PageGuard pageKey="alerts"><Alerts /></PageGuard>} />
-                                      <Route path="/employee-tiers" element={<PageGuard pageKey="employee_tiers"><EmployeeTiers /></PageGuard>} />
-                                      <Route path="/platform-accounts" element={<PageGuard pageKey="platform_accounts"><PlatformAccounts /></PageGuard>} />
-                                      <Route path="/ai-analytics" element={<PageGuard pageKey="ai_analytics"><AiAnalytics /></PageGuard>} />
-                                      <Route path="/finance-dashboard" element={<PageGuard pageKey="finance_dashboard"><FinanceDashboard /></PageGuard>} />
-                                      <Route path="/profile" element={<ProfilePage />} />
-                                      <Route path="/profile-page" element={<Navigate to="/profile" replace />} />
-                                      <Route path="/settings" element={<PageGuard pageKey="settings"><SettingsHub /></PageGuard>} />
-                                      <Route path="/settings/general" element={<Navigate to="/settings?tab=general" replace />} />
-                                      <Route path="/settings/schemes" element={<Navigate to="/settings?tab=schemes" replace />} />
-                                      <Route path="/settings/users" element={<Navigate to="/settings?tab=users" replace />} />
-                                      <Route path="/settings/permissions" element={<Navigate to="/settings?tab=users" replace />} />
-                                      <Route path="/settings/profile" element={<Navigate to="/profile" replace />} />
-                                      <Route path="/activity-log" element={<Navigate to="/settings?tab=activity" replace />} />
-                                      <Route path="/reports" element={<Navigate to="/settings?tab=activity" replace />} />
-                                      <Route path="/vehicles" element={<Navigate to="/motorcycles" replace />} />
-                                      <Route path="/vehicle-tracking" element={<Navigate to="/motorcycles" replace />} />
-                                      <Route path="/deductions" element={<Navigate to="/advances" replace />} />
-                                      <Route path="/violation-resolver" element={<PageGuard pageKey="violation_resolver"><ViolationResolverPage /></PageGuard>} />
-                                      <Route path="*" element={<NotFound />} />
-                                    </Routes>
-                                  </Suspense>
-                                </ErrorBoundary>
-                              </DashboardLayout>
-                            </ProtectedRoute>
-                          }
-                        />
-                      </Routes>
-                    </Suspense>
-                  </ErrorBoundary>
-                </SystemSettingsProvider>
-              </TemporalProvider>
-            </LanguageProvider>
-          </AuthProvider>
-        </BrowserRouter>
+        <AuthProvider>
+          <ErrorContextSync />
+          <LanguageProvider>
+            <TemporalProvider>
+              <SystemSettingsProvider>
+                <ErrorBoundary>
+                  <RouterProvider
+                    router={router}
+                    future={{
+                      v7_startTransition: true,
+                      v7_relativeSplatPath: true,
+                    }}
+                  />
+                </ErrorBoundary>
+              </SystemSettingsProvider>
+            </TemporalProvider>
+          </LanguageProvider>
+        </AuthProvider>
       </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>

@@ -1,7 +1,7 @@
 import * as Sentry from "@sentry/react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
-import "./styles/index.css";
+import "../src/styles/index.css";
 import { ErrorBoundary } from "@shared/components/ErrorBoundary";
 import { installGlobalErrorMonitoring } from "@shared/lib/logger";
 import { isLikelyStaleChunkReason, reloadOnceForStaleChunk } from "@shared/lib/chunkLoadRecovery";

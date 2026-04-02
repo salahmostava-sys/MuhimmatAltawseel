@@ -6,6 +6,7 @@ import { PlatformAccountsTable } from '@modules/platform-accounts/components/Pla
 import { PlatformAssignDialog } from '@modules/platform-accounts/components/PlatformAssignDialog';
 import { PlatformHistoryDialog } from '@modules/platform-accounts/components/PlatformHistoryDialog';
 import { usePlatformAccountsPage } from '@modules/platform-accounts/hooks/usePlatformAccountsPage';
+import { memo } from 'react';
 
 const PlatformAccounts = () => {
   const {
@@ -142,4 +143,4 @@ const PlatformAccounts = () => {
   );
 };
 
-export default PlatformAccounts;
+export default memo(PlatformAccounts);
