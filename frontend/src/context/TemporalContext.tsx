@@ -1,2 +1,2 @@
-export { TemporalProvider, useTemporal } from '@app/providers/TemporalContext';
+export { TemporalProvider } from '@app/providers/TemporalContext';
 
