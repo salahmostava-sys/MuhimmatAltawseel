@@ -108,7 +108,7 @@ export function EmployeeActionsBar({
               className="!w-auto !justify-start"
             />
 
-            <DropdownMenu>
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-1.5 h-9">
                   <Columns size={14} /> الأعمدة

@@ -82,87 +82,106 @@ const DashboardRouteShell = () => (
   </DashboardLayout>
 );
 
+const AppProvidersShell = () => (
+  <AuthProvider>
+    <ErrorContextSync />
+    <LanguageProvider>
+      <TemporalProvider>
+        <SystemSettingsProvider>
+          <Outlet />
+        </SystemSettingsProvider>
+      </TemporalProvider>
+    </LanguageProvider>
+  </AuthProvider>
+);
+
 const router = createBrowserRouter([
   {
-    path: "/login",
-    element: (
-      <PublicLayout>
-        <Login />
-      </PublicLayout>
-    ),
-  },
-  {
-    path: "/forgot-password",
-    element: (
-      <PublicLayout>
-        <ForgotPassword />
-      </PublicLayout>
-    ),
-  },
-  {
-    path: "/reset-password",
-    element: (
-      <PublicLayout>
-        <ResetPassword />
-      </PublicLayout>
-    ),
-  },
-  { path: "/forgot", element: <Navigate to="/forgot-password" replace /> },
-  { path: "/forget-password", element: <Navigate to="/forgot-password" replace /> },
-  { path: "/reset", element: <Navigate to="/reset-password" replace /> },
-  { path: "/resetpass", element: <Navigate to="/reset-password" replace /> },
-
-  {
-    path: "/*",
-    element: (
-      <ProtectedRoute>
-        <DashboardRouteShell />
-      </ProtectedRoute>
-    ),
+    path: "/",
+    element: <AppProvidersShell />,
     children: [
-      { index: true, element: <Dashboard /> },
-      { path: "employees", element: <PageGuard pageKey="employees"><Employees /></PageGuard> },
-      { path: "attendance", element: <PageGuard pageKey="attendance"><Attendance /></PageGuard> },
-      { path: "orders", element: <PageGuard pageKey="orders"><Orders /></PageGuard> },
-      { path: "salaries", element: <PageGuard pageKey="salaries"><Salaries /></PageGuard> },
-      { path: "advances", element: <PageGuard pageKey="advances"><Advances /></PageGuard> },
-      { path: "motorcycles", element: <PageGuard pageKey="vehicles"><Motorcycles /></PageGuard> },
       {
-        path: "vehicle-assignment",
-        element: <PageGuard pageKey="vehicle_assignment"><VehicleAssignment /></PageGuard>,
+        path: "login",
+        element: (
+          <PublicLayout>
+            <Login />
+          </PublicLayout>
+        ),
       },
-      { path: "fuel", element: <PageGuard pageKey="fuel"><FuelPage /></PageGuard> },
-      { path: "maintenance", element: <PageGuard pageKey="maintenance"><MaintenancePage /></PageGuard> },
-      { path: "apps", element: <PageGuard pageKey="apps"><Apps /></PageGuard> },
-      { path: "alerts", element: <PageGuard pageKey="alerts"><Alerts /></PageGuard> },
-      { path: "employee-tiers", element: <PageGuard pageKey="employee_tiers"><EmployeeTiers /></PageGuard> },
       {
-        path: "platform-accounts",
-        element: <PageGuard pageKey="platform_accounts"><PlatformAccounts /></PageGuard>,
+        path: "forgot-password",
+        element: (
+          <PublicLayout>
+            <ForgotPassword />
+          </PublicLayout>
+        ),
       },
-      { path: "ai-analytics", element: <PageGuard pageKey="ai_analytics"><AiAnalytics /></PageGuard> },
       {
-        path: "finance-dashboard",
-        element: <PageGuard pageKey="finance_dashboard"><FinanceDashboard /></PageGuard>,
+        path: "reset-password",
+        element: (
+          <PublicLayout>
+            <ResetPassword />
+          </PublicLayout>
+        ),
       },
-      { path: "profile", element: <ProfilePage /> },
-      { path: "profile-page", element: <Navigate to="/profile" replace /> },
-      { path: "settings", element: <PageGuard pageKey="settings"><SettingsHub /></PageGuard> },
-      { path: "settings/general", element: <Navigate to="/settings?tab=general" replace /> },
-      { path: "settings/schemes", element: <Navigate to="/settings?tab=schemes" replace /> },
-      { path: "settings/users", element: <Navigate to="/settings?tab=users" replace /> },
-      { path: "settings/permissions", element: <Navigate to="/settings?tab=users" replace /> },
-      { path: "settings/profile", element: <Navigate to="/profile" replace /> },
-      { path: "activity-log", element: <Navigate to="/settings?tab=activity" replace /> },
-      { path: "reports", element: <Navigate to="/settings?tab=activity" replace /> },
-      { path: "vehicles", element: <Navigate to="/motorcycles" replace /> },
-      { path: "vehicle-tracking", element: <Navigate to="/motorcycles" replace /> },
-      { path: "deductions", element: <Navigate to="/advances" replace /> },
+      { path: "forgot", element: <Navigate to="/forgot-password" replace /> },
+      { path: "forget-password", element: <Navigate to="/forgot-password" replace /> },
+      { path: "reset", element: <Navigate to="/reset-password" replace /> },
+      { path: "resetpass", element: <Navigate to="/reset-password" replace /> },
+
       {
-        path: "violation-resolver",
-        element: <PageGuard pageKey="violation_resolver"><ViolationResolverPage /></PageGuard>,
+        path: "/",
+        element: (
+          <ProtectedRoute>
+            <DashboardRouteShell />
+          </ProtectedRoute>
+        ),
+        children: [
+          { index: true, element: <Dashboard /> },
+          { path: "employees", element: <PageGuard pageKey="employees"><Employees /></PageGuard> },
+          { path: "attendance", element: <PageGuard pageKey="attendance"><Attendance /></PageGuard> },
+          { path: "orders", element: <PageGuard pageKey="orders"><Orders /></PageGuard> },
+          { path: "salaries", element: <PageGuard pageKey="salaries"><Salaries /></PageGuard> },
+          { path: "advances", element: <PageGuard pageKey="advances"><Advances /></PageGuard> },
+          { path: "motorcycles", element: <PageGuard pageKey="vehicles"><Motorcycles /></PageGuard> },
+          {
+            path: "vehicle-assignment",
+            element: <PageGuard pageKey="vehicle_assignment"><VehicleAssignment /></PageGuard>,
+          },
+          { path: "fuel", element: <PageGuard pageKey="fuel"><FuelPage /></PageGuard> },
+          { path: "maintenance", element: <PageGuard pageKey="maintenance"><MaintenancePage /></PageGuard> },
+          { path: "apps", element: <PageGuard pageKey="apps"><Apps /></PageGuard> },
+          { path: "alerts", element: <PageGuard pageKey="alerts"><Alerts /></PageGuard> },
+          { path: "employee-tiers", element: <PageGuard pageKey="employee_tiers"><EmployeeTiers /></PageGuard> },
+          {
+            path: "platform-accounts",
+            element: <PageGuard pageKey="platform_accounts"><PlatformAccounts /></PageGuard>,
+          },
+          { path: "ai-analytics", element: <PageGuard pageKey="ai_analytics"><AiAnalytics /></PageGuard> },
+          {
+            path: "finance-dashboard",
+            element: <PageGuard pageKey="finance_dashboard"><FinanceDashboard /></PageGuard>,
+          },
+          { path: "profile", element: <ProfilePage /> },
+          { path: "profile-page", element: <Navigate to="/profile" replace /> },
+          { path: "settings", element: <PageGuard pageKey="settings"><SettingsHub /></PageGuard> },
+          { path: "settings/general", element: <Navigate to="/settings?tab=general" replace /> },
+          { path: "settings/schemes", element: <Navigate to="/settings?tab=schemes" replace /> },
+          { path: "settings/users", element: <Navigate to="/settings?tab=users" replace /> },
+          { path: "settings/permissions", element: <Navigate to="/settings?tab=users" replace /> },
+          { path: "settings/profile", element: <Navigate to="/profile" replace /> },
+          { path: "activity-log", element: <Navigate to="/settings?tab=activity" replace /> },
+          { path: "reports", element: <Navigate to="/settings?tab=activity" replace /> },
+          { path: "vehicles", element: <Navigate to="/motorcycles" replace /> },
+          { path: "vehicle-tracking", element: <Navigate to="/motorcycles" replace /> },
+          { path: "deductions", element: <Navigate to="/advances" replace /> },
+          {
+            path: "violation-resolver",
+            element: <PageGuard pageKey="violation_resolver"><ViolationResolverPage /></PageGuard>,
+          },
+          { path: "*", element: <NotFound /> },
+        ],
       },
-      { path: "*", element: <NotFound /> },
     ],
   },
 ]);
@@ -173,24 +192,15 @@ const App = () => (
     <ThemeProvider>
       <TooltipProvider>
         <Toaster position="top-center" />
-        <AuthProvider>
-          <ErrorContextSync />
-          <LanguageProvider>
-            <TemporalProvider>
-              <SystemSettingsProvider>
-                <ErrorBoundary>
-                  <RouterProvider
-                    router={router}
-                    future={{
-                      v7_startTransition: true,
-                      v7_relativeSplatPath: true,
-                    }}
-                  />
-                </ErrorBoundary>
-              </SystemSettingsProvider>
-            </TemporalProvider>
-          </LanguageProvider>
-        </AuthProvider>
+        <ErrorBoundary>
+          <RouterProvider
+            router={router}
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true,
+            }}
+          />
+        </ErrorBoundary>
       </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>

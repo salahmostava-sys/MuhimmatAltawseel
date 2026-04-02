@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { FileActionsMenu } from './FileActionsMenu';
 
 /** 5MB import limit */
@@ -34,12 +35,15 @@ export function DataTableActions({
   className,
   labels = {},
 }: DataTableActionsProps) {
-  const L = {
-    export: labels.export ?? 'تصدير Excel',
-    template: labels.template ?? 'تحميل قالب الاستيراد',
-    import: labels.import ?? 'استيراد Excel',
-    print: labels.print ?? 'طباعة الجدول',
-  };
+  const L = useMemo(
+    () => ({
+      export: labels.export ?? 'تصدير Excel',
+      template: labels.template ?? 'تحميل قالب الاستيراد',
+      import: labels.import ?? 'استيراد Excel',
+      print: labels.print ?? 'طباعة الجدول',
+    }),
+    [labels.export, labels.template, labels.import, labels.print],
+  );
 
   return (
     <FileActionsMenu
