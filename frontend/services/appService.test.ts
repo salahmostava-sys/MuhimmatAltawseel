@@ -5,7 +5,9 @@ const { tableResults, fromMock } = vi.hoisted(() => {
   const tableResultsLocal: Record<string, MockQueryResult> = {};
   return {
     tableResults: tableResultsLocal,
-    fromMock: vi.fn((table: string) => createQueryBuilder(tableResultsLocal[table] ?? { data: null, error: null })),
+    fromMock: vi.fn((table: string) =>
+      createQueryBuilder(tableResultsLocal[table] ?? { data: null, error: null }),
+    ),
   };
 });
 
@@ -14,6 +16,10 @@ vi.mock('@services/supabase/client', () => ({
 }));
 
 vi.mock('@services/serviceError', () => ({
+  handleSupabaseError: vi.fn((error: unknown, context: string) => {
+    const message = error instanceof Error ? error.message : 'service error';
+    throw new Error(`${context}: ${message}`);
+  }),
   toServiceError: vi.fn((error: unknown, context: string) => {
     const message = error instanceof Error ? error.message : 'service error';
     return new Error(`${context}: ${message}`);
@@ -25,7 +31,7 @@ import { appService } from './appService';
 describe('appService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(tableResults).forEach((k) => delete tableResults[k]);
+    Object.keys(tableResults).forEach((key) => delete tableResults[key]);
   });
 
   it('getAll returns apps on success', async () => {
@@ -63,8 +69,8 @@ describe('appService', () => {
       count: 7,
     };
 
-    const n = await appService.countActiveEmployeeApps('a1');
-    expect(n).toBe(7);
+    const count = await appService.countActiveEmployeeApps('a1');
+    expect(count).toBe(7);
     expect(fromMock).toHaveBeenCalledWith('employee_apps');
   });
 
