@@ -283,36 +283,16 @@ export const usePlatformAccountsPage = () => {
 
     setSavingAssign(true);
 
-    const today = format(new Date(), 'yyyy-MM-dd');
     const monthYear = assignForm.start_date.slice(0, 7);
 
-    const openAssignments = await accountAssignmentService.getOpenAssignmentIdsByAccount(assignTarget.id);
-    if (openAssignments.length > 0) {
-      await accountAssignmentService.closeAssignmentsByIds(
-        (openAssignments as Array<{ id: string }>).map((assignment) => assignment.id),
-        today,
-      );
-    }
-
     try {
-      await accountAssignmentService.createAssignment({
+      await accountAssignmentService.assignPlatformAccount({
         account_id: assignTarget.id,
         employee_id: assignForm.employee_id,
         start_date: assignForm.start_date,
-        end_date: null,
-        month_year: monthYear,
         notes: assignForm.notes.trim() || null,
         created_by: user?.id ?? null,
       });
-    } catch (error: unknown) {
-      setSavingAssign(false);
-      const message = error instanceof Error ? error.message : TOAST_ERROR_GENERIC;
-      toast.error(TOAST_ERROR_GENERIC, { description: message });
-      return;
-    }
-
-    try {
-      await platformAccountService.syncAccountEmployee(assignTarget.id, assignForm.employee_id);
     } catch (error: unknown) {
       setSavingAssign(false);
       const message = error instanceof Error ? error.message : TOAST_ERROR_GENERIC;
