@@ -20,7 +20,7 @@ vi.mock('@services/permissionsService', () => ({
   permissionsService: permissionsServiceMock,
 }));
 
-import { DEFAULT_PERMISSIONS, usePermissions } from './usePermissions';
+import { DEFAULT_PERMISSIONS, usePermissions, type PagePermission } from './usePermissions';
 
 const createWrapper = () => {
   const queryClient = new QueryClient({
@@ -101,6 +101,36 @@ describe('usePermissions hook', () => {
     mockAuthState.role = null;
     vi.clearAllMocks();
     permissionsServiceMock.getUserPermission.mockResolvedValue(null);
+  });
+
+  it('deny-all مؤقتاً أثناء تحميل صلاحيات الصفحة', async () => {
+    const createDeferred = <T,>() => {
+      let resolve!: (value: T) => void;
+      const promise = new Promise<T>((res) => {
+        resolve = res;
+      });
+      return { promise, resolve };
+    };
+
+    const deferred = createDeferred<PagePermission | null>();
+
+    mockAuthState.user = { id: 'u1' };
+    mockAuthState.role = 'admin';
+    permissionsServiceMock.getUserPermission.mockReturnValue(deferred.promise);
+
+    const { result } = renderHook(() => usePermissions('employees'), { wrapper: createWrapper() });
+
+    await waitFor(() => expect(result.current.loading).toBe(true));
+    expect(result.current.permissions).toEqual({
+      can_view: false,
+      can_edit: false,
+      can_delete: false,
+    });
+
+    deferred.resolve(null);
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.permissions.can_edit).toBe(true);
   });
 
   it('denies all when no user', async () => {

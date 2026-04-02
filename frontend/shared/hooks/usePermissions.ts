@@ -130,8 +130,17 @@ export const usePermissions = (pageKey: string) => {
   const fallbackPermission =
     role != null ? (DEFAULT_PERMISSIONS[role as AppRole] || DEFAULT_PERMISSIONS.viewer)[pageKey] || DENY_ALL : DENY_ALL;
 
-  const permissions = !user || !role ? DENY_ALL : query.data || fallbackPermission;
-  const loading = Boolean(user && role) ? query.isLoading : false;
+  // Hardening: while permissions are loading, do NOT render edit buttons based on
+  // a permissive fallback. Default to deny-all until the query resolves.
+  const permissions = !user || !role
+    ? DENY_ALL
+    : query.isLoading
+      ? DENY_ALL
+      : query.isError
+        ? DENY_ALL
+        : query.data ?? fallbackPermission;
+
+  const loading = Boolean(user && role) && query.isLoading;
 
   return { permissions, loading, isAdmin: role === 'admin' };
 };

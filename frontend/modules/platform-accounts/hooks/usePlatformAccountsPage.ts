@@ -293,29 +293,33 @@ export const usePlatformAccountsPage = () => {
         notes: assignForm.notes.trim() || null,
         created_by: user?.id ?? null,
       });
+      // Audit is non-blocking for the core operation.
+      try {
+        await auditService.logAdminAction({
+          action: 'platform_account_assignments.create',
+          table_name: 'platform_accounts',
+          record_id: assignTarget.id,
+          meta: {
+            employee_id: assignForm.employee_id,
+            start_date: assignForm.start_date,
+            month_year: monthYear,
+            notes: assignForm.notes.trim() || null,
+          },
+        });
+      } catch (auditError: unknown) {
+        console.error('Audit failed for platform account assignment (create)', auditError);
+      }
+
+      toast.success(TOAST_SUCCESS_ACTION);
+      setAssignDialog(false);
+      void refetchPageData();
     } catch (error: unknown) {
-      setSavingAssign(false);
       const message = error instanceof Error ? error.message : TOAST_ERROR_GENERIC;
       toast.error(TOAST_ERROR_GENERIC, { description: message });
       return;
+    } finally {
+      setSavingAssign(false);
     }
-
-    await auditService.logAdminAction({
-      action: 'platform_account_assignments.create',
-      table_name: 'platform_accounts',
-      record_id: assignTarget.id,
-      meta: {
-        employee_id: assignForm.employee_id,
-        start_date: assignForm.start_date,
-        month_year: monthYear,
-        notes: assignForm.notes.trim() || null,
-      },
-    });
-
-    setSavingAssign(false);
-    toast.success(TOAST_SUCCESS_ACTION);
-    setAssignDialog(false);
-    void refetchPageData();
   };
 
   const openHistory = async (account: PlatformAccountView) => {
@@ -323,31 +327,48 @@ export const usePlatformAccountsPage = () => {
     setHistoryDialog(true);
     setHistoryLoading(true);
 
-    const data = await accountAssignmentService.getHistoryByAccountId(account.id);
-    await auditService.logAdminAction({
-      action: 'platform_account_assignments.view_history',
-      table_name: 'platform_accounts',
-      record_id: account.id,
-      meta: { count: Array.isArray(data) ? data.length : 0 },
-    });
+    try {
+      const data = await accountAssignmentService.getHistoryByAccountId(account.id);
+      // Audit is non-blocking for the core operation.
+      try {
+        await auditService.logAdminAction({
+          action: 'platform_account_assignments.view_history',
+          table_name: 'platform_accounts',
+          record_id: account.id,
+          meta: { count: Array.isArray(data) ? data.length : 0 },
+        });
+      } catch (auditError: unknown) {
+        console.error('Audit failed for platform account assignment (view_history)', auditError);
+      }
 
-    const employeeMap = Object.fromEntries(employees.map((employee) => [employee.id, employee.name]));
-    const assignments: AssignmentWithName[] = ((data ?? []) as Array<{
-      id: string;
-      account_id: string;
-      employee_id: string;
-      start_date: string;
-      end_date: string | null;
-      month_year: string;
-      notes: string | null;
-      created_at: string;
-    }>).map((row) => ({
-      ...row,
-      employee_name: employeeMap[row.employee_id] ?? 'غير معروف',
-    }));
+      // التاريخ يجب أن يعرض أسماء الموظفين من القائمة الكاملة،
+      // لأن قائمة `employees` قد تكون مفلترة حسب نشاط/ظهور الموظفين في الشهر.
+      const employeeMap = Object.fromEntries(
+        employeesFull.map((employee) => [employee.id, employee.name]),
+      );
+      const assignments: AssignmentWithName[] = ((data ?? []) as Array<{
+        id: string;
+        account_id: string;
+        employee_id: string;
+        start_date: string;
+        end_date: string | null;
+        month_year: string;
+        notes: string | null;
+        created_at: string;
+      }>).map((row) => ({
+        ...row,
+        employee_name: employeeMap[row.employee_id] ?? 'غير معروف',
+      }));
 
-    setHistoryAccount((current) => (current ? { ...current, assignments } : null));
-    setHistoryLoading(false);
+      setHistoryAccount((current) => (current ? { ...current, assignments } : null));
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : TOAST_ERROR_GENERIC;
+      toast.error(TOAST_ERROR_GENERIC, { description: message });
+      // Keep dialog context (account title) but show empty history groups.
+      setHistoryAccount(account);
+    } finally {
+      setHistoryLoading(false);
+    }
   };
 
   const filteredAccounts = useMemo(
