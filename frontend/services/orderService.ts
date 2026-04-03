@@ -242,7 +242,7 @@ export const orderService = {
 
   bulkUpsert: async (rows: { employee_id: string; app_id: string; date: string; orders_count: number }[], chunkSize = 200) => {
     let saved = 0;
-    const failed: string[] = [];
+    const failed: { row: typeof rows[0]; error: string }[] = [];
     
     for (let i = 0; i < rows.length; i += chunkSize) {
       const chunk = rows.slice(i, i + chunkSize);
@@ -252,23 +252,33 @@ export const orderService = {
           .upsert(chunk, { onConflict: 'employee_id,app_id,date' });
         
         if (error) {
-          // Log the error but continue with other chunks
-          console.error('Chunk upsert error:', error);
+          console.error('❌ Chunk upsert error:', {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+            chunkSize: chunk.length,
+            firstRow: chunk[0]
+          });
           chunk.forEach((row) => {
-            failed.push(`${row.employee_id}::${row.app_id}::${row.date}`);
+            failed.push({ row, error: error.message });
           });
         } else {
           saved += chunk.length;
         }
       } catch (err) {
-        console.error('Chunk upsert exception:', err);
+        console.error('❌ Chunk upsert exception:', err);
         chunk.forEach((row) => {
-          failed.push(`${row.employee_id}::${row.app_id}::${row.date}`);
+          failed.push({ row, error: String(err) });
         });
       }
     }
     
-    return { saved, failed };
+    if (failed.length > 0) {
+      console.warn(`⚠️ Failed to save ${failed.length} orders:`, failed.slice(0, 5));
+    }
+    
+    return { saved, failed: failed.map(f => `${f.row.employee_id}::${f.row.app_id}::${f.row.date}`) };
   },
 
   getBaseEmployees: async () => {
