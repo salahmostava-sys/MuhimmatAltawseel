@@ -414,6 +414,294 @@ export const dashboardService = {
     };
   },
 
+  /**
+   * Get comprehensive dashboard statistics from all modules
+   */
+  getComprehensiveStats: async (monthYear: string) => {
+    const start = `${monthYear}-01`;
+    const end = format(endOfMonth(new Date(`${monthYear}-01`)), 'yyyy-MM-dd');
+    const today = format(new Date(), 'yyyy-MM-dd');
+
+    const [
+      employeesRes,
+      attendanceRes,
+      ordersRes,
+      fuelRes,
+      maintenanceRes,
+      violationsRes,
+      advancesRes,
+      salariesRes,
+      vehiclesRes,
+      alertsRes,
+      appsRes,
+      tiersRes,
+      platformAccountsRes,
+      sparePartsRes,
+    ] = await Promise.all([
+      // Employees
+      supabase.from('employees').select('id, status, sponsorship_status, probation_end_date, city, license_status, tier_id').eq('status', 'active'),
+      // Attendance today
+      supabase.from('attendance').select('status').eq('date', today),
+      // Orders this month
+      supabase.from('daily_orders').select('orders_count, employee_id, app_id').gte('date', start).lte('date', end),
+      // Fuel this month
+      supabase.from('fuel_records').select('cost, liters, vehicle_id').gte('date', start).lte('date', end),
+      // Maintenance this month
+      supabase.from('maintenance_records').select('cost, status, vehicle_id').gte('date', start).lte('date', end),
+      // Violations (pending)
+      supabase.from('violations').select('amount, status, employee_id').eq('status', 'pending'),
+      // Advances (active)
+      supabase.from('advances').select('amount, remaining_amount, employee_id, status').eq('status', 'active'),
+      // Salaries this month
+      supabase.from('salary_records').select('net_salary, base_salary, is_approved').eq('month_year', monthYear),
+      // Vehicles
+      supabase.from('vehicles').select('id, status, plate_number'),
+      // Alerts
+      supabase.from('alerts').select('id, severity, is_resolved, type'),
+      // Apps
+      supabase.from('apps').select('id, name, is_active'),
+      // Tiers
+      supabase.from('tiers').select('id, name'),
+      // Platform accounts
+      supabase.from('platform_accounts').select('id, status, employee_id'),
+      // Spare parts
+      supabase.from('spare_parts_inventory').select('quantity, min_quantity'),
+    ]);
+
+    // Process employees
+    const employees = employeesRes.data ?? [];
+    const activeEmployees = employees.length;
+    const employeesWithLicense = employees.filter(e => e.license_status === 'has_license').length;
+    const employeesAppliedLicense = employees.filter(e => e.license_status === 'applied').length;
+    const employeesNoLicense = employees.filter(e => !e.license_status || e.license_status === 'no_license').length;
+    const employeesByCity = {
+      makkah: employees.filter(e => e.city === 'makkah' || e.city === 'مكة').length,
+      jeddah: employees.filter(e => e.city === 'jeddah' || e.city === 'جدة').length,
+      other: employees.filter(e => e.city && e.city !== 'makkah' && e.city !== 'مكة' && e.city !== 'jeddah' && e.city !== 'جدة').length,
+    };
+
+    // Process attendance
+    const attendance = attendanceRes.data ?? [];
+    const presentToday = attendance.filter(a => a.status === 'present').length;
+    const absentToday = attendance.filter(a => a.status === 'absent').length;
+    const lateToday = attendance.filter(a => a.status === 'late').length;
+    const leaveToday = attendance.filter(a => a.status === 'leave').length;
+    const sickToday = attendance.filter(a => a.status === 'sick').length;
+    const attendanceRate = activeEmployees > 0 ? Math.round((presentToday / activeEmployees) * 100) : 0;
+
+    // Process orders
+    const orders = ordersRes.data ?? [];
+    const totalOrders = orders.reduce((s, o) => s + (o.orders_count ?? 0), 0);
+    const uniqueRidersWithOrders = new Set(orders.map(o => o.employee_id)).size;
+    const ordersByApp = orders.reduce((acc, o) => {
+      acc[o.app_id] = (acc[o.app_id] || 0) + (o.orders_count ?? 0);
+      return acc;
+    }, {} as Record<string, number>);
+    const avgOrdersPerRider = uniqueRidersWithOrders > 0 ? Math.round(totalOrders / uniqueRidersWithOrders) : 0;
+
+    // Process fuel
+    const fuel = fuelRes.data ?? [];
+    const fuelCost = Math.round(fuel.reduce((s, f) => s + (f.cost ?? 0), 0));
+    const fuelLiters = Math.round(fuel.reduce((s, f) => s + (f.liters ?? 0), 0));
+    const uniqueVehiclesRefueled = new Set(fuel.map(f => f.vehicle_id)).size;
+    const avgFuelPerVehicle = uniqueVehiclesRefueled > 0 ? Math.round(fuelCost / uniqueVehiclesRefueled) : 0;
+
+    // Process maintenance
+    const maintenance = maintenanceRes.data ?? [];
+    const maintenanceCost = Math.round(maintenance.reduce((s, m) => s + (m.cost ?? 0), 0));
+    const maintenanceCompleted = maintenance.filter(m => m.status === 'completed').length;
+    const maintenancePending = maintenance.filter(m => m.status === 'pending' || m.status === 'in_progress').length;
+    const uniqueVehiclesMaintained = new Set(maintenance.map(m => m.vehicle_id)).size;
+
+    // Process violations
+    const violations = violationsRes.data ?? [];
+    const violationsCount = violations.length;
+    const violationsCost = Math.round(violations.reduce((s, v) => s + (v.amount ?? 0), 0));
+    const uniqueEmployeesWithViolations = new Set(violations.map(v => v.employee_id)).size;
+
+    // Process advances
+    const advances = advancesRes.data ?? [];
+    const advancesCount = advances.length;
+    const advancesTotalAmount = Math.round(advances.reduce((s, a) => s + (a.amount ?? 0), 0));
+    const advancesRemainingAmount = Math.round(advances.reduce((s, a) => s + (a.remaining_amount ?? 0), 0));
+    const uniqueEmployeesWithAdvances = new Set(advances.map(a => a.employee_id)).size;
+
+    // Process salaries
+    const salaries = salariesRes.data ?? [];
+    const salariesApproved = salaries.filter(s => s.is_approved).length;
+    const salariesPending = salaries.filter(s => !s.is_approved).length;
+    const totalSalariesNet = Math.round(salaries.filter(s => s.is_approved).reduce((s, sal) => s + (sal.net_salary ?? 0), 0));
+    const totalSalariesBase = Math.round(salaries.reduce((s, sal) => s + (sal.base_salary ?? 0), 0));
+    const avgSalary = salariesApproved > 0 ? Math.round(totalSalariesNet / salariesApproved) : 0;
+
+    // Process vehicles
+    const vehicles = vehiclesRes.data ?? [];
+    const vehiclesActive = vehicles.filter(v => v.status === 'active').length;
+    const vehiclesInactive = vehicles.filter(v => v.status === 'inactive').length;
+    const vehiclesMaintenance = vehicles.filter(v => v.status === 'maintenance').length;
+    const totalVehicles = vehicles.length;
+
+    // Process alerts
+    const alerts = alertsRes.data ?? [];
+    const alertsUnresolved = alerts.filter(a => !a.is_resolved).length;
+    const alertsResolved = alerts.filter(a => a.is_resolved).length;
+    const alertsCritical = alerts.filter(a => !a.is_resolved && a.severity === 'critical').length;
+    const alertsHigh = alerts.filter(a => !a.is_resolved && a.severity === 'high').length;
+    const alertsMedium = alerts.filter(a => !a.is_resolved && a.severity === 'medium').length;
+
+    // Process apps
+    const apps = appsRes.data ?? [];
+    const appsActive = apps.filter(a => a.is_active).length;
+    const appsInactive = apps.filter(a => !a.is_active).length;
+
+    // Process tiers
+    const tiers = tiersRes.data ?? [];
+    const tiersCount = tiers.length;
+
+    // Process platform accounts
+    const platformAccounts = platformAccountsRes.data ?? [];
+    const platformAccountsActive = platformAccounts.filter(p => p.status === 'active').length;
+    const platformAccountsInactive = platformAccounts.filter(p => p.status === 'inactive').length;
+    const uniqueEmployeesWithAccounts = new Set(platformAccounts.map(p => p.employee_id)).size;
+
+    // Process spare parts
+    const spareParts = sparePartsRes.data ?? [];
+    const sparePartsLowStock = spareParts.filter(sp => sp.quantity <= (sp.min_quantity || 0)).length;
+    const sparePartsTotal = spareParts.length;
+
+    return {
+      // Employees
+      employees: {
+        total: activeEmployees,
+        withLicense: employeesWithLicense,
+        appliedLicense: employeesAppliedLicense,
+        noLicense: employeesNoLicense,
+        byCity: employeesByCity,
+      },
+      // Attendance
+      attendance: {
+        present: presentToday,
+        absent: absentToday,
+        late: lateToday,
+        leave: leaveToday,
+        sick: sickToday,
+        rate: attendanceRate,
+      },
+      // Orders
+      orders: {
+        total: totalOrders,
+        uniqueRiders: uniqueRidersWithOrders,
+        avgPerRider: avgOrdersPerRider,
+        byApp: ordersByApp,
+      },
+      // Fuel
+      fuel: {
+        cost: fuelCost,
+        liters: fuelLiters,
+        vehiclesRefueled: uniqueVehiclesRefueled,
+        avgPerVehicle: avgFuelPerVehicle,
+      },
+      // Maintenance
+      maintenance: {
+        cost: maintenanceCost,
+        completed: maintenanceCompleted,
+        pending: maintenancePending,
+        vehiclesMaintained: uniqueVehiclesMaintained,
+      },
+      // Violations
+      violations: {
+        count: violationsCount,
+        cost: violationsCost,
+        employeesWithViolations: uniqueEmployeesWithViolations,
+      },
+      // Advances
+      advances: {
+        count: advancesCount,
+        totalAmount: advancesTotalAmount,
+        remainingAmount: advancesRemainingAmount,
+        employeesWithAdvances: uniqueEmployeesWithAdvances,
+      },
+      // Salaries
+      salaries: {
+        approved: salariesApproved,
+        pending: salariesPending,
+        totalNet: totalSalariesNet,
+        totalBase: totalSalariesBase,
+        avgSalary,
+      },
+      // Vehicles
+      vehicles: {
+        total: totalVehicles,
+        active: vehiclesActive,
+        inactive: vehiclesInactive,
+        maintenance: vehiclesMaintenance,
+      },
+      // Alerts
+      alerts: {
+        unresolved: alertsUnresolved,
+        resolved: alertsResolved,
+        critical: alertsCritical,
+        high: alertsHigh,
+        medium: alertsMedium,
+      },
+      // Apps
+      apps: {
+        active: appsActive,
+        inactive: appsInactive,
+        total: apps.length,
+      },
+      // Tiers
+      tiers: {
+        count: tiersCount,
+      },
+      // Platform accounts
+      platformAccounts: {
+        active: platformAccountsActive,
+        inactive: platformAccountsInactive,
+        employeesWithAccounts: uniqueEmployeesWithAccounts,
+      },
+      // Spare parts
+      spareParts: {
+        lowStock: sparePartsLowStock,
+        total: sparePartsTotal,
+      },
+    };
+  },
+
+  /**
+   * Get additional financial and operational metrics for the month
+   */
+  getAdditionalMetrics: async (monthYear: string) => {
+    const start = `${monthYear}-01`;
+    const end = format(endOfMonth(new Date(`${monthYear}-01`)), 'yyyy-MM-dd');
+
+    const [fuelRes, maintenanceRes, violationsRes, advancesRes, salariesRes] = await Promise.all([
+      supabase.from('fuel_records').select('cost, liters').gte('date', start).lte('date', end),
+      supabase.from('maintenance_records').select('cost').gte('date', start).lte('date', end),
+      supabase.from('violations').select('amount').gte('date', start).lte('date', end).eq('status', 'pending'),
+      supabase.from('advances').select('amount').eq('status', 'active'),
+      supabase.from('salary_records').select('net_salary').eq('month_year', monthYear).eq('is_approved', true),
+    ]);
+
+    const fuelCost = (fuelRes.data ?? []).reduce((s, r) => s + (r.cost ?? 0), 0);
+    const fuelLiters = (fuelRes.data ?? []).reduce((s, r) => s + (r.liters ?? 0), 0);
+    const maintenanceCost = (maintenanceRes.data ?? []).reduce((s, r) => s + (r.cost ?? 0), 0);
+    const violationsCount = violationsRes.data?.length ?? 0;
+    const violationsCost = (violationsRes.data ?? []).reduce((s, r) => s + (r.amount ?? 0), 0);
+    const pendingAdvances = (advancesRes.data ?? []).reduce((s, r) => s + (r.amount ?? 0), 0);
+    const totalSalaries = (salariesRes.data ?? []).reduce((s, r) => s + (r.net_salary ?? 0), 0);
+
+    return {
+      fuelCost: Math.round(fuelCost),
+      fuelLiters: Math.round(fuelLiters),
+      maintenanceCost: Math.round(maintenanceCost),
+      violationsCount,
+      violationsCost: Math.round(violationsCost),
+      pendingAdvances: Math.round(pendingAdvances),
+      totalSalaries: Math.round(totalSalaries),
+    };
+  },
+
   /** All KPIs in one parallel fetch */
   getKPIs: async (monthYear: string, today: string) => {
     const [empRes, attRes, advRes, salRes] = await Promise.all([

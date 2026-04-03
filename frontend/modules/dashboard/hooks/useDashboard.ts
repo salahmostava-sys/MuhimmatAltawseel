@@ -25,6 +25,13 @@ type Kpis = {
   makkahCount: number;
   jeddahCount: number;
   estRevenueTotal: number;
+  fuelCost?: number;
+  fuelLiters?: number;
+  maintenanceCost?: number;
+  violationsCount?: number;
+  violationsCost?: number;
+  pendingAdvances?: number;
+  totalSalaries?: number;
 };
 
 export type EmpDetail = { 
@@ -191,6 +198,6 @@ export function useDashboard(params: {
     loading, isError, error, refetch, isFetching,
     kpis, orderGrowth, employeeCounts, ordersByApp, ordersByCity, attendanceWeek,
     topNInput, setTopNInput, handleTopNBlur, topRidersOverall, maxOrderOverall, topRidersPerApp,
-    bottomRidersPerApp, atRiskRiders, supervisorPerformance,
+    bottomRidersPerApp, atRiskRiders, supervisorPerformance, data,
   };
 }

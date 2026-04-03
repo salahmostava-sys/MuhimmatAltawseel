@@ -1,4 +1,4 @@
-import { Users, UserCheck, Package, Award, Bike, Bell, ArrowUpRight, ArrowDownRight, type LucideIcon } from 'lucide-react';
+import { Users, UserCheck, Package, Award, Bike, Bell, ArrowUpRight, ArrowDownRight, Fuel, Wrench, DollarSign, AlertTriangle, type LucideIcon } from 'lucide-react';
 
 type StatsCardsProps = Readonly<{
   loading: boolean;
@@ -11,6 +11,13 @@ type StatsCardsProps = Readonly<{
     totalOrders: number;
     activeVehicles: number;
     activeAlerts: number;
+    fuelCost?: number;
+    fuelLiters?: number;
+    maintenanceCost?: number;
+    violationsCount?: number;
+    violationsCost?: number;
+    pendingAdvances?: number;
+    totalSalaries?: number;
   };
   orderGrowth: number;
 }>;
@@ -52,14 +59,63 @@ export function StatsCards({ loading, kpis, orderGrowth }: StatsCardsProps) {
     kpis.totalMonthTarget > 0
       ? `هذا الشهر · ${kpis.targetAchievementPct}% من هدف المنصات (${kpis.totalMonthTarget.toLocaleString()})`
       : 'هذا الشهر';
+  
+  const hasFuel = kpis.fuelCost !== undefined || kpis.fuelLiters !== undefined;
+  const hasMaintenance = kpis.maintenanceCost !== undefined;
+  const hasViolations = kpis.violationsCount !== undefined || kpis.violationsCost !== undefined;
+  const hasFinance = kpis.pendingAdvances !== undefined || kpis.totalSalaries !== undefined;
+  
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-6 gap-3">
-      <StatCard label="المناديب النشطون" value={kpis.activeRiders} icon={Users} sub="مرتبطون بمنصة توصيل" loading={loading} />
-      <StatCard label="حاضرون اليوم" value={kpis.presentToday} icon={UserCheck} sub={`${kpis.absentToday} غائب`} loading={loading} />
-      <StatCard label="إجمالي طلبات الشهر" value={kpis.totalOrders.toLocaleString()} icon={Package} trend={{ value: orderGrowth, positive: orderGrowth >= 0 }} sub={ordersSub} loading={loading} />
-      <StatCard label="متوسط طلبات/مندوب" value={avgPerRider} icon={Award} sub="على المناديب المرتبطين بالمنصات" loading={loading} />
-      <StatCard label="المركبات النشطة" value={kpis.activeVehicles} icon={Bike} loading={loading} />
-      <StatCard label="التنبيهات" value={kpis.activeAlerts} icon={Bell} sub="غير محلولة" loading={loading} />
-    </div>
+    <>
+      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-6 gap-3">
+        <StatCard label="المناديب النشطون" value={kpis.activeRiders} icon={Users} sub="مرتبطون بمنصة توصيل" loading={loading} />
+        <StatCard label="حاضرون اليوم" value={kpis.presentToday} icon={UserCheck} sub={`${kpis.absentToday} غائب`} loading={loading} />
+        <StatCard label="إجمالي طلبات الشهر" value={kpis.totalOrders.toLocaleString()} icon={Package} trend={{ value: orderGrowth, positive: orderGrowth >= 0 }} sub={ordersSub} loading={loading} />
+        <StatCard label="متوسط طلبات/مندوب" value={avgPerRider} icon={Award} sub="على المناديب المرتبطين بالمنصات" loading={loading} />
+        <StatCard label="المركبات النشطة" value={kpis.activeVehicles} icon={Bike} loading={loading} />
+        <StatCard label="التنبيهات" value={kpis.activeAlerts} icon={Bell} sub="غير محلولة" loading={loading} />
+      </div>
+      
+      {(hasFuel || hasMaintenance || hasViolations || hasFinance) && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+          {hasFuel && (
+            <StatCard 
+              label="استهلاك الوقود" 
+              value={`${(kpis.fuelCost || 0).toLocaleString()} ر.س`} 
+              icon={Fuel} 
+              sub={kpis.fuelLiters ? `${kpis.fuelLiters.toLocaleString()} لتر` : 'هذا الشهر'} 
+              loading={loading} 
+            />
+          )}
+          {hasMaintenance && (
+            <StatCard 
+              label="تكلفة الصيانة" 
+              value={`${(kpis.maintenanceCost || 0).toLocaleString()} ر.س`} 
+              icon={Wrench} 
+              sub="هذا الشهر" 
+              loading={loading} 
+            />
+          )}
+          {hasViolations && (
+            <StatCard 
+              label="المخالفات" 
+              value={kpis.violationsCount || 0} 
+              icon={AlertTriangle} 
+              sub={kpis.violationsCost ? `${kpis.violationsCost.toLocaleString()} ر.س` : 'هذا الشهر'} 
+              loading={loading} 
+            />
+          )}
+          {hasFinance && (
+            <StatCard 
+              label="السلف المعلقة" 
+              value={`${(kpis.pendingAdvances || 0).toLocaleString()} ر.س`} 
+              icon={DollarSign} 
+              sub={kpis.totalSalaries ? `رواتب: ${kpis.totalSalaries.toLocaleString()} ر.س` : undefined} 
+              loading={loading} 
+            />
+          )}
+        </div>
+      )}
+    </>
   );
 }
