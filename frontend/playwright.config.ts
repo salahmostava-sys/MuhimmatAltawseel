@@ -11,8 +11,7 @@ dotenv.config({ path: path.resolve(__dirname, '.env'), quiet: true });
  * قيم احتياطية حتى يُحمَّل التطبيق في CI أو بدون `.env.local`؛ للاختبار الحقيقي ضع مشروعك في `.env.local`.
  */
 const E2E_FALLBACK_SUPABASE_URL = 'https://placeholder.supabase.co';
-const E2E_FALLBACK_SUPABASE_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+const E2E_FALLBACK_SUPABASE_KEY = 'placeholder-key-for-ci-only';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL?.trim() || E2E_FALLBACK_SUPABASE_URL;
 const supabaseKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() || E2E_FALLBACK_SUPABASE_KEY;
