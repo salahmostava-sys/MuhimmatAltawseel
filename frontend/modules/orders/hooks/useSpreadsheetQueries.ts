@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { orderService } from '@services/orderService';
-import { filterVisibleEmployeesInMonth } from '@shared/lib/employeeVisibility';
+import { isExcludedSponsorshipStatus } from '@shared/lib/employeeVisibility';
 import { defaultQueryRetry } from '@shared/lib/query';
 import type { App, DailyData, Employee, EmployeeAppAssignmentRow, OrderRawRow } from '@modules/orders/types';
 import { buildAppEmployeeIdsMap, buildDailyDataMap } from '@modules/orders/utils/gridHelpers';
@@ -89,9 +89,12 @@ export function useSpreadsheetQueries(
   const employees = useMemo<Employee[]>(
     () => {
       const baseEmps = spreadsheetBaseData?.employees ?? [];
-      // Don't filter by activeEmployeeIdsInMonth - show all active employees with platform assignments
-      // The filtering will happen in useSpreadsheetGrid based on platform filter
-      return baseEmps.filter(emp => emp.status === 'active');
+      // For orders page: show all active employees, don't filter by activeEmployeeIdsInMonth
+      // The filtering will be done in useSpreadsheetGrid based on platform assignments
+      return baseEmps.filter(emp => 
+        emp.status === 'active' && 
+        !isExcludedSponsorshipStatus(emp.sponsorship_status)
+      );
     },
     [spreadsheetBaseData],
   );

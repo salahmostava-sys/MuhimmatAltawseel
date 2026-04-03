@@ -83,17 +83,19 @@ export function useSpreadsheetGrid() {
 
   const baseEmployees = useMemo(() => {
     if (platformFilter === 'all') {
-      // Show all employees who have at least one active platform assignment
-      const employeesWithPlatforms = sq.employees.filter(e => 
-        Object.values(sq.appEmployeeIds).some(appSet => appSet?.has(e.id))
-      );
+      // Show all employees who have at least one active platform assignment OR have orders
+      const employeesWithPlatforms = sq.employees.filter(e => {
+        const hasAssignment = Object.values(sq.appEmployeeIds).some(appSet => appSet?.has(e.id));
+        const hasOrders = Object.keys(data).some(key => key.startsWith(`${e.id}::`));
+        return hasAssignment || hasOrders;
+      });
       return employeesWithPlatforms;
     }
     // For specific platform filter
     const assigned = sq.appEmployeeIds[platformFilter];
     const withOrders = employeeIdsWithOrdersOnFilteredPlatform;
     return sq.employees.filter((e) => Boolean(assigned?.has(e.id)) || withOrders.has(e.id));
-  }, [sq.employees, platformFilter, sq.appEmployeeIds, employeeIdsWithOrdersOnFilteredPlatform]);
+  }, [sq.employees, platformFilter, sq.appEmployeeIds, employeeIdsWithOrdersOnFilteredPlatform, data]);
 
   const filteredEmployees = useMemo(
     () => baseEmployees.filter((emp) => emp.name.includes(search)),
