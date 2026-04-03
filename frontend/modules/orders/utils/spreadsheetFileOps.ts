@@ -12,6 +12,13 @@ import { dateStr, monthLabel } from '@modules/orders/utils/dateMonth';
 import { loadXlsx } from '@modules/orders/utils/xlsx';
 import { matchEmployeeNames, type UnmatchedEmployeeName } from '@shared/lib/nameMatching';
 
+export type SpreadsheetImportResult = {
+  appliedData: DailyData | null;
+  imported: number;
+  skipped: number;
+  errors: string[];
+};
+
 export async function exportSpreadsheetExcel(params: {
   year: number;
   month: number;
