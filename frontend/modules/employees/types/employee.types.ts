@@ -125,7 +125,7 @@ export const ALL_COLUMNS = [
 export type ColKey = typeof ALL_COLUMNS[number]['key'];
 export type ColumnDef = typeof ALL_COLUMNS[number];
 
-export const DEFAULT_HIDDEN_COLS = new Set<ColKey>(['name_en', 'iban', 'license_expiry', 'commercial_record']);
+export const DEFAULT_HIDDEN_COLS = new Set<ColKey>(['name_en', 'iban', 'license_expiry']);
 export const GRID_SKELETON_IDS = ['g1', 'g2', 'g3', 'g4', 'g5', 'g6'];
 export const FAST_SKELETON_IDS = ['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12'];
 

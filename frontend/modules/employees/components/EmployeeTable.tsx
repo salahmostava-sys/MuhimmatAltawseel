@@ -13,6 +13,8 @@ import {
   InlineSelect, EmployeeAvatar, SortIcon, ColFilterPopover,
   SkeletonRow, TextFilterInput,
 } from '@modules/employees/components/EmployeesViewParts';
+import { PlatformAppsEditor } from '@modules/employees/components/PlatformAppsEditor';
+import { useActiveApps } from '@modules/employees/hooks/useActiveApps';
 import {
   calcResidency, dayColorByThreshold, probationColor,
   GRID_SKELETON_IDS,
@@ -52,6 +54,7 @@ type EmployeeDetailedTableProps = {
   };
   setColFilter: (key: string, value: string) => void;
   tableRef: React.RefObject<HTMLTableElement | null>;
+  refetchEmployees: () => void;
 };
 
 export function EmployeeDetailedTable({
@@ -60,8 +63,10 @@ export function EmployeeDetailedTable({
   page, setPage, pageSize, setPageSize, totalPages,
   saveField, setSelectedEmployee, setEditEmployee, setShowAddModal,
   setDeleteEmployee, setStatusDateDialog, setStatusDate,
-  permissions, uniqueVals, setColFilter, tableRef,
+  permissions, uniqueVals, setColFilter, tableRef, refetchEmployees,
 }: EmployeeDetailedTableProps) {
+  const { data: availableApps = [] } = useActiveApps();
+
   return (
     <div className="ta-table-wrap">
       <div className="overflow-x-auto">
@@ -258,24 +263,34 @@ export function EmployeeDetailedTable({
                       case 'platform_apps':
                         return (
                           <td key="platform_apps" className="px-3 py-2.5 whitespace-nowrap">
-                            <div className="flex gap-1 flex-wrap max-w-[200px]">
-                              {(emp as { platform_apps?: Array<{ id: string; name: string; brand_color?: string }> }).platform_apps?.length ? (
-                                (emp as { platform_apps: Array<{ id: string; name: string; brand_color?: string }> }).platform_apps.map(app => (
-                                  <span
-                                    key={app.id}
-                                    className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium"
-                                    style={{
-                                      backgroundColor: app.brand_color || '#6366f1',
-                                      color: '#ffffff'
-                                    }}
-                                  >
-                                    {app.name}
-                                  </span>
-                                ))
-                              ) : (
-                                <span className="text-muted-foreground/40 text-xs">—</span>
-                              )}
-                            </div>
+                            {permissions.can_edit ? (
+                              <PlatformAppsEditor
+                                employeeId={emp.id}
+                                employeeName={emp.name}
+                                currentApps={(emp as { platform_apps?: Array<{ id: string; name: string; brand_color?: string }> }).platform_apps || []}
+                                availableApps={availableApps}
+                                onSuccess={refetchEmployees}
+                              />
+                            ) : (
+                              <div className="flex gap-1 flex-wrap max-w-[200px]">
+                                {(emp as { platform_apps?: Array<{ id: string; name: string; brand_color?: string }> }).platform_apps?.length ? (
+                                  (emp as { platform_apps: Array<{ id: string; name: string; brand_color?: string }> }).platform_apps.map(app => (
+                                    <span
+                                      key={app.id}
+                                      className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium"
+                                      style={{
+                                        backgroundColor: app.brand_color || '#6366f1',
+                                        color: '#ffffff'
+                                      }}
+                                    >
+                                      {app.name}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-muted-foreground/40 text-xs">—</span>
+                                )}
+                              </div>
+                            )}
                           </td>
                         );
 

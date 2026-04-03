@@ -258,6 +258,7 @@ const Employees = () => {
         uniqueVals={uniqueVals}
         setColFilter={setColFilter}
         tableRef={tableRef}
+        refetchEmployees={refetchEmployees}
       />
 
       {/* Modals */}

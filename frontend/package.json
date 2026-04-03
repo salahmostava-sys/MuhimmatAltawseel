@@ -10,7 +10,7 @@
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
     "verify": "npm run lint && npm run test && npm run build",
-    "gen:types": "cd .. && npx supabase gen types typescript --local -s public > frontend/services/supabase/types.ts",
+    "gen:types": "cd .. && npx supabase gen types typescript --project-id plxpehtkabmfkdlgjyin -s public > frontend/services/supabase/types.ts",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
