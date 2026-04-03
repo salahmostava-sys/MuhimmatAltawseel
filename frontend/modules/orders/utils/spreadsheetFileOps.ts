@@ -52,7 +52,7 @@ export async function runSpreadsheetImport(params: {
   onApplyData: (next: DailyData) => void;
   targetAppId?: string;
   onShowNameMapping?: (unmatched: UnmatchedEmployeeName[], onConfirm: (mapping: Map<string, string>) => void) => void;
-}): Promise<void> {
+}): Promise<SpreadsheetImportResult | null> {
   const { file, dayArr, employees, apps, data, onApplyData, targetAppId, onShowNameMapping } = params;
   try {
     // التحقق من نوع الملف
@@ -60,7 +60,7 @@ export async function runSpreadsheetImport(params: {
       toast.error('نوع الملف غير صحيح', {
         description: 'يرجى رفع ملف Excel بصيغة .xlsx أو .xls فقط'
       });
-      return;
+      return null;
     }
 
     const XLSX = await loadXlsx();
@@ -72,7 +72,7 @@ export async function runSpreadsheetImport(params: {
       toast.error('ملف فارغ', {
         description: 'الملف لا يحتوي على أي ورقة عمل'
       });
-      return;
+      return null;
     }
 
     const ws = wb.Sheets[wb.SheetNames[0]];
@@ -82,7 +82,7 @@ export async function runSpreadsheetImport(params: {
       toast.error('ملف فارغ', {
         description: 'الملف لا يحتوي على بيانات. يجب أن يحتوي على صف العناوين وصف واحد على الأقل من البيانات'
       });
-      return;
+      return null;
     }
 
     const expectedHeaders = buildOrdersIoHeaders(dayArr);
@@ -92,7 +92,7 @@ export async function runSpreadsheetImport(params: {
       toast.error('هيكل الملف غير صحيح', {
         description: `عدد الأعمدة المتوقع: ${expectedHeaders.length}، عدد الأعمدة الموجود: ${actualHeaders.length}. تأكد من استخدام القالب الصحيح للشهر الحالي`
       });
-      return;
+      return null;
     }
 
     // استخراج الأسماء من الملف
@@ -106,7 +106,7 @@ export async function runSpreadsheetImport(params: {
       toast.error('لا توجد بيانات للاستيراد', {
         description: 'الملف لا يحتوي على أسماء موظفين في العمود الأول'
       });
-      return;
+      return null;
     }
 
     // مطابقة الأسماء
@@ -147,7 +147,7 @@ export async function runSpreadsheetImport(params: {
               description: `تم استيراد ${imported} إدخال إلى ${appName}` 
             });
           }
-          resolve();
+          resolve({ appliedData: newData, imported, skipped, errors });
         });
       });
     }
@@ -177,12 +177,14 @@ export async function runSpreadsheetImport(params: {
         description: `تم استيراد ${imported} إدخال إلى ${appName}` 
       });
     }
+    return { appliedData: newData, imported, skipped, errors };
   } catch (err) {
     logError('[Orders] import spreadsheet failed', err);
     const errorMsg = err instanceof Error ? err.message : 'خطأ غير معروف';
     toast.error('فشل استيراد الملف', {
       description: `حدث خطأ أثناء قراءة الملف: ${errorMsg}`
     });
+    return null;
   }
 }
 
@@ -386,6 +388,7 @@ export async function saveSpreadsheetMonth(params: {
       description: `حدث خطأ: ${errorMsg}`
     });
     logError('Orders.handleSave', e);
+    return;
   } finally {
     setSaving(false);
   }

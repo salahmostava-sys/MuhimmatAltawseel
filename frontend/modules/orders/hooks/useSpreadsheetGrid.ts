@@ -197,10 +197,24 @@ export function useSpreadsheetGrid() {
     e.target.value = '';
   };
 
+  const persistSpreadsheetData = useCallback(
+    async (nextData: DailyData) => {
+      await saveSpreadsheetMonth({
+        isMonthLocked,
+        year,
+        month,
+        days,
+        data: nextData,
+        setSaving,
+      });
+    },
+    [days, isMonthLocked, month, year],
+  );
+
   const handleImportConfirm = async (targetAppId: string | undefined) => {
     setShowImportDialog(false);
     if (!pendingImportFile) return;
-    await runSpreadsheetImport({
+    const importResult = await runSpreadsheetImport({
       file: pendingImportFile,
       dayArr,
       employees: sq.employees,
@@ -214,6 +228,9 @@ export function useSpreadsheetGrid() {
         setShowNameMappingDialog(true);
       },
     });
+    if (importResult?.appliedData && importResult.imported > 0) {
+      await persistSpreadsheetData(importResult.appliedData);
+    }
     setPendingImportFile(null);
   };
 
@@ -247,15 +264,7 @@ export function useSpreadsheetGrid() {
       filteredEmployeeCount: filteredEmployees.length,
     });
 
-  const handleSave = () =>
-    void saveSpreadsheetMonth({
-      isMonthLocked,
-      year,
-      month,
-      days,
-      data,
-      setSaving,
-    });
+  const handleSave = () => void persistSpreadsheetData(data);
 
   const handleLockMonth = async () => {
     const my = monthYear(year, month);
