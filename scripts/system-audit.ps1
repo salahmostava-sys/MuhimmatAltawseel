@@ -113,16 +113,9 @@ if (-not $SkipBackend) {
 
 if (-not $SkipSupabase) {
   Invoke-Step 'Supabase audit files' {
-    $requiredFiles = @(
-      'supabase/tenant_rls_smoke_tests.sql',
-      'supabase/phase_1_5_validation_checks.sql',
-      'supabase/maintenance_system_tests.sql'
-    )
-
-    foreach ($file in $requiredFiles) {
-      if (-not (Test-Path -LiteralPath $file)) {
-        throw "Missing required Supabase audit file: $file"
-      }
+    Assert-CommandExists 'node'
+    Invoke-NativeCommand 'Supabase audit asset validation' {
+      node 'scripts/validate-supabase-assets.mjs'
     }
   }
 
@@ -139,6 +132,10 @@ if (-not $SkipSupabase) {
 
       Invoke-NativeCommand 'Supabase phase 1.5 validation' {
         psql $env:SUPABASE_DB_URL -v ON_ERROR_STOP=1 -f 'supabase/phase_1_5_validation_checks.sql'
+      }
+
+      Invoke-NativeCommand 'Supabase maintenance system tests' {
+        psql $env:SUPABASE_DB_URL -v ON_ERROR_STOP=1 -f 'supabase/maintenance_system_tests.sql'
       }
     }
   }

@@ -13,7 +13,7 @@ This checks:
 
 - `frontend` package layout and frontend `verify`
 - AI backend Python smoke tests when required packages are installed locally
-- Supabase audit SQL files presence
+- Supabase audit assets, required edge functions, and migration coverage tokens
 
 ## Strict frontend audit
 
@@ -45,5 +45,6 @@ Executed files:
 
 - `supabase/tenant_rls_smoke_tests.sql`
 - `supabase/phase_1_5_validation_checks.sql`
+- `supabase/maintenance_system_tests.sql`
 
-`maintenance_system_tests.sql` remains manual because it includes transactional mutation checks.
+`maintenance_system_tests.sql` is included because its mutation probes are wrapped in explicit rollback-safe sections.

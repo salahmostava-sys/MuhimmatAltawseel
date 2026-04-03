@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { validateSupabaseAssets } from './validate-supabase-assets.mjs';
 
 const args = new Set(process.argv.slice(2));
 
@@ -100,18 +101,10 @@ if (!skipBackend) {
 
 if (!skipSupabase) {
   logStep('Supabase audit files');
-
-  const requiredFiles = [
-    'supabase/tenant_rls_smoke_tests.sql',
-    'supabase/phase_1_5_validation_checks.sql',
-    'supabase/maintenance_system_tests.sql',
-  ];
-
-  for (const file of requiredFiles) {
-    if (!existsSync(path.join(repoRoot, file))) {
-      throw new Error(`Missing required Supabase audit file: ${file}`);
-    }
-  }
+  const validation = validateSupabaseAssets(repoRoot);
+  process.stdout.write(
+    `Validated ${validation.auditFiles} audit SQL files, ${validation.functionFiles} edge functions, and ${validation.migrations} migrations.\n`,
+  );
 
   if (runSupabaseSql) {
     const psqlCommand = process.platform === 'win32' ? 'psql.exe' : 'psql';
@@ -124,6 +117,7 @@ if (!skipSupabase) {
     logStep('Supabase SQL smoke tests');
     runCommand('Supabase tenant RLS smoke tests', psqlCommand, [dbUrl, '-v', 'ON_ERROR_STOP=1', '-f', 'supabase/tenant_rls_smoke_tests.sql']);
     runCommand('Supabase phase 1.5 validation', psqlCommand, [dbUrl, '-v', 'ON_ERROR_STOP=1', '-f', 'supabase/phase_1_5_validation_checks.sql']);
+    runCommand('Supabase maintenance system tests', psqlCommand, [dbUrl, '-v', 'ON_ERROR_STOP=1', '-f', 'supabase/maintenance_system_tests.sql']);
   }
 }
 
