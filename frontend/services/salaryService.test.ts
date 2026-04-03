@@ -24,7 +24,7 @@ vi.mock('@services/serviceError', () => ({
   }),
 }));
 
-import { salaryService } from './salaryService';
+import { getTierSalaryExplanationLines, salaryService } from './salaryService';
 
 describe('salaryService', () => {
   beforeEach(() => {
@@ -103,6 +103,28 @@ describe('salaryService', () => {
     expect(salaryService.calculateTierSalary(450, tiers, null, null)).toBe(2500);
     expect(salaryService.calculateTierSalary(470, tiers, null, null)).toBe(2500);
     expect(salaryService.calculateTierSalary(480, tiers, null, null)).toBe(2550);
+  });
+
+  it('formats base_plus_incremental explanations in readable math order', () => {
+    const explanation = getTierSalaryExplanationLines(
+      542,
+      [
+        {
+          from_orders: 471,
+          to_orders: null,
+          price_per_order: 2500,
+          tier_order: 1,
+          tier_type: 'base_plus_incremental',
+          incremental_threshold: 460,
+          incremental_price: 5,
+        },
+      ],
+      null,
+      null,
+    );
+
+    expect(explanation).toHaveLength(1);
+    expect(explanation[0]).toContain('\u20662,500 + (542 - 460) × 5 = 2,910\u2069');
   });
 
   it('getByMonth returns array on success', async () => {
