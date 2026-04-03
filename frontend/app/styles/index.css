@@ -487,4 +487,20 @@
   .ds-btn-primary:hover:not(:disabled) { opacity: 0.90; }
   .ds-btn-primary:active:not(:disabled) { transform: scale(0.97); }
   .ds-btn-primary:disabled { opacity: 0.45; pointer-events: none; }
+
+  /* ─── Yellow backgrounds → black text ────────────────────────── */
+  .bg-yellow-50,
+  .bg-yellow-100,
+  .bg-yellow-200,
+  .bg-yellow-300,
+  .bg-yellow-400,
+  .bg-yellow-500,
+  .bg-amber-50,
+  .bg-amber-100,
+  .bg-amber-200,
+  .bg-amber-300,
+  .bg-amber-400,
+  .bg-amber-500 {
+    color: #000000 !important;
+  }
 }

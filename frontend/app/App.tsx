@@ -31,6 +31,7 @@ const Advances = lazy(() => import("@modules/advances/pages/AdvancesPage"));
 const FuelPage = lazy(() => import("@modules/fuel/pages/FuelPage"));
 const MaintenancePage = lazy(() => import("@modules/maintenance/pages/MaintenancePage"));
 const Apps = lazy(() => import("@modules/pages/Apps"));
+const AppSettingsPage = lazy(() => import("@modules/apps/pages/AppSettingsPage").then(m => ({ default: m.AppSettingsPage })));
 const Alerts = lazy(() => import("@modules/pages/Alerts"));
 const SettingsHub = lazy(() => import("@modules/pages/SettingsHub"));
 const ViolationResolverPage = lazy(() => import("@modules/violations/pages/ViolationResolverPage"));
@@ -150,6 +151,7 @@ const router = createBrowserRouter([
           { path: "fuel", element: <PageGuard pageKey="fuel"><FuelPage /></PageGuard> },
           { path: "maintenance", element: <PageGuard pageKey="maintenance"><MaintenancePage /></PageGuard> },
           { path: "apps", element: <PageGuard pageKey="apps"><Apps /></PageGuard> },
+          { path: "apps/settings", element: <PageGuard pageKey="apps"><AppSettingsPage /></PageGuard> },
           { path: "alerts", element: <PageGuard pageKey="alerts"><Alerts /></PageGuard> },
           { path: "employee-tiers", element: <PageGuard pageKey="employee_tiers"><EmployeeTiers /></PageGuard> },
           {
