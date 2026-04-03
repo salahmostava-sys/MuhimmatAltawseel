@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type React from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useMonthlyActiveEmployeeIds } from '@shared/hooks/useMonthlyActiveEmployeeIds';
 import { usePermissions } from '@shared/hooks/usePermissions';
 import { toast } from '@shared/components/ui/sonner';
@@ -26,6 +27,7 @@ import { getDaysInMonth, monthYear, shiftMonth, isPastMonth } from '@modules/ord
 import { useTemporalContext } from '@app/providers/TemporalContext';
 
 export function useSpreadsheetGrid() {
+  const queryClient = useQueryClient();
   const { enabled, userId } = useAuthQueryGate();
   const uid = authQueryUserId(userId);
   const { permissions } = usePermissions('orders');
@@ -301,7 +303,7 @@ export function useSpreadsheetGrid() {
       }
 
       toast.success(`تم حذف ${count} طلب بنجاح`);
-      setData({});
+      await queryClient.invalidateQueries({ queryKey: sq.qk.spreadsheetMonthRaw(year, month) });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'فشل الحذف';
       toast.error(TOAST_ERROR_GENERIC, { description: message });

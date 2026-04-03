@@ -8,7 +8,8 @@ export const bulkDeleteService = {
   deleteEmployeeMonth: async (employeeId: string, monthYear: string) => {
     const [year, month] = monthYear.split('-');
     const from = `${year}-${month}-01`;
-    const to = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
+    const lastDay = new Date(Number(year), Number(month), 0).getDate();
+    const to = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
 
     const { error, count } = await supabase
       .from('daily_orders')
@@ -27,7 +28,8 @@ export const bulkDeleteService = {
   deleteEmployeeAppMonth: async (employeeId: string, appId: string, monthYear: string) => {
     const [year, month] = monthYear.split('-');
     const from = `${year}-${month}-01`;
-    const to = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
+    const lastDay = new Date(Number(year), Number(month), 0).getDate();
+    const to = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
 
     const { error, count } = await supabase
       .from('daily_orders')
@@ -47,7 +49,8 @@ export const bulkDeleteService = {
   deleteAppMonth: async (appId: string, monthYear: string) => {
     const [year, month] = monthYear.split('-');
     const from = `${year}-${month}-01`;
-    const to = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
+    const lastDay = new Date(Number(year), Number(month), 0).getDate();
+    const to = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
 
     const { error, count } = await supabase
       .from('daily_orders')
