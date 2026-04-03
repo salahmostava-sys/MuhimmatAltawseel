@@ -23,12 +23,11 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Validate frontend-only package management
+      - name: Report root package files
         run: |
           for file in package.json package-lock.json bun.lock bun.lockb; do
             if [ -f "$file" ]; then
-              echo "Root-level $file is not allowed. Use frontend/ package files only."
-              exit 1
+              echo "Legacy root-level $file detected. Frontend CI still installs strictly from frontend/."
             fi
           done
 

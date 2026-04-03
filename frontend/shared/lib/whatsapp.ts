@@ -34,8 +34,8 @@ export async function sendWhatsAppMessage(
 
   const cleanPhone = to.replace(/[\s\-()]/g, '').replace(/^0+/, '');
   
-  // Validate cleaned phone (must be digits only, 10-15 chars)
-  if (!/^\d{10,15}$/.test(cleanPhone)) {
+  // Accept local mobile numbers after trimming leading zeros as well as international formats.
+  if (!/^\d{9,15}$/.test(cleanPhone)) {
     logError('[WhatsApp] Invalid phone format after cleaning', { cleanPhone });
     return false;
   }

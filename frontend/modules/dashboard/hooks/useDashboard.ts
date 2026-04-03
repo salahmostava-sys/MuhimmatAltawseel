@@ -74,6 +74,8 @@ type DashboardData = {
   };
 };
 
+export type DashboardOperationalStats = DashboardData['operationalStats'];
+
 /** Stable empty refs so useMemo deps do not change every render when `data` is missing. */
 const EMPTY_EMP_DETAILS: EmpDetail[] = [];
 const EMPTY_ORDERS_BY_APP: DashboardData['ordersByApp'] = [];

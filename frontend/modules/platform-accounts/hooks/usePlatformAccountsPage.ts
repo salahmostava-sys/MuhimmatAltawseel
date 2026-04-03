@@ -205,7 +205,7 @@ export const usePlatformAccountsPage = () => {
     [sortKey],
   );
 
-  saveAccount: useCallback(async () => {
+  const saveAccount = useCallback(async () => {
     if (!accountForm.app_id) {
       toast.error(TOAST_ERROR_GENERIC, { description: 'يرجى اختيار المنصة' });
       return;

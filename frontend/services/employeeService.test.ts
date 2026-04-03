@@ -42,7 +42,7 @@ describe('employeeService', () => {
     };
 
     const rows = await employeeService.getAll();
-    expect(rows).toEqual([{ id: 'e1', name: 'Ahmed' }]);
+    expect(rows).toEqual([{ id: 'e1', name: 'Ahmed', platform_apps: [] }]);
     expect(fromMock).toHaveBeenCalledWith('employees');
   });
 

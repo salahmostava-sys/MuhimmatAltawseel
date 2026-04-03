@@ -36,7 +36,12 @@ import { logError } from '@shared/lib/logger';
 import { AlertsWidget } from '@modules/dashboard/components/AlertsWidget';
 import { TopEmployees } from '@modules/dashboard/components/TopEmployees';
 import { DashboardSupervisorTargetsCard } from '@modules/dashboard/components/DashboardSupervisorTargetsCard';
-import { useDashboard, type AtRiskRider, type EmpDetail } from '@modules/dashboard/hooks/useDashboard';
+import {
+  useDashboard,
+  type AtRiskRider,
+  type DashboardOperationalStats,
+  type EmpDetail,
+} from '@modules/dashboard/hooks/useDashboard';
 import { OperationalStats } from '@modules/dashboard/components/OperationalStats';
 import { AttendanceChart } from '@modules/dashboard/components/AttendanceChart';
 import { ComprehensiveStats } from '@modules/dashboard/components/ComprehensiveStats';
@@ -959,6 +964,7 @@ type OverviewTabProps = {
     actual_orders: number;
     achievement_percent: number;
   }>;
+  operationalStats: DashboardOperationalStats;
 };
 
 const OverviewTab = ({
@@ -978,7 +984,7 @@ const OverviewTab = ({
   attendanceWeek,
   supervisorPerformance,
   operationalStats,
-}: OverviewTabProps & { operationalStats: any }) => {
+}: OverviewTabProps) => {
   // Prepare comprehensive stats data
   const comprehensiveStatsData = {
     employees: operationalStats.employees,

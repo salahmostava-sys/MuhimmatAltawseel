@@ -7,6 +7,16 @@
  * Sanitizes a string to prevent log injection attacks (CWE-117)
  * Removes newlines, carriage returns, and control characters
  */
+function stripControlCharacters(input: string): string {
+  return Array.from(input)
+    .filter((character) => {
+      const codePoint = character.codePointAt(0);
+      if (codePoint === undefined) return false;
+      return codePoint >= 0x20 && codePoint !== 0x7f;
+    })
+    .join('');
+}
+
 export function sanitizeForLog(input: unknown): string {
   if (input === null || input === undefined) {
     return '';
@@ -15,9 +25,9 @@ export function sanitizeForLog(input: unknown): string {
   const str = String(input);
   
   // Remove newlines, carriage returns, and other control characters
-  return str
-    .replace(/[\r\n\t]/g, ' ')
-    .replace(/[\x00-\x1F\x7F]/g, '')
+  const sanitized = stripControlCharacters(str.replace(/[\r\n\t]/g, ' '));
+
+  return sanitized
     .trim()
     .slice(0, 1000); // Limit length to prevent log flooding
 }

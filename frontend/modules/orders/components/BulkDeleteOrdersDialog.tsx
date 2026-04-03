@@ -36,6 +36,8 @@ type Props = Readonly<{
   onCancel: () => void;
 }>;
 
+type DeleteFilters = Parameters<Props['onConfirm']>[1];
+
 export function BulkDeleteOrdersDialog({ open, employees, apps, year, month, onConfirm, onCancel }: Props) {
   const [scope, setScope] = useState<DeleteScope>('employee_month');
   const [employeeId, setEmployeeId] = useState<string>('');
@@ -46,7 +48,7 @@ export function BulkDeleteOrdersDialog({ open, employees, apps, year, month, onC
   const handleConfirm = async () => {
     setDeleting(true);
     try {
-      const filters: any = {};
+      const filters: DeleteFilters = {};
       
       if (scope === 'employee_month') {
         filters.employeeId = employeeId;

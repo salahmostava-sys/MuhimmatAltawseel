@@ -105,7 +105,7 @@ describe('fuelService', () => {
 
     await expect(
       fuelService.upsertDailyMileage({
-        employee_id: 'e1',
+        employee_id: '11111111-1111-1111-1111-111111111111',
         date: '2026-03-15',
         km_total: 100,
         fuel_cost: 45,

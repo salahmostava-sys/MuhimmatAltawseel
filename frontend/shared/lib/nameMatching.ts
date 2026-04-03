@@ -1,3 +1,14 @@
+export type NameMatchSuggestion = {
+  id: string;
+  name: string;
+  similarity: number;
+};
+
+export type UnmatchedEmployeeName = {
+  name: string;
+  suggestions: NameMatchSuggestion[];
+};
+
 /**
  * حساب نسبة التشابه بين نصين باستخدام Levenshtein Distance
  */
@@ -120,7 +131,7 @@ export function findBestMatch(
   searchName: string,
   candidates: Array<{ id: string; name: string }>,
   threshold = 60 // خفض الحد الأدنى إلى 60%
-): { match: { id: string; name: string } | null; similarity: number; suggestions: Array<{ id: string; name: string; similarity: number }> } {
+): { match: { id: string; name: string } | null; similarity: number; suggestions: NameMatchSuggestion[] } {
   const matches = candidates.map((candidate) => ({
     ...candidate,
     similarity: advancedSimilarity(searchName, candidate.name),
@@ -148,10 +159,10 @@ export function matchEmployeeNames(
   threshold = 60 // خفض الحد الأدنى إلى 60%
 ): {
   matched: Map<string, { id: string; name: string; similarity: number }>;
-  unmatched: Array<{ name: string; suggestions: Array<{ id: string; name: string; similarity: number }> }>;
+  unmatched: UnmatchedEmployeeName[];
 } {
   const matched = new Map<string, { id: string; name: string; similarity: number }>();
-  const unmatched: Array<{ name: string; suggestions: Array<{ id: string; name: string; similarity: number }> }> = [];
+  const unmatched: UnmatchedEmployeeName[] = [];
 
   for (const importedName of importedNames) {
     const result = findBestMatch(importedName, employees, threshold);

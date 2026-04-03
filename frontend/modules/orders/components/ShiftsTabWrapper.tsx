@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@shared/components/ui/sonner';
 import { useAuthQueryGate, authQueryUserId } from '@shared/hooks/useAuthQueryGate';
@@ -6,7 +6,7 @@ import { usePermissions } from '@shared/hooks/usePermissions';
 import { useTemporalContext } from '@app/providers/TemporalContext';
 import { shiftService } from '@services/shiftService';
 import { orderService } from '@services/orderService';
-import { ShiftsTab } from '@modules/orders/components/ShiftsTab';
+import { ShiftsTab, type ShiftRow } from '@modules/orders/components/ShiftsTab';
 import { shiftMonth } from '@modules/orders/utils/dateMonth';
 
 export function ShiftsTabWrapper() {
@@ -52,14 +52,14 @@ export function ShiftsTabWrapper() {
   }, [year, month, queryClient]);
 
   const handleSave = useCallback(
-    async (shiftsData: any[]) => {
+    async (shiftsData: ShiftRow[]) => {
       try {
-        const rows = shiftsData.map((s) => ({
-          employee_id: s.employee_id,
-          app_id: s.app_id,
-          date: s.date,
-          hours_worked: s.hours_worked,
-          notes: s.notes,
+        const rows = shiftsData.map((shift) => ({
+          employee_id: shift.employee_id,
+          app_id: shift.app_id,
+          date: shift.date,
+          hours_worked: shift.hours_worked,
+          notes: shift.notes ?? undefined,
         }));
 
         await shiftService.bulkUpsert(rows);

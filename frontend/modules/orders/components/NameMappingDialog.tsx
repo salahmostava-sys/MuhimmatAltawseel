@@ -18,15 +18,11 @@ import {
   SelectValue,
 } from '@shared/components/ui/select';
 import { Badge } from '@shared/components/ui/badge';
-
-type UnmatchedName = {
-  name: string;
-  suggestions: Array<{ id: string; name: string; similarity: number }>;
-};
+import type { UnmatchedEmployeeName } from '@shared/lib/nameMatching';
 
 type Props = Readonly<{
   open: boolean;
-  unmatched: UnmatchedName[];
+  unmatched: UnmatchedEmployeeName[];
   onConfirm: (mapping: Map<string, string>) => void;
   onCancel: () => void;
 }>;

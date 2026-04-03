@@ -21,7 +21,7 @@ import { OrdersMonthNavigator } from '@shared/components/orders/OrdersMonthNavig
 import { monthLabel } from '@modules/orders/utils/dateMonth';
 import type { App, Employee } from '@modules/orders/types';
 
-type ShiftRow = {
+export type ShiftRow = {
   id?: string;
   employee_id: string;
   app_id: string;

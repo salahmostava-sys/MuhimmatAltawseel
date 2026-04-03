@@ -10,6 +10,7 @@ import { orderService } from '@services/orderService';
 import { bulkDeleteService } from '@services/bulkDeleteService';
 import type { DailyData } from '@modules/orders/types';
 import type { OrdersPopoverState } from '@shared/components/orders/OrdersCellPopover';
+import type { UnmatchedEmployeeName } from '@shared/lib/nameMatching';
 import { useSpreadsheetQueries } from '@modules/orders/hooks/useSpreadsheetQueries';
 import {
   calculatePlatformTotals,
@@ -32,7 +33,6 @@ export function useSpreadsheetGrid() {
   const uid = authQueryUserId(userId);
   const { permissions } = usePermissions('orders');
   const { selectedMonth: globalMonth, setSelectedMonth: setGlobalMonth } = useTemporalContext();
-  const now = new Date();
 
   // Derived from Global Temporal Context (YYYY-MM)
   const [yearStr, monthStr] = globalMonth.split('-');
@@ -53,7 +53,7 @@ export function useSpreadsheetGrid() {
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [showNameMappingDialog, setShowNameMappingDialog] = useState(false);
-  const [unmatchedNames, setUnmatchedNames] = useState<any[]>([]);
+  const [unmatchedNames, setUnmatchedNames] = useState<UnmatchedEmployeeName[]>([]);
   const [nameMappingCallback, setNameMappingCallback] = useState<((mapping: Map<string, string>) => void) | null>(null);
 
   const monthKey = monthYear(year, month);

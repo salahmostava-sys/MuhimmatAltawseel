@@ -1,7 +1,5 @@
 import { toast } from '@shared/components/ui/sonner';
 import {
-  TOAST_ERROR_GENERIC,
-  TOAST_ERROR_RETRY_SHORT,
   TOAST_SUCCESS_ACTION,
   TOAST_SUCCESS_OPERATION,
 } from '@shared/lib/toastMessages';
@@ -9,10 +7,10 @@ import { buildOrdersIoHeaders } from '@shared/constants/excelSchemas';
 import { logError } from '@shared/lib/logger';
 import { orderService } from '@services/orderService';
 import type { App, DailyData, Employee } from '@modules/orders/types';
-import { mergeImportedOrdersFromMatrix, ordersImportHeadersMatch } from '@modules/orders/utils/importHelpers';
+import { ordersImportHeadersMatch } from '@modules/orders/utils/importHelpers';
 import { dateStr, monthLabel } from '@modules/orders/utils/dateMonth';
 import { loadXlsx } from '@modules/orders/utils/xlsx';
-import { matchEmployeeNames } from '@shared/lib/nameMatching';
+import { matchEmployeeNames, type UnmatchedEmployeeName } from '@shared/lib/nameMatching';
 
 export async function exportSpreadsheetExcel(params: {
   year: number;
@@ -46,7 +44,7 @@ export async function runSpreadsheetImport(params: {
   data: DailyData;
   onApplyData: (next: DailyData) => void;
   targetAppId?: string;
-  onShowNameMapping?: (unmatched: any[], onConfirm: (mapping: Map<string, string>) => void) => void;
+  onShowNameMapping?: (unmatched: UnmatchedEmployeeName[], onConfirm: (mapping: Map<string, string>) => void) => void;
 }): Promise<void> {
   const { file, dayArr, employees, apps, data, onApplyData, targetAppId, onShowNameMapping } = params;
   try {
