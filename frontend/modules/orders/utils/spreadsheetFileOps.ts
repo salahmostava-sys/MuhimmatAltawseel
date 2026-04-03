@@ -12,6 +12,7 @@ import type { App, DailyData, Employee } from '@modules/orders/types';
 import { mergeImportedOrdersFromMatrix, ordersImportHeadersMatch } from '@modules/orders/utils/importHelpers';
 import { dateStr, monthLabel } from '@modules/orders/utils/dateMonth';
 import { loadXlsx } from '@modules/orders/utils/xlsx';
+import { matchEmployeeNames } from '@shared/lib/nameMatching';
 
 export async function exportSpreadsheetExcel(params: {
   year: number;
@@ -45,8 +46,9 @@ export async function runSpreadsheetImport(params: {
   data: DailyData;
   onApplyData: (next: DailyData) => void;
   targetAppId?: string;
+  onShowNameMapping?: (unmatched: any[], onConfirm: (mapping: Map<string, string>) => void) => void;
 }): Promise<void> {
-  const { file, dayArr, employees, apps, data, onApplyData, targetAppId } = params;
+  const { file, dayArr, employees, apps, data, onApplyData, targetAppId, onShowNameMapping } = params;
   try {
     const XLSX = await loadXlsx();
     const arrayBuffer = await file.arrayBuffer();
@@ -66,13 +68,57 @@ export async function runSpreadsheetImport(params: {
       });
       return;
     }
-    const { newData, imported } = mergeImportedOrdersFromMatrix(
+
+    // استخراج الأسماء من الملف
+    const importedNames = matrix.slice(1).map((row) => {
+      const line = Array.isArray(row) ? row : [];
+      return String(line[0] ?? '').trim();
+    }).filter(Boolean);
+
+    // مطابقة الأسماء
+    const { matched, unmatched } = matchEmployeeNames(importedNames, employees, 70);
+
+    // إذا كان هناك أسماء غير مطابقة وتم توفير callback
+    if (unmatched.length > 0 && onShowNameMapping) {
+      return new Promise((resolve) => {
+        onShowNameMapping(unmatched, (nameMapping) => {
+          // دمج المطابقات التلقائية مع المطابقات اليدوية
+          const finalMapping = new Map<string, string>();
+          matched.forEach((match, name) => finalMapping.set(name, match.id));
+          nameMapping.forEach((id, name) => finalMapping.set(name, id));
+
+          // استيراد البيانات مع المطابقات
+          const { newData, imported } = mergeImportedOrdersFromMatrixWithMapping(
+            matrix.slice(1),
+            dayArr,
+            employees,
+            apps,
+            data,
+            targetAppId,
+            finalMapping
+          );
+          onApplyData(newData);
+          const appName = targetAppId ? apps.find((a) => a.id === targetAppId)?.name : 'جميع المنصات';
+          toast.success(TOAST_SUCCESS_ACTION, { 
+            description: `تم استيراد ${imported} إدخال إلى ${appName}` 
+          });
+          resolve();
+        });
+      });
+    }
+
+    // إذا كانت كل الأسماء مطابقة
+    const finalMapping = new Map<string, string>();
+    matched.forEach((match, name) => finalMapping.set(name, match.id));
+
+    const { newData, imported } = mergeImportedOrdersFromMatrixWithMapping(
       matrix.slice(1),
       dayArr,
       employees,
       apps,
       data,
       targetAppId,
+      finalMapping
     );
     onApplyData(newData);
     const appName = targetAppId ? apps.find((a) => a.id === targetAppId)?.name : 'جميع المنصات';
@@ -81,6 +127,38 @@ export async function runSpreadsheetImport(params: {
     logError('[Orders] import spreadsheet failed', err);
     toast.error(TOAST_ERROR_GENERIC);
   }
+}
+
+function mergeImportedOrdersFromMatrixWithMapping(
+  matrixRows: unknown[],
+  dayArr: number[],
+  employees: Employee[],
+  apps: App[],
+  prev: DailyData,
+  targetAppId: string | undefined,
+  nameMapping: Map<string, string>
+): { newData: DailyData; imported: number } {
+  let imported = 0;
+  const newData = { ...prev };
+  const targetApps = targetAppId ? apps.filter((a) => a.id === targetAppId) : apps;
+  
+  for (const row of matrixRows) {
+    const line = Array.isArray(row) ? row : [];
+    const empName = String(line[0] ?? '').trim();
+    const empId = nameMapping.get(empName);
+    if (!empId) continue;
+    
+    for (let idx = 0; idx < dayArr.length; idx++) {
+      const d = dayArr[idx];
+      const val = Number(line[idx + 1]);
+      if (val <= 0) continue;
+      for (const app of targetApps) {
+        newData[`${empId}::${app.id}::${d}`] = val;
+        imported++;
+      }
+    }
+  }
+  return { newData, imported };
 }
 
 export async function downloadSpreadsheetTemplate(dayArr: number[]): Promise<void> {

@@ -6,6 +6,7 @@ import { toast } from '@shared/components/ui/sonner';
 import { TOAST_ERROR_GENERIC } from '@shared/lib/toastMessages';
 import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { orderService } from '@services/orderService';
+import { bulkDeleteService } from '@services/bulkDeleteService';
 import type { DailyData } from '@modules/orders/types';
 import type { OrdersPopoverState } from '@shared/components/orders/OrdersCellPopover';
 import { useSpreadsheetQueries } from '@modules/orders/hooks/useSpreadsheetQueries';
@@ -48,6 +49,10 @@ export function useSpreadsheetGrid() {
   const [lockingMonth, setLockingMonth] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [showNameMappingDialog, setShowNameMappingDialog] = useState(false);
+  const [unmatchedNames, setUnmatchedNames] = useState<any[]>([]);
+  const [nameMappingCallback, setNameMappingCallback] = useState<((mapping: Map<string, string>) => void) | null>(null);
 
   const monthKey = monthYear(year, month);
   const { data: activeIdsData } = useMonthlyActiveEmployeeIds(monthKey);
@@ -191,8 +196,28 @@ export function useSpreadsheetGrid() {
       data,
       onApplyData: setData,
       targetAppId,
+      onShowNameMapping: (unmatched, callback) => {
+        setUnmatchedNames(unmatched);
+        setNameMappingCallback(() => callback);
+        setShowNameMappingDialog(true);
+      },
     });
     setPendingImportFile(null);
+  };
+
+  const handleNameMappingConfirm = (mapping: Map<string, string>) => {
+    setShowNameMappingDialog(false);
+    if (nameMappingCallback) {
+      nameMappingCallback(mapping);
+      setNameMappingCallback(null);
+    }
+    setUnmatchedNames([]);
+  };
+
+  const handleNameMappingCancel = () => {
+    setShowNameMappingDialog(false);
+    setUnmatchedNames([]);
+    setNameMappingCallback(null);
   };
 
   const handleImportCancel = () => {
@@ -225,12 +250,10 @@ export function useSpreadsheetGrid() {
     setLockingMonth(true);
     try {
       if (isMonthLocked) {
-        // Unlock month
         await orderService.unlockMonth(my);
         setIsMonthLocked(false);
         toast.success('تم فتح الشهر بنجاح');
       } else {
-        // Lock month (only if past month)
         if (!isPastMonth(year, month)) {
           toast.error('لا يمكن قفل الشهر الحالي أو المستقبلي');
           setLockingMonth(false);
@@ -246,6 +269,34 @@ export function useSpreadsheetGrid() {
       toast.error(TOAST_ERROR_GENERIC, { description: message });
     } finally {
       setLockingMonth(false);
+    }
+  };
+
+  const handleBulkDelete = async (
+    scope: 'employee_month' | 'employee_app_month' | 'app_month' | 'day',
+    filters: { employeeId?: string; appId?: string; day?: number }
+  ) => {
+    try {
+      const my = monthYear(year, month);
+      let count = 0;
+
+      if (scope === 'employee_month' && filters.employeeId) {
+        count = await bulkDeleteService.deleteEmployeeMonth(filters.employeeId, my);
+      } else if (scope === 'employee_app_month' && filters.employeeId && filters.appId) {
+        count = await bulkDeleteService.deleteEmployeeAppMonth(filters.employeeId, filters.appId, my);
+      } else if (scope === 'app_month' && filters.appId) {
+        count = await bulkDeleteService.deleteAppMonth(filters.appId, my);
+      } else if (scope === 'day' && filters.day) {
+        const date = `${year}-${String(month).padStart(2, '0')}-${String(filters.day).padStart(2, '0')}`;
+        count = await bulkDeleteService.deleteDay(date);
+      }
+
+      toast.success(`تم حذف ${count} طلب بنجاح`);
+      setData({});
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'فشل الحذف';
+      toast.error(TOAST_ERROR_GENERIC, { description: message });
+      throw e;
     }
   };
 
@@ -302,6 +353,13 @@ export function useSpreadsheetGrid() {
     handlePrint,
     handleSave,
     handleLockMonth,
+    handleBulkDelete,
+    showBulkDeleteDialog,
+    setShowBulkDeleteDialog,
+    showNameMappingDialog,
+    unmatchedNames,
+    handleNameMappingConfirm,
+    handleNameMappingCancel,
     seqColMin,
     repColMin,
   };

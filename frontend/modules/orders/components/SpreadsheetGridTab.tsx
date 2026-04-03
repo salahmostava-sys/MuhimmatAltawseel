@@ -7,6 +7,8 @@ import { monthLabel, isPastMonth } from '@modules/orders/utils/dateMonth';
 import { shortName } from '@modules/orders/utils/text';
 import { OrdersSpreadsheetHint, OrdersSpreadsheetToolbar } from '@modules/orders/components/OrdersSpreadsheetToolbar';
 import { ImportPlatformDialog } from '@modules/orders/components/ImportPlatformDialog';
+import { BulkDeleteOrdersDialog } from '@modules/orders/components/BulkDeleteOrdersDialog';
+import { NameMappingDialog } from '@modules/orders/components/NameMappingDialog';
 
 export const SpreadsheetGridTab = React.memo(() => {
   const g = useSpreadsheetGrid();
@@ -36,6 +38,7 @@ export const SpreadsheetGridTab = React.memo(() => {
         onPrint={g.handlePrint}
         onSave={g.handleSave}
         onLockMonth={g.handleLockMonth}
+        onBulkDelete={() => g.setShowBulkDeleteDialog(true)}
         canEdit={g.permissions.can_edit}
         canShowSave={g.permissions.can_edit && !g.isMonthLocked}
         canShowLock={g.permissions.can_edit && isPastMonth(g.year, g.month) && !g.isMonthLocked}
@@ -89,6 +92,23 @@ export const SpreadsheetGridTab = React.memo(() => {
         apps={g.apps}
         onConfirm={g.handleImportConfirm}
         onCancel={g.handleImportCancel}
+      />
+
+      <BulkDeleteOrdersDialog
+        open={g.showBulkDeleteDialog}
+        employees={g.employees}
+        apps={g.apps}
+        year={g.year}
+        month={g.month}
+        onConfirm={g.handleBulkDelete}
+        onCancel={() => g.setShowBulkDeleteDialog(false)}
+      />
+
+      <NameMappingDialog
+        open={g.showNameMappingDialog}
+        unmatched={g.unmatchedNames}
+        onConfirm={g.handleNameMappingConfirm}
+        onCancel={g.handleNameMappingCancel}
       />
     </div>
   );

@@ -1,5 +1,5 @@
 import type React from 'react';
-import { Search, Save, FolderOpen, Loader2 } from 'lucide-react';
+import { Search, Save, FolderOpen, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import {
@@ -36,6 +36,7 @@ type Props = Readonly<{
   onPrint: () => void;
   onSave: () => void;
   onLockMonth: () => void;
+  onBulkDelete: () => void;
   canEdit: boolean;
   canShowSave: boolean;
   canShowLock: boolean;
@@ -67,6 +68,7 @@ export function OrdersSpreadsheetToolbar(props: Props) {
     onPrint,
     onSave,
     onLockMonth,
+    onBulkDelete,
     canEdit,
     canShowSave,
     canShowLock,
@@ -180,6 +182,14 @@ export function OrdersSpreadsheetToolbar(props: Props) {
             <DropdownMenuItem onClick={onPickImport}>⬆️ استيراد Excel</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onPrint}>🖨️ طباعة الجدول</DropdownMenuItem>
+            {canEdit && !isMonthLocked && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onBulkDelete} className="text-destructive focus:text-destructive">
+                  🗑️ حذف جماعي
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
         {canShowSave && (
