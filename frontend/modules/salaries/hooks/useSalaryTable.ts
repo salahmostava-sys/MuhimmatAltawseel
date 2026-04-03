@@ -4,7 +4,10 @@ import { getTotalDeductions } from '@modules/salaries/lib/salaryDomain';
 import { toComparableSortValue } from '@modules/salaries/lib/salaryConstants';
 
 export function computeSalaryRow(r: SalaryRow) {
-  const totalPlatformSalary = Number(r.engineBaseSalary || 0);
+  const hasPlatformSalaryEntries = Object.keys(r.platformSalaries || {}).length > 0;
+  const totalPlatformSalary = hasPlatformSalaryEntries
+    ? Object.values(r.platformSalaries).reduce((sum, value) => sum + Number(value || 0), 0)
+    : Number(r.engineBaseSalary || 0);
   const totalAdditions = r.incentives + r.sickAllowance;
   const totalWithSalary = totalPlatformSalary + totalAdditions;
   const totalDeductions = getTotalDeductions(r);

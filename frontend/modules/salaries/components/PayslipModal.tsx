@@ -37,6 +37,8 @@ export function PayslipModal({ row, onClose, onApprove, selectedMonth, companyNa
   const platforms = buildSlipPlatformRows(row);
   const totalPlatformSalary = platforms.reduce((s, r) => s + r.salary, 0);
   const totalEarnings = totalPlatformSalary + row.incentives + row.sickAllowance;
+  const totalOrders = platforms.reduce((s, p) => s + p.orders, 0);
+  const totalBonus = row.incentives + row.sickAllowance;
   const allDeductions = [
     row.advanceDeduction,
     row.externalDeduction,
@@ -64,16 +66,22 @@ export function PayslipModal({ row, onClose, onApprove, selectedMonth, companyNa
   const employeeInfo = buildSlipEmployeeInfo(row, monthLabel, companyName);
 
   useEffect(() => {
-    // Load default template
-    salarySlipTemplateService.getDefault().then(setTemplate).catch(() => {});
+    let cancelled = false;
+    salarySlipTemplateService.getDefault().then((value) => {
+      if (!cancelled) setTemplate(value);
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-    // AI Analysis call
-    const totalOrders = platforms.reduce((s, p) => s + p.orders, 0);
-    const totalBonus = row.incentives + row.sickAllowance;
-    
+  useEffect(() => {
+    let cancelled = false;
+    setAnalysis(null);
     setAnalysisLoading(true);
-    aiService.analyzeSalary(row.engineBaseSalary || 0, totalOrders, totalBonus)
-      .then(res => {
+    aiService.analyzeSalary(totalPlatformSalary, totalOrders, totalBonus)
+      .then((res) => {
+        if (cancelled) return;
         setAnalysis(res);
         if (res.risk === 'underpaid') {
           toast.warning('تنبيه المحلل الذكي: ملاحظة انخفاض في المستحقات الحالية مقارنة بالأداء', {
@@ -82,9 +90,16 @@ export function PayslipModal({ row, onClose, onApprove, selectedMonth, companyNa
           });
         }
       })
-      .catch(e => logError('[Salaries] AI Analysis failed', e))
-      .finally(() => setAnalysisLoading(false));
-  }, [row.id, platforms, row.engineBaseSalary, row.incentives, row.sickAllowance]);
+      .catch((e) => {
+        if (!cancelled) logError('[Salaries] AI Analysis failed', e);
+      })
+      .finally(() => {
+        if (!cancelled) setAnalysisLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [row.id, totalBonus, totalOrders, totalPlatformSalary]);
 
   const slipHTML = buildSalarySlipHTML({
     employee: employeeInfo,

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Settings, Plus, Pencil, Trash2, Check, X, Pin, Loader2, Lock, Link2 } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
@@ -112,6 +112,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
   const { toast } = useToast();
   const { enabled, userId } = useAuthQueryGate();
   const uid = authQueryUserId(userId);
+  const queryClient = useQueryClient();
   const [schemes, setSchemes] = useState<Scheme[]>([]);
   const [tiers, setTiersMap] = useState<Record<string, Tier[]>>({});
   const [snapshots, setSnapshots] = useState<Record<string, Snapshot[]>>({});
@@ -197,6 +198,14 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
     const message = schemeDataError instanceof Error ? schemeDataError.message : 'تعذر تحميل بيانات السكيّمات';
     toast({ title: 'خطأ في التحميل', description: message, variant: 'destructive' });
   }, [schemeDataError, toast]);
+
+  const invalidateRelatedQueries = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['salary-schemes', uid] }),
+      queryClient.invalidateQueries({ queryKey: ['salaries', uid] }),
+      queryClient.invalidateQueries({ queryKey: ['apps'] }),
+    ]);
+  };
 
   const getAssignedApps = (schemeId: string) => apps.filter(a => a.scheme_id === schemeId);
 
@@ -286,6 +295,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
 
       toast({ title: editing ? 'تم التعديل' : 'تمت الإضافة', description: editing ? 'تم تعديل السكيمة بنجاح' : 'تمت إضافة السكيمة بنجاح' });
       setShowModal(false);
+      await invalidateRelatedQueries();
       void refetchSchemeData();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'حدث خطأ غير متوقع';
@@ -301,6 +311,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
       await appService.assignScheme(assignAppId, assignSchemeId);
       toast({ title: '✅ تم الربط', description: `تم ربط السكيمة بالمنصة بنجاح` });
       setShowAssignModal(false);
+      await invalidateRelatedQueries();
       void refetchSchemeData();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'حدث خطأ غير متوقع';
@@ -313,6 +324,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
     try {
       await appService.assignScheme(appId, null);
       toast({ title: 'تم إلغاء الربط' });
+      await invalidateRelatedQueries();
       void refetchSchemeData();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'حدث خطأ غير متوقع';
@@ -326,6 +338,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
       await salarySchemeService.updateSchemeStatus(id, newStatus as 'active' | 'archived');
       setSchemes(prev => prev.map(s => s.id === id ? { ...s, status: newStatus as 'active' | 'archived' } : s));
       toast({ title: 'تم التحديث' });
+      await invalidateRelatedQueries();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'حدث خطأ غير متوقع';
       toast({ title: 'خطأ', description: message, variant: 'destructive' });
@@ -356,6 +369,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
         ...prev,
         [schemeId]: (prev[schemeId] || []).filter(m => !months.includes(m)),
       }));
+      await invalidateRelatedQueries();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'حدث خطأ غير متوقع';
       toast({ title: 'خطأ', description: message, variant: 'destructive' });
@@ -372,6 +386,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
         [schemeId]: (prev[schemeId] || []).filter(s => s.month_year !== monthYear),
       }));
       toast({ title: 'تم إلغاء التثبيت', description: monthLabel(monthYear) });
+      await invalidateRelatedQueries();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'حدث خطأ غير متوقع';
       toast({ title: 'خطأ', description: message, variant: 'destructive' });

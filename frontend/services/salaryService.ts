@@ -87,6 +87,16 @@ const sortSalarySchemeTiers = (tiers: SalarySchemeTier[]): SalarySchemeTier[] =>
   return [...tiers].sort((a, b) => a.tier_order - b.tier_order);
 };
 
+const formatExplanationNumber = (value: number): string => {
+  if (!Number.isFinite(value)) return '0';
+  return value.toLocaleString('en-US');
+};
+
+const isolateLtr = (value: string): string => `\u2066${value}\u2069`;
+
+const formatExplanationRange = (from: number, to: number | null): string =>
+  isolateLtr(`${formatExplanationNumber(from)}-${to == null ? '∞' : formatExplanationNumber(to)}`);
+
 const findMatchedSalaryTier = (tiers: SalarySchemeTier[], orders: number): SalarySchemeTier => {
   let matchedTier = tiers[0];
   for (const tier of tiers) {
@@ -128,17 +138,21 @@ export function getTierSalaryExplanationLines(
   const lines: string[] = [];
 
   if (tierType === 'per_order_band') {
+    const bandTotal = orders * matched.price_per_order;
     lines.push(
-      `${orders.toLocaleString('ar-SA')} طلب × ${matched.price_per_order} ر.س (شريحة ${matched.from_orders}–${matched.to_orders ?? '∞'})`,
+      `المعادلة: ${isolateLtr(`${formatExplanationNumber(orders)} × ${formatExplanationNumber(matched.price_per_order)} = ${formatExplanationNumber(bandTotal)}`)} ر.س (شريحة ${formatExplanationRange(matched.from_orders, matched.to_orders ?? null)})`,
     );
   } else if (tierType === 'fixed_amount') {
     lines.push(
-      `مبلغ ثابت ${Math.round(matched.price_per_order).toLocaleString('ar-SA')} ر.س للنطاق ${matched.from_orders}–${matched.to_orders ?? '∞'}`,
+      `مبلغ ثابت ${isolateLtr(formatExplanationNumber(Math.round(matched.price_per_order)))} ر.س للنطاق ${formatExplanationRange(matched.from_orders, matched.to_orders ?? null)}`,
     );
   } else if (tierType === 'base_plus_incremental') {
     const thr = matched.incremental_threshold ?? matched.from_orders;
+    const incrementalPrice = matched.incremental_price ?? 0;
+    const extraOrders = Math.max(0, orders - thr);
+    const tierTotal = matched.price_per_order + extraOrders * incrementalPrice;
     lines.push(
-      `أساس ${Math.round(matched.price_per_order).toLocaleString('ar-SA')} + (${orders} − ${thr}) × ${matched.incremental_price ?? 0} ر.س`,
+      `المعادلة: ${isolateLtr(`${formatExplanationNumber(Math.round(matched.price_per_order))} + (${formatExplanationNumber(orders)} - ${formatExplanationNumber(thr)}) × ${formatExplanationNumber(incrementalPrice)} = ${formatExplanationNumber(tierTotal)}`)} ر.س`,
     );
   } else {
     for (const tier of sorted) {
@@ -147,8 +161,9 @@ export function getTierSalaryExplanationLines(
       if (orders < from) break;
       const inTier = Math.min(orders, to) - from + 1;
       if (inTier <= 0) continue;
+      const tierSubtotal = inTier * tier.price_per_order;
       lines.push(
-        `تراكمي ${from}–${tier.to_orders ?? '∞'}: ${inTier} طلب × ${tier.price_per_order} ر.س`,
+        `تراكمي ${formatExplanationRange(from, tier.to_orders ?? null)}: ${isolateLtr(`${formatExplanationNumber(inTier)} × ${formatExplanationNumber(tier.price_per_order)} = ${formatExplanationNumber(tierSubtotal)}`)} ر.س`,
       );
     }
   }
