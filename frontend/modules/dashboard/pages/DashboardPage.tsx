@@ -39,12 +39,9 @@ import { DashboardSupervisorTargetsCard } from '@modules/dashboard/components/Da
 import {
   useDashboard,
   type AtRiskRider,
-  type DashboardOperationalStats,
   type EmpDetail,
 } from '@modules/dashboard/hooks/useDashboard';
-import { OperationalStats } from '@modules/dashboard/components/OperationalStats';
 import { AttendanceChart } from '@modules/dashboard/components/AttendanceChart';
-import { ComprehensiveStats } from '@modules/dashboard/components/ComprehensiveStats';
 
 
 
@@ -964,7 +961,6 @@ type OverviewTabProps = {
     actual_orders: number;
     achievement_percent: number;
   }>;
-  operationalStats: DashboardOperationalStats;
 };
 
 const OverviewTab = ({
@@ -983,49 +979,7 @@ const OverviewTab = ({
   atRiskRiders,
   attendanceWeek,
   supervisorPerformance,
-  operationalStats,
 }: OverviewTabProps) => {
-  // Prepare comprehensive stats data
-  const comprehensiveStatsData = {
-    employees: operationalStats.employees,
-    attendance: operationalStats.attendance,
-    orders: operationalStats.orders,
-    fuel: operationalStats.fuel,
-    maintenance: operationalStats.maintenance,
-    vehicles: operationalStats.vehicles,
-    alerts: operationalStats.alerts,
-    violations: {
-      count: kpis.violationsCount || 0,
-      cost: kpis.violationsCost || 0,
-      employeesWithViolations: 0,
-    },
-    advances: {
-      count: 0,
-      totalAmount: kpis.pendingAdvances || 0,
-      remainingAmount: 0,
-      employeesWithAdvances: 0,
-    },
-    salaries: {
-      approved: 0,
-      pending: 0,
-      totalNet: kpis.totalSalaries || 0,
-      avgSalary: 0,
-    },
-    apps: {
-      active: kpis.activeApps || 0,
-      inactive: 0,
-    },
-    platformAccounts: {
-      active: 0,
-      inactive: 0,
-      employeesWithAccounts: 0,
-    },
-    spareParts: {
-      lowStock: 0,
-      total: 0,
-    },
-  };
-
   return (
     <div className="space-y-6">
       <StatsCards loading={loading} kpis={kpis} orderGrowth={orderGrowth} />
@@ -1052,8 +1006,6 @@ const OverviewTab = ({
         }}
         attendanceWeek={attendanceWeek}
       />
-      <OperationalStats loading={loading} stats={operationalStats} />
-      <ComprehensiveStats loading={loading} stats={comprehensiveStatsData} />
       <AlertsWidget />
     </div>
   );
@@ -1085,7 +1037,6 @@ const Dashboard = () => {
     bottomRidersPerApp,
     atRiskRiders,
     supervisorPerformance,
-    data,
   } = useDashboard({
     userId: uid,
     currentMonth,
@@ -1133,15 +1084,6 @@ const Dashboard = () => {
           atRiskRiders={atRiskRiders}
           attendanceWeek={attendanceWeek}
           supervisorPerformance={supervisorPerformance}
-          operationalStats={data?.operationalStats ?? {
-            employees: { total: 0, withLicense: 0, appliedLicense: 0, noLicense: 0, byCity: { makkah: 0, jeddah: 0, other: 0 } },
-            attendance: { present: 0, absent: 0, late: 0, leave: 0, sick: 0, rate: 0 },
-            orders: { total: 0, uniqueRiders: 0, avgPerRider: 0 },
-            fuel: { cost: 0, liters: 0, vehiclesRefueled: 0, avgPerVehicle: 0 },
-            maintenance: { cost: 0, completed: 0, pending: 0, vehiclesMaintained: 0 },
-            vehicles: { total: 0, active: 0, inactive: 0, maintenance: 0 },
-            alerts: { unresolved: 0, critical: 0, high: 0, medium: 0 },
-          }}
         />
       )}
     </div>
