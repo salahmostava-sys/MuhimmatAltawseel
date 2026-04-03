@@ -154,32 +154,46 @@ export function useViolationTable() {
 
   // ── Search handler ────────────────────────────────────────────────────────
   const handleSearch = async () => {
-    const enteredAmount = Number.parseFloat(form.amount);
-    if (!enteredAmount || enteredAmount <= 0) {
-      toast({ title: 'أدخل مبلغ المخالفة', variant: 'destructive' });
+    // التحقق من رقم اللوحة
+    const plate = form.plate_number.trim();
+    if (!plate) { 
+      toast({ title: 'أدخل رقم اللوحة', description: 'رقم لوحة المركبة مطلوب', variant: 'destructive' }); 
+      return; 
+    }
+    
+    // التأكد من اختيار المركبة من القائمة
+    const vehicleId = form.selected_vehicle_id;
+    if (!vehicleId) {
+      toast({ title: 'اختر المركبة من القائمة', description: 'يجب اختيار المركبة من القائمة المنسدلة لضمان مطابقة البيانات', variant: 'destructive' });
       return;
     }
 
-    const vehicleId = form.selected_vehicle_id;
-    const plate = form.plate_number.trim();
-    if (!plate) { toast({ title: 'أدخل رقم اللوحة', variant: 'destructive' }); return; }
-
+    // التحقق من التاريخ
     const dateVal = form.use_time ? form.violation_datetime : form.violation_date_only;
-    if (!dateVal) { toast({ title: 'أدخل تاريخ المخالفة', variant: 'destructive' }); return; }
+    if (!dateVal) { 
+      toast({ title: 'أدخل تاريخ المخالفة', description: 'تاريخ المخالفة مطلوب', variant: 'destructive' }); 
+      return; 
+    }
 
     const violationDate = form.use_time
       ? (form.violation_datetime.split('T')[0] || '')
       : form.violation_date_only;
-    if (!violationDate) { toast({ title: 'أدخل تاريخ المخالفة', variant: 'destructive' }); return; }
+    if (!violationDate) { 
+      toast({ title: 'أدخل تاريخ المخالفة', description: 'تاريخ المخالفة مطلوب', variant: 'destructive' }); 
+      return; 
+    }
+
+    // التحقق من المبلغ
+    const enteredAmount = Number.parseFloat(form.amount);
+    if (!enteredAmount || enteredAmount <= 0) {
+      toast({ title: 'أدخل مبلغ المخالفة', description: 'مبلغ المخالفة مطلوب', variant: 'destructive' });
+      return;
+    }
 
     setSearching(true); setResults(null); setNoVehicle(false); setAssigningEmployeeId(null);
 
-    // Find vehicle(s)
-    const vehicleIds = vehicleId
-      ? [vehicleId]
-      : ((await violationService.findVehicleIdsByPlate(plate)) || []).map(v => v.id);
-
-    if (!vehicleIds.length) { setSearching(false); setNoVehicle(true); return; }
+    // Find vehicle(s) - now we require selected_vehicle_id
+    const vehicleIds = [vehicleId];
 
     // Find assignments at that time
     const violationTs = form.use_time
@@ -188,7 +202,12 @@ export function useViolationTable() {
 
     const assignments = await violationService.getAssignmentsByVehicleIds(vehicleIds);
 
-    if (!assignments?.length) { setSearching(false); setResults([]); return; }
+    if (!assignments?.length) { 
+      setSearching(false); 
+      setResults([]); 
+      toast({ title: 'لا يوجد مندوب مسؤول', description: 'لم يتم تسليم المركبة لأي مندوب في هذا التاريخ', variant: 'destructive' });
+      return; 
+    }
 
     const violationTime = new Date(violationTs).getTime();
 
@@ -209,7 +228,12 @@ export function useViolationTable() {
       });
     }
 
-    if (!matched.length) { setSearching(false); setResults([]); return; }
+    if (!matched.length) { 
+      setSearching(false); 
+      setResults([]); 
+      toast({ title: 'لا يوجد مندوب مسؤول', description: 'لم يتم تسليم المركبة لأي مندوب في هذا التوقيت المحدد', variant: 'destructive' });
+      return; 
+    }
 
     const empIds = [...new Set(matched.map(a => a.employee_id))];
 

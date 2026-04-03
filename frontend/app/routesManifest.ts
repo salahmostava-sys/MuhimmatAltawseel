@@ -46,7 +46,6 @@ export const routesManifest: AppRouteManifestItem[] = [
   { id: 'employee_tiers', titleAr: 'شرائح الشركة', group: 'operations', path: '/employee-tiers', permission: routePermission('employee_tiers'), sidebar: true },
   { id: 'platform_accounts', titleAr: 'حسابات المنصات', group: 'operations', path: '/platform-accounts', permission: routePermission('platform_accounts'), sidebar: true },
 
-  { id: 'finance_dashboard', titleAr: 'لوحة التحكم المالية', group: 'finance', path: '/finance-dashboard', permission: routePermission('finance_dashboard'), sidebar: true },
   { id: 'salaries', titleAr: 'الرواتب', group: 'finance', path: '/salaries', permission: routePermission('salaries'), sidebar: true },
   { id: 'advances', titleAr: 'السلف', group: 'finance', path: '/advances', permission: routePermission('advances'), sidebar: true },
 

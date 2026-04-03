@@ -4,7 +4,6 @@ import { FuelFiltersToolbar, FuelPlatformTabs } from '@modules/fuel/components/F
 import {
   FuelMonthlyView,
   FuelDailyDetailedView,
-  FuelDailyFastList,
 } from '@modules/fuel/components/FuelTable';
 import { ImportModal } from '@modules/fuel/components/FuelImportModal';
 import { useFuelPage } from '@modules/fuel/hooks/useFuelPage';
@@ -13,8 +12,6 @@ const FuelPage = () => { // NOSONAR: UI container with many independent handlers
   const {
     view,
     setView,
-    dailyMode,
-    setDailyMode,
     selectedMonth,
     setSelectedMonth,
     selectedYear,
@@ -29,8 +26,6 @@ const FuelPage = () => { // NOSONAR: UI container with many independent handlers
     employees,
     apps,
     monthYear,
-    monthStart,
-    monthEnd,
     ridersForTab,
     loading,
     filteredMonthly,
@@ -44,25 +39,20 @@ const FuelPage = () => { // NOSONAR: UI container with many independent handlers
     tableRef,
     handleExportMonthly,
     handleExportDaily,
-    fastDailyPage,
-    setFastDailyPage,
-    fastDailyPageSize,
-    fastDailyFilters,
-    setFastDailyFilters,
     showImport,
     setShowImport,
     expandedRider,
     setExpandedRider,
     newEntry,
     setNewEntry,
-                    editingDaily,
+    editingDaily,
     setEditingDaily,
     defaultEntryDate,
-                    savingEntry,
+    savingEntry,
     submitNewEntry,
-                    updateEditingDaily,
-                    saveEditedDaily,
-                    handleDeleteDaily,
+    updateEditingDaily,
+    saveEditedDaily,
+    handleDeleteDaily,
     permissions,
     refetchMonthly,
     monthOrdersMap,
@@ -74,7 +64,6 @@ const FuelPage = () => { // NOSONAR: UI container with many independent handlers
         search={search}
         setSearch={setSearch}
         view={view}
-        dailyMode={dailyMode}
         handleExportMonthly={handleExportMonthly}
         handleExportDaily={handleExportDaily}
         onOpenImport={() => setShowImport(true)}
@@ -113,50 +102,29 @@ const FuelPage = () => { // NOSONAR: UI container with many independent handlers
       )}
 
       {view === 'daily' && (
-        <>
-          {dailyMode === 'fast' ? (
-            <FuelDailyFastList
-              monthYear={monthYear}
-              monthStart={monthStart}
-              monthEnd={monthEnd}
-              employees={ridersForTab}
-              filters={fastDailyFilters}
-              onFiltersChange={(next) => {
-                setFastDailyFilters(next);
-                setFastDailyPage(1);
-              }}
-              page={fastDailyPage}
-              pageSize={fastDailyPageSize}
-              onPageChange={setFastDailyPage}
-              onBack={() => setDailyMode('detailed')}
-            />
-          ) : (
-            <FuelDailyDetailedView
-              filteredDaily={filteredDaily}
-              dailyTotalKm={dailyTotalKm}
-              dailyTotalFuel={dailyTotalFuel}
-              ridersForTab={ridersForTab}
-              selectedEmployee={selectedEmployee}
-              setSelectedEmployee={setSelectedEmployee}
-              loading={loading}
-              expandedRider={expandedRider}
-              setExpandedRider={setExpandedRider}
-              monthOrdersMap={monthOrdersMap}
-              permissionsCanEdit={permissions.can_edit}
-              newEntry={newEntry}
-              setNewEntry={setNewEntry}
-                          defaultEntryDate={defaultEntryDate}
-              savingEntry={savingEntry}
-              submitNewEntry={submitNewEntry}
-              editingDaily={editingDaily}
-              setEditingDaily={setEditingDaily}
-              updateEditingDaily={updateEditingDaily}
-              saveEditedDaily={saveEditedDaily}
-              handleDeleteDaily={handleDeleteDaily}
-              setDailyMode={setDailyMode}
-            />
-          )}
-        </>
+        <FuelDailyDetailedView
+          filteredDaily={filteredDaily}
+          dailyTotalKm={dailyTotalKm}
+          dailyTotalFuel={dailyTotalFuel}
+          ridersForTab={ridersForTab}
+          selectedEmployee={selectedEmployee}
+          setSelectedEmployee={setSelectedEmployee}
+          loading={loading}
+          expandedRider={expandedRider}
+          setExpandedRider={setExpandedRider}
+          monthOrdersMap={monthOrdersMap}
+          permissionsCanEdit={permissions.can_edit}
+          newEntry={newEntry}
+          setNewEntry={setNewEntry}
+          defaultEntryDate={defaultEntryDate}
+          savingEntry={savingEntry}
+          submitNewEntry={submitNewEntry}
+          editingDaily={editingDaily}
+          setEditingDaily={setEditingDaily}
+          updateEditingDaily={updateEditingDaily}
+          saveEditedDaily={saveEditedDaily}
+          handleDeleteDaily={handleDeleteDaily}
+        />
       )}
 
       {showImport && (

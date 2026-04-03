@@ -205,14 +205,9 @@ export const usePlatformAccountsPage = () => {
     [sortKey],
   );
 
-  const saveAccount = useCallback(async () => {
+  saveAccount: useCallback(async () => {
     if (!accountForm.app_id) {
       toast.error(TOAST_ERROR_GENERIC, { description: 'يرجى اختيار المنصة' });
-      return;
-    }
-
-    if (!editingAccount && !accountForm.employee_id) {
-      toast.error(TOAST_ERROR_GENERIC, { description: 'يرجى اختيار صاحب الحساب' });
       return;
     }
 

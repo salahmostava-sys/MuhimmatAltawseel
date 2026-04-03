@@ -9,12 +9,11 @@ export function FuelFiltersToolbar(props: Readonly<{
   search: string;
   setSearch: (v: string) => void;
   view: 'monthly' | 'daily';
-  dailyMode: 'detailed' | 'fast';
   handleExportMonthly: () => void;
   handleExportDaily: () => void;
   onOpenImport: () => void;
 }>) {
-  const { search, setSearch, view, dailyMode, handleExportMonthly, handleExportDaily, onOpenImport } = props;
+  const { search, setSearch, view, handleExportMonthly, handleExportDaily, onOpenImport } = props;
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
@@ -62,7 +61,7 @@ export function FuelFiltersToolbar(props: Readonly<{
           </DropdownMenuContent>
         </DropdownMenu>
       ) : null}
-      {view === 'daily' && dailyMode === 'detailed' ? (
+      {view === 'daily' ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs">

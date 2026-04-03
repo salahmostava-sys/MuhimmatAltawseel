@@ -47,7 +47,6 @@ export function useFuelPage() { // NOSONAR: page data layer with many independen
   const { selectedMonth: globalMonth } = useTemporalContext();
   const now = new Date();
   const [view, setView] = useState<'monthly' | 'daily'>('monthly');
-  const [dailyMode, setDailyMode] = useState<'detailed' | 'fast'>('detailed');
 
   const [yearStr, monthStr] = globalMonth.split('-');
   const selectedMonth = monthStr;
@@ -109,13 +108,19 @@ export function useFuelPage() { // NOSONAR: page data layer with many independen
     queryKey: ['fuel', uid, 'base-data'],
     enabled,
     queryFn: async () => {
-      const [empRows, appRows, linkRows] = await Promise.all([
+      const [empRows, appRows, linkRows, assignmentRows] = await Promise.all([
         fuelApi.getActiveEmployees(),
         fuelApi.getActiveApps(),
         fuelApi.getActiveEmployeeAppLinks(),
+        fuelApi.getActiveVehicleAssignments(),
       ]);
+      const vehicleMap = buildVehicleMap((assignmentRows || []) as VehicleAssignmentRow[]);
+      const employeesWithVehicles = (empRows || []).map((emp: Employee) => ({
+        ...emp,
+        vehicle: vehicleMap[emp.id] || null,
+      }));
       return {
-        employees: (empRows || []) as Employee[],
+        employees: employeesWithVehicles as Employee[],
         apps: (appRows || []) as AppRow[],
         links: (linkRows || []) as { employee_id: string; app_id: string }[],
       };
@@ -315,11 +320,6 @@ export function useFuelPage() { // NOSONAR: page data layer with many independen
     tableRef,
     handleExportMonthly,
     handleExportDaily,
-    fastDailyPage,
-    setFastDailyPage,
-    fastDailyPageSize,
-    fastDailyFilters,
-    setFastDailyFilters,
   } = useFuelTable({
     view,
     filteredMonthly,
@@ -338,8 +338,6 @@ export function useFuelPage() { // NOSONAR: page data layer with many independen
   return {
     view,
     setView,
-    dailyMode,
-    setDailyMode,
     selectedMonth,
     setSelectedMonth,
     selectedYear,
@@ -354,8 +352,6 @@ export function useFuelPage() { // NOSONAR: page data layer with many independen
     employees,
     apps,
     monthYear,
-    monthStart,
-    monthEnd,
     ridersForTab,
     loading,
     filteredMonthly,
@@ -369,11 +365,6 @@ export function useFuelPage() { // NOSONAR: page data layer with many independen
     tableRef,
     handleExportMonthly,
     handleExportDaily,
-    fastDailyPage,
-    setFastDailyPage,
-    fastDailyPageSize,
-    fastDailyFilters,
-    setFastDailyFilters,
     showImport,
     setShowImport,
     expandedRider,

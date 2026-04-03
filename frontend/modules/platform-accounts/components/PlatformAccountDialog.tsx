@@ -98,7 +98,7 @@ export const PlatformAccountDialog = ({
               <p className="text-[11px] text-muted-foreground">
                 عند الاختيار يُعبّأ تلقائيًا <strong>رقم الإقامة</strong> و
                 <strong>تاريخ انتهاء الإقامة</strong> من ملف الموظف؛ يمكنك تعديلهما أدناه إذا
-                اختلفت بيانات المنصة.
+                اختلفت بيانات المنصة. (اختياري — يمكن تركه فارغًا)
               </p>
               <Select
                 value={accountEmployeeSelectValue}

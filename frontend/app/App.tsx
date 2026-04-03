@@ -39,7 +39,6 @@ const VehicleAssignment = lazy(() => import("@modules/pages/VehicleAssignment"))
 const EmployeeTiers = lazy(() => import("@modules/pages/EmployeeTiers"));
 const PlatformAccounts = lazy(() => import("@modules/pages/PlatformAccounts"));
 const AiAnalytics = lazy(() => import("@modules/pages/AiAnalyticsPage"));
-const FinanceDashboard = lazy(() => import("@modules/finance/pages/FinanceDashboard"));
 const ProfilePage = lazy(() => import("@modules/pages/ProfilePage"));
 const NotFound = lazy(() => import("@modules/pages/NotFound"));
 
@@ -158,10 +157,6 @@ const router = createBrowserRouter([
             element: <PageGuard pageKey="platform_accounts"><PlatformAccounts /></PageGuard>,
           },
           { path: "ai-analytics", element: <PageGuard pageKey="ai_analytics"><AiAnalytics /></PageGuard> },
-          {
-            path: "finance-dashboard",
-            element: <PageGuard pageKey="finance_dashboard"><FinanceDashboard /></PageGuard>,
-          },
           { path: "profile", element: <ProfilePage /> },
           { path: "profile-page", element: <Navigate to="/profile" replace /> },
           { path: "settings", element: <PageGuard pageKey="settings"><SettingsHub /></PageGuard> },

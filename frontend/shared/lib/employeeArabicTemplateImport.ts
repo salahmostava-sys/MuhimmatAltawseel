@@ -25,6 +25,7 @@ type DbKey =
   | 'sponsorship_status'
   | 'bank_account_number'
   | 'iban'
+  | 'commercial_record'
   | 'salary_type'
   | 'status'
   | 'base_salary';
@@ -210,6 +211,7 @@ function buildPayload(row: EmployeeArabicRow): Record<string, unknown> {
     'sponsorship_status',
     'bank_account_number',
     'iban',
+    'commercial_record',
     'salary_type',
     'status',
   ];

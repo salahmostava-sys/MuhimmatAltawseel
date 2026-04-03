@@ -43,6 +43,7 @@ interface EmployeeData {
   base_salary: number;
   preferred_language?: string | null;
   nationality?: string | null;
+  commercial_record?: string | null;
 }
 
 interface Props {
@@ -187,6 +188,7 @@ const employeeFormSchema = z
     selected_apps: z.array(z.string()).default([]),
     app_schemes: z.record(z.string()).default({}),
     preferred_language: z.enum(['ar', 'en', 'ur']).default('ar'),
+    commercial_record: z.string().trim().optional().or(z.literal('')),
   })
   .superRefine((val, ctx) => {
     if (val.salary_type === 'shift') {
@@ -249,6 +251,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
       selected_apps: [],
       app_schemes: {},
       preferred_language: (editEmployee?.preferred_language as EmployeeFormValues['preferred_language']) || 'ar',
+      commercial_record: editEmployee?.commercial_record || '',
     },
     mode: 'onBlur',
   });
@@ -364,6 +367,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
     salary_type: v.salary_type,
     base_salary: v.salary_type === 'shift' ? Number(v.base_salary || 0) : 0,
     preferred_language: v.preferred_language,
+    commercial_record: v.commercial_record || null,
   });
 
   const upsertEmployeeAndAudit = async (payload: ReturnType<typeof buildEmployeePayload>) => {
@@ -550,7 +554,25 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                 <Input value={form.national_id} onChange={e => setField('national_id', e.target.value)} placeholder="2xxxxxxxxx" dir="ltr" />
               </F>
               <F label="الجنسية">
-                <Input value={form.nationality} onChange={e => setField('nationality', e.target.value)} placeholder="سعودي / يمني / باكستاني ..." />
+                <Select value={form.nationality} onValueChange={v => setField('nationality', v)}>
+                  <SelectTrigger><SelectValue placeholder="اختر الجنسية" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="سعودي">سعودي</SelectItem>
+                    <SelectItem value="يمني">يمني</SelectItem>
+                    <SelectItem value="باكستاني">باكستاني</SelectItem>
+                    <SelectItem value="مصري">مصري</SelectItem>
+                    <SelectItem value="سوداني">سوداني</SelectItem>
+                    <SelectItem value="بنغالي">بنغالي</SelectItem>
+                    <SelectItem value="هندي">هندي</SelectItem>
+                    <SelectItem value="فلبيني">فلبيني</SelectItem>
+                    <SelectItem value="فلسطيني">فلسطيني</SelectItem>
+                    <SelectItem value="سوري">سوري</SelectItem>
+                    <SelectItem value="أردني">أردني</SelectItem>
+                    <SelectItem value="إثيوبي">إثيوبي</SelectItem>
+                    <SelectItem value="نيبالي">نيبالي</SelectItem>
+                    <SelectItem value="أخرى">أخرى</SelectItem>
+                  </SelectContent>
+                </Select>
               </F>
               <F label="رقم الحساب البنكي">
                 <Input value={form.bank_account_number} onChange={e => setField('bank_account_number', e.target.value)} dir="ltr" />
@@ -650,6 +672,9 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
               </div>
               <F label="تاريخ انتهاء التأمين الصحي">
                 <Input type="date" value={form.health_insurance_expiry} onChange={e => setField('health_insurance_expiry', e.target.value)} />
+              </F>
+              <F label="رقم السجل التجاري">
+                <Input value={form.commercial_record} onChange={e => setField('commercial_record', e.target.value)} placeholder="1234567890" dir="ltr" />
               </F>
               <F label="حالة الرخصة">
                 <Select value={form.license_status} onValueChange={v => setField('license_status', v)}>

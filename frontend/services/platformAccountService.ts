@@ -41,6 +41,7 @@ export interface PlatformAccountWritePayload {
   iqama_expiry_date: string | null;
   status: 'active' | 'inactive';
   notes: string | null;
+  company_id?: string | null;
 }
 
 export const platformAccountService = {

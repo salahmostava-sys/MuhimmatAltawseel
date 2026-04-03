@@ -18,6 +18,7 @@ export const EMPLOYEE_IMPORT_COLUMNS = [
   { key: 'sponsorship_status', label: 'حالة الكفالة (sponsored/not_sponsored/absconded/terminated)' },
   { key: 'bank_account_number', label: 'رقم الحساب البنكي' },
   { key: 'iban', label: 'IBAN' },
+  { key: 'commercial_record', label: 'رقم السجل التجاري' },
   { key: 'salary_type', label: 'نوع الراتب (orders/shift)' },
   { key: 'status', label: 'الحالة (active/inactive/ended)' },
 ] as const;
