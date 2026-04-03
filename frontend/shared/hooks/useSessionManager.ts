@@ -16,7 +16,6 @@ import { SessionManager } from '@shared/lib/session/sessionManager';
 import {
   TOAST_SESSION_WARNING,
   TOAST_SESSION_EXPIRED,
-  TOAST_SESSION_EXPIRED_OTHER_TAB,
 } from '@shared/lib/toastMessages';
 
 interface UseSessionManagerOpts {

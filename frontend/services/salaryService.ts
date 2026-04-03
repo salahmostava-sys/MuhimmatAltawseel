@@ -117,7 +117,6 @@ export function getTierSalaryExplanationLines(
     );
   } else if (tierType === 'base_plus_incremental') {
     const thr = matched.incremental_threshold ?? matched.from_orders;
-    const extra = Math.max(0, orders - thr);
     lines.push(
       `أساس ${Math.round(matched.price_per_order).toLocaleString('ar-SA')} + (${orders} − ${thr}) × ${matched.incremental_price ?? 0} ر.س`,
     );

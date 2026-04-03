@@ -88,7 +88,7 @@ export function SalarySlipTemplateEditor() {
         const def = data.find(t => t.is_default) || data[0];
         setCurrentTemplate(def);
       }
-    } catch (e) {
+    } catch {
       toast.error('فشل تحميل القوالب');
     } finally {
       setLoading(false);
@@ -117,7 +117,7 @@ export function SalarySlipTemplateEditor() {
         toast.success('تم إنشاء القالب بنجاح');
       }
       loadTemplates();
-    } catch (e) {
+    } catch {
       toast.error('فشل حفظ القالب');
     } finally {
       setSaving(false);
@@ -130,7 +130,7 @@ export function SalarySlipTemplateEditor() {
       await salarySlipTemplateService.delete(id);
       toast.success('تم حذف القالب');
       loadTemplates();
-    } catch (e) {
+    } catch {
       toast.error('فشل حذف القالب');
     }
   };

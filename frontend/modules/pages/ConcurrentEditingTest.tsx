@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '@services/supabase/client';
 import { salaryDraftService } from '@services/salaryDraftService';
 import { Button } from '@shared/components/ui/button';
@@ -26,7 +26,7 @@ const ConcurrentEditingTest = () => {
     try {
       // Test 1: Check salary_drafts table exists
       addResult({ name: 'فحص جدول salary_drafts', status: 'pending', message: 'جارٍ الفحص...' });
-      const { data: draftsTable, error: draftsError } = await supabase
+      const { error: draftsError } = await supabase
         .from('salary_drafts')
         .select('id')
         .limit(1);
@@ -47,7 +47,7 @@ const ConcurrentEditingTest = () => {
 
       // Test 2: Check version column in salary_records
       addResult({ name: 'فحص عمود version', status: 'pending', message: 'جارٍ الفحص...' });
-      const { data: versionCheck, error: versionError } = await supabase
+      const { error: versionError } = await supabase
         .from('salary_records')
         .select('version')
         .limit(1);

@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
-import { Label } from '@shared/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@shared/components/ui/alert-dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
 import { useToast } from '@shared/hooks/use-toast';
@@ -61,13 +60,13 @@ const STATUS_NOT_DELIVERED = 'not_delivered';
 const statusLabel = (s: string) =>
   s === STATUS_DELIVERED ? 'مسلّمة' : 'غير مسلم';
 
-const statusCls = (s: string) =>
+const _statusCls = (s: string) =>
   s === STATUS_DELIVERED
     ? 'bg-success/10 text-success border border-success/20'
     : 'bg-muted text-muted-foreground border border-border';
 
 /* ─── Renewal badge ─── */
-const RenewalBadge = ({ date }: { date: string }) => {
+const _RenewalBadge = ({ date }: { date: string }) => {
   const days = differenceInDays(parseISO(date), new Date());
   if (days < 0)  return <span className="text-xs text-destructive font-medium">{date} <span className="text-[10px]">(منتهية)</span></span>;
   if (days <= 7)  return <span className="text-xs text-destructive font-medium">{date} <span className="text-[10px]">({days}د)</span></span>;

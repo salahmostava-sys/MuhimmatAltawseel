@@ -1,10 +1,7 @@
 import { Button } from '@shared/components/ui/button';
 import { Wallet, Table2, TrendingUp, Users, Building2 } from 'lucide-react';
 import { SalaryEngineStatusBadge } from '@modules/salaries/components/SalaryEngineStatusBadge';
-import { months } from '@modules/salaries/lib/salaryMonths';
 import type { SalaryRow } from '@modules/salaries/types/salary.types';
-
-import { useTemporalContext } from '@app/providers/TemporalContext';
 
 interface SalaryMonthSelectorProps {
   setPageMode: (v: 'detailed' | 'fast') => void;
@@ -14,7 +11,6 @@ interface SalaryMonthSelectorProps {
 
 export function SalaryMonthSelector(props: Readonly<SalaryMonthSelectorProps>) {
   const { setPageMode, loadingData, previewBackendError } = props;
-  const { selectedMonth, setSelectedMonth } = useTemporalContext();
 
   return (
     <div className="flex items-center justify-between gap-3 flex-wrap">

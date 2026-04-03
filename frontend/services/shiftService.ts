@@ -1,6 +1,6 @@
 import { supabase } from '@services/supabase/client';
 import { toServiceError } from '@services/serviceError';
-import type { DailyShift, ShiftFilter } from '@shared/types/shifts';
+import type { ShiftFilter } from '@shared/types/shifts';
 
 export const shiftService = {
   getAll: async () => {

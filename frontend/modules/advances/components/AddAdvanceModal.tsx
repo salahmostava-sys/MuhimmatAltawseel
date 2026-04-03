@@ -12,7 +12,6 @@ import { useToast } from '@shared/hooks/use-toast';
 import { format } from 'date-fns';
 import { logError } from '@shared/lib/logger';
 import type {
-  Advance,
   AdvanceStatus,
   Installment,
   InlineRowProps,
@@ -381,7 +380,7 @@ export const PrintSlip = ({ employeeName, nationalId, totalDebt, totalPaid, rema
   );
 };
 
-export const TransactionsModal = ({ employeeId, employeeName, nationalId, totalDebt, totalPaid, remaining, advances, allAdvances, isWrittenOff, canEdit, onClose, onRefresh, onWriteOff, onRestore, onEditAdvance }: TransactionsModalProps) => {
+export const TransactionsModal = ({ employeeId, employeeName, nationalId, totalDebt, totalPaid, remaining, advances, isWrittenOff, canEdit, onClose, onRefresh, onWriteOff, onRestore, onEditAdvance }: TransactionsModalProps) => {
   const { toast } = useToast();
   const empAdvances = advances.filter(a => a.employee_id === employeeId);
   const allInstallments = empAdvances.flatMap(adv =>

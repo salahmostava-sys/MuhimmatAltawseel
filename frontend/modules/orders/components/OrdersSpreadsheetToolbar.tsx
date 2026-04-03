@@ -1,5 +1,5 @@
 import type React from 'react';
-import { Search, Save, FolderOpen, Loader2, Trash2 } from 'lucide-react';
+import { Search, Save, FolderOpen, Loader2 } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import {

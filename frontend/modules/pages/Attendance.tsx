@@ -1,7 +1,6 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useRef, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@shared/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select';
 import { ClipboardCheck, CalendarDays, FolderOpen } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@shared/components/ui/dropdown-menu';
 import DailyAttendance from '@shared/components/attendance/DailyAttendance';
@@ -17,9 +16,6 @@ const MONTHS_AR = [
 ];
 
 import { useTemporalContext } from '@app/providers/TemporalContext';
-
-const currentYear = new Date().getFullYear();
-const YEARS = [currentYear - 2, currentYear - 1, currentYear];
 
 const ATT_TABS = ['daily', 'monthly'] as const;
 type AttTab = (typeof ATT_TABS)[number];

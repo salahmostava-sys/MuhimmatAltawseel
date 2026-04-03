@@ -48,7 +48,7 @@ import { ComprehensiveStats } from '@modules/dashboard/components/ComprehensiveS
 
 
 
-const SKELETON_KEYS_2 = ['sk-1', 'sk-2'] as const;
+const _SKELETON_KEYS_2 = ['sk-1', 'sk-2'] as const;
 const SKELETON_KEYS_4 = ['sk-1', 'sk-2', 'sk-3', 'sk-4'] as const;
 const SKELETON_KEYS_5 = ['sk-1', 'sk-2', 'sk-3', 'sk-4', 'sk-5'] as const;
 
@@ -109,7 +109,7 @@ const Card = ({ title, subtitle, children, action }: { title: string; subtitle?:
 );
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
-const KpiCard = ({ label, value, icon: Icon, color, bg, sub, trend, loading }: {
+const _KpiCard = ({ label, value, icon: Icon, color, bg, sub, trend, loading }: {
   label: string; value: string | number; icon: LucideIcon;
   color: string; bg: string; sub?: string;
   trend?: { value: number; positive: boolean }; loading?: boolean;
@@ -138,7 +138,7 @@ const KpiCard = ({ label, value, icon: Icon, color, bg, sub, trend, loading }: {
 );
 
 // ─── Stat Chip ────────────────────────────────────────────────────────────────
-const Chip = ({ label, value, color }: { label: string; value: number; color: string }) => (
+const _Chip = ({ label, value, color }: { label: string; value: number; color: string }) => (
   <div className={`rounded-xl px-3 py-2 ${color}`}>
     <p className="text-xl font-black leading-none">{value}</p>
     <p className="text-[10px] font-semibold mt-1 opacity-80 leading-tight">{label}</p>
@@ -149,7 +149,7 @@ const Chip = ({ label, value, color }: { label: string; value: number; color: st
 const RANK_COLORS = ['bg-amber-100 text-amber-600', 'bg-slate-100 text-slate-500', 'bg-orange-100 text-orange-500'];
 
 // ─── Leaderboard ─────────────────────────────────────────────────────────────
-const Leaderboard = ({ entries, loading, max }: { entries: { name: string; orders: number; app?: string; appColor?: string }[]; loading: boolean; max?: number }) => {
+const _Leaderboard = ({ entries, loading, max }: { entries: { name: string; orders: number; app?: string; appColor?: string }[]; loading: boolean; max?: number }) => {
   const maxVal = max || entries[0]?.orders || 1;
   
   const renderContent = () => {
@@ -220,7 +220,7 @@ const TargetBar = ({ name, actual, target, brandColor, textColor, riders }: {
 
 type OrdersByAppCardRow = { app: string; orders: number; target: number; brandColor: string; textColor: string; riders: number };
 
-const renderOrdersByAppNode = (loading: boolean, ordersByApp: OrdersByAppCardRow[]) => {
+const _renderOrdersByAppNode = (loading: boolean, ordersByApp: OrdersByAppCardRow[]) => {
   if (loading) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -246,8 +246,8 @@ const renderOrdersByAppNode = (loading: boolean, ordersByApp: OrdersByAppCardRow
 
 type DashboardTabKey = 'overview' | 'analytics';
 
-const DASHBOARD_MONTH_MIN = format(subMonths(new Date(), 36), 'yyyy-MM');
-const DASHBOARD_MONTH_MAX = format(new Date(), 'yyyy-MM');
+const _DASHBOARD_MONTH_MIN = format(subMonths(new Date(), 36), 'yyyy-MM');
+const _DASHBOARD_MONTH_MAX = format(new Date(), 'yyyy-MM');
 
 const DASHBOARD_SHORTCUTS = [
   { to: '/orders', label: 'الطلبات' },
@@ -314,7 +314,7 @@ const DashboardHeader = ({
   );
 };
 
-const OrdersByCityCard = ({ ordersByCity, totalOrders }: { ordersByCity: { city: string; orders: number }[]; totalOrders: number }) => {
+const _OrdersByCityCard = ({ ordersByCity, totalOrders }: { ordersByCity: { city: string; orders: number }[]; totalOrders: number }) => {
   if (ordersByCity.length === 0) return null;
   return (
     <Card title="الطلبات حسب المنطقة" subtitle={`إجمالي: ${totalOrders.toLocaleString()} طلب`}>
@@ -440,7 +440,7 @@ const AnalyticsTab = () => {
     enabled,
     queryFn: async () => {
       const months = buildHistoricalMonths();
-      const monthLabels = months.map(m => m.label);
+      const _monthLabels = months.map(m => m.label);
 
       const { apps, employees, monthOrders } = await dashboardService.fetchHistoricalData(months);
       const empMap = Object.fromEntries((employees || []).map(e => [e.id, e.name]));
@@ -460,17 +460,17 @@ const AnalyticsTab = () => {
       const riderData = accumulateRiderOrders(last4 as Array<AnalyticsOrderRow[] | null>);
       const riderMetrics = buildRiderMetrics(riderData, empMap);
 
-      return { monthLabels, monthlyTrend: trendData, riderMetrics, projectedOrders, currentOrders: currTotal, appBreakdown };
+      return { monthLabels: _monthLabels, monthlyTrend: trendData, riderMetrics, projectedOrders, currentOrders: currTotal, appBreakdown };
     },
     staleTime: 5 * 60 * 1000,
   });
 
   const {
-    monthLabels = [] as string[],
+    monthLabels: _monthLabels = [] as string[],
     monthlyTrend = [] as { month: string; orders: number; riders: number; avg: number }[],
     riderMetrics = [] as RiderMonthly[],
     projectedOrders = 0,
-    currentOrders = 0,
+    currentOrders: _currentOrders = 0,
     appBreakdown = [] as { name: string; brand_color: string; thisMonth: number; lastMonth: number; growth: number }[],
   } = data ?? {};
 
@@ -969,7 +969,7 @@ type OverviewTabProps = {
 
 const OverviewTab = ({
   loading,
-  monthYear,
+  monthYear: _monthYear,
   kpis,
   orderGrowth,
   ordersByApp,

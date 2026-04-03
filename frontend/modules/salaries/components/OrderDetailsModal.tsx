@@ -8,7 +8,7 @@ import {
 } from '@shared/components/ui/dialog';
 import { Button } from '@shared/components/ui/button';
 import { Badge } from '@shared/components/ui/badge';
-import { Package, Calculator, TrendingUp, ArrowRight } from 'lucide-react';
+import { Package, Calculator, TrendingUp } from 'lucide-react';
 import type { SalaryRow, SchemeData } from '@modules/salaries/types/salary.types';
 
 interface OrderDetailsModalProps {

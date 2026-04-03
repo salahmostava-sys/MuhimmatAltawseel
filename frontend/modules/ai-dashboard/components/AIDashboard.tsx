@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@shared/hooks/use-toast';
-import { aiService, type SalaryForecastResponse, type EmployeeRank, type Anomaly, type AnomalyDetectionResponse } from '@services/aiService';
+import { aiService, type SalaryForecastResponse, type EmployeeRank, type Anomaly } from '@services/aiService';
 import { Button } from '@shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { Badge } from '@shared/components/ui/badge';
@@ -15,9 +15,7 @@ import {
   AlertCircle,
   Info,
   Loader2,
-  User,
   DollarSign,
-  Package,
   CheckCircle2
 } from 'lucide-react';
 import { cn } from '@shared/lib/utils';
@@ -73,7 +71,7 @@ export function AIDashboard({
         working_days_per_month: 30,
       });
       setSalaryForecast(result);
-    } catch (err) {
+    } catch {
       toast({ 
         title: 'خطأ في توقع الراتب', 
         description: 'لم يتمكن الذكاء الاصطناعي من تحليل البيانات',
@@ -99,7 +97,7 @@ export function AIDashboard({
       
       const result = await aiService.bestEmployees(mockEmployees, 5);
       setBestEmployees(result.employees);
-    } catch (err) {
+    } catch {
       toast({ 
         title: 'خطأ في تحليل الأداء', 
         description: 'لم يتمكن الذكاء الاصطناعي من تقييم الموظفين',
@@ -137,7 +135,7 @@ export function AIDashboard({
           variant: 'destructive',
         });
       }
-    } catch (err) {
+    } catch {
       toast({ 
         title: 'خطأ في الكشف عن الشذوذ', 
         description: 'لم يتمكن الذكاء الاصطناعي من تحليل البيانات',
@@ -180,7 +178,7 @@ export function AIDashboard({
     return colors[tier] || 'bg-gray-100 text-gray-800';
   };
 
-  const getPerformanceLabel = (tier: string) => {
+  const _getPerformanceLabel = (tier: string) => {
     const labels: Record<string, string> = {
       excellent: 'ممتاز',
       good: 'جيد',
@@ -196,7 +194,7 @@ export function AIDashboard({
     return <Info className="h-4 w-4 text-blue-500" />;
   };
 
-  const getAnomalyBadgeVariant = (severity: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
+  const _getAnomalyBadgeVariant = (severity: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
     if (severity === 'critical') return 'destructive';
     if (severity === 'warning') return 'secondary';
     return 'outline';

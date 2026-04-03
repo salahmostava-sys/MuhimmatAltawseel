@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Button } from '@shared/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@shared/components/ui/tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select';
-import { CheckCircle, Printer, AlertTriangle, Loader2, Package } from 'lucide-react';
+import { CheckCircle, Printer, AlertTriangle, Loader2 } from 'lucide-react';
 import type { CustomColumn } from '@shared/hooks/useAppColors';
 import { SalarySortIcon } from '@modules/salaries/components/SalarySortIcon';
 import {
@@ -110,16 +110,6 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
     advance: 0, externalDed: 0, violations: 0,
     totalDed: 0, net: 0, transfer: 0, remaining: 0,
   }), [filtered, computeRow, platforms]);
-
-  const ThSort = ({ field, label, className = '' }: { field: string; label: string; className?: string }) => (
-    <th
-      className={`px-3 py-2 text-xs font-semibold whitespace-nowrap border border-border/60 text-center cursor-pointer select-none hover:brightness-90 transition-all ${className}`}
-      onClick={() => handleSort(field)}
-    >
-      {label}
-      <SalarySortIcon field={field} sortField={sortField} sortDir={sortDir} />
-    </th>
-  );
 
   return (
     <div className="rounded-xl shadow-card bg-card overflow-hidden">

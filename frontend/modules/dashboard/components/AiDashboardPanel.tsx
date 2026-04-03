@@ -71,7 +71,7 @@ const severityIcon = (severity: string) => {
 
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 
-function CardSkeleton({ title }: { title: string }) {
+function CardSkeleton({ title: _title }: { title: string }) {
   return (
     <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-card animate-pulse">
       <div className="flex items-center gap-2 mb-3">

@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Column } from '@tanstack/react-table';
-import { Check, Filter, Search, ArrowDownAZ, ArrowUpZA, X } from 'lucide-react';
+import { Check, Filter, ArrowDownAZ, ArrowUpZA, X } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@shared/components/ui/command';
 import { Checkbox } from '@shared/components/ui/checkbox';

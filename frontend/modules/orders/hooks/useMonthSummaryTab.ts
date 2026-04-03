@@ -22,7 +22,6 @@ export function useMonthSummaryTab() {
   const { permissions } = usePermissions('orders');
   const { selectedMonth: globalMonth, setSelectedMonth: setGlobalMonth } = useTemporalContext();
   const qk = ordersQueryKeys(uid);
-  const now = new Date();
 
   // Derived from Global Temporal Context (YYYY-MM)
   const [yearStr, monthStr] = globalMonth.split('-');

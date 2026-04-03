@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { Activity, BarChart3, Calendar } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select';
 import { FUEL_PAGE_MONTHS } from '@modules/fuel/lib/fuelMonthOptions';
 
 type FuelView = 'monthly' | 'daily';
@@ -25,10 +24,7 @@ export function FuelPageHeader({
   view,
   onViewChange,
   selectedMonth,
-  onMonthChange,
   selectedYear,
-  onYearChange,
-  years,
   toolbarEnd,
 }: FuelPageHeaderProps) {
   const { t } = useTranslation();

@@ -14,7 +14,6 @@ import {
   sumRiderFuel,
   sumRiderKm,
 } from '@shared/lib/fuelBusiness';
-import { useFuel } from '@modules/fuel/hooks/useFuel';
 import {
   costPerKmColor,
   fuelPerOrderBadgeClass,

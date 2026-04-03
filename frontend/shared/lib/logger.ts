@@ -34,17 +34,6 @@ function emitLog(level: LogLevel, message: string, payload: unknown) {
   }
 }
 
-function toSerializableError(error: unknown) {
-  if (error instanceof Error) {
-    return {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-    };
-  }
-  return error;
-}
-
 function sendToMonitoring(entry: LogMeta) {
   if (!MONITORING_ENDPOINT) return;
   try {

@@ -13,7 +13,7 @@ export function useSpreadsheetQueries(
   enabled: boolean,
   year: number,
   month: number,
-  activeEmployeeIdsInMonth: ReadonlySet<string> | undefined,
+  _activeEmployeeIdsInMonth: ReadonlySet<string> | undefined,
 ) {
   const qk = ordersQueryKeys(uid);
 

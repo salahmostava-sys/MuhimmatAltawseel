@@ -1,4 +1,4 @@
-import { Map, Clock, Target } from 'lucide-react';
+import { Clock, Target } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthQueryGate, authQueryUserId } from '@shared/hooks/useAuthQueryGate';
 

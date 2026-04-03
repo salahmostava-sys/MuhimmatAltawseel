@@ -23,7 +23,7 @@ export const appService = {
     return data ?? [];
   },
 
-  getMonthlyApps: async (monthYear: string) => {
+  getMonthlyApps: async (_monthYear: string) => {
     // 1. Get all non-archived apps
     const { data: allApps, error: appsError } = await supabase
       .from('apps')

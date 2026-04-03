@@ -1,8 +1,6 @@
 import { useRef, useState } from 'react';
 import * as XLSX from '@e965/xlsx';
 import { createDefaultGlobalFilters } from '@shared/components/table/GlobalTableFilters';
-import { Input } from '@shared/components/ui/input';
-import { Button } from '@shared/components/ui/button';
 import type { DailyRow, MonthlyRow } from '@modules/fuel/types/fuel.types';
 import { DAY_NAMES } from '@modules/fuel/types/fuel.types';
 
@@ -14,7 +12,6 @@ export function useFuelTable(args: {
   selectedYear: string;
 }) {
   const {
-    view,
     filteredMonthly,
     filteredDaily,
     selectedMonth,

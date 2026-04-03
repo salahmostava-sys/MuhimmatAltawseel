@@ -17,7 +17,7 @@ const MONTHS_AR = [
   "نوفمبر",
   "ديسمبر",
 ];
-const MONTHS_EN = [
+const _MONTHS_EN = [
   "January",
   "February",
   "March",

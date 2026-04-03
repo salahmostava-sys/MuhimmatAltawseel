@@ -9,7 +9,6 @@ import type {
   OrderWithAppRow,
   PreparedSalaryState,
   SalaryBaseContextData,
-  SalaryDraftPatch,
   SalaryRow,
   SchemeData,
 } from '@modules/salaries/types/salary.types';

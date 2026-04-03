@@ -84,7 +84,7 @@ const daysLabel = (days: number | null) => {
   return `${days} يوم`;
 };
 
-const authBadge = (date: string | null) => {
+const _authBadge = (date: string | null) => {
   if (!date) return null;
   const days = getDaysLeft(date);
   if (days === null) return null;

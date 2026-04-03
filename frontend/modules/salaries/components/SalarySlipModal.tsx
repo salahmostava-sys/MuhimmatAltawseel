@@ -7,7 +7,7 @@ import { statusLabels, statusStyles } from '@modules/salaries/lib/salaryConstant
 import type { SalaryRow } from '@modules/salaries/types/salary.types';
 import type React from 'react';
 import { buildSalarySlipHTML } from '@modules/salaries/lib/buildSalarySlipHTML';
-import { buildSlipFieldsFromRow, buildSlipPlatformRows, buildSlipEmployeeInfo } from '@modules/salaries/lib/buildSalarySlipFields';
+import { buildSlipFieldsFromRow, buildSlipEmployeeInfo } from '@modules/salaries/lib/buildSalarySlipFields';
 
 interface SalaryDetailDialogProps {
   detailRow: SalaryRow;

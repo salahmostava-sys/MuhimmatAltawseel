@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Label } from '@shared/components/ui/label';
 import { Input } from '@shared/components/ui/input';
@@ -27,14 +27,7 @@ export function AppWorkTypeSettings({ appId, appName, currentWorkType, onWorkTyp
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    setWorkType(currentWorkType);
-    if (currentWorkType === 'hybrid') {
-      void loadHybridRule();
-    }
-  }, [currentWorkType, appId]);
-
-  const loadHybridRule = async () => {
+  const loadHybridRule = useCallback(async () => {
     setLoading(true);
     try {
       const rule = await hybridRuleService.getByAppId(appId);
@@ -46,7 +39,14 @@ export function AppWorkTypeSettings({ appId, appName, currentWorkType, onWorkTyp
     } finally {
       setLoading(false);
     }
-  };
+  }, [appId]);
+
+  useEffect(() => {
+    setWorkType(currentWorkType);
+    if (currentWorkType === 'hybrid') {
+      void loadHybridRule();
+    }
+  }, [currentWorkType, loadHybridRule]);
 
   const handleSave = async () => {
     setSaving(true);

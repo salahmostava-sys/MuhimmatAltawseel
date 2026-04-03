@@ -55,7 +55,7 @@ const Salaries = () => {
   const { selectedMonth } = useTemporalContext();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [cityFilter, setCityFilter] = useState('all');
+  const [cityFilter] = useState('all');
   const { data: activeIdsData } = useMonthlyActiveEmployeeIds(selectedMonth);
   const activeEmployeeIdsInMonth = activeIdsData?.employeeIds;
   const [rows, setRows] = useState<SalaryRow[]>([]);

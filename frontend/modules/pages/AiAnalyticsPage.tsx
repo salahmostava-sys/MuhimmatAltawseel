@@ -12,7 +12,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-import { Sparkles, TrendingUp, Brain } from 'lucide-react';
+import { TrendingUp, Brain } from 'lucide-react';
 import { PageSection } from '@shared/components/layout/PageScaffold';
 import { dashboardService } from '@services/dashboardService';
 import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';

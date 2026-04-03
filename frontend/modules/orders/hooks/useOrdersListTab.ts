@@ -21,7 +21,6 @@ export function useOrdersListTab() {
   const { enabled, userId } = useAuthQueryGate();
   const uid = authQueryUserId(userId);
   const { selectedMonth: globalMonth, setSelectedMonth: setGlobalMonth } = useTemporalContext();
-  const now = new Date();
 
   // Derived from Global Temporal Context (YYYY-MM)
   const [yearStr, monthStr] = globalMonth.split('-');

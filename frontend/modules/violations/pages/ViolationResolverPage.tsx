@@ -1,6 +1,5 @@
 import { FileWarning } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
-import { VIOLATIONS_FILTERS } from '@shared/config/filterConfigs';
 import { useViolationTable } from '@modules/violations/hooks/useViolationTable';
 import ViolationSearchTab from '@modules/violations/components/ViolationSearchTab';
 import ViolationFilters from '@modules/violations/components/ViolationFilters';

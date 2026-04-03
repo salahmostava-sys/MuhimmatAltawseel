@@ -9,7 +9,7 @@ import {
 } from '@shared/components/ui/dropdown-menu';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import {
-  CityBadge, LicenseBadge, SponsorBadge, StatusBadge,
+  CityBadge, LicenseBadge, SponsorBadge,
   InlineSelect, EmployeeAvatar, SortIcon, ColFilterPopover,
   SkeletonRow, TextFilterInput,
 } from '@modules/employees/components/EmployeesViewParts';
