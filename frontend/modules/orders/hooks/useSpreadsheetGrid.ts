@@ -3,7 +3,7 @@ import type React from 'react';
 import { useMonthlyActiveEmployeeIds } from '@shared/hooks/useMonthlyActiveEmployeeIds';
 import { usePermissions } from '@shared/hooks/usePermissions';
 import { toast } from '@shared/components/ui/sonner';
-import { TOAST_ERROR_GENERIC, TOAST_SUCCESS_ACTION } from '@shared/lib/toastMessages';
+import { TOAST_ERROR_GENERIC } from '@shared/lib/toastMessages';
 import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { orderService } from '@services/orderService';
 import type { DailyData } from '@modules/orders/types';
@@ -46,6 +46,8 @@ export function useSpreadsheetGrid() {
   const [platformFilter, setPlatformFilter] = useState('all');
   const [isMonthLocked, setIsMonthLocked] = useState(false);
   const [lockingMonth, setLockingMonth] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
 
   const monthKey = monthYear(year, month);
   const { data: activeIdsData } = useMonthlyActiveEmployeeIds(monthKey);
@@ -173,15 +175,29 @@ export function useSpreadsheetGrid() {
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setPendingImportFile(file);
+    setShowImportDialog(true);
+    e.target.value = '';
+  };
+
+  const handleImportConfirm = async (targetAppId: string | undefined) => {
+    setShowImportDialog(false);
+    if (!pendingImportFile) return;
     await runSpreadsheetImport({
-      file,
+      file: pendingImportFile,
       dayArr,
       employees: sq.employees,
       apps: sq.apps,
       data,
       onApplyData: setData,
+      targetAppId,
     });
-    e.target.value = '';
+    setPendingImportFile(null);
+  };
+
+  const handleImportCancel = () => {
+    setShowImportDialog(false);
+    setPendingImportFile(null);
   };
 
   const handleTemplate = () => void downloadSpreadsheetTemplate(dayArr);
@@ -279,6 +295,9 @@ export function useSpreadsheetGrid() {
     handlePopoverApply,
     exportExcel,
     handleImport,
+    handleImportConfirm,
+    handleImportCancel,
+    showImportDialog,
     handleTemplate,
     handlePrint,
     handleSave,

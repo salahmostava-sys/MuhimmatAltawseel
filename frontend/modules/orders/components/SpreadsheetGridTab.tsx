@@ -6,6 +6,7 @@ import { useSpreadsheetGrid } from '@modules/orders/hooks/useSpreadsheetGrid';
 import { monthLabel, isPastMonth } from '@modules/orders/utils/dateMonth';
 import { shortName } from '@modules/orders/utils/text';
 import { OrdersSpreadsheetHint, OrdersSpreadsheetToolbar } from '@modules/orders/components/OrdersSpreadsheetToolbar';
+import { ImportPlatformDialog } from '@modules/orders/components/ImportPlatformDialog';
 
 export const SpreadsheetGridTab = React.memo(() => {
   const g = useSpreadsheetGrid();
@@ -82,6 +83,13 @@ export const SpreadsheetGridTab = React.memo(() => {
           onClose={() => g.setCellPopover(null)}
         />
       )}
+
+      <ImportPlatformDialog
+        open={g.showImportDialog}
+        apps={g.apps}
+        onConfirm={g.handleImportConfirm}
+        onCancel={g.handleImportCancel}
+      />
     </div>
   );
 });

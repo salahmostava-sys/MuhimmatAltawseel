@@ -11,9 +11,12 @@ export function mergeImportedOrdersFromMatrix(
   employees: Employee[],
   apps: App[],
   prev: DailyData,
+  targetAppId?: string,
 ): { newData: DailyData; imported: number } {
   let imported = 0;
   const newData = { ...prev };
+  const targetApps = targetAppId ? apps.filter((a) => a.id === targetAppId) : apps;
+  
   for (const row of matrixRows) {
     const line = Array.isArray(row) ? row : [];
     const empName = toCellText(line[0]);
@@ -23,7 +26,7 @@ export function mergeImportedOrdersFromMatrix(
       const d = dayArr[idx];
       const val = Number(line[idx + 1]);
       if (val <= 0) continue;
-      for (const app of apps) {
+      for (const app of targetApps) {
         newData[`${emp.id}::${app.id}::${d}`] = val;
         imported++;
       }

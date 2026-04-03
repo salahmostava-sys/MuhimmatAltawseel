@@ -44,8 +44,9 @@ export async function runSpreadsheetImport(params: {
   apps: App[];
   data: DailyData;
   onApplyData: (next: DailyData) => void;
+  targetAppId?: string;
 }): Promise<void> {
-  const { file, dayArr, employees, apps, data, onApplyData } = params;
+  const { file, dayArr, employees, apps, data, onApplyData, targetAppId } = params;
   try {
     const XLSX = await loadXlsx();
     const arrayBuffer = await file.arrayBuffer();
@@ -71,9 +72,11 @@ export async function runSpreadsheetImport(params: {
       employees,
       apps,
       data,
+      targetAppId,
     );
     onApplyData(newData);
-    toast.success(TOAST_SUCCESS_ACTION, { description: `تم استيراد ${imported} إدخال` });
+    const appName = targetAppId ? apps.find((a) => a.id === targetAppId)?.name : 'جميع المنصات';
+    toast.success(TOAST_SUCCESS_ACTION, { description: `تم استيراد ${imported} إدخال إلى ${appName}` });
   } catch (err) {
     logError('[Orders] import spreadsheet failed', err);
     toast.error(TOAST_ERROR_GENERIC);
