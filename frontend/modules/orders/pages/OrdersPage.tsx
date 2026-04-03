@@ -6,8 +6,9 @@ import { ResponsiveTabBar } from '@shared/components/ResponsiveTabBar';
 import { SpreadsheetGridTab } from '@modules/orders/components/SpreadsheetGridTab';
 import { MonthSummaryTab } from '@modules/orders/components/MonthSummaryTab';
 import { OrdersListTab } from '@modules/orders/components/OrdersListTab';
+import { ShiftsTabWrapper } from '@modules/orders/components/ShiftsTabWrapper';
 
-const ORDER_TABS = ['grid', 'summary', 'list'] as const;
+const ORDER_TABS = ['grid', 'summary', 'list', 'shifts'] as const;
 type OrderTab = (typeof ORDER_TABS)[number];
 
 const isOrderTab = (v: string | null): v is OrderTab =>
@@ -58,6 +59,7 @@ const OrdersPage = () => {
             { value: 'grid', label: '📊 Grid الشهري', selectLabel: 'Grid الشهري' },
             { value: 'summary', label: 'ملخص الشهر', selectLabel: 'ملخص الشهر' },
             { value: 'list', label: 'قائمة (سريعة)', selectLabel: 'قائمة (سريعة)' },
+            { value: 'shifts', label: '⏰ الدوام', selectLabel: 'الدوام' },
           ]}
         />
         <TabsContent value="grid" className="mt-2 outline-none">
@@ -68,6 +70,9 @@ const OrdersPage = () => {
         </TabsContent>
         <TabsContent value="list" className="mt-2 outline-none">
           <OrdersListTab />
+        </TabsContent>
+        <TabsContent value="shifts" className="mt-2 outline-none">
+          <ShiftsTabWrapper />
         </TabsContent>
       </Tabs>
     </div>

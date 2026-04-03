@@ -10,13 +10,14 @@ export interface AppUpsertPayload {
   is_active: boolean;
   is_archived?: boolean;
   custom_columns: Json;
+  work_type?: 'orders' | 'shift' | 'hybrid';
 }
 
 export const appService = {
   getAll: async () => {
     const { data, error } = await supabase
       .from('apps')
-      .select('id, name, name_en, brand_color, text_color, is_active, custom_columns')
+      .select('id, name, name_en, brand_color, text_color, is_active, custom_columns, work_type')
       .order('name');
     if (error) handleSupabaseError(error, 'appService.getAll');
     return data ?? [];
@@ -26,7 +27,7 @@ export const appService = {
     // 1. Get all non-archived apps
     const { data: allApps, error: appsError } = await supabase
       .from('apps')
-      .select('id, name, name_en, brand_color, text_color, is_active, custom_columns')
+      .select('id, name, name_en, brand_color, text_color, is_active, custom_columns, work_type')
       // .eq('is_archived', false) // Table 'apps' might not have 'is_archived' yet either, checking types...
       .order('name');
     
