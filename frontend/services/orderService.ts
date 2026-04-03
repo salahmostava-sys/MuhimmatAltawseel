@@ -59,7 +59,8 @@ export const orderService = {
   getOrdersByEmployeeMonth: async (employeeId: string, monthYear: string) => {
     const [year, month] = monthYear.split('-');
     const from = `${year}-${month}-01`;
-    const to = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
+    const lastDay = new Date(Number(year), Number(month), 0).getDate();
+    const to = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
 
     const { data, error } = await supabase
       .from('daily_orders')
@@ -76,7 +77,8 @@ export const orderService = {
   getSalaryContextOrdersByMonth: async (monthYear: string) => {
     const [year, month] = monthYear.split('-');
     const from = `${year}-${month}-01`;
-    const to = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
+    const lastDay = new Date(Number(year), Number(month), 0).getDate();
+    const to = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
     const { data, error } = await supabase
       .from('daily_orders')
       .select('employee_id, app_id, orders_count, apps(name, id)')
@@ -104,7 +106,8 @@ export const orderService = {
   getByMonth: async (monthYear: string, filters: Pick<OrderFilter, 'employeeId' | 'appId'> = {}) => {
     const [year, month] = monthYear.split('-');
     const from = `${year}-${month}-01`;
-    const to = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
+    const lastDay = new Date(Number(year), Number(month), 0).getDate();
+    const to = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
 
     let query = supabase
       .from('daily_orders')
@@ -137,7 +140,8 @@ export const orderService = {
     const filters = params.filters ?? {};
     const [year, month] = monthYear.split('-');
     const from = `${year}-${month}-01`;
-    const to = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
+    const lastDay = new Date(Number(year), Number(month), 0).getDate();
+    const to = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
 
     const fromIdx = (page - 1) * pageSize;
     const toIdx = fromIdx + pageSize - 1;
@@ -193,7 +197,8 @@ export const orderService = {
   getTotalByEmployee: async (employeeId: string, monthYear: string) => {
     const [year, month] = monthYear.split('-');
     const from = `${year}-${month}-01`;
-    const to = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
+    const lastDay = new Date(Number(year), Number(month), 0).getDate();
+    const to = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
 
     const { data, error } = await supabase
       .from('daily_orders')
