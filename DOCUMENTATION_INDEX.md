@@ -269,7 +269,6 @@ check-code-quality.sh (فحص شامل)
 - [salary_drafts migration](./supabase/migrations/20260407000000_concurrent_editing_protection.sql)
 - [salaryDraftService.ts](./frontend/services/salaryDraftService.ts)
 - [useDebounce.ts](./frontend/shared/hooks/useDebounce.ts)
-- [ConcurrentEditingTest.tsx](./frontend/modules/pages/ConcurrentEditingTest.tsx)
 
 ---
 

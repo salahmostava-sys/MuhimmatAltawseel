@@ -35,6 +35,7 @@ const AiAnalyticsPage = () => {
   const { user } = useAuth();
   const { enabled, userId } = useAuthQueryGate();
   const uid = authQueryUserId(user?.id ?? userId);
+  const currentDaysPassed = new Date().getDate();
 
   const monthKeys = useMemo(() => {
     const keys: string[] = [];
@@ -59,6 +60,7 @@ const AiAnalyticsPage = () => {
   });
 
   const { isLoading, isError, error, refetch, isFetching, data: queryData } = q;
+  const currentMonthOrders = queryData?.totals[queryData.totals.length - 1] ?? null;
 
   const { chartData, forecast } = useMemo(() => {
     if (!queryData?.totals.length) {
@@ -103,12 +105,9 @@ const AiAnalyticsPage = () => {
           <Brain className="h-5 w-5 text-primary" />
           <span className="text-sm font-semibold text-muted-foreground">تحليلات الذكاء الاصطناعي</span>
         </div>
-        <AIDashboard 
-          employeeId={user?.id}
-          employeeName={user?.user_metadata?.name || ''}
-          currentOrders={450}
-          currentSalary={2475}
-          daysPassed={15}
+        <AIDashboard
+          currentOrders={currentMonthOrders}
+          daysPassed={currentDaysPassed}
         />
       </PageSection>
 
