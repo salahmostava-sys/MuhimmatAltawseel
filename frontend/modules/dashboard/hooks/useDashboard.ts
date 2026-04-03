@@ -63,6 +63,15 @@ type DashboardData = {
     actual_orders: number;
     achievement_percent: number;
   }>;
+  operationalStats: {
+    employees: { total: number; withLicense: number; appliedLicense: number; noLicense: number; byCity: { makkah: number; jeddah: number; other: number } };
+    attendance: { present: number; absent: number; late: number; leave: number; sick: number; rate: number };
+    orders: { total: number; uniqueRiders: number; avgPerRider: number };
+    fuel: { cost: number; liters: number; vehiclesRefueled: number; avgPerVehicle: number };
+    maintenance: { cost: number; completed: number; pending: number; vehiclesMaintained: number };
+    vehicles: { total: number; active: number; inactive: number; maintenance: number };
+    alerts: { unresolved: number; critical: number; high: number; medium: number };
+  };
 };
 
 /** Stable empty refs so useMemo deps do not change every render when `data` is missing. */

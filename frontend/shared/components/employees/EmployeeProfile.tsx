@@ -1,12 +1,15 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, User, FileText, Wallet, CreditCard, Clock, Package, DollarSign, ExternalLink, Loader2, ChevronDown, ChevronUp, TrendingUp } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowRight, User, FileText, Wallet, CreditCard, Clock, Package, DollarSign, ExternalLink, Loader2, ChevronDown, ChevronUp, TrendingUp, Check, X } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select';
 import { differenceInDays, parseISO } from 'date-fns';
 import { useSignedUrl, extractStoragePath } from '@shared/hooks/useSignedUrl';
 import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { useQueryErrorToast } from '@shared/hooks/useQueryErrorToast';
+import { useToast } from '@shared/hooks/use-toast';
+import { employeeService } from '@services/employeeService';
 import {
   employeeProfileService,
   type EmployeeProfileAdvance,
@@ -181,12 +184,46 @@ function groupOrdersByMonth(orders: DailyOrder[]): MonthlyOrders[] {
   return Object.values(map).sort((a, b) => b.month.localeCompare(a.month));
 }
 
+// قائمة الجنسيات الشائعة
+const NATIONALITIES = [
+  'سعودي',
+  'مصري',
+  'سوداني',
+  'يمني',
+  'سوري',
+  'أردني',
+  'فلسطيني',
+  'لبناني',
+  'عراقي',
+  'باكستاني',
+  'هندي',
+  'بنغلاديشي',
+  'فلبيني',
+  'إندونيسي',
+  'نيبالي',
+  'سريلانكي',
+  'إثيوبي',
+  'إريتري',
+  'صومالي',
+  'تشادي',
+  'نيجيري',
+  'غاني',
+  'كيني',
+  'أوغندي',
+  'تنزاني',
+];
+
 const EmployeeProfile = ({ employee, onBack }: Props) => {
   const { enabled, userId } = useAuthQueryGate();
   const uid = authQueryUserId(userId);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('basic');
   const [expandedAdv, setExpandedAdv] = useState<string | null>(null);
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
+  const [editingNationality, setEditingNationality] = useState(false);
+  const [nationalityValue, setNationalityValue] = useState(employee.nationality || '');
+  const [savingNationality, setSavingNationality] = useState(false);
 
   // Signed URL for personal photo (used in profile header)
   const personalPhotoPath = extractStoragePath(employee.personal_photo_url);
@@ -293,7 +330,86 @@ const EmployeeProfile = ({ employee, onBack }: Props) => {
               {employee.employee_code && <InfoField label="كود الموظف" value={employee.employee_code} dir="ltr" />}
               {employee.phone && <InfoField label="رقم الهاتف" value={employee.phone} dir="ltr" />}
               {employee.national_id && <InfoField label="رقم الهوية" value={employee.national_id} dir="ltr" />}
-              {employee.nationality && <InfoField label="الجنسية" value={employee.nationality} />}
+              {/* Nationality - Editable */}
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">الجنسية</p>
+                {!editingNationality ? (
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-foreground">{employee.nationality || '—'}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingNationality(true);
+                        setNationalityValue(employee.nationality || '');
+                      }}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      تعديل
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={nationalityValue}
+                      onValueChange={setNationalityValue}
+                      disabled={savingNationality}
+                    >
+                      <SelectTrigger className="w-full max-w-[200px]">
+                        <SelectValue placeholder="اختر الجنسية" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {NATIONALITIES.map((nat) => (
+                          <SelectItem key={nat} value={nat}>
+                            {nat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0"
+                      disabled={savingNationality}
+                      onClick={async () => {
+                        if (!nationalityValue) {
+                          toast({ title: 'خطأ', description: 'يرجى اختيار الجنسية', variant: 'destructive' });
+                          return;
+                        }
+                        setSavingNationality(true);
+                        try {
+                          await employeeService.updateEmployee(employee.id, { nationality: nationalityValue });
+                          await queryClient.invalidateQueries({ queryKey: ['employees'] });
+                          await queryClient.invalidateQueries({ queryKey: ['employee-profile'] });
+                          toast({ title: 'تم الحفظ', description: 'تم تحديث الجنسية بنجاح' });
+                          setEditingNationality(false);
+                        } catch (error) {
+                          toast({
+                            title: 'خطأ',
+                            description: error instanceof Error ? error.message : 'فشل تحديث الجنسية',
+                            variant: 'destructive',
+                          });
+                        } finally {
+                          setSavingNationality(false);
+                        }
+                      }}
+                    >
+                      {savingNationality ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} className="text-success" />}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0"
+                      disabled={savingNationality}
+                      onClick={() => {
+                        setEditingNationality(false);
+                        setNationalityValue(employee.nationality || '');
+                      }}
+                    >
+                      <X size={14} className="text-muted-foreground" />
+                    </Button>
+                  </div>
+                )}
+              </div>
               {employee.iban && <InfoField label="رقم IBAN" value={`SA••••••••${employee.iban.slice(-4)}`} />}
               {employee.bank_account_number && <InfoField label="رقم الحساب البنكي" value={employee.bank_account_number} dir="ltr" />}
               {employee.email && (

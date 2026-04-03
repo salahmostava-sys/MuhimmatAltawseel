@@ -143,33 +143,40 @@ const RANK_COLORS = ['bg-amber-100 text-amber-600', 'bg-slate-100 text-slate-500
 // ─── Leaderboard ─────────────────────────────────────────────────────────────
 const Leaderboard = ({ entries, loading, max }: { entries: { name: string; orders: number; app?: string; appColor?: string }[]; loading: boolean; max?: number }) => {
   const maxVal = max || entries[0]?.orders || 1;
+  
+  const renderContent = () => {
+    if (loading) {
+      return SKELETON_KEYS_5.map((k) => <div key={`leaderboard-skeleton-${k}`} className="h-12 bg-muted/40 rounded-xl animate-pulse" />);
+    }
+    
+    if (entries.length === 0) {
+      return <p className="text-sm text-muted-foreground text-center py-8">لا توجد بيانات هذا الشهر</p>;
+    }
+    
+    return entries.map((e, i) => (
+      <div key={`${e.name}-${e.orders}-${e.app ?? 'no-app'}`} className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-muted/40 transition-colors">
+        <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${RANK_COLORS[i] || 'bg-muted text-muted-foreground'}`}>{i + 1}</div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-foreground truncate">{e.name}</span>
+            <span className="text-sm font-black text-foreground flex-shrink-0 ml-2">{e.orders.toLocaleString()}</span>
+          </div>
+          {e.app && (
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: e.appColor || '#888' }} />
+              <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+                <div className="h-full rounded-full transition-all" style={{ width: `${(e.orders / maxVal) * 100}%`, backgroundColor: e.appColor || '#888' }} />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    ));
+  };
+  
   return (
     <div className="space-y-1">
-      {loading ? (
-        SKELETON_KEYS_5.map((k) => <div key={`leaderboard-skeleton-${k}`} className="h-12 bg-muted/40 rounded-xl animate-pulse" />)
-      ) : entries.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">لا توجد بيانات هذا الشهر</p>
-      ) : (
-        entries.map((e, i) => (
-          <div key={`${e.name}-${e.orders}-${e.app ?? 'no-app'}`} className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-muted/40 transition-colors">
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${RANK_COLORS[i] || 'bg-muted text-muted-foreground'}`}>{i + 1}</div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-foreground truncate">{e.name}</span>
-                <span className="text-sm font-black text-foreground flex-shrink-0 ml-2">{e.orders.toLocaleString()}</span>
-              </div>
-              {e.app && (
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: e.appColor || '#888' }} />
-                  <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${(e.orders / maxVal) * 100}%`, backgroundColor: e.appColor || '#888' }} />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        ))
-      )}
+      {renderContent()}
     </div>
   );
 };
