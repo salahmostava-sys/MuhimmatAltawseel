@@ -1,6 +1,13 @@
 import { useRef } from 'react';
 import { Loader2, FolderOpen } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@shared/components/ui/dropdown-menu';
 import { cn } from '@shared/lib/utils';
 import { useToast } from '@shared/hooks/use-toast';
 import { logError } from '@shared/lib/logger';
@@ -90,7 +97,7 @@ export function FileActionsMenu({
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center justify-start gap-2 sm:gap-3 w-auto max-w-full',
+        'flex flex-wrap items-center justify-start gap-2 w-auto max-w-full',
         className
       )}
       role="toolbar"
@@ -111,51 +118,35 @@ export function FileActionsMenu({
         </span>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={busy}
-          className="gap-1.5 border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
-          onClick={() => void run(onExport)}
-        >
-          <FolderOpen className="size-4" aria-hidden />
-          {labels.export}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={busy}
-          className="gap-1.5 border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
-          onClick={() => void run(onDownloadTemplate)}
-        >
-          {labels.template}
-        </Button>
-        {!hideImport && (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
           <Button
-            type="button"
             variant="outline"
             size="sm"
             disabled={busy}
-            className="gap-1.5 border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
-            onClick={handleImportPick}
+            className="gap-1.5 h-9"
           >
-            {labels.import}
+            <FolderOpen size={14} /> ملفات
           </Button>
-        )}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={busy}
-          className="gap-1.5 border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
-          onClick={() => void run(onPrint)}
-        >
-          {labels.print}
-        </Button>
-      </div>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => void run(onExport)}>
+            📊 {labels.export}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => void run(onDownloadTemplate)}>
+            📋 {labels.template}
+          </DropdownMenuItem>
+          {!hideImport && (
+            <DropdownMenuItem onClick={handleImportPick}>
+              ⬆️ {labels.import}
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => void run(onPrint)}>
+            🖨️ {labels.print}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
