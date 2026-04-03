@@ -7,7 +7,20 @@ export type NameMatchSuggestion = {
 export type UnmatchedEmployeeName = {
   name: string;
   suggestions: NameMatchSuggestion[];
+  bestSimilarity: number;
+  reason: 'low-confidence' | 'not-found';
+  rowIndexes?: number[];
 };
+
+export type NameMatchingOptions = {
+  autoMatchThreshold?: number;
+  suggestionThreshold?: number;
+  maxSuggestions?: number;
+};
+
+const DEFAULT_AUTO_MATCH_THRESHOLD = 90;
+const DEFAULT_SUGGESTION_THRESHOLD = 45;
+const DEFAULT_MAX_SUGGESTIONS = 5;
 
 /**
  * حساب نسبة التشابه بين نصين باستخدام Levenshtein Distance
@@ -130,8 +143,17 @@ function advancedSimilarity(searchName: string, candidateName: string): number {
 export function findBestMatch(
   searchName: string,
   candidates: Array<{ id: string; name: string }>,
-  threshold = 60 // خفض الحد الأدنى إلى 60%
-): { match: { id: string; name: string } | null; similarity: number; suggestions: NameMatchSuggestion[] } {
+  options: NameMatchingOptions = {},
+): {
+  match: { id: string; name: string } | null;
+  similarity: number;
+  suggestions: NameMatchSuggestion[];
+} {
+  const {
+    autoMatchThreshold = DEFAULT_AUTO_MATCH_THRESHOLD,
+    suggestionThreshold = DEFAULT_SUGGESTION_THRESHOLD,
+    maxSuggestions = DEFAULT_MAX_SUGGESTIONS,
+  } = options;
   const matches = candidates.map((candidate) => ({
     ...candidate,
     similarity: advancedSimilarity(searchName, candidate.name),
@@ -141,10 +163,10 @@ export function findBestMatch(
   matches.sort((a, b) => b.similarity - a.similarity);
 
   const bestMatch = matches[0];
-  const suggestions = matches.filter((m) => m.similarity >= threshold).slice(0, 5);
+  const suggestions = matches.filter((m) => m.similarity >= suggestionThreshold).slice(0, maxSuggestions);
 
   return {
-    match: bestMatch && bestMatch.similarity >= threshold ? bestMatch : null,
+    match: bestMatch && bestMatch.similarity >= autoMatchThreshold ? bestMatch : null,
     similarity: bestMatch?.similarity || 0,
     suggestions,
   };
@@ -156,16 +178,17 @@ export function findBestMatch(
 export function matchEmployeeNames(
   importedNames: string[],
   employees: Array<{ id: string; name: string }>,
-  threshold = 60 // خفض الحد الأدنى إلى 60%
+  options: NameMatchingOptions = {},
 ): {
   matched: Map<string, { id: string; name: string; similarity: number }>;
   unmatched: UnmatchedEmployeeName[];
 } {
+  const { suggestionThreshold = DEFAULT_SUGGESTION_THRESHOLD } = options;
   const matched = new Map<string, { id: string; name: string; similarity: number }>();
   const unmatched: UnmatchedEmployeeName[] = [];
 
   for (const importedName of importedNames) {
-    const result = findBestMatch(importedName, employees, threshold);
+    const result = findBestMatch(importedName, employees, options);
     
     if (result.match) {
       matched.set(importedName, {
@@ -177,6 +200,8 @@ export function matchEmployeeNames(
       unmatched.push({
         name: importedName,
         suggestions: result.suggestions,
+        bestSimilarity: result.similarity,
+        reason: result.similarity >= suggestionThreshold ? 'low-confidence' : 'not-found',
       });
     }
   }

@@ -206,9 +206,11 @@ export function useSpreadsheetGrid() {
         days,
         data: nextData,
         setSaving,
+        employees: sq.employees,
+        apps: sq.apps,
       });
     },
-    [days, isMonthLocked, month, year],
+    [days, isMonthLocked, month, sq.apps, sq.employees, year],
   );
 
   const handleImportConfirm = async (targetAppId: string | undefined) => {

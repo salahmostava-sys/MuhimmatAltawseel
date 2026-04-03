@@ -13,6 +13,18 @@ export interface DailyOrder {
   updated_at: string;
 }
 
+export type DailyOrderUpsertRow = {
+  employee_id: string;
+  app_id: string;
+  date: string;
+  orders_count: number;
+};
+
+export type BulkUpsertFailure = {
+  row: DailyOrderUpsertRow;
+  error: string;
+};
+
 export interface OrderFilter {
   employeeId?: string;
   appId?: string;
@@ -45,6 +57,30 @@ type EmployeeAppRow = {
   employee_id: string;
   app_id: string;
 };
+
+const DAILY_ORDERS_UPSERT_CONFLICT = 'employee_id,app_id,date';
+
+function getBulkUpsertErrorMessage(error: unknown): string {
+  if (
+    error &&
+    typeof error === 'object' &&
+    'message' in error &&
+    typeof (error as { message?: unknown }).message === 'string' &&
+    (error as { message: string }).message.trim()
+  ) {
+    return (error as { message: string }).message;
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return String(error ?? 'خطأ غير معروف');
+}
+
+async function upsertDailyOrderRows(rows: DailyOrderUpsertRow[]) {
+  return supabase.from('daily_orders').upsert(rows, { onConflict: DAILY_ORDERS_UPSERT_CONFLICT });
+}
 
 export const orderService = {
   getAll: async () => {
@@ -246,16 +282,29 @@ export const orderService = {
     return data ?? [];
   },
 
-  bulkUpsert: async (rows: { employee_id: string; app_id: string; date: string; orders_count: number }[], chunkSize = 200) => {
+  bulkUpsert: async (rows: DailyOrderUpsertRow[], chunkSize = 200) => {
     let saved = 0;
-    const failed: { row: typeof rows[0]; error: string }[] = [];
+    const failed: BulkUpsertFailure[] = [];
+
+    const saveChunkRowByRow = async (chunk: DailyOrderUpsertRow[]) => {
+      for (const row of chunk) {
+        try {
+          const { error } = await upsertDailyOrderRows([row]);
+          if (error) {
+            failed.push({ row, error: getBulkUpsertErrorMessage(error) });
+          } else {
+            saved += 1;
+          }
+        } catch (error) {
+          failed.push({ row, error: getBulkUpsertErrorMessage(error) });
+        }
+      }
+    };
     
     for (let i = 0; i < rows.length; i += chunkSize) {
       const chunk = rows.slice(i, i + chunkSize);
       try {
-        const { error } = await supabase
-          .from('daily_orders')
-          .upsert(chunk, { onConflict: 'employee_id,app_id,date' });
+        const { error } = await upsertDailyOrderRows(chunk);
         
         if (error) {
           console.error('❌ Chunk upsert error:', {
@@ -266,17 +315,22 @@ export const orderService = {
             chunkSize: chunk.length,
             firstRow: chunk[0]
           });
-          chunk.forEach((row) => {
-            failed.push({ row, error: error.message });
-          });
+
+          if (chunk.length === 1) {
+            failed.push({ row: chunk[0], error: getBulkUpsertErrorMessage(error) });
+          } else {
+            await saveChunkRowByRow(chunk);
+          }
         } else {
           saved += chunk.length;
         }
-      } catch (err) {
-        console.error('❌ Chunk upsert exception:', err);
-        chunk.forEach((row) => {
-          failed.push({ row, error: String(err) });
-        });
+      } catch (error) {
+        console.error('❌ Chunk upsert exception:', error);
+        if (chunk.length === 1) {
+          failed.push({ row: chunk[0], error: getBulkUpsertErrorMessage(error) });
+        } else {
+          await saveChunkRowByRow(chunk);
+        }
       }
     }
     
@@ -284,7 +338,7 @@ export const orderService = {
       console.warn(`⚠️ Failed to save ${failed.length} orders:`, failed.slice(0, 5));
     }
     
-    return { saved, failed: failed.map(f => `${f.row.employee_id}::${f.row.app_id}::${f.row.date}`) };
+    return { saved, failed };
   },
 
   getBaseEmployees: async () => {

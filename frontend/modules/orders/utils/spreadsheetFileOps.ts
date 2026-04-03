@@ -12,6 +12,22 @@ import { dateStr, monthLabel } from '@modules/orders/utils/dateMonth';
 import { loadXlsx } from '@modules/orders/utils/xlsx';
 import { matchEmployeeNames, type UnmatchedEmployeeName } from '@shared/lib/nameMatching';
 
+function summarizeMessages(messages: string[], limit = 3): string {
+  if (messages.length === 0) return '';
+  const preview = messages.slice(0, limit).join('، ');
+  return messages.length > limit ? `${preview}، و${messages.length - limit} أخرى` : preview;
+}
+
+function buildOrderIdentityLabel(
+  row: { employee_id: string; app_id: string; date: string },
+  employeeNames: Map<string, string>,
+  appNames: Map<string, string>,
+): string {
+  const employeeName = employeeNames.get(row.employee_id) ?? row.employee_id;
+  const appName = appNames.get(row.app_id) ?? row.app_id;
+  return `${employeeName} - ${appName} - ${row.date}`;
+}
+
 export type SpreadsheetImportResult = {
   appliedData: DailyData | null;
   imported: number;
@@ -110,16 +126,24 @@ export async function runSpreadsheetImport(params: {
     }
 
     // مطابقة الأسماء
+    const rowsByImportedName = new Map<string, number[]>();
+    importedNames.forEach(({ name, rowIndex }) => {
+      rowsByImportedName.set(name, [...(rowsByImportedName.get(name) ?? []), rowIndex]);
+    });
+
     const { matched, unmatched } = matchEmployeeNames(
       importedNames.map(item => item.name),
       employees,
-      60
     );
+    const unmatchedWithRows: UnmatchedEmployeeName[] = unmatched.map((item) => ({
+      ...item,
+      rowIndexes: rowsByImportedName.get(item.name) ?? [],
+    }));
 
     // إذا كان هناك أسماء غير مطابقة وتم توفير callback
-    if (unmatched.length > 0 && onShowNameMapping) {
+    if (unmatchedWithRows.length > 0 && onShowNameMapping) {
       return new Promise((resolve) => {
-        onShowNameMapping(unmatched, (nameMapping) => {
+        onShowNameMapping(unmatchedWithRows, (nameMapping) => {
           // دمج المطابقات التلقائية مع المطابقات اليدوية
           const finalMapping = new Map<string, string>();
           matched.forEach((match, name) => finalMapping.set(name, match.id));
@@ -317,8 +341,10 @@ export async function saveSpreadsheetMonth(params: {
   days: number;
   data: DailyData;
   setSaving: (v: boolean) => void;
+  employees: Employee[];
+  apps: App[];
 }): Promise<void> {
-  const { isMonthLocked, year, month, days, data, setSaving } = params;
+  const { isMonthLocked, year, month, days, data, setSaving, employees, apps } = params;
   if (isMonthLocked) {
     toast.error('الشهر مقفل', {
       description: 'لا يمكن حفظ التغييرات في شهر مقفل'
@@ -327,6 +353,8 @@ export async function saveSpreadsheetMonth(params: {
   }
   
   setSaving(true);
+  const employeeNames = new Map(employees.map((employee) => [employee.id, employee.name]));
+  const appNames = new Map(apps.map((app) => [app.id, app.name]));
   const rows: { employee_id: string; app_id: string; date: string; orders_count: number }[] = [];
   const invalidRows: string[] = [];
   
@@ -338,14 +366,16 @@ export async function saveSpreadsheetMonth(params: {
       invalidRows.push(`مفتاح غير صحيح: ${key}`);
       return;
     }
+
+    const rowIdentity = `${employeeNames.get(empId) ?? empId} - ${appNames.get(appId) ?? appId}`;
     
     if (Number.isNaN(day) || day < 1 || day > days) {
-      invalidRows.push(`يوم غير صحيح: ${day}`);
+      invalidRows.push(`${rowIdentity}: يوم غير صحيح (${dayStr})`);
       return;
     }
     
     if (count <= 0 || count > 10000) {
-      invalidRows.push(`عدد طلبات غير صحيح: ${count}`);
+      invalidRows.push(`${rowIdentity} - ${dateStr(year, month, day)}: عدد طلبات غير صحيح (${count})`);
       return;
     }
     
@@ -359,6 +389,9 @@ export async function saveSpreadsheetMonth(params: {
   
   if (invalidRows.length > 0) {
     console.warn('تم تجاهل بيانات غير صحيحة:', invalidRows);
+    toast.warning('تم تجاهل بعض البيانات قبل الحفظ', {
+      description: summarizeMessages(invalidRows)
+    });
   }
   
   if (rows.length === 0) {
@@ -374,8 +407,11 @@ export async function saveSpreadsheetMonth(params: {
     
     if (failed.length > 0) {
       console.error('فشل حفظ بعض السجلات:', failed.slice(0, 10));
+      const failedMessages = failed.map((failure) => (
+        `${buildOrderIdentityLabel(failure.row, employeeNames, appNames)}: ${failure.error}`
+      ));
       toast.error('حفظ جزئي', {
-        description: `تم حفظ ${saved} إدخال بنجاح، فشل حفظ ${failed.length} إدخال. تحقق من Console للتفاصيل`
+        description: `تم حفظ ${saved} إدخال بنجاح، وتعذر حفظ ${failed.length} إدخال. ${summarizeMessages(failedMessages)}`
       });
     } else {
       toast.success(TOAST_SUCCESS_OPERATION, {

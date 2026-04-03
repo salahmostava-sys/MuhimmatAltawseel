@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AlertTriangle, Check, X } from 'lucide-react';
 import {
   Dialog,
@@ -30,6 +30,12 @@ type Props = Readonly<{
 export function NameMappingDialog({ open, unmatched, onConfirm, onCancel }: Props) {
   const [mapping, setMapping] = useState<Map<string, string>>(new Map());
 
+  useEffect(() => {
+    if (open) {
+      setMapping(new Map());
+    }
+  }, [open, unmatched]);
+
   const handleSelectEmployee = (importedName: string, employeeId: string) => {
     setMapping((prev) => {
       const next = new Map(prev);
@@ -58,10 +64,11 @@ export function NameMappingDialog({ open, unmatched, onConfirm, onCancel }: Prop
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="text-warning" size={20} />
-            مطابقة الأسماء غير الدقيقة
+            مراجعة الأسماء غير المؤكدة
           </DialogTitle>
           <DialogDescription>
-            تم العثور على {unmatched.length} اسم غير مطابق تماماً. اختر الموظف الصحيح لكل اسم أو تخطَّه.
+            تم العثور على {unmatched.length} اسم يحتاج مراجعة قبل الاستيراد. لو نسبة التشابه ليست
+            عالية سنعرض اقتراحات بدل المطابقة التلقائية.
           </DialogDescription>
         </DialogHeader>
 
@@ -73,6 +80,16 @@ export function NameMappingDialog({ open, unmatched, onConfirm, onCancel }: Prop
                   <div>
                     <p className="text-sm font-medium">الاسم في الملف:</p>
                     <p className="text-base font-bold text-destructive">{item.name}</p>
+                    {item.rowIndexes && item.rowIndexes.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        الصفوف: {item.rowIndexes.join('، ')}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {item.reason === 'low-confidence'
+                        ? `ثقة منخفضة (${Math.round(item.bestSimilarity)}%)، يُرجى اختيار الموظف الصحيح`
+                        : 'لم يتم العثور على مطابقة مؤكدة لهذا الاسم'}
+                    </p>
                   </div>
                   {mapping.has(item.name) ? (
                     <Badge variant="outline" className="gap-1">
@@ -126,9 +143,7 @@ export function NameMappingDialog({ open, unmatched, onConfirm, onCancel }: Prop
                 </div>
 
                 {item.suggestions.length > 0 && (
-                  <div className="text-xs text-muted-foreground">
-                    💡 الاقتراحات مرتبة حسب نسبة التشابه
-                  </div>
+                  <div className="text-xs text-muted-foreground">الاقتراحات مرتبة حسب نسبة التشابه</div>
                 )}
               </div>
             ))}
