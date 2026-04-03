@@ -26,11 +26,29 @@ export async function sendWhatsAppMessage(
   const cfg = getWhatsAppConfig();
   if (!cfg) return false;
 
+  // Validate phone number format
+  if (!to || typeof to !== 'string') {
+    logError('[WhatsApp] Invalid phone number', { to });
+    return false;
+  }
+
   const cleanPhone = to.replace(/[\s\-()]/g, '').replace(/^0+/, '');
+  
+  // Validate cleaned phone (must be digits only, 10-15 chars)
+  if (!/^\d{10,15}$/.test(cleanPhone)) {
+    logError('[WhatsApp] Invalid phone format after cleaning', { cleanPhone });
+    return false;
+  }
+
+  // Validate message
+  if (!message || typeof message !== 'string' || message.length > 4096) {
+    logError('[WhatsApp] Invalid message', { messageLength: message?.length });
+    return false;
+  }
 
   try {
     const res = await fetch(
-      `https://graph.facebook.com/v19.0/${cfg.phone_number_id}/messages`,
+      `https://graph.facebook.com/v19.0/${encodeURIComponent(cfg.phone_number_id)}/messages`,
       {
         method: 'POST',
         headers: {

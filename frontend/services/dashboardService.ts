@@ -39,6 +39,14 @@ export interface SupervisorPerformanceRow {
 export const dashboardService = {
   /** Server-side aggregated overview (RPC) */
   getOverviewRpc: async (monthYear: string, today: string) => {
+    // Validate inputs to prevent injection
+    if (!/^\d{4}-\d{2}$/.test(monthYear)) {
+      throw new Error('Invalid monthYear format. Expected YYYY-MM');
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) {
+      throw new Error('Invalid today format. Expected YYYY-MM-DD');
+    }
+
     const attempts: Array<Record<string, unknown>> = [
       { p_month_year: monthYear, p_today: today },                    // current signature
       { p_monthly_year: monthYear, p_today: today },                  // legacy signature (without company)

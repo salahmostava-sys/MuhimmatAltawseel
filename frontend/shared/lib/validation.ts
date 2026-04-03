@@ -27,18 +27,20 @@ export function validateUploadFile(
   return { valid: true };
 }
 
-export function validatePhoneNumber(phoneNumber: string) {
-  if (phoneNumber.length !== 14) return false;
+export function validatePhoneNumber(phoneNumber: string): boolean {
+  if (!phoneNumber || phoneNumber.length !== 14) return false;
   if (!phoneNumber.startsWith('(') || phoneNumber[4] !== ')' || phoneNumber[5] !== ' ' || phoneNumber[9] !== '-') return false;
   for (const idx of [1, 2, 3, 6, 7, 8, 10, 11, 12, 13]) {
     const ch = phoneNumber[idx];
-    if (ch < '0' || ch > '9') return false;
+    if (!ch || ch < '0' || ch > '9') return false;
   }
   return true;
 }
 
-export function validateEmail(email: string) {
+export function validateEmail(email: string): boolean {
+  if (!email) return false;
   const value = email.trim();
+  if (!value) return false;
   const atIndex = value.indexOf('@');
   if (atIndex <= 0 || atIndex !== value.lastIndexOf('@')) return false;
   const local = value.slice(0, atIndex);
@@ -48,12 +50,12 @@ export function validateEmail(email: string) {
   return domain.includes('.');
 }
 
-export function validateNationalID(nationalID: string) {
-  if (nationalID.length !== 9 || nationalID[4] !== '-') return false;
+export function validateNationalID(nationalID: string): boolean {
+  if (!nationalID || nationalID.length !== 9 || nationalID[4] !== '-') return false;
   const left = nationalID.slice(0, 4);
   const right = nationalID.slice(5);
   for (const ch of left + right) {
-    if (ch < '0' || ch > '9') return false;
+    if (!ch || ch < '0' || ch > '9') return false;
   }
   return true;
 }

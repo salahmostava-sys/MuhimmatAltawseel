@@ -138,6 +138,11 @@ export const attendanceService = {
   },
 
   getAttendanceByMonth: async (monthYear: string) => {
+    // Validate monthYear format
+    if (!/^\d{4}-\d{2}$/.test(monthYear)) {
+      throw new Error('Invalid monthYear format. Expected YYYY-MM');
+    }
+    
     const [year, month] = monthYear.split('-');
     const from = `${year}-${month}-01`;
     const to = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
@@ -154,6 +159,14 @@ export const attendanceService = {
   },
 
   getAttendanceByEmployeeMonth: async (employeeId: string, monthYear: string) => {
+    // Validate inputs
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(employeeId)) {
+      throw new Error('Invalid employeeId format');
+    }
+    if (!/^\d{4}-\d{2}$/.test(monthYear)) {
+      throw new Error('Invalid monthYear format. Expected YYYY-MM');
+    }
+    
     const [year, month] = monthYear.split('-');
     const from = `${year}-${month}-01`;
     const to = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];

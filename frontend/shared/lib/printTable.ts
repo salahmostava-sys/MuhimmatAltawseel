@@ -5,8 +5,17 @@ export function printHtmlTable(
   table: HTMLTableElement,
   options: { title: string; subtitle?: string }
 ): void {
+  // Validate inputs
+  if (!table || !(table instanceof HTMLTableElement)) {
+    throw new Error('Invalid table element');
+  }
+  if (!options.title || typeof options.title !== 'string') {
+    throw new Error('Title is required');
+  }
+  
   const printWindow = globalThis.open('', '_blank');
   if (!printWindow) return;
+  
   const { title, subtitle } = options;
   const doc = printWindow.document;
   doc.open();

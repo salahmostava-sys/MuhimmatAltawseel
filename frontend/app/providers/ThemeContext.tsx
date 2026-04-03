@@ -11,9 +11,14 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType>({} as ThemeContextType);
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem('theme') as Theme) || 'light'
-  );
+  const [theme, setTheme] = useState<Theme>(() => {
+    try {
+      const stored = localStorage.getItem('theme');
+      return (stored === 'light' || stored === 'dark') ? stored : 'light';
+    } catch {
+      return 'light';
+    }
+  });
 
   useEffect(() => {
     const root = document.documentElement;
@@ -22,7 +27,11 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     } else {
       root.classList.remove('dark');
     }
-    localStorage.setItem('theme', theme);
+    try {
+      localStorage.setItem('theme', theme);
+    } catch {
+      // Ignore localStorage errors (e.g., private browsing)
+    }
   }, [theme]);
 
   const toggleTheme = useCallback(() => {

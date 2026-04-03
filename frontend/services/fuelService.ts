@@ -115,6 +115,11 @@ export const fuelService = {
       search?: string; // employee name
     };
   }) => {
+    // Validate date formats
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(params.monthStart) || !/^\d{4}-\d{2}-\d{2}$/.test(params.monthEnd)) {
+      throw new Error('Invalid date format. Expected YYYY-MM-DD');
+    }
+    
     const { monthStart, monthEnd, page, pageSize } = params;
     const filters = params.filters ?? {};
 
@@ -179,6 +184,20 @@ export const fuelService = {
   },
 
   upsertDailyMileage: async (payload: MileageDailyPayload, editId?: string) => {
+    // Validate payload
+    if (!payload.employee_id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.employee_id)) {
+      throw new Error('Invalid employee_id');
+    }
+    if (!payload.date || !/^\d{4}-\d{2}-\d{2}$/.test(payload.date)) {
+      throw new Error('Invalid date format. Expected YYYY-MM-DD');
+    }
+    if (typeof payload.km_total !== 'number' || payload.km_total < 0) {
+      throw new Error('Invalid km_total');
+    }
+    if (typeof payload.fuel_cost !== 'number' || payload.fuel_cost < 0) {
+      throw new Error('Invalid fuel_cost');
+    }
+    
     if (editId) {
       const { error } = await supabase
         .from('vehicle_mileage_daily')
