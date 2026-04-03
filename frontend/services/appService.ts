@@ -71,7 +71,17 @@ export const appService = {
 
   permanentDelete: async (id: string) => {
     // Hard delete: remove completely from system
-    // This will cascade delete related records if FK constraints are set
+    // Delete related records first to avoid FK constraint violations
+    await Promise.all([
+      supabase.from('employee_apps').delete().eq('app_id', id),
+      supabase.from('daily_orders').delete().eq('app_id', id),
+      supabase.from('app_targets').delete().eq('app_id', id),
+      supabase.from('pricing_rules').delete().eq('app_id', id),
+      supabase.from('daily_shifts').delete().eq('app_id', id),
+      supabase.from('app_hybrid_rules').delete().eq('app_id', id),
+    ]);
+    
+    // Now delete the app itself
     const { error } = await supabase.from('apps').delete().eq('id', id);
     if (error) handleSupabaseError(error, 'appService.permanentDelete');
   },

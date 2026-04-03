@@ -1011,7 +1011,6 @@ const Dashboard = () => {
     orderGrowth,
     ordersByApp,
     ordersByCity,
-    attendanceWeek,
     topNInput,
     setTopNInput,
     handleTopNBlur,
@@ -1020,7 +1019,6 @@ const Dashboard = () => {
     bottomRidersPerApp,
     atRiskRiders,
     supervisorPerformance,
-    data,
   } = useDashboard({
     userId: uid,
     currentMonth,
