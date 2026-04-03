@@ -23,9 +23,11 @@ let monitoringInstalled = false;
  * to monitoring when VITE_MONITORING_ENDPOINT is configured.
  */
 function emitLog(level: LogLevel, message: string, payload: unknown) {
-  void level;
-  void message;
-  void payload;
+  if (level === 'error') {
+    console.error(`[${level}] ${message}`, payload);
+  } else {
+    console.warn(`[${level}] ${message}`, payload);
+  }
 }
 
 function toSerializableError(error: unknown) {

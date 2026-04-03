@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
     "allowJs": true,
-    "noImplicitAny": false,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "paths": {
       "@app/*": [
         "./app/*"
@@ -19,7 +19,7 @@
       ]
     },
     "skipLibCheck": true,
-    "strictNullChecks": false
+    "strictNullChecks": true
   },
   "files": [],
   "references": [
