@@ -307,20 +307,19 @@ export const buildSalaryRows = ({
   return newRows;
 };
 
-export const hydrateRowsWithDraft = (rows: SalaryRow[], draftKey: string) => {
-  let hydratedRows = rows;
+import { salaryDraftService } from '@services/salaryDraftService';
+
+export const hydrateRowsWithDraft = async (rows: SalaryRow[], monthYear: string) => {
   try {
-    const draftRaw = localStorage.getItem(draftKey);
-    if (!draftRaw) return hydratedRows;
-    const draft = JSON.parse(draftRaw) as Record<string, SalaryDraftPatch>;
-    hydratedRows = rows.map((row) => {
-      const patch = draft[row.id];
+    const draftMap = await salaryDraftService.getDraftsForMonth(monthYear);
+    return rows.map((row) => {
+      const patch = draftMap[row.id];
       return patch ? { ...row, ...patch, isDirty: true } : row;
     });
   } catch (e) {
-    logError('[Salaries] ignored malformed salaries draft in localStorage', e, { level: 'warn' });
+    logError('[Salaries] Failed to load drafts from server', e, { level: 'warn' });
+    return rows;
   }
-  return hydratedRows;
 };
 
 export const buildAppMaps = (appsWithScheme: AppWithSchemeRow[] | null | undefined) => {
@@ -358,12 +357,10 @@ export async function prepareSalaryState({
   salaryBaseContext,
   selectedMonth,
   activeEmployeeIdsInMonth,
-  salariesDraftKey,
 }: {
   salaryBaseContext: SalaryBaseContextData;
   selectedMonth: string;
   activeEmployeeIdsInMonth: ReadonlySet<string> | undefined;
-  salariesDraftKey: string;
 }): Promise<PreparedSalaryState> {
   const { monthlyContext, previewData } = salaryBaseContext;
   const { employees: empRows, orders, appsWithSchemeRes, attendanceRows, fuelRes, savedRecords, allAdvances } = monthlyContext;
@@ -408,7 +405,7 @@ export async function prepareSalaryState({
     advRemainingMap,
     fuelCostMap,
   });
-  const hydratedRows = hydrateRowsWithDraft(newRows, salariesDraftKey);
+  const hydratedRows = await hydrateRowsWithDraft(newRows, selectedMonth);
   const appsWithoutPricingRules = appsFromApi.filter((a) => !rulesMap[a.id] || rulesMap[a.id].length === 0).map((a) => a.name);
   const appsWithoutScheme = appsFromApi.filter((a) => !a.salary_schemes).map((a) => a.name);
 

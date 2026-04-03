@@ -41,6 +41,7 @@ const EmployeeTiers = lazy(() => import("@modules/pages/EmployeeTiers"));
 const PlatformAccounts = lazy(() => import("@modules/pages/PlatformAccounts"));
 const AiAnalytics = lazy(() => import("@modules/pages/AiAnalyticsPage"));
 const ProfilePage = lazy(() => import("@modules/pages/ProfilePage"));
+const ConcurrentEditingTest = lazy(() => import("@modules/pages/ConcurrentEditingTest"));
 const NotFound = lazy(() => import("@modules/pages/NotFound"));
 
 const PageLoader = () => {
@@ -159,6 +160,7 @@ const router = createBrowserRouter([
             element: <PageGuard pageKey="platform_accounts"><PlatformAccounts /></PageGuard>,
           },
           { path: "ai-analytics", element: <PageGuard pageKey="ai_analytics"><AiAnalytics /></PageGuard> },
+          { path: "test-concurrent", element: <ConcurrentEditingTest /> },
           { path: "profile", element: <ProfilePage /> },
           { path: "profile-page", element: <Navigate to="/profile" replace /> },
           { path: "settings", element: <PageGuard pageKey="settings"><SettingsHub /></PageGuard> },

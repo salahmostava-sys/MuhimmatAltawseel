@@ -7,7 +7,7 @@ import { installGlobalErrorMonitoring } from "@shared/lib/logger";
 import { isLikelyStaleChunkReason, reloadOnceForStaleChunk } from "@shared/lib/chunkLoadRecovery";
 
 Sentry.init({
-  dsn: "https://5aff3d20b4886b8ce4d0e1160740dac6@o4511125432107008.ingest.de.sentry.io/4511125438857296",
+  dsn: import.meta.env.VITE_SENTRY_DSN,
   // Setting this option to true will send default PII data to Sentry.
   // For example, automatic IP address collection on events
   sendDefaultPii: false,
