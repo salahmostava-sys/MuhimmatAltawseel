@@ -106,14 +106,13 @@ export const ALL_COLUMNS = [
   { key: 'city',                     label: 'المدينة',                 sortable: true  },
   { key: 'phone',                    label: 'رقم الهاتف',              sortable: true  },
   { key: 'nationality',              label: 'الجنسية',                 sortable: true  },
-  { key: 'status',                   label: 'الحالة',                  sortable: true  },
+  { key: 'platform_apps',            label: 'المنصة',                  sortable: false },
+  { key: 'commercial_record',        label: 'السجل التجاري',           sortable: true  },
   { key: 'sponsorship_status',       label: 'حالة الكفالة',            sortable: true  },
   { key: 'join_date',                label: 'تاريخ الانضمام',          sortable: true  },
   { key: 'birth_date',               label: 'تاريخ الميلاد',           sortable: true  },
   { key: 'probation_end_date',       label: 'انتهاء فترة التجربة',     sortable: true  },
-  { key: 'residency_expiry',         label: 'انتهاء الإقامة',          sortable: true  },
-  { key: 'days_residency',           label: 'المتبقي (يوم)',           sortable: true  },
-  { key: 'residency_status',         label: 'حالة الإقامة',            sortable: false },
+  { key: 'residency_combined',       label: 'الإقامة',                 sortable: true  },
   { key: 'health_insurance_expiry',  label: 'انتهاء التأمين الصحي',   sortable: true  },
   { key: 'license_status',           label: 'حالة الرخصة',             sortable: true  },
   { key: 'license_expiry',           label: 'انتهاء الرخصة',           sortable: true  },
@@ -126,7 +125,7 @@ export const ALL_COLUMNS = [
 export type ColKey = typeof ALL_COLUMNS[number]['key'];
 export type ColumnDef = typeof ALL_COLUMNS[number];
 
-export const DEFAULT_HIDDEN_COLS = new Set<ColKey>(['name_en', 'iban', 'license_expiry']);
+export const DEFAULT_HIDDEN_COLS = new Set<ColKey>(['name_en', 'iban', 'license_expiry', 'commercial_record']);
 export const GRID_SKELETON_IDS = ['g1', 'g2', 'g3', 'g4', 'g5', 'g6'];
 export const FAST_SKELETON_IDS = ['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12'];
 

@@ -69,7 +69,7 @@ export function EmployeeDetailedTable({
           <thead>
             <tr className="ta-thead">
               {activeCols.map(col => {
-                const isFilterable = !['seq', 'actions', 'residency_status', 'days_residency', 'residency_expiry',
+                const isFilterable = !['seq', 'actions', 'platform_apps', 'residency_combined',
                   'join_date', 'birth_date', 'bank_account_number', 'probation_end_date', 'iban', 'license_expiry',
                   'name_en', 'health_insurance_expiry'].includes(col.key);
                 const isActive = !!colFilters[col.key];
@@ -150,17 +150,6 @@ export function EmployeeDetailedTable({
                       <SelectContent>
                         <SelectItem value="all">الكل</SelectItem>
                         {uniqueVals.job_title.map(j => <SelectItem key={j} value={j}>{j}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  );
-                  if (col.key === 'status') return (
-                    <Select value={colFilters.status || 'all'} onValueChange={v => setColFilter('status', v)}>
-                      <SelectTrigger className="h-7 text-xs w-full"><SelectValue placeholder="الكل" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">الكل</SelectItem>
-                        <SelectItem value="active">نشط</SelectItem>
-                        <SelectItem value="inactive">غير نشط</SelectItem>
-                        <SelectItem value="ended">منتهي</SelectItem>
                       </SelectContent>
                     </Select>
                   );
@@ -266,19 +255,46 @@ export function EmployeeDetailedTable({
                       case 'nationality':
                         return <td key="nationality" className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap">{emp.nationality || '—'}</td>;
 
-                      case 'status':
+                      case 'platform_apps':
                         return (
-                          <td key="status" className="px-3 py-2.5 whitespace-nowrap">
-                            <InlineSelect
-                              value={emp.status || 'active'}
-                              options={[
-                                { value: 'active',   label: 'نشط'      },
-                                { value: 'inactive', label: 'غير نشط'  },
-                                { value: 'ended',    label: 'منتهي'     },
-                              ]}
-                              onSave={v => saveField(emp.id, 'status', v)}
-                              renderDisplay={() => <StatusBadge status={emp.status} />}
-                            />
+                          <td key="platform_apps" className="px-3 py-2.5 whitespace-nowrap">
+                            <div className="flex gap-1 flex-wrap max-w-[200px]">
+                              {(emp as { platform_apps?: Array<{ id: string; name: string; brand_color?: string }> }).platform_apps?.length ? (
+                                (emp as { platform_apps: Array<{ id: string; name: string; brand_color?: string }> }).platform_apps.map(app => (
+                                  <span
+                                    key={app.id}
+                                    className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium"
+                                    style={{
+                                      backgroundColor: app.brand_color || '#6366f1',
+                                      color: '#ffffff'
+                                    }}
+                                  >
+                                    {app.name}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-muted-foreground/40 text-xs">—</span>
+                              )}
+                            </div>
+                          </td>
+                        );
+
+                      case 'commercial_record':
+                        return <td key="commercial_record" className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap">{emp.commercial_record || '—'}</td>;
+
+                      case 'residency_combined':
+                        return (
+                          <td key="residency_combined" className="px-3 py-2.5 whitespace-nowrap">
+                            {emp.residency_expiry ? (
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-xs text-muted-foreground">{format(parseISO(emp.residency_expiry), 'yyyy/MM/dd')}</span>
+                                {res.days !== null && (
+                                  <span className={`text-xs font-medium ${daysColor}`}>
+                                    {res.days >= 0 ? `متبقي ${res.days} يوم` : `منتهية منذ ${Math.abs(res.days)} يوم`}
+                                  </span>
+                                )}
+                              </div>
+                            ) : <span className="text-muted-foreground/40">—</span>}
                           </td>
                         );
 
@@ -333,21 +349,6 @@ export function EmployeeDetailedTable({
                           </td>
                         );
                       }
-
-                      case 'residency_expiry':
-                        return <td key="residency_expiry" className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap">{emp.residency_expiry ? format(parseISO(emp.residency_expiry), 'yyyy/MM/dd') : '—'}</td>;
-
-                      case 'days_residency':
-                        return <td key="days_residency" className={`px-3 py-2.5 text-sm font-medium whitespace-nowrap text-center ${daysColor}`}>{res.days ?? '—'}</td>;
-
-                      case 'residency_status':
-                        return (
-                          <td key="residency_status" className="px-3 py-2.5 whitespace-nowrap">
-                            {res.status === 'valid' && <span className="badge-success">صالحة</span>}
-                            {res.status === 'expired' && <span className="badge-urgent">منتهية</span>}
-                            {res.status !== 'valid' && res.status !== 'expired' && <span className="text-muted-foreground/40">—</span>}
-                          </td>
-                        );
 
                       case 'health_insurance_expiry': {
                         const hiExpiry = emp.health_insurance_expiry;

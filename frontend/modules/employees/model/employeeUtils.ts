@@ -29,6 +29,7 @@ export type Employee = {
   base_salary: number;
   nationality?: string | null;
   preferred_language?: string | null;
+  commercial_record?: string | null;
 };
 
 export type SortDir = 'asc' | 'desc' | null;

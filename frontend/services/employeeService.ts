@@ -47,10 +47,17 @@ export const employeeService = {
   async getAll() {
     const { data, error } = await supabase
       .from('employees')
-      .select('*')
+      .select('*, employee_apps(app_id, apps(id, name, brand_color))')
       .order('name', { ascending: true });
     if (error) throw toServiceError(error, 'employeeService.getAll');
-    return data ?? [];
+    
+    // Transform employee_apps to platform_apps
+    const transformed = (data ?? []).map(emp => ({
+      ...emp,
+      platform_apps: (emp.employee_apps || []).map((ea: { apps: { id: string; name: string; brand_color?: string } }) => ea.apps).filter(Boolean)
+    }));
+    
+    return transformed;
   },
 
   /**
