@@ -1,17 +1,28 @@
-import { salaryService, type PricingRule, type SalarySchemeTier } from '@services/salaryService';
+import {
+  salaryService,
+  type PricingRule,
+  type SalaryPreviewPlatformBreakdown,
+  type SalarySchemeTier,
+} from '@services/salaryService';
 import { salaryDataService } from '@services/salaryDataService';
 import { filterVisibleEmployeesForSalaryMonth } from '@shared/lib/employeeVisibility';
-import { toCityArabicLabel } from '@modules/salaries/model/salaryUtils';
+import {
+  getPrimaryPlatformActivityCount,
+  hasPlatformActivity,
+  toCityArabicLabel,
+} from '@modules/salaries/model/salaryUtils';
 import { logError } from '@shared/lib/logger';
 import type { SlipLanguage } from '@shared/lib/salarySlipTranslations';
 import type {
   AppWithSchemeRow,
   OrderWithAppRow,
+  PlatformSalaryMetric,
   PreparedSalaryState,
   SalaryBaseContextData,
   SalaryRow,
   SchemeData,
 } from '@modules/salaries/types/salary.types';
+import type { WorkType } from '@shared/types/shifts';
 
 export const wasFixedSchemeAlreadyCalculated = (
   platformNames: string[],
@@ -94,8 +105,42 @@ export const buildSavedMap = (savedRecords: Array<{ employee_id: string; is_appr
   return savedMap;
 };
 
+type PreviewMapEntry = {
+  base_salary: number;
+  advance_deduction: number;
+  external_deduction: number;
+  total_shift_days: number;
+  platform_breakdown: Record<string, PlatformSalaryMetric>;
+};
+
+const toWorkType = (value: unknown): WorkType => {
+  if (value === 'shift' || value === 'hybrid') return value;
+  return 'orders';
+};
+
+const normalizePreviewPlatformBreakdown = (value: unknown) => {
+  const breakdown: Record<string, PlatformSalaryMetric> = {};
+  if (!Array.isArray(value)) return breakdown;
+
+  (value as SalaryPreviewPlatformBreakdown[]).forEach((item) => {
+    const appName = String(item.app_name || '').trim();
+    if (!appName) return;
+
+    breakdown[appName] = {
+      appName,
+      workType: toWorkType(item.work_type),
+      calculationMethod: item.calculation_method ?? null,
+      ordersCount: Number(item.orders_count || 0),
+      shiftDays: Number(item.shift_days || 0),
+      salary: Number(item.earnings || 0),
+    };
+  });
+
+  return breakdown;
+};
+
 export const buildPreviewMap = (previewData: Array<Record<string, unknown>> | null | undefined) => {
-  const previewMap: Record<string, { base_salary: number; advance_deduction: number; external_deduction: number }> = {};
+  const previewMap: Record<string, PreviewMapEntry> = {};
   (previewData || []).forEach((row) => {
     const employeeId = String(row.employee_id || '');
     if (!employeeId) return;
@@ -103,6 +148,8 @@ export const buildPreviewMap = (previewData: Array<Record<string, unknown>> | nu
       base_salary: Number(row.base_salary || 0),
       advance_deduction: Number(row.advance_deduction || 0),
       external_deduction: Number(row.external_deduction || 0),
+      total_shift_days: Number(row.total_shift_days || 0),
+      platform_breakdown: normalizePreviewPlatformBreakdown(row.platform_breakdown),
     };
   });
   return previewMap;
@@ -209,6 +256,7 @@ export const buildSalaryRows = ({
   selectedMonth,
   platformNames,
   appNameToId,
+  appWorkTypeMap,
   rulesMap,
   appSchemeMap,
   ordMap,
@@ -224,12 +272,13 @@ export const buildSalaryRows = ({
   selectedMonth: string;
   platformNames: string[];
   appNameToId: Record<string, string>;
+  appWorkTypeMap: Record<string, WorkType>;
   rulesMap: Record<string, PricingRule[]>;
   appSchemeMap: Record<string, SchemeData | null>;
   ordMap: Record<string, Record<string, number>>;
   attendanceDaysMap: Record<string, number>;
   savedMap: Record<string, { is_approved: boolean; net_salary: number }>;
-  previewMap: Record<string, { base_salary: number; advance_deduction: number; external_deduction: number }>;
+  previewMap: Record<string, PreviewMapEntry>;
   advInstIds: Record<string, string[]>;
   deductedInstIds: Record<string, string[]>;
   advRemainingMap: Record<string, number>;
@@ -240,14 +289,22 @@ export const buildSalaryRows = ({
     const employeeId = String(emp.id);
     const empOrders = ordMap[employeeId] || {};
     const attendanceDays = attendanceDaysMap[employeeId] || 0;
-    const registeredApps = Object.keys(empOrders).filter((k) => empOrders[k] > 0);
+    const preview = previewMap[employeeId];
 
     const platformOrders: Record<string, number> = {};
     const platformSalaries: Record<string, number> = {};
+    const platformMetrics: Record<string, PlatformSalaryMetric> = {};
     for (const platformName of platformNames) {
+      const previewMetric = preview?.platform_breakdown[platformName];
+      if (previewMetric) {
+        platformMetrics[platformName] = previewMetric;
+        platformOrders[platformName] = getPrimaryPlatformActivityCount(previewMetric);
+        platformSalaries[platformName] = Math.round(previewMetric.salary);
+        continue;
+      }
+
       const orders = empOrders[platformName] || 0;
-      platformOrders[platformName] = orders;
-      platformSalaries[platformName] = calculatePlatformSalary({
+      const salary = calculatePlatformSalary({
         platformName,
         orders,
         attendanceDays,
@@ -257,18 +314,33 @@ export const buildSalaryRows = ({
         appSchemeMap,
         platformSalaries,
       });
+
+      const fallbackMetric: PlatformSalaryMetric = {
+        appName: platformName,
+        workType: appWorkTypeMap[platformName] || 'orders',
+        calculationMethod: null,
+        ordersCount: orders,
+        shiftDays: 0,
+        salary,
+      };
+
+      platformMetrics[platformName] = fallbackMetric;
+      platformOrders[platformName] = getPrimaryPlatformActivityCount(fallbackMetric);
+      platformSalaries[platformName] = salary;
     }
+
+    const registeredApps = platformNames.filter((platformName) => hasPlatformActivity(platformMetrics[platformName]));
 
     const saved = savedMap[employeeId];
     const pendingInstallmentsCount = (advInstIds[employeeId] || []).length;
     const deductedInstallmentsCount = (deductedInstIds[employeeId] || []).length;
     const status = resolveRowStatus(saved, pendingInstallmentsCount, deductedInstallmentsCount);
-    const preview = previewMap[employeeId];
     const hasIban = !!emp.iban;
     const rawCity = (emp.city as string | null | undefined) ?? null;
     const cityKey: 'makkah' | 'jeddah' | null = rawCity === 'makkah' || rawCity === 'jeddah' ? rawCity : null;
     const preferredLanguage = ((emp as { preferred_language?: SlipLanguage | null }).preferred_language || 'ar') as SlipLanguage;
     const phone = (emp as { phone?: string | null }).phone || null;
+    const workDays = Math.max(attendanceDays, preview.total_shift_days || 0);
 
     newRows.push({
       id: `${employeeId}-${selectedMonth}`,
@@ -284,6 +356,7 @@ export const buildSalaryRows = ({
       registeredApps,
       platformOrders,
       platformSalaries,
+      platformMetrics,
       incentives: 0,
       sickAllowance: 0,
       violations: 0,
@@ -296,7 +369,7 @@ export const buildSalaryRows = ({
       status,
       preferredLanguage,
       phone,
-      workDays: attendanceDays,
+      workDays,
       fuelCost: fuelCostMap[employeeId] || 0,
       platformIncome: 0,
       engineBaseSalary: preview.base_salary,
@@ -324,11 +397,13 @@ export const hydrateRowsWithDraft = async (rows: SalaryRow[], monthYear: string)
 export const buildAppMaps = (appsWithScheme: AppWithSchemeRow[] | null | undefined) => {
   const appSchemeMap: Record<string, SchemeData | null> = {};
   const appNameToId: Record<string, string> = {};
+  const appWorkTypeMap: Record<string, WorkType> = {};
   (appsWithScheme || []).forEach((app) => {
     appSchemeMap[app.name] = app.salary_schemes ?? null;
     appNameToId[app.name] = app.id;
+    appWorkTypeMap[app.name] = toWorkType(app.work_type);
   });
-  return { appSchemeMap, appNameToId };
+  return { appSchemeMap, appNameToId, appWorkTypeMap };
 };
 
 export const fetchPricingRulesMap = async (appNameToId: Record<string, string>) => {
@@ -356,10 +431,12 @@ export async function prepareSalaryState({
   salaryBaseContext,
   selectedMonth,
   activeEmployeeIdsInMonth,
+  salariesDraftKey: _salariesDraftKey,
 }: {
   salaryBaseContext: SalaryBaseContextData;
   selectedMonth: string;
   activeEmployeeIdsInMonth: ReadonlySet<string> | undefined;
+  salariesDraftKey?: string;
 }): Promise<PreparedSalaryState> {
   const { monthlyContext, previewData } = salaryBaseContext;
   const { employees: empRows, orders, appsWithSchemeRes, attendanceRows, fuelRes, savedRecords, allAdvances } = monthlyContext;
@@ -384,7 +461,7 @@ export async function prepareSalaryState({
   const fuelCostMap = buildFuelCostMap(fuelRes as Array<{ employee_id: string; fuel_cost: number | string }> | null | undefined);
   const ordMap = buildOrdersMap(orders as OrderWithAppRow[] | null);
   const appsFromApi = (appsWithSchemeRes as AppWithSchemeRow[] | null) || [];
-  const { appSchemeMap, appNameToId } = buildAppMaps(appsFromApi);
+  const { appSchemeMap, appNameToId, appWorkTypeMap } = buildAppMaps(appsFromApi);
   const platformNames = appsFromApi.map((a) => a.name);
   const rulesMap = await fetchPricingRulesMap(appNameToId);
   const builtEmpPlatformScheme = buildEmpPlatformSchemeMap(employees.map((emp) => emp.id), platformNames, appSchemeMap);
@@ -393,6 +470,7 @@ export async function prepareSalaryState({
     selectedMonth,
     platformNames,
     appNameToId,
+    appWorkTypeMap,
     rulesMap,
     appSchemeMap,
     ordMap,

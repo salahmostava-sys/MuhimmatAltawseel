@@ -2,6 +2,7 @@ import { supabase } from '@services/supabase/client';
 import { isEmployeeIdUuid, isValidSalaryMonthYear } from '@shared/lib/salaryValidation';
 import { handleSupabaseError } from '@services/serviceError';
 import { createPagedResult } from '@shared/types/pagination';
+import type { WorkType } from '@shared/types/shifts';
 
 export interface SalaryRecordPayload {
   employee_id: string;
@@ -23,13 +24,32 @@ export interface SalaryRpcParams {
   paymentMethod?: string;
 }
 
+export type SalaryPreviewCalculationMethod =
+  | 'orders'
+  | 'shift'
+  | 'orders_fallback'
+  | 'mixed'
+  | 'none';
+
+export interface SalaryPreviewPlatformBreakdown {
+  app_id?: string;
+  app_name: string;
+  work_type: WorkType;
+  calculation_method?: SalaryPreviewCalculationMethod | null;
+  orders_count?: number | null;
+  shift_days?: number | null;
+  earnings: number;
+}
+
 export interface SalaryPreviewRow {
   employee_id: string;
   total_orders: number;
+  total_shift_days?: number;
   base_salary: number;
   external_deduction: number;
   advance_deduction: number;
   net_salary: number;
+  platform_breakdown?: SalaryPreviewPlatformBreakdown[] | null;
 }
 
 export type PricingCalcType = 'per_order' | 'fixed' | 'hybrid';

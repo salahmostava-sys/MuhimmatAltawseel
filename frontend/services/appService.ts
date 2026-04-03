@@ -165,7 +165,7 @@ export const appService = {
   getActiveWithSalarySchemes: async () => {
     const { data, error } = await supabase
       .from('apps')
-      .select('id, name, scheme_id, salary_schemes(id, name, name_en, status, scheme_type, monthly_amount, target_orders, target_bonus, salary_scheme_tiers(id, from_orders, to_orders, price_per_order, tier_order, tier_type, incremental_threshold, incremental_price))')
+      .select('id, name, work_type, scheme_id, salary_schemes(id, name, name_en, status, scheme_type, monthly_amount, target_orders, target_bonus, salary_scheme_tiers(id, from_orders, to_orders, price_per_order, tier_order, tier_type, incremental_threshold, incremental_price))')
       .eq('is_active', true);
     if (error) handleSupabaseError(error, 'appService.getActiveWithSalarySchemes');
     return data ?? [];

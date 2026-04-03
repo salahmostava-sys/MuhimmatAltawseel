@@ -1,6 +1,7 @@
 import { useState, type KeyboardEvent, type ReactNode } from 'react';
 import { getOrdersCellBackground } from '@modules/salaries/lib/salaryConstants';
-import type { SalaryRow, SchemeData } from '@modules/salaries/types/salary.types';
+import { getPlatformActivitySummary, getPrimaryPlatformActivityCount } from '@modules/salaries/model/salaryUtils';
+import type { PlatformSalaryMetric, SalaryRow, SchemeData } from '@modules/salaries/types/salary.types';
 import { getTierSalaryExplanationLines } from '@services/salaryService';
 
 export const EditableCell = ({
@@ -99,7 +100,7 @@ export type PlatformOrderCellProps = {
   platformName: string;
   tdClass: string;
   pc?: { cellBg: string; focusBorder: string };
-  orders: number;
+  metric?: PlatformSalaryMetric;
   salary: number;
   scheme: SchemeData | null | undefined;
   editingCell: { rowId: string; platform: string } | null;
@@ -112,18 +113,23 @@ export const PlatformOrderCell = ({
   platformName,
   tdClass,
   pc,
-  orders,
+  metric,
   salary,
   scheme,
   editingCell,
   setEditingCell,
   updatePlatformOrders,
 }: PlatformOrderCellProps) => {
+  const primaryCount = getPrimaryPlatformActivityCount(metric);
+  const ordersForScheme = metric?.ordersCount || 0;
   const target = scheme?.target_orders;
-  const hitTarget = target && orders >= target;
-  const rowBg = getOrdersCellBackground(orders, !!hitTarget, pc?.cellBg);
-  const noScheme = orders > 0 && scheme === null;
+  const hitTarget = target && ordersForScheme >= target;
+  const rowBg = getOrdersCellBackground(primaryCount, !!hitTarget, pc?.cellBg);
+  const noScheme = ordersForScheme > 0 && scheme === null && metric?.workType === 'orders';
   const isEditing = editingCell?.rowId === rowId && editingCell?.platform === platformName;
+  const isEditable = metric?.workType !== 'shift' && metric?.workType !== 'hybrid';
+  const activitySummary = getPlatformActivitySummary(metric);
+  const orders = primaryCount;
 
   const handleBlur = (value: number) => {
     updatePlatformOrders(rowId, platformName, value);
@@ -136,7 +142,7 @@ export const PlatformOrderCell = ({
   };
 
   let salaryMeta: ReactNode = null;
-  if (orders > 0) {
+  if (salary > 0 || primaryCount > 0) {
     if (noScheme) {
       salaryMeta = (
         <span
@@ -160,22 +166,30 @@ export const PlatformOrderCell = ({
       key={`${platformName}-col`}
       className={`${tdClass} text-center border-l border-border/20`}
       style={{ background: noScheme ? 'rgba(234,179,8,0.1)' : rowBg }}
-      onDoubleClick={() => setEditingCell({ rowId, platform: platformName })}
+      title={activitySummary !== '—' ? activitySummary : undefined}
+      onDoubleClick={() => {
+        if (isEditable) setEditingCell({ rowId, platform: platformName });
+      }}
     >
-      {isEditing ? (
+      {isEditing && isEditable ? (
         <input
           autoFocus
           type="number"
-          defaultValue={orders}
+          defaultValue={ordersForScheme}
           className="w-16 text-center border rounded px-1 py-0.5 text-xs bg-background"
           style={{ borderColor: pc?.focusBorder }}
           onBlur={e => handleBlur(Number(e.target.value))}
           onKeyDown={handleKeyDown}
         />
       ) : (
-        <SalaryBreakdown orders={orders} scheme={scheme || null} salary={salary}>
+        <SalaryBreakdown orders={ordersForScheme} scheme={scheme || null} salary={salary}>
           <div className="flex flex-col items-center leading-tight">
-            <span className={`font-semibold text-xs ${orders === 0 ? 'text-muted-foreground/30' : 'text-foreground'}`}>
+            <span
+              className={`font-semibold text-[11px] ${
+                primaryCount === 0 && salary === 0 ? 'text-muted-foreground/30' : 'text-foreground'
+              }`}
+              title={isEditable ? 'Ù†Ù‚Ø± Ù…Ø²Ø¯ÙˆØ¬ Ù„Ù„ØªØ¹Ø¯ÙŠÙ„' : undefined}
+            >
               {orders === 0 ? '—' : orders}
             </span>
             {salaryMeta}

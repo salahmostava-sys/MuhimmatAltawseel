@@ -9,6 +9,12 @@ cd d:\MuhimmatAltawseel
 node scripts/system-audit.mjs
 ```
 
+If local PowerShell blocks script execution on Windows, use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\system-audit.ps1 -SkipFrontend
+```
+
 This checks:
 
 - `frontend` package layout and frontend `verify`

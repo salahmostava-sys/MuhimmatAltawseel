@@ -16,6 +16,7 @@ import { toast as sonnerToast } from '@shared/components/ui/sonner';
 import { salaryService, type PricingRule, type SalarySchemeTier } from '@services/salaryService';
 import type { SalaryRow, SchemeData, SortDir } from '@modules/salaries/types/salary.types';
 import { computeSalaryRow } from '@modules/salaries/hooks/useSalaryTable';
+import { getPrimaryPlatformActivityCount } from '@modules/salaries/model/salaryUtils';
 import { useSalaryIO } from '@modules/salaries/hooks/useSalaryIO';
 import { useSalaryPrint } from '@modules/salaries/hooks/useSalaryPrint';
 import { useSalaryPersistence } from '@modules/salaries/hooks/useSalaryPersistence';
@@ -115,6 +116,8 @@ export function useSalaryActions(params: UseSalaryActionsParams) {
     setRows((prev) =>
       prev.map((r) => {
         if (r.id !== id) return r;
+        const currentMetric = r.platformMetrics[platform];
+        if (currentMetric && currentMetric.workType !== 'orders') return r;
         const newOrders = { ...r.platformOrders, [platform]: value };
         const appId = appIdByName[platform];
         const appRules = appId ? (pricingRulesByAppId[appId] || []) : [];
@@ -132,8 +135,23 @@ export function useSalaryActions(params: UseSalaryActionsParams) {
           }
         }
         const newSalaries = { ...r.platformSalaries, [platform]: salary };
+        const nextMetric = {
+          appName: platform,
+          workType: currentMetric?.workType || 'orders',
+          calculationMethod: currentMetric?.calculationMethod ?? null,
+          ordersCount: value,
+          shiftDays: currentMetric?.shiftDays || 0,
+          salary,
+        };
+        const newMetrics = { ...r.platformMetrics, [platform]: nextMetric };
         const isDirty = r.status !== 'pending' ? true : r.isDirty;
-        return { ...r, platformOrders: newOrders, platformSalaries: newSalaries, isDirty };
+        return {
+          ...r,
+          platformOrders: { ...newOrders, [platform]: getPrimaryPlatformActivityCount(nextMetric) },
+          platformSalaries: newSalaries,
+          platformMetrics: newMetrics,
+          isDirty,
+        };
       }),
     );
   };
@@ -144,7 +162,7 @@ export function useSalaryActions(params: UseSalaryActionsParams) {
       .filter((p) => row.registeredApps.includes(p))
       .map((p) => ({
         appName: p,
-        orders: row.platformOrders[p] || 0,
+        orders: getPrimaryPlatformActivityCount(row.platformMetrics[p]),
         salary: row.platformSalaries[p] || 0,
       }));
     setDetailOrders(orders);

@@ -1,5 +1,6 @@
 import type { SlipLanguage } from '@shared/lib/salarySlipTranslations';
 import type { PricingRule } from '@services/salaryService';
+import type { WorkType } from '@shared/types/shifts';
 
 export type SortDir = 'asc' | 'desc' | null;
 
@@ -17,6 +18,7 @@ export interface SalaryRow {
   registeredApps: string[];
   platformOrders: Record<string, number>;
   platformSalaries: Record<string, number>;
+  platformMetrics: Record<string, PlatformSalaryMetric>;
   incentives: number;
   sickAllowance: number;
   violations: number;
@@ -34,6 +36,15 @@ export interface SalaryRow {
   fuelCost: number;
   platformIncome: number;
   engineBaseSalary?: number;
+}
+
+export interface PlatformSalaryMetric {
+  appName: string;
+  workType: WorkType;
+  calculationMethod?: string | null;
+  ordersCount: number;
+  shiftDays: number;
+  salary: number;
 }
 
 export interface SchemeData {
@@ -79,6 +90,7 @@ export const buildOrdersMap = (rows: OrderWithAppRow[] | null | undefined) => {
 export type AppWithSchemeRow = {
   id: string;
   name: string;
+  work_type?: WorkType | null;
   salary_schemes?: SchemeData | null;
 };
 

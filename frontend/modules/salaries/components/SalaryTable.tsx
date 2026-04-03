@@ -132,7 +132,7 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
                 <th colSpan={3} className={`${thFrozenBase} border-l border-border/50`} style={stickyLeft(40)}>بيانات المندوب</th>
                 <th colSpan={3} className="px-3 py-2 text-xs font-semibold text-info whitespace-nowrap border-b border-border/40 bg-info/10 text-center border-l border-border/40">📊 بيانات المندوب الشهرية</th>
                 <th colSpan={platforms.length} className="px-3 py-2 text-xs font-semibold text-primary whitespace-nowrap border-b border-border/50 bg-muted/40 text-center border-l border-border/50">
-                  المنصات (نقر مزدوج لتعديل الطلبات)
+                  المنصات (نقر مزدوج لتعديل عداد الطلبات فقط)
                 </th>
                 <th colSpan={2} className="px-3 py-2 text-xs font-semibold text-primary whitespace-nowrap border-b border-border/40 bg-primary/10 text-center border-l border-border/40">إجمالي الطلبات + الراتب الثابت</th>
                 <th colSpan={4} className="px-3 py-2 text-xs font-semibold text-success whitespace-nowrap border-b border-border/40 bg-success/10 text-center border-l border-border/40">✅ الإضافات</th>
@@ -171,13 +171,13 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
                       onClick={() => handleSort(p)}>
                        <div className="flex flex-col items-center gap-0">
                          <span>{p}</span>
-                         <span className="text-[9px] opacity-80 font-normal">طلبات / راتب <SalarySortIcon field={p} sortField={sortField} sortDir={sortDir} /></span>
+                         <span className="text-[9px] opacity-80 font-normal">نشاط / راتب <SalarySortIcon field={p} sortField={sortField} sortDir={sortDir} /></span>
                        </div>
                     </th>
                   );
                 })}
                 <th className="px-2 py-2 text-xs font-semibold text-foreground whitespace-nowrap border border-border/30 bg-primary/10 text-center cursor-pointer select-none hover:brightness-95" onClick={() => handleSort('totalPlatformOrders')}>
-                  إجمالي الطلبات <SalarySortIcon field="totalPlatformOrders" sortField={sortField} sortDir={sortDir} />
+                  إجمالي النشاط <SalarySortIcon field="totalPlatformOrders" sortField={sortField} sortDir={sortDir} />
                 </th>
                 <th className={`${thBase} bg-primary/10`}>الراتب الأساسي</th>
                 <th className={`${thBase} bg-success/5`}>حوافز</th>
@@ -248,7 +248,6 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
                     </td>
                     {platforms.map(p => {
                       const pc = platformColors[p];
-                      const orders = r.platformOrders[p] || 0;
                       const salary = r.platformSalaries[p] || 0;
                       const scheme = empPlatformScheme?.[r.employeeId]?.[p];
                       return (
@@ -258,7 +257,7 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
                           platformName={p}
                           tdClass={tdClass}
                           pc={pc}
-                          orders={orders}
+                          metric={r.platformMetrics[p]}
                           salary={salary}
                           scheme={scheme}
                           editingCell={editingCell}
@@ -270,7 +269,8 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
                     <td className={`${tdClass} text-center font-bold text-foreground border-l border-border/20 bg-primary/[0.04]`}>
                       {(() => {
                         const totalOrders = Object.values(r.platformOrders).reduce((s, v) => s + v, 0);
-                        return totalOrders > 0 ? (
+                        const totalSalary = Object.values(r.platformSalaries).reduce((s, v) => s + v, 0);
+                        return totalOrders > 0 || totalSalary > 0 ? (
                           <OrderDetailsModal row={r} empPlatformScheme={empPlatformScheme} />
                         ) : (
                           <span className="text-muted-foreground/30">—</span>
