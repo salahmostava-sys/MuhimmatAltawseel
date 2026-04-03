@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { Suspense, lazy, useState, useRef, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Settings2 } from 'lucide-react';
 import { useToast } from '@shared/hooks/use-toast';
@@ -14,19 +14,15 @@ import { createDefaultGlobalFilters } from '@shared/components/table/GlobalTable
 import { isValidSalaryMonthYear } from '@shared/lib/salaryValidation';
 import { defaultQueryRetry } from '@shared/lib/query';
 import { loadJsPdf } from '@modules/salaries/lib/salaryPdfLoaders';
+import Loading from '@shared/components/Loading';
 
 import type { FastApprovedFilter } from '@modules/salaries/model/salaryUtils';
-import { SalaryFastList as SalariesFastList } from '@modules/salaries/components/SalaryFastList';
 import { SalarySchemeSelector } from '@modules/salaries/components/SalarySchemeSelector';
-import { PayslipModal } from '@modules/salaries/components/PayslipModal';
 import { useSalaryFilteredRows } from '@modules/salaries/hooks/useSalaryTable';
 import { useSalaryActions } from '@modules/salaries/hooks/useSalaryActions';
 import { SalaryMonthSelector, SalarySummaryCards } from '@modules/salaries/components/SalaryMonthSelector';
 import { SalaryActionsBar, BatchProgressBar } from '@modules/salaries/components/SalaryActionsBar';
-import { SalaryCardsView } from '@modules/salaries/components/SalaryCardsView';
 import { SalaryTable } from '@modules/salaries/components/SalaryTable';
-import { SalaryDetailDialog, BatchSlipRenderer, buildBatchSlipHTML } from '@modules/salaries/components/SalarySlipModal';
-import { SalarySlipTemplateEditor } from '@modules/salaries/components/SalarySlipTemplateEditor';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@shared/components/ui/dialog';
 
 import { PLATFORM_COLORS } from '@modules/salaries/lib/salaryConstants';
@@ -43,6 +39,36 @@ import type {
 import type JSZip from 'jszip';
 
 import { useTemporalContext } from '@app/providers/TemporalContext';
+
+const SalariesFastList = lazy(() =>
+  import('@modules/salaries/components/SalaryFastList').then((module) => ({
+    default: module.SalaryFastList,
+  })),
+);
+const PayslipModal = lazy(() =>
+  import('@modules/salaries/components/PayslipModal').then((module) => ({
+    default: module.PayslipModal,
+  })),
+);
+const SalaryCardsView = lazy(() =>
+  import('@modules/salaries/components/SalaryCardsView').then((module) => ({
+    default: module.SalaryCardsView,
+  })),
+);
+const SalaryDetailDialog = lazy(() =>
+  import('@modules/salaries/components/SalarySlipModal').then((module) => ({
+    default: module.SalaryDetailDialog,
+  })),
+);
+const SalarySlipTemplateEditor = lazy(() =>
+  import('@modules/salaries/components/SalarySlipTemplateEditor').then((module) => ({
+    default: module.SalarySlipTemplateEditor,
+  })),
+);
+
+const InlineLoader = ({ minHeightClassName = 'min-h-[220px]' }: Readonly<{ minHeightClassName?: string }>) => (
+  <Loading minHeightClassName={minHeightClassName} />
+);
 
 const Salaries = () => {
   const { toast } = useToast();
@@ -296,6 +322,7 @@ const Salaries = () => {
     const timer = setTimeout(async () => {
       try {
         const row = batchQueue[batchIndex];
+        const { buildBatchSlipHTML } = await import('@modules/salaries/lib/buildBatchSlipHTML');
         const html = buildBatchSlipHTML(row, months.find(m => m.v === selectedMonth)?.l || selectedMonth, projectName);
 
         // Use jsPDF for blob generation
@@ -341,21 +368,23 @@ const Salaries = () => {
 
   if (pageMode === 'fast') {
     return (
-      <SalariesFastList
-        monthYear={selectedMonth}
-        branch={fastFilters.branch}
-        search={fastFilters.search}
-        approved={fastApproved}
-        onApprovedChange={setFastApproved}
-        onFiltersChange={(next) => { setFastFilters(next); setFastPage(1); }}
-        page={fastPage}
-        pageSize={fastPageSize}
-        onPageChange={setFastPage}
-        onBack={() => setPageMode('detailed')}
-        onSalaryTemplate={actions.downloadSalaryTemplate}
-        onSalaryImport={actions.handleSalaryImportFile}
-        salaryActionLoading={salaryActionLoading}
-      />
+      <Suspense fallback={<InlineLoader minHeightClassName="min-h-[320px]" />}>
+        <SalariesFastList
+          monthYear={selectedMonth}
+          branch={fastFilters.branch}
+          search={fastFilters.search}
+          approved={fastApproved}
+          onApprovedChange={setFastApproved}
+          onFiltersChange={(next) => { setFastFilters(next); setFastPage(1); }}
+          page={fastPage}
+          pageSize={fastPageSize}
+          onPageChange={setFastPage}
+          onBack={() => setPageMode('detailed')}
+          onSalaryTemplate={actions.downloadSalaryTemplate}
+          onSalaryImport={actions.handleSalaryImportFile}
+          salaryActionLoading={salaryActionLoading}
+        />
+      </Suspense>
     );
   }
 
@@ -425,15 +454,17 @@ const Salaries = () => {
       />
 
       {viewMode === 'cards' && (
-        <SalaryCardsView
-          loadingData={loadingData}
-          filtered={filtered}
-          computeRow={computeRow}
-          approveRow={actions.approveRow}
-          markAsPaid={actions.markAsPaid}
-          markingPaid={markingPaid}
-          setPayslipRow={setPayslipRow}
-        />
+        <Suspense fallback={<InlineLoader />}>
+          <SalaryCardsView
+            loadingData={loadingData}
+            filtered={filtered}
+            computeRow={computeRow}
+            approveRow={actions.approveRow}
+            markAsPaid={actions.markAsPaid}
+            markingPaid={markingPaid}
+            setPayslipRow={setPayslipRow}
+          />
+        </Suspense>
       )}
 
       {viewMode === 'table' && (
@@ -465,35 +496,32 @@ const Salaries = () => {
       )}
 
       {payslipRow && (
-        <PayslipModal
-          row={payslipRow}
-          selectedMonth={selectedMonth}
-          companyName={projectName}
-          onClose={() => setPayslipRow(null)}
-          onApprove={() => { actions.approveRow(payslipRow.id); setPayslipRow(null); }}
-        />
+        <Suspense fallback={<InlineLoader />}>
+          <PayslipModal
+            row={payslipRow}
+            selectedMonth={selectedMonth}
+            companyName={projectName}
+            onClose={() => setPayslipRow(null)}
+            onApprove={() => { actions.approveRow(payslipRow.id); setPayslipRow(null); }}
+          />
+        </Suspense>
       )}
 
       {detailRow && (
-        <SalaryDetailDialog
-          detailRow={detailRow}
-          computeRow={computeRow}
-          platforms={platforms}
-          platformColors={platformColors}
-          appCustomColumns={appCustomColumns}
-          selectedMonth={selectedMonth}
-          monthLabel={monthLabel}
-          setDetailRow={setDetailRow}
-          setPayslipRow={setPayslipRow}
-        />
+        <Suspense fallback={<InlineLoader />}>
+          <SalaryDetailDialog
+            detailRow={detailRow}
+            computeRow={computeRow}
+            platforms={platforms}
+            platformColors={platformColors}
+            appCustomColumns={appCustomColumns}
+            selectedMonth={selectedMonth}
+            monthLabel={monthLabel}
+            setDetailRow={setDetailRow}
+            setPayslipRow={setPayslipRow}
+          />
+        </Suspense>
       )}
-
-      <BatchSlipRenderer
-        batchQueue={batchQueue}
-        batchIndex={batchIndex}
-        batchMonth={batchMonth}
-        projectName={projectName}
-      />
 
       <Dialog open={showTemplateEditor} onOpenChange={setShowTemplateEditor}>
         <DialogContent className="max-w-[95vw] w-[1400px] max-h-[95vh] overflow-y-auto p-0 border-none bg-muted/20">
@@ -503,7 +531,11 @@ const Salaries = () => {
             </DialogTitle>
           </DialogHeader>
           <div className="p-2">
-            <SalarySlipTemplateEditor />
+            {showTemplateEditor && (
+              <Suspense fallback={<InlineLoader minHeightClassName="min-h-[480px]" />}>
+                <SalarySlipTemplateEditor />
+              </Suspense>
+            )}
           </div>
         </DialogContent>
       </Dialog>

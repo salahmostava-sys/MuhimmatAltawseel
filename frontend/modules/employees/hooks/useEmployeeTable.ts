@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
 import { format } from 'date-fns';
-import * as XLSX from '@e965/xlsx';
 import { driverService } from '@services/driverService';
 import { employeeService, EMPLOYEE_DELETE_BLOCKED_MESSAGE } from '@services/employeeService';
 import { getErrorMessage } from '@services/serviceError';
@@ -17,6 +16,8 @@ import {
   type UploadLiveStats,
   type EmployeeStatusFilter,
 } from '@modules/employees/types/employee.types';
+
+const loadXlsx = () => import('@e965/xlsx');
 
 export function useEmployeeActions(params: {
   data: Employee[];
@@ -133,7 +134,8 @@ export function useEmployeeActions(params: {
     });
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    const XLSX = await loadXlsx();
     const rows = filtered.map((e) => ({
       employee_code: e.employee_code || '',
       name: e.name || '',
@@ -166,6 +168,7 @@ export function useEmployeeActions(params: {
   };
 
   const handleFastExport = async () => {
+    const XLSX = await loadXlsx();
     const branch = parseBranchFilter(fastFilters.branch as import('@shared/components/table/GlobalTableFilters').BranchKey);
     const search = fastFilters.search?.trim() || undefined;
     const isAllStatus = fastStatus === 'all';
@@ -217,10 +220,11 @@ export function useEmployeeActions(params: {
       record_id: null,
       meta: { total: out.length, branch: branch ?? null, status: status ?? null, search: search ?? null },
     });
-    toast({ title: `Success: ${out.length} rows processed` });
+      toast({ title: `Success: ${out.length} rows processed` });
   };
 
-  const handleTemplate = () => {
+  const handleTemplate = async () => {
+    const XLSX = await loadXlsx();
     const headers = [Array.from(EMPLOYEE_TEMPLATE_AR_HEADERS)];
     const ws = XLSX.utils.aoa_to_sheet(headers);
     const wb = XLSX.utils.book_new();
@@ -240,7 +244,7 @@ export function useEmployeeActions(params: {
   const runExportDetailed = async () => {
     setActionLoading(true);
     try {
-      handleExport();
+      await handleExport();
       toast({ title: `تم التصدير`, description: `عُالج ${filtered.length} صفاً` });
     } catch (e: unknown) {
       toast({
@@ -256,7 +260,7 @@ export function useEmployeeActions(params: {
   const runTemplateDownload = async () => {
     setActionLoading(true);
     try {
-      handleTemplate();
+      await handleTemplate();
       toast({ title: 'تم التنزيل', description: 'تم تنزيل قالب الاستيراد' });
     } catch (e: unknown) {
       toast({

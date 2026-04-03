@@ -1,13 +1,10 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@shared/components/ui/dialog';
 import { Button } from '@shared/components/ui/button';
 import { Printer } from 'lucide-react';
-import { getSlipTranslations } from '@shared/lib/salarySlipTranslations';
 import type { CustomColumn } from '@shared/hooks/useAppColors';
 import { statusLabels, statusStyles } from '@modules/salaries/lib/salaryConstants';
 import type { SalaryRow } from '@modules/salaries/types/salary.types';
 import type React from 'react';
-import { buildSalarySlipHTML } from '@modules/salaries/lib/buildSalarySlipHTML';
-import { buildSlipFieldsFromRow, buildSlipEmployeeInfo } from '@modules/salaries/lib/buildSalarySlipFields';
 import { getPlatformActivitySummary, hasPlatformActivity } from '@modules/salaries/model/salaryUtils';
 
 interface SalaryDetailDialogProps {
@@ -197,54 +194,4 @@ export function BatchSlipRenderer(_props: Readonly<BatchSlipRendererProps>) {
   // This component is now a no-op — batch HTML generation is done inline
   // in the SalariesPage batch export effect via buildBatchSlipHTML().
   return null;
-}
-
-/**
- * Build a standalone HTML string for a single salary slip in batch mode.
- * Used by SalariesPage batch ZIP export.
- */
-export function buildBatchSlipHTML(row: SalaryRow, batchMonth: string, projectName: string): string {
-  const t = getSlipTranslations(row.preferredLanguage);
-
-  const platformRows = row.registeredApps
-    .filter(app => (row.platformOrders[app] || 0) > 0)
-    .map(app => ({
-      name: app,
-      orders: row.platformOrders[app] || 0,
-      salary: row.platformSalaries[app] || 0,
-    }));
-
-  const totalPlatformSalary = platformRows.reduce((s, r) => s + r.salary, 0);
-  const totalEarnings = totalPlatformSalary + row.incentives + row.sickAllowance;
-  const allDeductionVals = [
-    row.advanceDeduction,
-    row.externalDeduction,
-    row.violations,
-    ...Object.values(row.customDeductions || {}),
-  ];
-  const totalDeductions = allDeductionVals.reduce((s, d) => s + d, 0);
-  const netSalary = totalEarnings - totalDeductions;
-  const remaining = netSalary - row.transfer;
-
-  const computed = {
-    totalPlatformSalary,
-    totalAdditions: row.incentives + row.sickAllowance,
-    totalWithSalary: totalEarnings,
-    totalDeductions,
-    netSalary,
-    remaining,
-  };
-
-  const fields = buildSlipFieldsFromRow(row, computed, t);
-  const monthField = fields.find(f => f.key === 'month');
-  if (monthField) monthField.value = batchMonth;
-
-  const employeeInfo = buildSlipEmployeeInfo(row, batchMonth, projectName);
-
-  return buildSalarySlipHTML({
-    employee: employeeInfo,
-    fields,
-    platforms: platformRows,
-    projectName,
-  });
 }

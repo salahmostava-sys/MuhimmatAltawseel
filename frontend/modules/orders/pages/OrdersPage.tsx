@@ -1,18 +1,38 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { Suspense, lazy, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Package } from 'lucide-react';
 import { Tabs, TabsContent } from '@shared/components/ui/tabs';
 import { ResponsiveTabBar } from '@shared/components/ResponsiveTabBar';
-import { SpreadsheetGridTab } from '@modules/orders/components/SpreadsheetGridTab';
-import { MonthSummaryTab } from '@modules/orders/components/MonthSummaryTab';
-import { OrdersListTab } from '@modules/orders/components/OrdersListTab';
-import { ShiftsTabWrapper } from '@modules/orders/components/ShiftsTabWrapper';
+import Loading from '@shared/components/Loading';
+
+const SpreadsheetGridTab = lazy(() =>
+  import('@modules/orders/components/SpreadsheetGridTab').then((module) => ({
+    default: module.SpreadsheetGridTab,
+  })),
+);
+const MonthSummaryTab = lazy(() =>
+  import('@modules/orders/components/MonthSummaryTab').then((module) => ({
+    default: module.MonthSummaryTab,
+  })),
+);
+const OrdersListTab = lazy(() =>
+  import('@modules/orders/components/OrdersListTab').then((module) => ({
+    default: module.OrdersListTab,
+  })),
+);
+const ShiftsTabWrapper = lazy(() =>
+  import('@modules/orders/components/ShiftsTabWrapper').then((module) => ({
+    default: module.ShiftsTabWrapper,
+  })),
+);
 
 const ORDER_TABS = ['grid', 'summary', 'list', 'shifts'] as const;
 type OrderTab = (typeof ORDER_TABS)[number];
 
 const isOrderTab = (v: string | null): v is OrderTab =>
   v !== null && ORDER_TABS.includes(v as OrderTab);
+
+const TabLoader = () => <Loading minHeightClassName="min-h-[240px]" />;
 
 const OrdersPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -63,16 +83,24 @@ const OrdersPage = () => {
           ]}
         />
         <TabsContent value="grid" className="mt-2 outline-none">
-          <SpreadsheetGridTab />
+          <Suspense fallback={<TabLoader />}>
+            <SpreadsheetGridTab />
+          </Suspense>
         </TabsContent>
         <TabsContent value="summary" className="mt-2 overflow-x-auto outline-none">
-          <MonthSummaryTab />
+          <Suspense fallback={<TabLoader />}>
+            <MonthSummaryTab />
+          </Suspense>
         </TabsContent>
         <TabsContent value="list" className="mt-2 outline-none">
-          <OrdersListTab />
+          <Suspense fallback={<TabLoader />}>
+            <OrdersListTab />
+          </Suspense>
         </TabsContent>
         <TabsContent value="shifts" className="mt-2 outline-none">
-          <ShiftsTabWrapper />
+          <Suspense fallback={<TabLoader />}>
+            <ShiftsTabWrapper />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </div>
