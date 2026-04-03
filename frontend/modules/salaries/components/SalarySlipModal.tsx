@@ -8,6 +8,7 @@ import type { SalaryRow } from '@modules/salaries/types/salary.types';
 import type React from 'react';
 import { buildSalarySlipHTML } from '@modules/salaries/lib/buildSalarySlipHTML';
 import { buildSlipFieldsFromRow, buildSlipEmployeeInfo } from '@modules/salaries/lib/buildSalarySlipFields';
+import { getPlatformActivitySummary, hasPlatformActivity } from '@modules/salaries/model/salaryUtils';
 
 interface SalaryDetailDialogProps {
   detailRow: SalaryRow;
@@ -15,7 +16,6 @@ interface SalaryDetailDialogProps {
   platforms: string[];
   platformColors: Record<string, { header: string; headerText: string; cellBg: string; valueColor: string; focusBorder: string }>;
   appCustomColumns: Record<string, CustomColumn[]>;
-  detailOrders: { appName: string; orders: number; salary: number }[];
   selectedMonth: string;
   monthLabel: string;
   setDetailRow: React.Dispatch<React.SetStateAction<SalaryRow | null>>;
@@ -29,7 +29,6 @@ export function SalaryDetailDialog(props: Readonly<SalaryDetailDialogProps>) {
     platforms,
     platformColors,
     appCustomColumns,
-    detailOrders,
     monthLabel,
     setDetailRow,
     setPayslipRow,
@@ -67,13 +66,14 @@ export function SalaryDetailDialog(props: Readonly<SalaryDetailDialogProps>) {
 
           <div className="rounded-xl border border-success/20 bg-success/5 overflow-hidden">
             <div className="px-3 py-2 bg-success/10 border-b border-success/20">
-              <p className="font-bold text-xs text-success uppercase tracking-wide">✅ الطلبات والاستحقاقات</p>
+              <p className="font-bold text-xs text-success uppercase tracking-wide">✅ النشاط والاستحقاقات</p>
             </div>
             <div className="divide-y divide-border/30">
               {platforms.map(p => {
-                const orders = detailRow.platformOrders[p] || 0;
+                const metric = detailRow.platformMetrics[p];
+                const activitySummary = getPlatformActivitySummary(metric);
                 const salary = detailRow.platformSalaries[p] || 0;
-                if (orders === 0 && salary === 0) return null;
+                if (!hasPlatformActivity(metric) && salary === 0) return null;
                 const pc = platformColors[p];
                 return (
                   <div key={p} className="flex justify-between items-center px-3 py-2.5">
@@ -81,15 +81,18 @@ export function SalaryDetailDialog(props: Readonly<SalaryDetailDialogProps>) {
                       <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: pc?.header || 'hsl(var(--primary))' }} />
                       <div>
                         <span className="font-medium text-xs text-foreground">{p}</span>
-                        <span className="text-[10px] text-muted-foreground mr-1.5">{orders.toLocaleString()} طلب</span>
+                        <span className="text-[10px] text-muted-foreground mr-1.5">{activitySummary}</span>
                       </div>
                     </div>
                     <span className="font-semibold text-xs" style={{ color: pc?.header || 'hsl(var(--primary))' }}>{salary.toLocaleString()} ر.س</span>
                   </div>
                 );
               })}
-              {detailOrders.length === 0 && platforms.every(p => !detailRow.platformOrders[p]) && (
-                <div className="px-3 py-4 text-center text-xs text-muted-foreground">لا توجد طلبات مسجّلة لهذا الشهر</div>
+              {!platforms.some((platform) => {
+                const metric = detailRow.platformMetrics[platform];
+                return hasPlatformActivity(metric) || (detailRow.platformSalaries[platform] || 0) > 0;
+              }) && (
+                <div className="px-3 py-4 text-center text-xs text-muted-foreground">لا يوجد نشاط مسجّل لهذا الشهر</div>
               )}
               {detailRow.incentives > 0 && (
                 <div className="flex justify-between items-center px-3 py-2.5">

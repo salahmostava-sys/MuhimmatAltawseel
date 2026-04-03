@@ -56,7 +56,6 @@ export interface UseSalaryActionsParams {
   pricingRulesByAppId: Record<string, PricingRule[]>;
   empPlatformScheme: Record<string, Record<string, SchemeData | null>>;
   setDetailRow: React.Dispatch<React.SetStateAction<SalaryRow | null>>;
-  setDetailOrders: React.Dispatch<React.SetStateAction<{ appName: string; orders: number; salary: number }[]>>;
 }
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
@@ -74,7 +73,7 @@ export function useSalaryActions(params: UseSalaryActionsParams) {
     salaryToolbarImportRef,
     setEmployeeFieldSaving,
     appIdByName, pricingRulesByAppId, empPlatformScheme,
-    setDetailRow, setDetailOrders,
+    setDetailRow,
   } = params;
 
   // ── Delegate to specialised hooks ─────────────────────────────────────────
@@ -158,14 +157,6 @@ export function useSalaryActions(params: UseSalaryActionsParams) {
 
   const openEmployeeDetail = (row: SalaryRow) => {
     setDetailRow(row);
-    const orders = platforms
-      .filter((p) => row.registeredApps.includes(p))
-      .map((p) => ({
-        appName: p,
-        orders: getPrimaryPlatformActivityCount(row.platformMetrics[p]),
-        salary: row.platformSalaries[p] || 0,
-      }));
-    setDetailOrders(orders);
   };
 
   // ── Return the same public API as before (backward-compatible) ────────────

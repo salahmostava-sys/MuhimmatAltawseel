@@ -81,7 +81,6 @@ const Salaries = () => {
   const [pricingRulesByAppId, setPricingRulesByAppId] = useState<Record<string, PricingRule[]>>({});
   const [employeeFieldSaving, setEmployeeFieldSaving] = useState<string | null>(null);
   const [detailRow, setDetailRow] = useState<SalaryRow | null>(null);
-  const [detailOrders, setDetailOrders] = useState<{ appName: string; orders: number; salary: number }[]>([]);
   const [showTemplateEditor, setShowTemplateEditor] = useState(false);
 
   const [batchQueue, setBatchQueue] = useState<SalaryRow[]>([]);
@@ -268,7 +267,7 @@ const Salaries = () => {
     setMarkingPaid, setBatchQueue, setBatchIndex, setBatchZip, setBatchMonth,
     salaryToolbarImportRef, employeeFieldSaving, setEmployeeFieldSaving,
     appIdByName, pricingRulesByAppId, empPlatformScheme,
-    setDetailRow, setDetailOrders,
+    setDetailRow,
   });
 
   const totalNet = filtered.reduce((s, r) => s + computeRow(r).netSalary, 0);
@@ -482,7 +481,6 @@ const Salaries = () => {
           platforms={platforms}
           platformColors={platformColors}
           appCustomColumns={appCustomColumns}
-          detailOrders={detailOrders}
           selectedMonth={selectedMonth}
           monthLabel={monthLabel}
           setDetailRow={setDetailRow}
