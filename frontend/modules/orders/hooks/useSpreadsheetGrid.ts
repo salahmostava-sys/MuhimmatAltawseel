@@ -104,6 +104,7 @@ export function useSpreadsheetGrid() {
     [baseEmployees, search],
   );
   const visibleApps = platformFilter === 'all' ? sq.apps : sq.apps.filter((a) => a.id === platformFilter);
+  const now = new Date();
   const days = getDaysInMonth(year, month);
   const dayArr = Array.from({ length: days }, (_, i) => i + 1);
   const today = now.getFullYear() === year && now.getMonth() + 1 === month ? now.getDate() : -1;
