@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/react';
+import { sanitizeForLog, sanitizeObjectForLog, sanitizeError } from './security/sanitize';
 
 type LogLevel = 'error' | 'warn';
 type LogMeta = {
@@ -23,10 +24,13 @@ let monitoringInstalled = false;
  * to monitoring when VITE_MONITORING_ENDPOINT is configured.
  */
 function emitLog(level: LogLevel, message: string, payload: unknown) {
+  const safeMessage = sanitizeForLog(message);
+  const safePayload = sanitizeObjectForLog(payload);
+  
   if (level === 'error') {
-    console.error(`[${level}] ${message}`, payload);
+    console.error(`[${level}] ${safeMessage}`, safePayload);
   } else {
-    console.warn(`[${level}] ${message}`, payload);
+    console.warn(`[${level}] ${safeMessage}`, safePayload);
   }
 }
 
@@ -62,14 +66,18 @@ function sendToMonitoring(entry: LogMeta) {
 }
 
 function track(level: LogLevel, message: string, error?: unknown, options?: { meta?: unknown }) {
-  const payload = options?.meta === undefined ? toSerializableError(error) : { error: toSerializableError(error), meta: options.meta };
+  const safeMessage = sanitizeForLog(message);
+  const sanitizedError = sanitizeError(error);
+  const payload = options?.meta === undefined 
+    ? sanitizedError 
+    : { error: sanitizedError, meta: sanitizeObjectForLog(options.meta) };
   
   if (level === 'error') {
-    Sentry.captureException(error || new Error(message), {
-      extra: { message, payload, meta: options?.meta }
+    Sentry.captureException(error || new Error(safeMessage), {
+      extra: { message: safeMessage, payload, meta: options?.meta }
     });
   } else if (level === 'warn') {
-    Sentry.captureMessage(message, {
+    Sentry.captureMessage(safeMessage, {
       level: 'warning',
       extra: { payload, meta: options?.meta }
     });
@@ -77,8 +85,8 @@ function track(level: LogLevel, message: string, error?: unknown, options?: { me
 
   sendToMonitoring({
     level,
-    message,
-    payload,
+    message: safeMessage,
+    payload: sanitizeObjectForLog(payload),
     ts: new Date().toISOString(),
     href: typeof globalThis.location?.href === 'string' ? globalThis.location.href : '',
     mode: import.meta.env.MODE,
@@ -86,7 +94,7 @@ function track(level: LogLevel, message: string, error?: unknown, options?: { me
   });
   
   if (!import.meta.env.PROD) {
-    emitLog(level, message, payload);
+    emitLog(level, safeMessage, payload);
   }
 }
 
@@ -114,8 +122,13 @@ export function installGlobalErrorMonitoring() {
   monitoringInstalled = true;
 
   globalThis.addEventListener('error', (event) => {
-    logger.error('[global] uncaught error', event.error ?? event.message, {
-      meta: { filename: event.filename, lineno: event.lineno, colno: event.colno },
+    const safeMessage = sanitizeForLog(event.error?.message ?? event.message);
+    logger.error('[global] uncaught error', event.error ?? safeMessage, {
+      meta: { 
+        filename: sanitizeForLog(event.filename), 
+        lineno: event.lineno, 
+        colno: event.colno 
+      },
     });
   });
 
