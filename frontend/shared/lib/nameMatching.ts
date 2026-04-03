@@ -53,18 +53,77 @@ function normalizeText(text: string): string {
 }
 
 /**
+ * حساب نسبة التطابق المتقدمة (تدعم الأسماء الجزئية)
+ */
+function advancedSimilarity(searchName: string, candidateName: string): number {
+  const normalizedSearch = normalizeText(searchName);
+  const normalizedCandidate = normalizeText(candidateName);
+
+  // 1. تطابق كامل
+  if (normalizedSearch === normalizedCandidate) {
+    return 100;
+  }
+
+  // 2. تطابق جزئي (الاسم المدخل موجود في الاسم الكامل)
+  if (normalizedCandidate.includes(normalizedSearch)) {
+    // نسبة التطابق بناءً على طول الاسم المدخل مقارنة بالاسم الكامل
+    const ratio = normalizedSearch.length / normalizedCandidate.length;
+    return 85 + (ratio * 15); // 85-100%
+  }
+
+  // 3. تطابق الكلمات (أي كلمة من الاسم المدخل موجودة في الاسم الكامل)
+  const searchWords = normalizedSearch.split(' ').filter(Boolean);
+  const candidateWords = normalizedCandidate.split(' ').filter(Boolean);
+  
+  let matchedWords = 0;
+  for (const searchWord of searchWords) {
+    for (const candidateWord of candidateWords) {
+      // تطابق كامل للكلمة
+      if (searchWord === candidateWord) {
+        matchedWords++;
+        break;
+      }
+      // تطابق جزئي للكلمة (الكلمة المدخلة موجودة في بداية كلمة من الاسم)
+      if (candidateWord.startsWith(searchWord) && searchWord.length >= 3) {
+        matchedWords += 0.8;
+        break;
+      }
+      // تطابق جزئي (الكلمة المدخلة موجودة في أي مكان من الكلمة)
+      if (candidateWord.includes(searchWord) && searchWord.length >= 3) {
+        matchedWords += 0.6;
+        break;
+      }
+    }
+  }
+
+  if (matchedWords > 0) {
+    const wordMatchRatio = matchedWords / searchWords.length;
+    return 60 + (wordMatchRatio * 25); // 60-85%
+  }
+
+  // 4. تشابه Levenshtein (للأسماء المتشابهة في الكتابة)
+  const levenshteinSim = similarityPercentage(normalizedSearch, normalizedCandidate);
+  
+  // 5. تشابه أول كلمة (مهم للأسماء العربية)
+  const firstSearchWord = searchWords[0] || '';
+  const firstCandidateWord = candidateWords[0] || '';
+  const firstWordSim = similarityPercentage(firstSearchWord, firstCandidateWord);
+
+  // أخذ أعلى نسبة تشابه
+  return Math.max(levenshteinSim, firstWordSim * 0.8);
+}
+
+/**
  * البحث عن أفضل مطابقة لاسم في قائمة
  */
 export function findBestMatch(
   searchName: string,
   candidates: Array<{ id: string; name: string }>,
-  threshold = 70 // الحد الأدنى للتشابه (70%)
+  threshold = 60 // خفض الحد الأدنى إلى 60%
 ): { match: { id: string; name: string } | null; similarity: number; suggestions: Array<{ id: string; name: string; similarity: number }> } {
-  const normalizedSearch = normalizeText(searchName);
-  
   const matches = candidates.map((candidate) => ({
     ...candidate,
-    similarity: similarityPercentage(normalizedSearch, normalizeText(candidate.name)),
+    similarity: advancedSimilarity(searchName, candidate.name),
   }));
 
   // ترتيب حسب نسبة التشابه
@@ -86,7 +145,7 @@ export function findBestMatch(
 export function matchEmployeeNames(
   importedNames: string[],
   employees: Array<{ id: string; name: string }>,
-  threshold = 70
+  threshold = 60 // خفض الحد الأدنى إلى 60%
 ): {
   matched: Map<string, { id: string; name: string; similarity: number }>;
   unmatched: Array<{ name: string; suggestions: Array<{ id: string; name: string; similarity: number }> }>;

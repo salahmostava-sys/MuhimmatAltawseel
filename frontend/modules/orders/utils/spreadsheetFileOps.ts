@@ -76,7 +76,7 @@ export async function runSpreadsheetImport(params: {
     }).filter(Boolean);
 
     // مطابقة الأسماء
-    const { matched, unmatched } = matchEmployeeNames(importedNames, employees, 70);
+    const { matched, unmatched } = matchEmployeeNames(importedNames, employees, 60);
 
     // إذا كان هناك أسماء غير مطابقة وتم توفير callback
     if (unmatched.length > 0 && onShowNameMapping) {
