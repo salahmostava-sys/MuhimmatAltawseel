@@ -50,33 +50,66 @@ export async function runSpreadsheetImport(params: {
 }): Promise<void> {
   const { file, dayArr, employees, apps, data, onApplyData, targetAppId, onShowNameMapping } = params;
   try {
+    // التحقق من نوع الملف
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+      toast.error('نوع الملف غير صحيح', {
+        description: 'يرجى رفع ملف Excel بصيغة .xlsx أو .xls فقط'
+      });
+      return;
+    }
+
     const XLSX = await loadXlsx();
     const arrayBuffer = await file.arrayBuffer();
     const wb = XLSX.read(arrayBuffer, { type: 'array' });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const matrix = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: '' });
-    if (matrix.length < 2) {
-      toast.error(TOAST_ERROR_GENERIC, { description: 'الملف فارغ' });
+    
+    // التحقق من وجود ورقة عمل
+    if (!wb.SheetNames || wb.SheetNames.length === 0) {
+      toast.error('ملف فارغ', {
+        description: 'الملف لا يحتوي على أي ورقة عمل'
+      });
       return;
     }
+
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const matrix = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: '' });
+    
+    if (matrix.length < 2) {
+      toast.error('ملف فارغ', {
+        description: 'الملف لا يحتوي على بيانات. يجب أن يحتوي على صف العناوين وصف واحد على الأقل من البيانات'
+      });
+      return;
+    }
+
     const expectedHeaders = buildOrdersIoHeaders(dayArr);
     const actualHeaders = (matrix[0] || []).map((h) => String(h ?? '').trim());
+    
     if (!ordersImportHeadersMatch(actualHeaders, expectedHeaders)) {
-      toast.error(TOAST_ERROR_GENERIC, {
-        description:
-          'هيكل الأعمدة غير مطابق للقالب — تأكد من تحميل القالب واستخدامه بدون تعديل ترتيب أو أسماء الأعمدة',
+      toast.error('هيكل الملف غير صحيح', {
+        description: `عدد الأعمدة المتوقع: ${expectedHeaders.length}، عدد الأعمدة الموجود: ${actualHeaders.length}. تأكد من استخدام القالب الصحيح للشهر الحالي`
       });
       return;
     }
 
     // استخراج الأسماء من الملف
-    const importedNames = matrix.slice(1).map((row) => {
+    const importedNames = matrix.slice(1).map((row, idx) => {
       const line = Array.isArray(row) ? row : [];
-      return String(line[0] ?? '').trim();
-    }).filter(Boolean);
+      const name = String(line[0] ?? '').trim();
+      return { name, rowIndex: idx + 2 }; // +2 لأن الصف الأول هو العناوين والـ index يبدأ من 0
+    }).filter(item => item.name);
+
+    if (importedNames.length === 0) {
+      toast.error('لا توجد بيانات للاستيراد', {
+        description: 'الملف لا يحتوي على أسماء موظفين في العمود الأول'
+      });
+      return;
+    }
 
     // مطابقة الأسماء
-    const { matched, unmatched } = matchEmployeeNames(importedNames, employees, 60);
+    const { matched, unmatched } = matchEmployeeNames(
+      importedNames.map(item => item.name),
+      employees,
+      60
+    );
 
     // إذا كان هناك أسماء غير مطابقة وتم توفير callback
     if (unmatched.length > 0 && onShowNameMapping) {
@@ -88,7 +121,7 @@ export async function runSpreadsheetImport(params: {
           nameMapping.forEach((id, name) => finalMapping.set(name, id));
 
           // استيراد البيانات مع المطابقات
-          const { newData, imported } = mergeImportedOrdersFromMatrixWithMapping(
+          const { newData, imported, skipped, errors } = mergeImportedOrdersFromMatrixWithMapping(
             matrix.slice(1),
             dayArr,
             employees,
@@ -99,9 +132,16 @@ export async function runSpreadsheetImport(params: {
           );
           onApplyData(newData);
           const appName = targetAppId ? apps.find((a) => a.id === targetAppId)?.name : 'جميع المنصات';
-          toast.success(TOAST_SUCCESS_ACTION, { 
-            description: `تم استيراد ${imported} إدخال إلى ${appName}` 
-          });
+          
+          if (errors.length > 0) {
+            toast.warning(`تم الاستيراد مع تحذيرات`, {
+              description: `تم استيراد ${imported} إدخال، تم تجاهل ${skipped} صف. ${errors.slice(0, 3).join('، ')}`
+            });
+          } else {
+            toast.success(TOAST_SUCCESS_ACTION, { 
+              description: `تم استيراد ${imported} إدخال إلى ${appName}` 
+            });
+          }
           resolve();
         });
       });
@@ -111,7 +151,7 @@ export async function runSpreadsheetImport(params: {
     const finalMapping = new Map<string, string>();
     matched.forEach((match, name) => finalMapping.set(name, match.id));
 
-    const { newData, imported } = mergeImportedOrdersFromMatrixWithMapping(
+    const { newData, imported, skipped, errors } = mergeImportedOrdersFromMatrixWithMapping(
       matrix.slice(1),
       dayArr,
       employees,
@@ -122,10 +162,22 @@ export async function runSpreadsheetImport(params: {
     );
     onApplyData(newData);
     const appName = targetAppId ? apps.find((a) => a.id === targetAppId)?.name : 'جميع المنصات';
-    toast.success(TOAST_SUCCESS_ACTION, { description: `تم استيراد ${imported} إدخال إلى ${appName}` });
+    
+    if (errors.length > 0) {
+      toast.warning(`تم الاستيراد مع تحذيرات`, {
+        description: `تم استيراد ${imported} إدخال، تم تجاهل ${skipped} صف. الأخطاء: ${errors.slice(0, 3).join('، ')}`
+      });
+    } else {
+      toast.success(TOAST_SUCCESS_ACTION, { 
+        description: `تم استيراد ${imported} إدخال إلى ${appName}` 
+      });
+    }
   } catch (err) {
     logError('[Orders] import spreadsheet failed', err);
-    toast.error(TOAST_ERROR_GENERIC);
+    const errorMsg = err instanceof Error ? err.message : 'خطأ غير معروف';
+    toast.error('فشل استيراد الملف', {
+      description: `حدث خطأ أثناء قراءة الملف: ${errorMsg}`
+    });
   }
 }
 
@@ -137,28 +189,68 @@ function mergeImportedOrdersFromMatrixWithMapping(
   prev: DailyData,
   targetAppId: string | undefined,
   nameMapping: Map<string, string>
-): { newData: DailyData; imported: number } {
+): { newData: DailyData; imported: number; skipped: number; errors: string[] } {
   let imported = 0;
+  let skipped = 0;
+  const errors: string[] = [];
   const newData = { ...prev };
   const targetApps = targetAppId ? apps.filter((a) => a.id === targetAppId) : apps;
   
-  for (const row of matrixRows) {
+  if (targetApps.length === 0) {
+    errors.push('لا توجد منصات نشطة');
+    return { newData, imported, skipped, errors };
+  }
+
+  for (let rowIdx = 0; rowIdx < matrixRows.length; rowIdx++) {
+    const row = matrixRows[rowIdx];
     const line = Array.isArray(row) ? row : [];
     const empName = String(line[0] ?? '').trim();
-    const empId = nameMapping.get(empName);
-    if (!empId) continue;
     
+    if (!empName) {
+      skipped++;
+      continue;
+    }
+
+    const empId = nameMapping.get(empName);
+    if (!empId) {
+      skipped++;
+      errors.push(`صف ${rowIdx + 2}: الموظف "${empName}" غير موجود`);
+      continue;
+    }
+    
+    let hasValidData = false;
     for (let idx = 0; idx < dayArr.length; idx++) {
       const d = dayArr[idx];
-      const val = Number(line[idx + 1]);
+      const cellValue = line[idx + 1];
+      const val = Number(cellValue);
+      
+      if (Number.isNaN(val)) {
+        if (cellValue !== '' && cellValue !== null && cellValue !== undefined) {
+          errors.push(`صف ${rowIdx + 2}, يوم ${d}: قيمة غير صحيحة "${cellValue}"`);
+        }
+        continue;
+      }
+      
       if (val <= 0) continue;
+      
+      if (val > 10000) {
+        errors.push(`صف ${rowIdx + 2}, يوم ${d}: عدد الطلبات ${val} كبير جداً`);
+        continue;
+      }
+      
+      hasValidData = true;
       for (const app of targetApps) {
         newData[`${empId}::${app.id}::${d}`] = val;
         imported++;
       }
     }
+    
+    if (!hasValidData) {
+      skipped++;
+    }
   }
-  return { newData, imported };
+  
+  return { newData, imported, skipped, errors };
 }
 
 export async function downloadSpreadsheetTemplate(dayArr: number[]): Promise<void> {
@@ -220,34 +312,74 @@ export async function saveSpreadsheetMonth(params: {
   setSaving: (v: boolean) => void;
 }): Promise<void> {
   const { isMonthLocked, year, month, days, data, setSaving } = params;
-  if (isMonthLocked) return;
+  if (isMonthLocked) {
+    toast.error('الشهر مقفل', {
+      description: 'لا يمكن حفظ التغييرات في شهر مقفل'
+    });
+    return;
+  }
+  
   setSaving(true);
   const rows: { employee_id: string; app_id: string; date: string; orders_count: number }[] = [];
+  const invalidRows: string[] = [];
+  
   Object.entries(data).forEach(([key, count]) => {
     const [empId, appId, dayStr] = key.split('::');
     const day = Number.parseInt(dayStr, 10);
-    if (!Number.isNaN(day) && day >= 1 && day <= days) {
-      rows.push({
-        employee_id: empId,
-        app_id: appId,
-        date: dateStr(year, month, day),
-        orders_count: count,
-      });
+    
+    if (!empId || !appId || !dayStr) {
+      invalidRows.push(`مفتاح غير صحيح: ${key}`);
+      return;
     }
+    
+    if (Number.isNaN(day) || day < 1 || day > days) {
+      invalidRows.push(`يوم غير صحيح: ${day}`);
+      return;
+    }
+    
+    if (count <= 0 || count > 10000) {
+      invalidRows.push(`عدد طلبات غير صحيح: ${count}`);
+      return;
+    }
+    
+    rows.push({
+      employee_id: empId,
+      app_id: appId,
+      date: dateStr(year, month, day),
+      orders_count: count,
+    });
   });
+  
+  if (invalidRows.length > 0) {
+    console.warn('تم تجاهل بيانات غير صحيحة:', invalidRows);
+  }
+  
+  if (rows.length === 0) {
+    toast.error('لا توجد بيانات للحفظ', {
+      description: 'لم يتم العثور على أي طلبات صحيحة للحفظ'
+    });
+    setSaving(false);
+    return;
+  }
+  
   try {
     const { saved, failed } = await orderService.bulkUpsert(rows);
+    
     if (failed.length > 0) {
-      toast.error(TOAST_ERROR_GENERIC, {
-        description: `فشل في حفظ ${failed.length} إدخال — تم حفظ ${saved} بنجاح`,
+      console.error('فشل حفظ بعض السجلات:', failed.slice(0, 10));
+      toast.error('حفظ جزئي', {
+        description: `تم حفظ ${saved} إدخال بنجاح، فشل حفظ ${failed.length} إدخال. تحقق من Console للتفاصيل`
       });
     } else {
       toast.success(TOAST_SUCCESS_OPERATION, {
-        description: `${saved} إدخال — ${monthLabel(year, month)}`,
+        description: `تم حفظ ${saved} إدخال — ${monthLabel(year, month)}`
       });
     }
   } catch (e: unknown) {
-    toast.error(TOAST_ERROR_RETRY_SHORT);
+    const errorMsg = e instanceof Error ? e.message : 'خطأ غير معروف';
+    toast.error('فشل عملية الحفظ', {
+      description: `حدث خطأ: ${errorMsg}`
+    });
     logError('Orders.handleSave', e);
   } finally {
     setSaving(false);

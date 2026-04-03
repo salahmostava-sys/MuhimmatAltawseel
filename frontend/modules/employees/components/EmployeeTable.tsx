@@ -258,7 +258,18 @@ export function EmployeeDetailedTable({
                         return <td key="phone" className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap" dir="ltr">{emp.phone || '—'}</td>;
 
                       case 'nationality':
-                        return <td key="nationality" className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap">{emp.nationality || '—'}</td>;
+                        return (
+                          <td key="nationality" className="px-3 py-2.5 whitespace-nowrap">
+                            <InlineSelect
+                              value={emp.nationality || ''}
+                              options={uniqueVals.nationality.map(n => ({ value: n, label: n }))}
+                              onSave={v => saveField(emp.id, 'nationality', v)}
+                              renderDisplay={() => (
+                                <span className="text-sm text-muted-foreground">{emp.nationality || '—'}</span>
+                              )}
+                            />
+                          </td>
+                        );
 
                       case 'platform_apps':
                         return (
