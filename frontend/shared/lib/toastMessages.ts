@@ -9,8 +9,8 @@ export const TOAST_ERROR_GENERIC = 'حدث خطأ، يرجى المحاولة م
 export const TOAST_ERROR_RETRY_SHORT = 'حدث خطأ، حاول مرة أخرى';
 
 // ─── Session Management ──────────────────────────────────────────────────────
-/** Warning shown 30 seconds before automatic logout. */
-export const TOAST_SESSION_WARNING = '⚠️ ستنتهي جلستك خلال 30 ثانية بسبب عدم النشاط';
+/** Warning shown 1 minute before automatic logout. */
+export const TOAST_SESSION_WARNING = '⚠️ ستنتهي جلستك خلال دقيقة واحدة بسبب عدم النشاط';
 /** Shown after the user is auto-logged-out due to inactivity. */
 export const TOAST_SESSION_EXPIRED = 'تم تسجيل الخروج تلقائياً بسبب عدم النشاط';
 /** Shown when logout was triggered from another browser tab. */

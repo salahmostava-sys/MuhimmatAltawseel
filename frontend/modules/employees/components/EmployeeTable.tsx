@@ -71,7 +71,7 @@ export function EmployeeDetailedTable({
     <div className="ta-table-wrap">
       <div className="overflow-x-auto">
         <table className="w-full" ref={tableRef}>
-          <thead>
+          <thead className="bg-yellow-400">
             <tr className="ta-thead">
               {activeCols.map(col => {
                 const isFilterable = !['seq', 'actions', 'platform_apps', 'residency_combined',
@@ -169,7 +169,7 @@ export function EmployeeDetailedTable({
                 return (
                   <th
                     key={col.key}
-                    className={`ta-th select-none whitespace-nowrap ${col.key === 'seq' ? 'w-10 px-2 text-center' : ''} ${col.sortable ? 'cursor-pointer hover:text-foreground' : ''}`}
+                    className={`ta-th select-none whitespace-nowrap text-black ${col.key === 'seq' ? 'w-10 px-2 text-center' : ''} ${col.sortable ? 'cursor-pointer hover:text-gray-800' : ''}`}
                     onClick={col.sortable ? () => handleSort(col.key) : undefined}
                   >
                     <div className="flex items-center gap-1">

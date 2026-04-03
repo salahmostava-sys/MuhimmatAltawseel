@@ -61,9 +61,41 @@ export const appService = {
   },
 
   delete: async (id: string) => {
-    // Permanent delete since we don't have is_archived yet
-    const { error } = await supabase.from('apps').delete().eq('id', id);
+    // Soft delete: mark as archived
+    const { error } = await supabase
+      .from('apps')
+      .update({ is_archived: true, is_active: false })
+      .eq('id', id);
     if (error) handleSupabaseError(error, 'appService.delete');
+  },
+
+  permanentDelete: async (id: string) => {
+    // Hard delete: remove completely from system
+    // This will cascade delete related records if FK constraints are set
+    const { error } = await supabase.from('apps').delete().eq('id', id);
+    if (error) handleSupabaseError(error, 'appService.permanentDelete');
+  },
+
+  getAppDependencies: async (id: string) => {
+    // Check all dependencies before permanent delete
+    const [employeeApps, dailyOrders, appTargets, pricingRules] = await Promise.all([
+      supabase.from('employee_apps').select('id', { count: 'exact', head: true }).eq('app_id', id),
+      supabase.from('daily_orders').select('id', { count: 'exact', head: true }).eq('app_id', id),
+      supabase.from('app_targets').select('id', { count: 'exact', head: true }).eq('app_id', id),
+      supabase.from('pricing_rules').select('id', { count: 'exact', head: true }).eq('app_id', id),
+    ]);
+
+    return {
+      employeeAppsCount: employeeApps.count ?? 0,
+      dailyOrdersCount: dailyOrders.count ?? 0,
+      appTargetsCount: appTargets.count ?? 0,
+      pricingRulesCount: pricingRules.count ?? 0,
+      hasAnyDependencies: 
+        (employeeApps.count ?? 0) > 0 ||
+        (dailyOrders.count ?? 0) > 0 ||
+        (appTargets.count ?? 0) > 0 ||
+        (pricingRules.count ?? 0) > 0,
+    };
   },
 
   countActiveEmployeeApps: async (appId: string) => {
@@ -79,7 +111,7 @@ export const appService = {
   getActiveEmployeeAppsWithEmployees: async (appId: string) => {
     const { data, error } = await supabase
       .from('employee_apps')
-      .select('employee_id, employees!inner(id, name, status, sponsorship_status)')
+      .select('employee_id, employees!inner(id, name, national_id, phone, job_title, status, sponsorship_status)')
       .eq('app_id', appId)
       .eq('status', 'active');
     if (error) handleSupabaseError(error, 'appService.getActiveEmployeeAppsWithEmployees');

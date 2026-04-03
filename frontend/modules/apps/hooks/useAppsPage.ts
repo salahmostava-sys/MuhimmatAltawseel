@@ -28,6 +28,14 @@ export const useAppsPage = () => {
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
   const [modalApp, setModalApp] = useState<AppData | null | undefined>(undefined);
   const [deleteApp, setDeleteApp] = useState<AppData | null>(null);
+  const [deleteMode, setDeleteMode] = useState<'soft' | 'hard'>('soft');
+  const [appDependencies, setAppDependencies] = useState<{
+    employeeAppsCount: number;
+    dailyOrdersCount: number;
+    appTargetsCount: number;
+    pricingRulesCount: number;
+    hasAnyDependencies: boolean;
+  } | null>(null);
 
   const appsQuery = useQuery({
     queryKey: appsOverviewQueryKey(uid, monthYear),
@@ -100,13 +108,21 @@ export const useAppsPage = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (app: AppData) => appService.delete(app.id),
-    onSuccess: async (_, app) => {
+    mutationFn: async ({ app, mode }: { app: AppData; mode: 'soft' | 'hard' }) => {
+      if (mode === 'hard') {
+        await appService.permanentDelete(app.id);
+      } else {
+        await appService.delete(app.id);
+      }
+    },
+    onSuccess: async (_, { app }) => {
       await invalidateApps();
       if (selectedAppId === app.id) {
         setSelectedAppId(null);
       }
       setDeleteApp(null);
+      setDeleteMode('soft');
+      setAppDependencies(null);
       toast.success(TOAST_SUCCESS_ACTION);
     },
     onError: () => {
@@ -116,6 +132,19 @@ export const useAppsPage = () => {
 
   const toggleSelectApp = (app: AppData) => {
     setSelectedAppId((current) => (current === app.id ? null : app.id));
+  };
+
+  const handleDeleteClick = async (app: AppData) => {
+    setDeleteApp(app);
+    setDeleteMode('soft');
+    // Fetch dependencies
+    try {
+      const deps = await appService.getAppDependencies(app.id);
+      setAppDependencies(deps);
+    } catch (error) {
+      console.error('Failed to fetch dependencies:', error);
+      setAppDependencies(null);
+    }
   };
 
   return {
@@ -128,12 +157,15 @@ export const useAppsPage = () => {
     loadingEmployees: employeesQuery.isLoading || employeesQuery.isFetching,
     modalApp,
     deleteApp,
+    deleteMode,
+    appDependencies,
     deleting: deleteMutation.isPending,
     savingApp: saveMutation.isPending,
     openingCreateModal: () => setModalApp(null),
     openingEditModal: (app: AppData) => setModalApp(app),
     closeModal: () => setModalApp(undefined),
-    setDeleteApp,
+    setDeleteApp: handleDeleteClick,
+    setDeleteMode,
     toggleSelectApp,
     saveApp: async (values: AppFormValues) => {
       try {
@@ -152,7 +184,7 @@ export const useAppsPage = () => {
     confirmDelete: async () => {
       if (!deleteApp) return;
       try {
-        await deleteMutation.mutateAsync(deleteApp);
+        await deleteMutation.mutateAsync({ app: deleteApp, mode: deleteMode });
       } catch {
         // Mutation errors are handled centrally in the mutation callbacks.
       }

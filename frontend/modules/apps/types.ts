@@ -28,6 +28,10 @@ export interface AppFormValues {
 export interface AppEmployee {
   id: string;
   name: string;
+  national_id?: string | null;
+  phone?: string | null;
+  job_title?: string | null;
+  status: string;
   monthOrders: number;
   targetShare: number | null;
   projectedMonthEnd: number | null;
@@ -45,6 +49,9 @@ export interface AppEmployeeAssignmentRow {
   employees: {
     id: string;
     name: string;
+    national_id?: string | null;
+    phone?: string | null;
+    job_title?: string | null;
     status: string;
     sponsorship_status: string | null;
   } | null;

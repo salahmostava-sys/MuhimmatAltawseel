@@ -70,7 +70,7 @@ export function useSessionManager({ session, signOut, queryClient }: UseSessionM
   // ── Warning handler ────────────────────────────────────────────────────────
   const handleWarning = useCallback(() => {
     toast(TOAST_SESSION_WARNING, {
-      duration: 28_000, // stays visible until timeout or dismissal
+      duration: 58_000, // stays visible until timeout or dismissal (58 seconds)
       id: 'session-warning',
       icon: '⏳',
     });

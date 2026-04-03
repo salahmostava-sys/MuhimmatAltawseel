@@ -158,6 +158,10 @@ export const buildAppEmployees = ({
     return {
       id: employee.id,
       name: employee.name,
+      national_id: (employee as any).national_id || null,
+      phone: (employee as any).phone || null,
+      job_title: (employee as any).job_title || null,
+      status: employee.status,
       monthOrders,
       targetShare,
       projectedMonthEnd,

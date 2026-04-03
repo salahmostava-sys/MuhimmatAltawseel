@@ -55,6 +55,8 @@ export const AppEmployeesPanel = ({
             <thead className="ta-thead">
               <tr>
                 <th className="ta-th text-right">المندوب</th>
+                <th className="ta-th text-center">رقم الهوية</th>
+                <th className="ta-th text-center">الجوال</th>
                 <th className="ta-th text-center">حالة العمل</th>
                 <th className="ta-th text-center">الطلبات المنفذة</th>
                 <th className="ta-th text-center">حصة الهدف</th>
@@ -63,36 +65,58 @@ export const AppEmployeesPanel = ({
               </tr>
             </thead>
             <tbody>
-              {employees.map((employee) => (
-                <tr key={employee.id} className="ta-tr group">
-                  <td className="ta-td text-right font-bold text-foreground">{employee.name}</td>
-                  <td className="ta-td text-center">
-                    <span className="badge-success text-[10px]">نشط</span>
-                  </td>
-                  <td className="ta-td text-center text-sm font-black" style={{ color: app.brand_color }}>
-                    {employee.monthOrders.toLocaleString()}
-                  </td>
-                  <td className="ta-td text-center text-xs tabular-nums text-muted-foreground">
-                    {employee.targetShare != null ? Math.round(employee.targetShare).toLocaleString() : '—'}
-                  </td>
-                  <td className="ta-td text-center text-xs font-semibold tabular-nums">
-                    {employee.projectedMonthEnd != null ? employee.projectedMonthEnd.toLocaleString() : '—'}
-                  </td>
-                  <td className="ta-td text-center">
-                    {employee.onTrack === null ? (
-                      <span className="text-[10px] text-muted-foreground">بدون هدف</span>
-                    ) : employee.onTrack ? (
-                      <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
-                        <Check size={10} /> يحقق التارجت
+              {employees.map((employee) => {
+                const statusLabel = employee.status === 'active' ? 'نشط' : employee.status === 'inactive' ? 'موقوف' : 'منتهي';
+                const statusClass = employee.status === 'active' ? 'badge-success' : employee.status === 'inactive' ? 'badge-warning' : 'badge-urgent';
+                
+                return (
+                  <tr key={employee.id} className="ta-tr group">
+                    <td className="ta-td text-right">
+                      <div>
+                        <p className="font-bold text-foreground">{employee.name}</p>
+                        {employee.job_title && (
+                          <p className="text-[10px] text-muted-foreground">{employee.job_title}</p>
+                        )}
                       </div>
-                    ) : (
-                      <div className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-600">
-                        <X size={10} /> تحت التارجت
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="ta-td text-center">
+                      <span className="text-xs font-mono text-muted-foreground" dir="ltr">
+                        {employee.national_id || '—'}
+                      </span>
+                    </td>
+                    <td className="ta-td text-center">
+                      <span className="text-xs font-mono text-muted-foreground" dir="ltr">
+                        {employee.phone || '—'}
+                      </span>
+                    </td>
+                    <td className="ta-td text-center">
+                      <span className={`${statusClass} text-[10px]`}>{statusLabel}</span>
+                    </td>
+                    <td className="ta-td text-center text-sm font-black" style={{ color: app.brand_color }}>
+                      {employee.monthOrders.toLocaleString()}
+                    </td>
+                    <td className="ta-td text-center text-xs tabular-nums text-muted-foreground">
+                      {employee.targetShare != null ? Math.round(employee.targetShare).toLocaleString() : '—'}
+                    </td>
+                    <td className="ta-td text-center text-xs font-semibold tabular-nums">
+                      {employee.projectedMonthEnd != null ? employee.projectedMonthEnd.toLocaleString() : '—'}
+                    </td>
+                    <td className="ta-td text-center">
+                      {employee.onTrack === null ? (
+                        <span className="text-[10px] text-muted-foreground">بدون هدف</span>
+                      ) : employee.onTrack ? (
+                        <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
+                          <Check size={10} /> يحقق التارجت
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-600">
+                          <X size={10} /> تحت التارجت
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
