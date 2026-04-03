@@ -334,79 +334,63 @@ const EmployeeProfile = ({ employee, onBack }: Props) => {
               <div>
                 <p className="text-xs text-muted-foreground mb-1">الجنسية</p>
                 {!editingNationality ? (
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-foreground">{employee.nationality || '—'}</p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingNationality(true);
-                        setNationalityValue(employee.nationality || '');
-                      }}
-                      className="text-xs text-primary hover:underline"
-                    >
-                      تعديل
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingNationality(true);
+                      setNationalityValue(employee.nationality || '');
+                    }}
+                    className="text-sm font-medium text-foreground hover:text-primary transition-colors text-start"
+                  >
+                    {employee.nationality || 'اضغط لاختيار الجنسية'}
+                  </button>
                 ) : (
                   <div className="flex items-center gap-2">
                     <Select
                       value={nationalityValue}
                       onValueChange={setNationalityValue}
                       disabled={savingNationality}
+                      open={editingNationality}
+                      onOpenChange={(open) => {
+                        if (!open && !savingNationality) {
+                          setEditingNationality(false);
+                          setNationalityValue(employee.nationality || '');
+                        }
+                      }}
                     >
                       <SelectTrigger className="w-full max-w-[200px]">
                         <SelectValue placeholder="اختر الجنسية" />
                       </SelectTrigger>
                       <SelectContent>
                         {NATIONALITIES.map((nat) => (
-                          <SelectItem key={nat} value={nat}>
+                          <SelectItem
+                            key={nat}
+                            value={nat}
+                            onSelect={async () => {
+                              setSavingNationality(true);
+                              try {
+                                await employeeService.updateEmployee(employee.id, { nationality: nat });
+                                await queryClient.invalidateQueries({ queryKey: ['employees'] });
+                                await queryClient.invalidateQueries({ queryKey: ['employee-profile'] });
+                                toast({ title: 'تم الحفظ', description: 'تم تحديث الجنسية بنجاح' });
+                                setEditingNationality(false);
+                              } catch (error) {
+                                toast({
+                                  title: 'خطأ',
+                                  description: error instanceof Error ? error.message : 'فشل تحديث الجنسية',
+                                  variant: 'destructive',
+                                });
+                              } finally {
+                                setSavingNationality(false);
+                              }
+                            }}
+                          >
                             {nat}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 p-0"
-                      disabled={savingNationality}
-                      onClick={async () => {
-                        if (!nationalityValue) {
-                          toast({ title: 'خطأ', description: 'يرجى اختيار الجنسية', variant: 'destructive' });
-                          return;
-                        }
-                        setSavingNationality(true);
-                        try {
-                          await employeeService.updateEmployee(employee.id, { nationality: nationalityValue });
-                          await queryClient.invalidateQueries({ queryKey: ['employees'] });
-                          await queryClient.invalidateQueries({ queryKey: ['employee-profile'] });
-                          toast({ title: 'تم الحفظ', description: 'تم تحديث الجنسية بنجاح' });
-                          setEditingNationality(false);
-                        } catch (error) {
-                          toast({
-                            title: 'خطأ',
-                            description: error instanceof Error ? error.message : 'فشل تحديث الجنسية',
-                            variant: 'destructive',
-                          });
-                        } finally {
-                          setSavingNationality(false);
-                        }
-                      }}
-                    >
-                      {savingNationality ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} className="text-success" />}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 p-0"
-                      disabled={savingNationality}
-                      onClick={() => {
-                        setEditingNationality(false);
-                        setNationalityValue(employee.nationality || '');
-                      }}
-                    >
-                      <X size={14} className="text-muted-foreground" />
-                    </Button>
+                    {savingNationality && <Loader2 size={14} className="animate-spin text-primary" />}
                   </div>
                 )}
               </div>

@@ -365,11 +365,11 @@ export function OperationalStats({ loading, stats }: OperationalStatsProps) {
                 loading={loading}
               />
               <StatCard
-                label="محلولة"
-                value={stats.alerts.resolved}
-                icon={CheckCircle}
-                color="text-emerald-600"
-                bg="bg-emerald-50"
+                label="إجمالي التنبيهات"
+                value={stats.alerts.unresolved + stats.alerts.critical + stats.alerts.high + stats.alerts.medium}
+                icon={TrendingUp}
+                color="text-blue-600"
+                bg="bg-blue-50"
                 link="/alerts"
                 loading={loading}
               />

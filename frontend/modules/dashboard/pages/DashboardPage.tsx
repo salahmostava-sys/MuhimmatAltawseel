@@ -37,6 +37,9 @@ import { AlertsWidget } from '@modules/dashboard/components/AlertsWidget';
 import { TopEmployees } from '@modules/dashboard/components/TopEmployees';
 import { DashboardSupervisorTargetsCard } from '@modules/dashboard/components/DashboardSupervisorTargetsCard';
 import { useDashboard, type AtRiskRider, type EmpDetail } from '@modules/dashboard/hooks/useDashboard';
+import { OperationalStats } from '@modules/dashboard/components/OperationalStats';
+import { AttendanceChart } from '@modules/dashboard/components/AttendanceChart';
+import { ComprehensiveStats } from '@modules/dashboard/components/ComprehensiveStats';
 
 
 
@@ -930,6 +933,13 @@ type OverviewTabProps = {
     makkahCount: number;
     jeddahCount: number;
     estRevenueTotal: number;
+    fuelCost?: number;
+    fuelLiters?: number;
+    maintenanceCost?: number;
+    violationsCount?: number;
+    violationsCost?: number;
+    pendingAdvances?: number;
+    totalSalaries?: number;
   };
   orderGrowth: number;
   ordersByApp: OrdersByAppCardRow[];
@@ -969,6 +979,47 @@ const OverviewTab = ({
   supervisorPerformance,
   operationalStats,
 }: OverviewTabProps & { operationalStats: any }) => {
+  // Prepare comprehensive stats data
+  const comprehensiveStatsData = {
+    employees: operationalStats.employees,
+    attendance: operationalStats.attendance,
+    orders: operationalStats.orders,
+    fuel: operationalStats.fuel,
+    maintenance: operationalStats.maintenance,
+    vehicles: operationalStats.vehicles,
+    alerts: operationalStats.alerts,
+    violations: {
+      count: kpis.violationsCount || 0,
+      cost: kpis.violationsCost || 0,
+      employeesWithViolations: 0,
+    },
+    advances: {
+      count: 0,
+      totalAmount: kpis.pendingAdvances || 0,
+      remainingAmount: 0,
+      employeesWithAdvances: 0,
+    },
+    salaries: {
+      approved: 0,
+      pending: 0,
+      totalNet: kpis.totalSalaries || 0,
+      avgSalary: 0,
+    },
+    apps: {
+      active: kpis.activeApps || 0,
+      inactive: 0,
+    },
+    platformAccounts: {
+      active: 0,
+      inactive: 0,
+      employeesWithAccounts: 0,
+    },
+    spareParts: {
+      lowStock: 0,
+      total: 0,
+    },
+  };
+
   return (
     <div className="space-y-6">
       <StatsCards loading={loading} kpis={kpis} orderGrowth={orderGrowth} />
@@ -984,6 +1035,19 @@ const OverviewTab = ({
         bottomRidersPerApp={bottomRidersPerApp}
         atRiskRiders={atRiskRiders}
       />
+      <AttendanceChart 
+        loading={loading} 
+        kpis={{
+          presentToday: kpis.presentToday,
+          lateToday: kpis.lateToday,
+          absentToday: kpis.absentToday,
+          leaveToday: kpis.leaveToday,
+          sickToday: kpis.sickToday,
+        }}
+        attendanceWeek={attendanceWeek}
+      />
+      <OperationalStats loading={loading} stats={operationalStats} />
+      <ComprehensiveStats loading={loading} stats={comprehensiveStatsData} />
       <AlertsWidget />
     </div>
   );
