@@ -243,14 +243,31 @@ export const orderService = {
   bulkUpsert: async (rows: { employee_id: string; app_id: string; date: string; orders_count: number }[], chunkSize = 200) => {
     let saved = 0;
     const failed: string[] = [];
+    
     for (let i = 0; i < rows.length; i += chunkSize) {
       const chunk = rows.slice(i, i + chunkSize);
-      const { error } = await supabase
-        .from('daily_orders')
-        .upsert(chunk, { onConflict: 'employee_id,app_id,date' });
-      if (error) throw toServiceError(error, 'orderService.bulkUpsert');
-      saved += chunk.length;
+      try {
+        const { error } = await supabase
+          .from('daily_orders')
+          .upsert(chunk, { onConflict: 'employee_id,app_id,date' });
+        
+        if (error) {
+          // Log the error but continue with other chunks
+          console.error('Chunk upsert error:', error);
+          chunk.forEach((row) => {
+            failed.push(`${row.employee_id}::${row.app_id}::${row.date}`);
+          });
+        } else {
+          saved += chunk.length;
+        }
+      } catch (err) {
+        console.error('Chunk upsert exception:', err);
+        chunk.forEach((row) => {
+          failed.push(`${row.employee_id}::${row.app_id}::${row.date}`);
+        });
+      }
     }
+    
     return { saved, failed };
   },
 
