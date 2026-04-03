@@ -1,16 +1,15 @@
-import { useState, forwardRef, useCallback, useMemo } from 'react';
+import { useState, forwardRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { cn } from '@shared/lib/utils';
 import {
-  Users, UserCheck, Bell, Package, Bike, Smartphone,
-  TrendingUp, ArrowUpRight, ArrowDownRight, Award,
-  BarChart2, Activity, MapPin, Map, Car, Sparkles,
-  Target, Clock, ChevronUp, ChevronDown,
-  Minus, Settings2, Calendar,
+  TrendingUp, ArrowUpRight, ArrowDownRight,
+  BarChart2, Activity,
+  Target, ChevronUp, ChevronDown,
+  Minus, Calendar,
   type LucideIcon,
 } from 'lucide-react';
-import AlertsList from '@shared/components/AlertsList';
+
 import { dashboardService } from '@services/dashboardService';
 import { useTemporalContext } from '@app/providers/TemporalContext';
 import {
@@ -23,7 +22,7 @@ import {
   ResponsiveContainer, Line, Legend,
 } from 'recharts';
 import { useRealtimePostgresChanges, REALTIME_TABLES_DASHBOARD } from '@shared/hooks/useRealtimePostgresChanges';
-import { useMonthlyActiveEmployeeIds } from '@shared/hooks/useMonthlyActiveEmployeeIds';
+
 import { isEmployeeVisibleInMonth } from '@shared/lib/employeeVisibility';
 import { getDashboardCityKey, mapDashboardCityLabel, type DashboardCityKey } from '@shared/lib/dashboardCity';
 import { useAuth } from '@app/providers/AuthContext';
@@ -32,18 +31,13 @@ import { QueryErrorRetry } from '@shared/components/QueryErrorRetry';
 import { StatsCards } from '@modules/dashboard/components/StatsCards';
 import { OrdersChart } from '@modules/dashboard/components/OrdersChart';
 
-import { AttendanceChart } from '@modules/dashboard/components/AttendanceChart';
+
 import { logError } from '@shared/lib/logger';
 import { AlertsWidget } from '@modules/dashboard/components/AlertsWidget';
 import { TopEmployees } from '@modules/dashboard/components/TopEmployees';
 import { DashboardSupervisorTargetsCard } from '@modules/dashboard/components/DashboardSupervisorTargetsCard';
 import { useDashboard, type AtRiskRider, type EmpDetail } from '@modules/dashboard/hooks/useDashboard';
-import { useRiderPredictions } from '@shared/hooks/useRiderPredictions';
-import { RiderPredictionCard } from '@shared/components/dashboard/RiderPredictionCard';
-import { Button } from '@shared/components/ui/button';
-import { Skeleton } from '@shared/components/ui/skeleton';
-import { ComprehensiveStats } from '@modules/dashboard/components/ComprehensiveStats';
-import { OperationalStats } from '@modules/dashboard/components/OperationalStats';
+
 
 
 const SKELETON_KEYS_2 = ['sk-1', 'sk-2'] as const;
@@ -151,29 +145,31 @@ const Leaderboard = ({ entries, loading, max }: { entries: { name: string; order
   const maxVal = max || entries[0]?.orders || 1;
   return (
     <div className="space-y-1">
-      {loading
-        ? SKELETON_KEYS_5.map((k) => <div key={`leaderboard-skeleton-${k}`} className="h-12 bg-muted/40 rounded-xl animate-pulse" />)
-        : entries.length === 0
-          ? <p className="text-sm text-muted-foreground text-center py-8">لا توجد بيانات هذا الشهر</p>
-          : entries.map((e, i) => (
-            <div key={`${e.name}-${e.orders}-${e.app ?? 'no-app'}`} className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-muted/40 transition-colors">
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${RANK_COLORS[i] || 'bg-muted text-muted-foreground'}`}>{i + 1}</div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-foreground truncate">{e.name}</span>
-                  <span className="text-sm font-black text-foreground flex-shrink-0 ml-2">{e.orders.toLocaleString()}</span>
-                </div>
-                {e.app && (
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: e.appColor || '#888' }} />
-                    <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
-                      <div className="h-full rounded-full transition-all" style={{ width: `${(e.orders / maxVal) * 100}%`, backgroundColor: e.appColor || '#888' }} />
-                    </div>
-                  </div>
-                )}
+      {loading ? (
+        SKELETON_KEYS_5.map((k) => <div key={`leaderboard-skeleton-${k}`} className="h-12 bg-muted/40 rounded-xl animate-pulse" />)
+      ) : entries.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-8">لا توجد بيانات هذا الشهر</p>
+      ) : (
+        entries.map((e, i) => (
+          <div key={`${e.name}-${e.orders}-${e.app ?? 'no-app'}`} className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-muted/40 transition-colors">
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${RANK_COLORS[i] || 'bg-muted text-muted-foreground'}`}>{i + 1}</div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-foreground truncate">{e.name}</span>
+                <span className="text-sm font-black text-foreground flex-shrink-0 ml-2">{e.orders.toLocaleString()}</span>
               </div>
+              {e.app && (
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: e.appColor || '#888' }} />
+                  <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full rounded-full transition-all" style={{ width: `${(e.orders / maxVal) * 100}%`, backgroundColor: e.appColor || '#888' }} />
+                  </div>
+                </div>
+              )}
             </div>
-          ))}
+          </div>
+        ))
+      )}
     </div>
   );
 };
@@ -252,7 +248,7 @@ const DashboardHeader = ({
   activeTab: DashboardTabKey;
   onTabChange: (tab: DashboardTabKey) => void;
 }) => {
-  const { selectedMonth, setSelectedMonth } = useTemporalContext();
+  const { selectedMonth } = useTemporalContext();
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -845,14 +841,14 @@ const fetchDashboardKpis = async (
       activeApps?: number;
     };
   };
-  const rpc = ((rpcData === true ? {} : rpcData) as unknown) as DashboardRpcShape;
-  const apps = (rpc.apps || []) as DashboardApp[];
+  const rpc = (rpcData === true ? {} : rpcData) as DashboardRpcShape;
+  const apps = rpc.apps || [];
 
   const { presentToday, absentToday, lateToday, leaveToday, sickToday } = getAttendanceTodayCounts(
-    (rpc.attendanceToday || {}) as DashboardAttendanceToday
+    rpc.attendanceToday || {}
   );
 
-  const rawEmpDetails = (rpc.empDetails || []) as EmpDetail[];
+  const rawEmpDetails = rpc.empDetails || [];
   const empDetails = rawEmpDetails.filter((e) =>
     isEmployeeVisibleInMonth({ id: e.id, sponsorship_status: e.sponsorship_status }, activeEmployeeIdsInMonth)
   );
@@ -860,14 +856,14 @@ const fetchDashboardKpis = async (
   const driverIdSet = new Set((employeeAppAssignments || []).map((a) => a.employee_id));
   const activeRiders = empDetails.filter((e) => driverIdSet.has(e.id)).length;
 
-  const ordersByApp = (rpc.ordersByApp || []) as DashboardOrdersByAppRow[];
+  const ordersByApp = rpc.ordersByApp || [];
   const totalOrders = ordersByApp.reduce((s, r) => s + (r.orders || 0), 0);
   const totalMonthTarget = ordersByApp.reduce((s, r) => s + (r.target || 0), 0);
   const targetAchievementPct = totalMonthTarget > 0 ? Math.min(999, Math.round((totalOrders / totalMonthTarget) * 100)) : 0;
   const estRevenueByApp = ordersByApp;
-  const estRevenueTotal = (rpc.kpis?.estRevenueTotal as number) || estRevenueByApp.reduce((s, r) => s + (r.estRevenue || 0), 0);
+  const estRevenueTotal = rpc.kpis?.estRevenueTotal || estRevenueByApp.reduce((s, r) => s + (r.estRevenue || 0), 0);
 
-  const ordersByCity = ((rpc.ordersByCity || []) as DashboardOrdersByCityRow[]).map((r) => ({
+  const ordersByCity = (rpc.ordersByCity || []).map((r) => ({
     city: mapOrdersCityLabel(r.city),
     orders: r.orders,
   }));
@@ -886,10 +882,10 @@ const fetchDashboardKpis = async (
     totalMonthTarget,
     targetAchievementPct,
     presentToday, absentToday, lateToday, leaveToday, sickToday,
-    totalOrders, prevMonthOrders: (rpc.kpis?.prevMonthOrders as number) || 0,
-    activeVehicles: (rpc.kpis?.activeVehicles as number) || 0,
-    activeAlerts: (rpc.kpis?.activeAlerts as number) || 0,
-    activeApps: (rpc.kpis?.activeApps as number) || apps.length,
+    totalOrders, prevMonthOrders: rpc.kpis?.prevMonthOrders || 0,
+    activeVehicles: rpc.kpis?.activeVehicles || 0,
+    activeAlerts: rpc.kpis?.activeAlerts || 0,
+    activeApps: rpc.kpis?.activeApps || apps.length,
     hasLicense: empDetails.filter(e => e.license_status === 'has_license').length,
     appliedLicense: empDetails.filter(e => e.license_status === 'applied').length,
     noLicense: empDetails.filter(e => !e.license_status || e.license_status === 'no_license').length,
@@ -900,7 +896,7 @@ const fetchDashboardKpis = async (
   };
 
   const attendanceWeek = buildAttendanceWeek(
-    (rpc.attendanceWeek || []) as DashboardAttendanceWeekRow[]
+    rpc.attendanceWeek || []
   );
 
   return { kpis, empDetails, ordersByApp, ordersByCity, allRiders, attendanceWeek, apps, estRevenueByApp, supervisorPerformance, operationalStats };
@@ -1044,34 +1040,32 @@ const Dashboard = () => {
         />
       )}
       {activeTab === 'overview' && !isError && (
-        <>
-          <OverviewTab
-            loading={loading}
-            monthYear={currentMonth}
-            kpis={kpis}
-            orderGrowth={orderGrowth}
-            ordersByApp={ordersByApp}
-            ordersByCity={ordersByCity}
-            topNInput={topNInput}
-            setTopNInput={setTopNInput}
-            handleTopNBlur={handleTopNBlur}
-            topRidersOverall={topRidersOverall}
-            topRidersPerApp={topRidersPerApp}
-            bottomRidersPerApp={bottomRidersPerApp}
-            atRiskRiders={atRiskRiders}
-            attendanceWeek={attendanceWeek}
-            supervisorPerformance={supervisorPerformance}
-            operationalStats={data?.operationalStats ?? {
-              employees: { total: 0, withLicense: 0, appliedLicense: 0, noLicense: 0, byCity: { makkah: 0, jeddah: 0, other: 0 } },
-              attendance: { present: 0, absent: 0, late: 0, leave: 0, sick: 0, rate: 0 },
-              orders: { total: 0, uniqueRiders: 0, avgPerRider: 0 },
-              fuel: { cost: 0, liters: 0, vehiclesRefueled: 0, avgPerVehicle: 0 },
-              maintenance: { cost: 0, completed: 0, pending: 0, vehiclesMaintained: 0 },
-              vehicles: { total: 0, active: 0, inactive: 0, maintenance: 0 },
-              alerts: { unresolved: 0, critical: 0, high: 0, medium: 0 },
-            }}
-          />
-        </>
+        <OverviewTab
+          loading={loading}
+          monthYear={currentMonth}
+          kpis={kpis}
+          orderGrowth={orderGrowth}
+          ordersByApp={ordersByApp}
+          ordersByCity={ordersByCity}
+          topNInput={topNInput}
+          setTopNInput={setTopNInput}
+          handleTopNBlur={handleTopNBlur}
+          topRidersOverall={topRidersOverall}
+          topRidersPerApp={topRidersPerApp}
+          bottomRidersPerApp={bottomRidersPerApp}
+          atRiskRiders={atRiskRiders}
+          attendanceWeek={attendanceWeek}
+          supervisorPerformance={supervisorPerformance}
+          operationalStats={data?.operationalStats ?? {
+            employees: { total: 0, withLicense: 0, appliedLicense: 0, noLicense: 0, byCity: { makkah: 0, jeddah: 0, other: 0 } },
+            attendance: { present: 0, absent: 0, late: 0, leave: 0, sick: 0, rate: 0 },
+            orders: { total: 0, uniqueRiders: 0, avgPerRider: 0 },
+            fuel: { cost: 0, liters: 0, vehiclesRefueled: 0, avgPerVehicle: 0 },
+            maintenance: { cost: 0, completed: 0, pending: 0, vehiclesMaintained: 0 },
+            vehicles: { total: 0, active: 0, inactive: 0, maintenance: 0 },
+            alerts: { unresolved: 0, critical: 0, high: 0, medium: 0 },
+          }}
+        />
       )}
     </div>
   );
