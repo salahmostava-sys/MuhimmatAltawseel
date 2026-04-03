@@ -31,12 +31,7 @@ import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGat
 import { QueryErrorRetry } from '@shared/components/QueryErrorRetry';
 import { StatsCards } from '@modules/dashboard/components/StatsCards';
 import { OrdersChart } from '@modules/dashboard/components/OrdersChart';
-import { DashboardOrdersInsights } from '@modules/dashboard/components/DashboardOrdersInsights';
-import { OperationalActionsBar } from '@modules/dashboard/components/OperationalActionsBar';
-import { DashboardExportCard } from '@modules/dashboard/components/DashboardExportCard';
-import { DashboardAiSummaryCard } from '@modules/dashboard/components/DashboardAiSummaryCard';
-import { DashboardTrendInsight } from '@modules/dashboard/components/DashboardTrendInsight';
-import { buildOperationalActions } from '@modules/dashboard/lib/operationalActionItems';
+
 import { AttendanceChart } from '@modules/dashboard/components/AttendanceChart';
 import { logError } from '@shared/lib/logger';
 import { AlertsWidget } from '@modules/dashboard/components/AlertsWidget';
@@ -49,10 +44,7 @@ import { Button } from '@shared/components/ui/button';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { ComprehensiveStats } from '@modules/dashboard/components/ComprehensiveStats';
 import { OperationalStats } from '@modules/dashboard/components/OperationalStats';
-import { AiDashboardPanel } from '@modules/dashboard/components/AiDashboardPanel';
-import { useAiAnalytics } from '@modules/dashboard/hooks/useAiAnalytics';
-import { FleetHealthTab } from '@modules/dashboard/components/FleetHealthTab';
-import { HeatmapTab } from '@modules/dashboard/components/HeatmapTab';
+
 
 const SKELETON_KEYS_2 = ['sk-1', 'sk-2'] as const;
 const SKELETON_KEYS_4 = ['sk-1', 'sk-2', 'sk-3', 'sk-4'] as const;
@@ -974,60 +966,23 @@ const OverviewTab = ({
   supervisorPerformance,
   operationalStats,
 }: OverviewTabProps & { operationalStats: any }) => {
-  const ai = useAiAnalytics(monthYear);
-
   return (
     <div className="space-y-6">
-      <OperationalStats loading={loading} stats={operationalStats} />
       <StatsCards loading={loading} kpis={kpis} orderGrowth={orderGrowth} />
       <DashboardSupervisorTargetsCard loading={loading} rows={supervisorPerformance} />
-      
-      {/* AI Dashboard Section */}
-      <AiDashboardPanel
-        isLoading={ai.isLoading}
-        predictions={ai.predictions}
-        bestDrivers={ai.bestDrivers}
-        topPlatforms={ai.topPlatforms}
-        smartAlerts={ai.smartAlerts}
-      />
-
-      <DashboardTrendInsight
+      <OrdersChart loading={loading} ordersByApp={ordersByApp} ordersByCity={ordersByCity} totalOrders={kpis.totalOrders} />
+      <TopEmployees
         loading={loading}
-        orderGrowth={orderGrowth}
-        prevMonthOrders={kpis.prevMonthOrders}
-        absentToday={kpis.absentToday}
-        lateToday={kpis.lateToday}
-        activeAlerts={kpis.activeAlerts}
+        topNInput={topNInput}
+        setTopNInput={setTopNInput}
+        handleTopNBlur={handleTopNBlur}
+        topRidersOverall={topRidersOverall}
+        topRidersPerApp={topRidersPerApp}
+        bottomRidersPerApp={bottomRidersPerApp}
+        atRiskRiders={atRiskRiders}
       />
-    <DashboardAiSummaryCard loading={loading} kpis={kpis} orderGrowth={orderGrowth} />
-    <DashboardExportCard monthYear={monthYear} loading={loading} kpis={kpis} orderGrowth={orderGrowth} />
-    <OperationalActionsBar
-      loading={loading}
-      actions={buildOperationalActions({
-        absentToday: kpis.absentToday,
-        activeAlerts: kpis.activeAlerts,
-        lateToday: kpis.lateToday,
-      })}
-    />
-    <DashboardOrdersInsights />
-    <OrdersChart loading={loading} ordersByApp={ordersByApp} ordersByCity={ordersByCity} totalOrders={kpis.totalOrders} />
-    <TopEmployees
-      loading={loading}
-      topNInput={topNInput}
-      setTopNInput={setTopNInput}
-      handleTopNBlur={handleTopNBlur}
-      topRidersOverall={topRidersOverall}
-      topRidersPerApp={topRidersPerApp}
-      bottomRidersPerApp={bottomRidersPerApp}
-      atRiskRiders={atRiskRiders}
-    />
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div className="lg:col-span-2">
-        <AttendanceChart loading={loading} kpis={kpis} attendanceWeek={attendanceWeek} />
-      </div>
       <AlertsWidget />
     </div>
-  </div>
   );
 };
 
@@ -1069,9 +1024,7 @@ const Dashboard = () => {
     useRealtimeInvalidation: useDashboardRealtimeInvalidation,
   });
 
-  const { data: predictions = [], isLoading: predLoading } = useRiderPredictions();
-  const [showAllPred, setShowAllPred] = useState(false);
-  const displayedPred = showAllPred ? predictions : predictions.slice(0, 5);
+
 
   return (
     <div className="space-y-5">
@@ -1080,17 +1033,7 @@ const Dashboard = () => {
         onTabChange={setActiveTab}
       />
 
-      {activeTab === 'analytics' && (
-        <div className="space-y-6">
-          <AnalyticsTab />
-          <div className="border-t border-border pt-6">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Sparkles className="h-6 w-6 text-primary" /> التحليلات الذكية
-            </h2>
-            <AiAnalyticsPage />
-          </div>
-        </div>
-      )}
+      {activeTab === 'analytics' && <AnalyticsTab />}
       {activeTab === 'overview' && isError && (
         <QueryErrorRetry
           error={error}
@@ -1128,43 +1071,6 @@ const Dashboard = () => {
               alerts: { unresolved: 0, critical: 0, high: 0, medium: 0 },
             }}
           />
-          <div className="mt-6" dir="rtl">
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-              <div>
-                <h2 className="text-lg font-bold">توقعات نهاية الشهر 🔮</h2>
-                <p className="text-xs text-muted-foreground">
-                  بناءً على أداء آخر 14 يوم + متوسط 3 شهور + التصحيح الموسمي
-                </p>
-              </div>
-              <Button variant="outline" size="sm" onClick={() => setShowAllPred((prev) => !prev)}>
-                {showAllPred ? 'عرض أفضل 5 فقط' : 'عرض الكل'}
-              </Button>
-            </div>
-            {predLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-52 rounded-xl" />
-                ))}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {displayedPred.map((p, i) => (
-                  <RiderPredictionCard key={p.riderId} prediction={p} rank={i + 1} />
-                ))}
-              </div>
-            )}
-          </div>
-          
-          {/* Mapped Tabs as Sections under Overview */}
-          <div className="border-t border-border pt-6 mt-6">
-            <h2 className="text-xl font-bold mb-4">أداء المنصات والخريطة الحرارية</h2>
-            <HeatmapTab />
-          </div>
-          
-          <div className="border-t border-border pt-6 mt-6">
-            <h2 className="text-xl font-bold mb-4">المركبات وصحة الأصول</h2>
-            <FleetHealthTab />
-          </div>
         </>
       )}
     </div>
