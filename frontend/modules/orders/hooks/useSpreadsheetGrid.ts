@@ -82,7 +82,14 @@ export function useSpreadsheetGrid() {
   }, [data, platformFilter]);
 
   const baseEmployees = useMemo(() => {
-    if (platformFilter === 'all') return sq.employees;
+    if (platformFilter === 'all') {
+      // Show all employees who have at least one active platform assignment
+      const employeesWithPlatforms = sq.employees.filter(e => 
+        Object.values(sq.appEmployeeIds).some(appSet => appSet?.has(e.id))
+      );
+      return employeesWithPlatforms;
+    }
+    // For specific platform filter
     const assigned = sq.appEmployeeIds[platformFilter];
     const withOrders = employeeIdsWithOrdersOnFilteredPlatform;
     return sq.employees.filter((e) => Boolean(assigned?.has(e.id)) || withOrders.has(e.id));

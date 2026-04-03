@@ -1,4 +1,4 @@
-import { Users, UserCheck, Package, Award, Bike, Bell, ArrowUpRight, ArrowDownRight, Fuel, Wrench, DollarSign, AlertTriangle, type LucideIcon } from 'lucide-react';
+import { Users, UserCheck, Package, Award, Bike, Bell, ArrowUpRight, ArrowDownRight, Fuel, Wrench, type LucideIcon } from 'lucide-react';
 
 type StatsCardsProps = Readonly<{
   loading: boolean;
@@ -62,8 +62,6 @@ export function StatsCards({ loading, kpis, orderGrowth }: StatsCardsProps) {
   
   const hasFuel = kpis.fuelCost !== undefined || kpis.fuelLiters !== undefined;
   const hasMaintenance = kpis.maintenanceCost !== undefined;
-  const hasViolations = kpis.violationsCount !== undefined || kpis.violationsCost !== undefined;
-  const hasFinance = kpis.pendingAdvances !== undefined || kpis.totalSalaries !== undefined;
   
   return (
     <>
@@ -76,7 +74,7 @@ export function StatsCards({ loading, kpis, orderGrowth }: StatsCardsProps) {
         <StatCard label="التنبيهات" value={kpis.activeAlerts} icon={Bell} sub="غير محلولة" loading={loading} />
       </div>
       
-      {(hasFuel || hasMaintenance || hasViolations || hasFinance) && (
+      {(hasFuel || hasMaintenance) && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
           {hasFuel && (
             <StatCard 
@@ -93,24 +91,6 @@ export function StatsCards({ loading, kpis, orderGrowth }: StatsCardsProps) {
               value={`${(kpis.maintenanceCost || 0).toLocaleString()} ر.س`} 
               icon={Wrench} 
               sub="هذا الشهر" 
-              loading={loading} 
-            />
-          )}
-          {hasViolations && (
-            <StatCard 
-              label="المخالفات" 
-              value={kpis.violationsCount || 0} 
-              icon={AlertTriangle} 
-              sub={kpis.violationsCost ? `${kpis.violationsCost.toLocaleString()} ر.س` : 'هذا الشهر'} 
-              loading={loading} 
-            />
-          )}
-          {hasFinance && (
-            <StatCard 
-              label="السلف المعلقة" 
-              value={`${(kpis.pendingAdvances || 0).toLocaleString()} ر.س`} 
-              icon={DollarSign} 
-              sub={kpis.totalSalaries ? `رواتب: ${kpis.totalSalaries.toLocaleString()} ر.س` : undefined} 
               loading={loading} 
             />
           )}

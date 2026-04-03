@@ -87,8 +87,13 @@ export function useSpreadsheetQueries(
     [spreadsheetBaseData],
   );
   const employees = useMemo<Employee[]>(
-    () => filterVisibleEmployeesInMonth(spreadsheetBaseData?.employees ?? [], activeEmployeeIdsInMonth),
-    [spreadsheetBaseData, activeEmployeeIdsInMonth],
+    () => {
+      const baseEmps = spreadsheetBaseData?.employees ?? [];
+      // Don't filter by activeEmployeeIdsInMonth - show all active employees with platform assignments
+      // The filtering will happen in useSpreadsheetGrid based on platform filter
+      return baseEmps.filter(emp => emp.status === 'active');
+    },
+    [spreadsheetBaseData],
   );
 
   return {

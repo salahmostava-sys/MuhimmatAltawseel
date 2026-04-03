@@ -415,6 +415,151 @@ export const dashboardService = {
   },
 
   /**
+   * Get operational dashboard statistics (no finance/violations/apps)
+   */
+  getOperationalStats: async (monthYear: string) => {
+    const start = `${monthYear}-01`;
+    const end = format(endOfMonth(new Date(`${monthYear}-01`)), 'yyyy-MM-dd');
+    const today = format(new Date(), 'yyyy-MM-dd');
+
+    const [
+      employeesRes,
+      attendanceRes,
+      ordersRes,
+      fuelRes,
+      maintenanceRes,
+      vehiclesRes,
+      alertsRes,
+    ] = await Promise.all([
+      // Employees
+      supabase.from('employees').select('id, status, sponsorship_status, probation_end_date, city, license_status, tier_id').eq('status', 'active'),
+      // Attendance today
+      supabase.from('attendance').select('status').eq('date', today),
+      // Orders this month
+      supabase.from('daily_orders').select('orders_count, employee_id, app_id').gte('date', start).lte('date', end),
+      // Fuel this month
+      supabase.from('fuel_records').select('cost, liters, vehicle_id').gte('date', start).lte('date', end),
+      // Maintenance this month
+      supabase.from('maintenance_records').select('cost, status, vehicle_id').gte('date', start).lte('date', end),
+      // Vehicles
+      supabase.from('vehicles').select('id, status, plate_number'),
+      // Alerts
+      supabase.from('alerts').select('id, severity, is_resolved, type'),
+    ]);
+
+    // Process employees
+    const employees = employeesRes.data ?? [];
+    const activeEmployees = employees.length;
+    const employeesWithLicense = employees.filter(e => e.license_status === 'has_license').length;
+    const employeesAppliedLicense = employees.filter(e => e.license_status === 'applied').length;
+    const employeesNoLicense = employees.filter(e => !e.license_status || e.license_status === 'no_license').length;
+    const employeesByCity = {
+      makkah: employees.filter(e => e.city === 'makkah' || e.city === 'مكة').length,
+      jeddah: employees.filter(e => e.city === 'jeddah' || e.city === 'جدة').length,
+      other: employees.filter(e => e.city && e.city !== 'makkah' && e.city !== 'مكة' && e.city !== 'jeddah' && e.city !== 'جدة').length,
+    };
+
+    // Process attendance
+    const attendance = attendanceRes.data ?? [];
+    const presentToday = attendance.filter(a => a.status === 'present').length;
+    const absentToday = attendance.filter(a => a.status === 'absent').length;
+    const lateToday = attendance.filter(a => a.status === 'late').length;
+    const leaveToday = attendance.filter(a => a.status === 'leave').length;
+    const sickToday = attendance.filter(a => a.status === 'sick').length;
+    const attendanceRate = activeEmployees > 0 ? Math.round((presentToday / activeEmployees) * 100) : 0;
+
+    // Process orders
+    const orders = ordersRes.data ?? [];
+    const totalOrders = orders.reduce((s, o) => s + (o.orders_count ?? 0), 0);
+    const uniqueRidersWithOrders = new Set(orders.map(o => o.employee_id)).size;
+    const avgOrdersPerRider = uniqueRidersWithOrders > 0 ? Math.round(totalOrders / uniqueRidersWithOrders) : 0;
+
+    // Process fuel
+    const fuel = fuelRes.data ?? [];
+    const fuelCost = Math.round(fuel.reduce((s, f) => s + (f.cost ?? 0), 0));
+    const fuelLiters = Math.round(fuel.reduce((s, f) => s + (f.liters ?? 0), 0));
+    const uniqueVehiclesRefueled = new Set(fuel.map(f => f.vehicle_id)).size;
+    const avgFuelPerVehicle = uniqueVehiclesRefueled > 0 ? Math.round(fuelCost / uniqueVehiclesRefueled) : 0;
+
+    // Process maintenance
+    const maintenance = maintenanceRes.data ?? [];
+    const maintenanceCost = Math.round(maintenance.reduce((s, m) => s + (m.cost ?? 0), 0));
+    const maintenanceCompleted = maintenance.filter(m => m.status === 'completed').length;
+    const maintenancePending = maintenance.filter(m => m.status === 'pending' || m.status === 'in_progress').length;
+    const uniqueVehiclesMaintained = new Set(maintenance.map(m => m.vehicle_id)).size;
+
+    // Process vehicles
+    const vehicles = vehiclesRes.data ?? [];
+    const vehiclesActive = vehicles.filter(v => v.status === 'active').length;
+    const vehiclesInactive = vehicles.filter(v => v.status === 'inactive').length;
+    const vehiclesMaintenance = vehicles.filter(v => v.status === 'maintenance').length;
+    const totalVehicles = vehicles.length;
+
+    // Process alerts
+    const alerts = alertsRes.data ?? [];
+    const alertsUnresolved = alerts.filter(a => !a.is_resolved).length;
+    const alertsResolved = alerts.filter(a => a.is_resolved).length;
+    const alertsCritical = alerts.filter(a => !a.is_resolved && a.severity === 'critical').length;
+    const alertsHigh = alerts.filter(a => !a.is_resolved && a.severity === 'high').length;
+    const alertsMedium = alerts.filter(a => !a.is_resolved && a.severity === 'medium').length;
+
+    return {
+      // Employees
+      employees: {
+        total: activeEmployees,
+        withLicense: employeesWithLicense,
+        appliedLicense: employeesAppliedLicense,
+        noLicense: employeesNoLicense,
+        byCity: employeesByCity,
+      },
+      // Attendance
+      attendance: {
+        present: presentToday,
+        absent: absentToday,
+        late: lateToday,
+        leave: leaveToday,
+        sick: sickToday,
+        rate: attendanceRate,
+      },
+      // Orders
+      orders: {
+        total: totalOrders,
+        uniqueRiders: uniqueRidersWithOrders,
+        avgPerRider: avgOrdersPerRider,
+      },
+      // Fuel
+      fuel: {
+        cost: fuelCost,
+        liters: fuelLiters,
+        vehiclesRefueled: uniqueVehiclesRefueled,
+        avgPerVehicle: avgFuelPerVehicle,
+      },
+      // Maintenance
+      maintenance: {
+        cost: maintenanceCost,
+        completed: maintenanceCompleted,
+        pending: maintenancePending,
+        vehiclesMaintained: uniqueVehiclesMaintained,
+      },
+      // Vehicles
+      vehicles: {
+        total: totalVehicles,
+        active: vehiclesActive,
+        inactive: vehiclesInactive,
+        maintenance: vehiclesMaintenance,
+      },
+      // Alerts
+      alerts: {
+        unresolved: alertsUnresolved,
+        resolved: alertsResolved,
+        critical: alertsCritical,
+        high: alertsHigh,
+        medium: alertsMedium,
+      },
+    };
+  },
+
+  /**
    * Get comprehensive dashboard statistics from all modules
    */
   getComprehensiveStats: async (monthYear: string) => {

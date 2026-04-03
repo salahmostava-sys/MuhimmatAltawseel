@@ -48,6 +48,7 @@ import { RiderPredictionCard } from '@shared/components/dashboard/RiderPredictio
 import { Button } from '@shared/components/ui/button';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { ComprehensiveStats } from '@modules/dashboard/components/ComprehensiveStats';
+import { OperationalStats } from '@modules/dashboard/components/OperationalStats';
 import { AiDashboardPanel } from '@modules/dashboard/components/AiDashboardPanel';
 import { useAiAnalytics } from '@modules/dashboard/hooks/useAiAnalytics';
 import { FleetHealthTab } from '@modules/dashboard/components/FleetHealthTab';
@@ -794,12 +795,12 @@ const fetchDashboardKpis = async (
   activeEmployeeIdsInMonth: ReadonlySet<string> | undefined
 ) => {
   const today = format(new Date(), 'yyyy-MM-dd');
-  const [rpcResult, employeeAssignmentsResult, supervisorPerformanceResult, additionalMetricsResult, comprehensiveStatsResult] = await Promise.allSettled([
+  const [rpcResult, employeeAssignmentsResult, supervisorPerformanceResult, additionalMetricsResult, operationalStatsResult] = await Promise.allSettled([
     dashboardService.getOverviewRpc(currentMonth, today),
     dashboardService.getEmployeeAppAssignments(),
     dashboardService.getSupervisorPerformance(currentMonth),
     dashboardService.getAdditionalMetrics(currentMonth),
-    dashboardService.getComprehensiveStats(currentMonth),
+    dashboardService.getOperationalStats(currentMonth),
   ]);
   if (rpcResult.status === 'rejected') throw rpcResult.reason;
   if (employeeAssignmentsResult.status === 'rejected') throw employeeAssignmentsResult.reason;
@@ -823,23 +824,17 @@ const fetchDashboardKpis = async (
       ? additionalMetricsResult.value
       : { fuelCost: 0, fuelLiters: 0, maintenanceCost: 0, violationsCount: 0, violationsCost: 0, pendingAdvances: 0, totalSalaries: 0 };
 
-  const comprehensiveStats =
-    comprehensiveStatsResult.status === 'fulfilled'
-      ? comprehensiveStatsResult.value
+  const operationalStats =
+    operationalStatsResult.status === 'fulfilled'
+      ? operationalStatsResult.value
       : {
           employees: { total: 0, withLicense: 0, appliedLicense: 0, noLicense: 0, byCity: { makkah: 0, jeddah: 0, other: 0 } },
           attendance: { present: 0, absent: 0, late: 0, leave: 0, sick: 0, rate: 0 },
           orders: { total: 0, uniqueRiders: 0, avgPerRider: 0 },
           fuel: { cost: 0, liters: 0, vehiclesRefueled: 0, avgPerVehicle: 0 },
           maintenance: { cost: 0, completed: 0, pending: 0, vehiclesMaintained: 0 },
-          violations: { count: 0, cost: 0, employeesWithViolations: 0 },
-          advances: { count: 0, totalAmount: 0, remainingAmount: 0, employeesWithAdvances: 0 },
-          salaries: { approved: 0, pending: 0, totalNet: 0, avgSalary: 0 },
           vehicles: { total: 0, active: 0, inactive: 0, maintenance: 0 },
           alerts: { unresolved: 0, critical: 0, high: 0, medium: 0 },
-          apps: { active: 0, inactive: 0 },
-          platformAccounts: { active: 0, inactive: 0, employeesWithAccounts: 0 },
-          spareParts: { lowStock: 0, total: 0 },
         };
 
   type DashboardRpcShape = {
@@ -916,7 +911,7 @@ const fetchDashboardKpis = async (
     (rpc.attendanceWeek || []) as DashboardAttendanceWeekRow[]
   );
 
-  return { kpis, empDetails, ordersByApp, ordersByCity, allRiders, attendanceWeek, apps, estRevenueByApp, supervisorPerformance, comprehensiveStats };
+  return { kpis, empDetails, ordersByApp, ordersByCity, allRiders, attendanceWeek, apps, estRevenueByApp, supervisorPerformance, operationalStats };
 };
 
 type OverviewTabProps = {
@@ -977,13 +972,13 @@ const OverviewTab = ({
   atRiskRiders,
   attendanceWeek,
   supervisorPerformance,
-  comprehensiveStats,
-}: OverviewTabProps & { comprehensiveStats: any }) => {
+  operationalStats,
+}: OverviewTabProps & { operationalStats: any }) => {
   const ai = useAiAnalytics(monthYear);
 
   return (
     <div className="space-y-6">
-      <ComprehensiveStats loading={loading} stats={comprehensiveStats} />
+      <OperationalStats loading={loading} stats={operationalStats} />
       <StatsCards loading={loading} kpis={kpis} orderGrowth={orderGrowth} />
       <DashboardSupervisorTargetsCard loading={loading} rows={supervisorPerformance} />
       
@@ -1123,20 +1118,14 @@ const Dashboard = () => {
             atRiskRiders={atRiskRiders}
             attendanceWeek={attendanceWeek}
             supervisorPerformance={supervisorPerformance}
-            comprehensiveStats={data?.comprehensiveStats ?? {
+            operationalStats={data?.operationalStats ?? {
               employees: { total: 0, withLicense: 0, appliedLicense: 0, noLicense: 0, byCity: { makkah: 0, jeddah: 0, other: 0 } },
               attendance: { present: 0, absent: 0, late: 0, leave: 0, sick: 0, rate: 0 },
               orders: { total: 0, uniqueRiders: 0, avgPerRider: 0 },
               fuel: { cost: 0, liters: 0, vehiclesRefueled: 0, avgPerVehicle: 0 },
               maintenance: { cost: 0, completed: 0, pending: 0, vehiclesMaintained: 0 },
-              violations: { count: 0, cost: 0, employeesWithViolations: 0 },
-              advances: { count: 0, totalAmount: 0, remainingAmount: 0, employeesWithAdvances: 0 },
-              salaries: { approved: 0, pending: 0, totalNet: 0, avgSalary: 0 },
               vehicles: { total: 0, active: 0, inactive: 0, maintenance: 0 },
               alerts: { unresolved: 0, critical: 0, high: 0, medium: 0 },
-              apps: { active: 0, inactive: 0 },
-              platformAccounts: { active: 0, inactive: 0, employeesWithAccounts: 0 },
-              spareParts: { lowStock: 0, total: 0 },
             }}
           />
           <div className="mt-6" dir="rtl">
