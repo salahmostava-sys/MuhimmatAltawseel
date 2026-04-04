@@ -188,7 +188,7 @@ export const PlatformOrderCell = ({
               className={`font-semibold text-[11px] ${
                 primaryCount === 0 && salary === 0 ? 'text-muted-foreground/30' : 'text-foreground'
               }`}
-              title={isEditable ? 'Ù†Ù‚Ø± Ù…Ø²Ø¯ÙˆØ¬ Ù„Ù„ØªØ¹Ø¯ÙŠÙ„' : undefined}
+              title={isEditable ? 'نقر مزدوج للتعديل' : undefined}
             >
               {orders === 0 ? '—' : orders}
             </span>

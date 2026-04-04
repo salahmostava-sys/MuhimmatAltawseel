@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Eye, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Checkbox } from '@shared/components/ui/checkbox';
@@ -105,10 +105,10 @@ export function EmployeeDetailedTable({
                   }
                   if (col.key === 'sponsorship_status') {
                     const kafalaOptions = [
-                      { v: 'sponsored', l: 'Ø¹Ù„Ù‰ Ø§Ù„ÙƒÙØ§Ù„Ø©' },
-                      { v: 'not_sponsored', l: 'Ù„ÙŠØ³ Ø¹Ù„Ù‰ Ø§Ù„ÙƒÙØ§Ù„Ø©' },
-                      { v: 'absconded', l: 'Ù‡Ø±ÙˆØ¨' },
-                      { v: 'terminated', l: 'Ø§Ù†ØªÙ‡Ø§Ø¡ Ø§Ù„Ø®Ø¯Ù…Ø©' },
+                      { v: 'sponsored', l: 'على الكفالة' },
+                      { v: 'not_sponsored', l: 'ليس على الكفالة' },
+                      { v: 'absconded', l: 'هروب' },
+                      { v: 'terminated', l: 'انتهاء الخدمة' },
                     ] as const;
                     const selected = colFilters.sponsorship_status
                       ? colFilters.sponsorship_status.split(',').map((s) => s.trim()).filter(Boolean)
@@ -132,29 +132,29 @@ export function EmployeeDetailedTable({
                   }
                   if (col.key === 'license_status') return (
                     <Select value={colFilters.license_status || 'all'} onValueChange={v => setColFilter('license_status', v)}>
-                      <SelectTrigger className="h-7 text-xs w-full"><SelectValue placeholder="Ø§Ù„ÙƒÙ„" /></SelectTrigger>
+                      <SelectTrigger className="h-7 text-xs w-full"><SelectValue placeholder="الكل" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Ø§Ù„ÙƒÙ„</SelectItem>
-                        <SelectItem value="has_license">Ù„Ø¯ÙŠÙ‡ Ø±Ø®ØµØ©</SelectItem>
-                        <SelectItem value="no_license">Ù„ÙŠØ³ Ù„Ø¯ÙŠÙ‡ Ø±Ø®ØµØ©</SelectItem>
-                        <SelectItem value="applied">ØªÙ… Ø§Ù„ØªÙ‚Ø¯ÙŠÙ…</SelectItem>
+                        <SelectItem value="all">الكل</SelectItem>
+                        <SelectItem value="has_license">لديه رخصة</SelectItem>
+                        <SelectItem value="no_license">ليس لديه رخصة</SelectItem>
+                        <SelectItem value="applied">تم التقديم</SelectItem>
                       </SelectContent>
                     </Select>
                   );
                   if (col.key === 'nationality') return (
                     <Select value={colFilters.nationality || 'all'} onValueChange={v => setColFilter('nationality', v)}>
-                      <SelectTrigger className="h-7 text-xs w-full"><SelectValue placeholder="Ø§Ù„ÙƒÙ„" /></SelectTrigger>
+                      <SelectTrigger className="h-7 text-xs w-full"><SelectValue placeholder="الكل" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Ø§Ù„ÙƒÙ„</SelectItem>
+                        <SelectItem value="all">الكل</SelectItem>
                         {uniqueVals.nationality.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   );
                   if (col.key === 'job_title') return (
                     <Select value={colFilters.job_title || 'all'} onValueChange={v => setColFilter('job_title', v)}>
-                      <SelectTrigger className="h-7 text-xs w-full"><SelectValue placeholder="Ø§Ù„ÙƒÙ„" /></SelectTrigger>
+                      <SelectTrigger className="h-7 text-xs w-full"><SelectValue placeholder="الكل" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Ø§Ù„ÙƒÙ„</SelectItem>
+                        <SelectItem value="all">الكل</SelectItem>
                         {uniqueVals.job_title.map(j => <SelectItem key={j} value={j}>{j}</SelectItem>)}
                       </SelectContent>
                     </Select>
@@ -201,9 +201,9 @@ export function EmployeeDetailedTable({
               <tr>
                 <td colSpan={activeCols.length} className="text-center py-16">
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <span className="text-4xl">ðŸ‘¥</span>
-                    <p className="font-medium">Ù„Ø§ ØªÙˆØ¬Ø¯ Ù†ØªØ§Ø¦Ø¬</p>
-                    <p className="text-xs">Ø¬Ø±Ù‘Ø¨ ØªØºÙŠÙŠØ± Ø§Ù„ÙÙ„Ø§ØªØ± Ø£Ùˆ Ø¥Ø¶Ø§ÙØ© Ù…ÙˆØ¸Ù Ø¬Ø¯ÙŠØ¯</p>
+                    <span className="text-4xl">👥</span>
+                    <p className="font-medium">لا توجد نتائج</p>
+                    <p className="text-xs">جرّب تغيير الفلاتر أو إضافة موظف جديد</p>
                   </div>
                 </td>
               </tr>
@@ -309,7 +309,7 @@ export function EmployeeDetailedTable({
                                 <span className="text-xs text-muted-foreground">{format(parseISO(emp.residency_expiry), 'yyyy/MM/dd')}</span>
                                 {res.days !== null && (
                                   <span className={`text-xs font-medium ${daysColor}`}>
-                                    {res.days >= 0 ? `Ù…ØªØ¨Ù‚ÙŠ ${res.days} ÙŠÙˆÙ…` : `Ù…Ù†ØªÙ‡ÙŠØ© Ù…Ù†Ø° ${Math.abs(res.days)} ÙŠÙˆÙ…`}
+                                    {res.days >= 0 ? `متبقي ${res.days} يوم` : `منتهية منذ ${Math.abs(res.days)} يوم`}
                                   </span>
                                 )}
                               </div>
@@ -323,10 +323,10 @@ export function EmployeeDetailedTable({
                             <InlineSelect
                               value={emp.sponsorship_status || 'not_sponsored'}
                               options={[
-                                { value: 'sponsored',     label: 'Ø¹Ù„Ù‰ Ø§Ù„ÙƒÙØ§Ù„Ø©'      },
-                                { value: 'not_sponsored', label: 'Ù„ÙŠØ³ Ø¹Ù„Ù‰ Ø§Ù„ÙƒÙØ§Ù„Ø©'  },
-                                { value: 'absconded',     label: 'Ù‡Ø±ÙˆØ¨'             },
-                                { value: 'terminated',    label: 'Ø§Ù†ØªÙ‡Ø§Ø¡ Ø§Ù„Ø®Ø¯Ù…Ø©'    },
+                                { value: 'sponsored',     label: 'على الكفالة'      },
+                                { value: 'not_sponsored', label: 'ليس على الكفالة'  },
+                                { value: 'absconded',     label: 'هروب'             },
+                                { value: 'terminated',    label: 'انتهاء الخدمة'    },
                               ]}
                               onSave={v => {
                                 if (v === 'absconded' || v === 'terminated') {
@@ -334,7 +334,7 @@ export function EmployeeDetailedTable({
                                   setStatusDateDialog({
                                     emp,
                                     newStatus: v,
-                                    label: v === 'absconded' ? 'Ù‡Ø±ÙˆØ¨' : 'Ø§Ù†ØªÙ‡Ø§Ø¡ Ø§Ù„Ø®Ø¯Ù…Ø©',
+                                    label: v === 'absconded' ? 'هروب' : 'انتهاء الخدمة',
                                   });
                                   return Promise.resolve();
                                 }
@@ -360,7 +360,7 @@ export function EmployeeDetailedTable({
                                 <span className="text-xs text-muted-foreground">{format(parseISO(emp.probation_end_date), 'yyyy/MM/dd')}</span>
                                 {probDays !== null && (
                                   <span className={`text-xs font-medium ${probationColor(probDays)}`}>
-                                    {probDays < 0 ? 'Ø§Ù†ØªÙ‡Øª' : `${probDays}ÙŠ Ù…ØªØ¨Ù‚ÙŠ`}
+                                    {probDays < 0 ? 'انتهت' : `${probDays}ي متبقي`}
                                   </span>
                                 )}
                               </div>
@@ -380,7 +380,7 @@ export function EmployeeDetailedTable({
                                 <span className={`text-xs ${hiColor}`}>{format(parseISO(hiExpiry), 'yyyy/MM/dd')}</span>
                                 {hiDays !== null && (
                                   <span className={`text-[10px] ${hiColor}`}>
-                                    {hiDays < 0 ? `Ù…Ù†ØªÙ‡ÙŠ Ù…Ù†Ø° ${Math.abs(hiDays)} ÙŠÙˆÙ…` : `Ù…ØªØ¨Ù‚ÙŠ ${hiDays} ÙŠÙˆÙ…`}
+                                    {hiDays < 0 ? `منتهي منذ ${Math.abs(hiDays)} يوم` : `متبقي ${hiDays} يوم`}
                                   </span>
                                 )}
                               </div>
@@ -395,9 +395,9 @@ export function EmployeeDetailedTable({
                             <InlineSelect
                               value={emp.license_status || 'no_license'}
                               options={[
-                                { value: 'has_license', label: 'Ù„Ø¯ÙŠÙ‡ Ø±Ø®ØµØ©'     },
-                                { value: 'no_license',  label: 'Ù„ÙŠØ³ Ù„Ø¯ÙŠÙ‡ Ø±Ø®ØµØ©' },
-                                { value: 'applied',     label: 'ØªÙ… Ø§Ù„ØªÙ‚Ø¯ÙŠÙ…'    },
+                                { value: 'has_license', label: 'لديه رخصة'     },
+                                { value: 'no_license',  label: 'ليس لديه رخصة' },
+                                { value: 'applied',     label: 'تم التقديم'    },
                               ]}
                               onSave={v => saveField(emp.id, 'license_status', v)}
                               renderDisplay={() => <LicenseBadge status={emp.license_status} />}
@@ -416,7 +416,7 @@ export function EmployeeDetailedTable({
                                 <span className={`text-xs ${leColor}`}>{format(parseISO(leExpiry), 'yyyy/MM/dd')}</span>
                                 {leDays !== null && (
                                   <span className={`text-[10px] ${leColor}`}>
-                                    {leDays < 0 ? `Ù…Ù†ØªÙ‡ÙŠØ© Ù…Ù†Ø° ${Math.abs(leDays)} ÙŠÙˆÙ…` : `Ù…ØªØ¨Ù‚ÙŠ ${leDays} ÙŠÙˆÙ…`}
+                                    {leDays < 0 ? `منتهية منذ ${Math.abs(leDays)} يوم` : `متبقي ${leDays} يوم`}
                                   </span>
                                 )}
                               </div>
@@ -444,16 +444,16 @@ export function EmployeeDetailedTable({
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground">
-                                  â‹®
+                                  ⋮
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => setSelectedEmployee(emp.id)}>
-                                  <Eye size={14} className="me-2" /> Ø¹Ø±Ø¶ Ø§Ù„Ù…Ù„Ù
+                                  <Eye size={14} className="me-2" /> عرض الملف
                                 </DropdownMenuItem>
                                 {permissions.can_edit && (
                                   <DropdownMenuItem onClick={() => { setEditEmployee(emp); setShowAddModal(true); }}>
-                                    <Edit size={14} className="me-2" /> ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª
+                                    <Edit size={14} className="me-2" /> تعديل البيانات
                                   </DropdownMenuItem>
                                 )}
                                 {permissions.can_delete && (
@@ -463,7 +463,7 @@ export function EmployeeDetailedTable({
                                       onClick={() => setDeleteEmployee(emp)}
                                       className="text-destructive focus:text-destructive"
                                     >
-                                      <Trash2 size={14} className="me-2" /> Ø­Ø°Ù Ø§Ù„Ù…ÙˆØ¸Ù
+                                      <Trash2 size={14} className="me-2" /> حذف الموظف
                                     </DropdownMenuItem>
                                   </>
                                 )}
@@ -486,7 +486,7 @@ export function EmployeeDetailedTable({
       {!loading && filteredCount > 0 && (
         <div className="flex items-center justify-between gap-4 px-4 py-3 border-t border-border/30 flex-wrap">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Ø¹Ø±Ø¶:</span>
+            <span className="text-xs text-muted-foreground">عرض:</span>
             <Select
               value={String(pageSize)}
               onValueChange={v => { setPageSize(Number(v)); setPage(1); }}
@@ -500,16 +500,16 @@ export function EmployeeDetailedTable({
                 <SelectItem value="100">100</SelectItem>
               </SelectContent>
             </Select>
-            <span className="text-xs text-muted-foreground">Ù„ÙƒÙ„ ØµÙØ­Ø©</span>
+            <span className="text-xs text-muted-foreground">لكل صفحة</span>
           </div>
 
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">
-              {Math.min((page - 1) * pageSize + 1, filteredCount)}â€“{Math.min(page * pageSize, filteredCount)} Ù…Ù† {filteredCount}
+              {Math.min((page - 1) * pageSize + 1, filteredCount)}–{Math.min(page * pageSize, filteredCount)} من {filteredCount}
             </span>
             <div className="flex items-center gap-1">
               <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => setPage(1)} disabled={page === 1}>
-                Â«
+                «
               </Button>
               <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => setPage(p => p - 1)} disabled={page === 1}>
                 <ChevronRight size={12} />
@@ -521,7 +521,7 @@ export function EmployeeDetailedTable({
                 <ChevronLeft size={12} />
               </Button>
               <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => setPage(totalPages)} disabled={page >= totalPages}>
-                Â»
+                »
               </Button>
             </div>
           </div>

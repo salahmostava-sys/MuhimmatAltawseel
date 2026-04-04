@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { X, Check, Trash2, ChevronRight, ChevronLeft } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
@@ -67,7 +67,7 @@ interface Props {
   editEmployee?: EmployeeData | null;
 }
 
-const STEPS = ['Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø£Ø³Ø§Ø³ÙŠØ©', 'Ø§Ù„Ø¥Ù‚Ø§Ù…Ø© ÙˆØ§Ù„ÙˆØ«Ø§Ø¦Ù‚', 'Ù†ÙˆØ¹ Ø§Ù„Ø±Ø§ØªØ¨', 'Ø±ÙØ¹ Ø§Ù„Ù…Ø³ØªÙ†Ø¯Ø§Øª'];
+const STEPS = ['البيانات الأساسية', 'الإقامة والوثائق', 'نوع الراتب', 'رفع المستندات'];
 
 const SectionTitle = ({ title }: { title: string }) => (
   <div className="flex items-center gap-3 mb-5">
@@ -91,7 +91,7 @@ const CITY_OPTIONS = DEFAULT_EMPLOYEE_CITY_OPTIONS.map((value) => ({
   label: cityLabel(value, value),
 }));
 
-// â”€â”€â”€ Secure Upload Area â€” uses signed URLs for existing private docs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Secure Upload Area — uses signed URLs for existing private docs ──────────
 const UploadArea = ({ label, icon, file, existingStoragePath, onFile, onRemove, status, errorText }: {
   label: string; icon: string; file: File | null; existingStoragePath?: string | null;
   onFile: (f: File) => void; onRemove: () => void;
@@ -117,18 +117,18 @@ const UploadArea = ({ label, icon, file, existingStoragePath, onFile, onRemove, 
     const isImageFile = file.type.startsWith('image/');
     previewNode = isImageFile
       ? <img src={URL.createObjectURL(file)} className="w-16 h-16 object-cover rounded-lg mx-auto" alt="" />
-      : <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center mx-auto text-2xl">ðŸ“„</div>;
+      : <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center mx-auto text-2xl">📄</div>;
   } else if (signedUrl) {
     previewNode = <img src={signedUrl} className="w-16 h-16 object-cover rounded-lg mx-auto" alt="" />;
   } else if (existingStoragePath) {
-    previewNode = <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center mx-auto text-xl">ðŸ“„</div>;
+    previewNode = <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center mx-auto text-xl">📄</div>;
   }
 
   const statusBadge = (() => {
-    if (status === 'uploading') return <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø±ÙØ¹...</span>;
-    if (status === 'uploaded') return <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success">ØªÙ… Ø§Ù„Ø±ÙØ¹</span>;
-    if (status === 'selected') return <span className="text-[10px] px-2 py-0.5 rounded-full bg-warning/10 text-warning">Ø¬Ø§Ù‡Ø² Ù„Ù„Ø±ÙØ¹</span>;
-    if (status === 'error') return <span className="text-[10px] px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">ÙØ´Ù„ Ø§Ù„Ø±ÙØ¹</span>;
+    if (status === 'uploading') return <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">جاري الرفع...</span>;
+    if (status === 'uploaded') return <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success">تم الرفع</span>;
+    if (status === 'selected') return <span className="text-[10px] px-2 py-0.5 rounded-full bg-warning/10 text-warning">جاهز للرفع</span>;
+    if (status === 'error') return <span className="text-[10px] px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">فشل الرفع</span>;
     return null;
   })();
 
@@ -152,18 +152,18 @@ const UploadArea = ({ label, icon, file, existingStoragePath, onFile, onRemove, 
         {hasContent ? (
           <div className="space-y-1">
             {previewNode}
-            <p className="text-xs text-foreground truncate max-w-[120px] mx-auto">{file ? file.name : 'Ù…Ø±ÙÙˆØ¹ Ù…Ø³Ø¨Ù‚Ø§Ù‹ ðŸ”’'}</p>
+            <p className="text-xs text-foreground truncate max-w-[120px] mx-auto">{file ? file.name : 'مرفوع مسبقاً 🔒'}</p>
             {statusBadge}
             <button type="button" onClick={e => { e.stopPropagation(); onRemove(); }} className="text-xs text-destructive hover:underline flex items-center gap-1 mx-auto">
-              <Trash2 size={10} /> Ø­Ø°Ù
+              <Trash2 size={10} /> حذف
             </button>
           </div>
         ) : (
           <>
             <div className="text-3xl mb-2">{icon}</div>
             <p className="text-xs font-medium text-foreground/70">{label}</p>
-            <p className="text-[10px] text-muted-foreground mt-1">Ø§Ø¶ØºØ· Ù„Ù„Ø±ÙØ¹ Ø£Ùˆ Ø§Ø³Ø­Ø¨ Ù‡Ù†Ø§</p>
-            <p className="text-[10px] text-muted-foreground">JPG, PNG, PDF â€” 5MB</p>
+            <p className="text-[10px] text-muted-foreground mt-1">اضغط للرفع أو اسحب هنا</p>
+            <p className="text-[10px] text-muted-foreground">JPG, PNG, PDF — 5MB</p>
           </>
         )}
       </button>
@@ -175,29 +175,29 @@ const UploadArea = ({ label, icon, file, existingStoragePath, onFile, onRemove, 
 const phoneSchema = z
   .string()
   .trim()
-  .min(1, 'Ø±Ù‚Ù… Ø§Ù„Ù‡Ø§ØªÙ Ù…Ø·Ù„ÙˆØ¨')
-  .refine(isValidEmployeePhone, 'Ø±Ù‚Ù… Ù‡Ø§ØªÙ ØºÙŠØ± ØµØ­ÙŠØ­');
+  .min(1, 'رقم الهاتف مطلوب')
+  .refine(isValidEmployeePhone, 'رقم هاتف غير صحيح');
 
 const nationalIdSchema = z
   .string()
   .trim()
-  .min(1, 'Ø±Ù‚Ù… Ø§Ù„Ù‡ÙˆÙŠØ© Ù…Ø·Ù„ÙˆØ¨')
-  .refine(isValidEmployeeNationalId, 'Ø±Ù‚Ù… Ù‡ÙˆÙŠØ© ØºÙŠØ± ØµØ­ÙŠØ­ (10 Ø£Ø±Ù‚Ø§Ù…)');
+  .min(1, 'رقم الهوية مطلوب')
+  .refine(isValidEmployeeNationalId, 'رقم هوية غير صحيح (10 أرقام)');
 
 const employeeFormSchema = z
   .object({
-    name: z.string().trim().min(2, 'Ø§Ù„Ø§Ø³Ù… Ù…Ø·Ù„ÙˆØ¨'),
+    name: z.string().trim().min(2, 'الاسم مطلوب'),
     name_en: z.string().trim().optional().or(z.literal('')),
     job_title: z.string().trim().optional().or(z.literal('')),
     phone: phoneSchema,
-    email: z.string().trim().email('Ø¨Ø±ÙŠØ¯ ØºÙŠØ± ØµØ­ÙŠØ­').optional().or(z.literal('')),
+    email: z.string().trim().email('بريد غير صحيح').optional().or(z.literal('')),
     national_id: nationalIdSchema,
     nationality: z.string().trim().optional().or(z.literal('')),
     bank_account_number: z.string().trim().optional().or(z.literal('')),
     cities: z.array(z.string().trim().min(1)).default([]),
     join_date: z.string().optional().or(z.literal('')),
     birth_date: z.string().optional().or(z.literal('')),
-    residency_expiry: z.string().trim().min(1, 'ØªØ§Ø±ÙŠØ® Ø§Ù†ØªÙ‡Ø§Ø¡ Ø§Ù„Ø¥Ù‚Ø§Ù…Ø© Ù…Ø·Ù„ÙˆØ¨'),
+    residency_expiry: z.string().trim().min(1, 'تاريخ انتهاء الإقامة مطلوب'),
     health_insurance_expiry: z.string().optional().or(z.literal('')),
     license_expiry: z.string().optional().or(z.literal('')),
     probation_end_date: z.string().optional().or(z.literal('')),
@@ -215,7 +215,7 @@ const employeeFormSchema = z
     if (val.salary_type === 'shift') {
       const n = Number(val.base_salary || 0);
       if (!n || n <= 0) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['base_salary'], message: 'Ø§Ù„Ø±Ø§ØªØ¨ Ù…Ø·Ù„ÙˆØ¨' });
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['base_salary'], message: 'الراتب مطلوب' });
       }
     }
   });
@@ -232,9 +232,9 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
   const [cityDraft, setCityDraft] = useState('');
 
   const APP_COLOR_FALLBACKS: Record<string, { bg: string; fg: string }> = {
-    'Ù‡Ù†Ù‚Ø±Ø³ØªÙŠØ´Ù†': { bg: '#ea580c', fg: '#ffffff' },
-    'Ù‡Ù†Ø¬Ø±': { bg: '#ea580c', fg: '#ffffff' },
-    'ÙƒÙŠØªØ§': { bg: '#7c3aed', fg: '#ffffff' },
+    'هنقرستيشن': { bg: '#ea580c', fg: '#ffffff' },
+    'هنجر': { bg: '#ea580c', fg: '#ffffff' },
+    'كيتا': { bg: '#7c3aed', fg: '#ffffff' },
   };
 
   const getAppChipColors = (appName: string) => {
@@ -470,13 +470,13 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
         allowedTypes: ['image/jpeg', 'image/png', 'application/pdf'],
       });
       if (!validation.valid) {
-        const msg = 'error' in validation ? validation.error : 'Ù…Ù„Ù ØºÙŠØ± ØµØ§Ù„Ø­';
+        const msg = 'error' in validation ? validation.error : 'ملف غير صالح';
         setUploadState((prev) => ({ ...prev, [u.key]: { status: 'error', error: msg } }));
         throw new Error(msg);
       }
       const ext = (u.file.name.split('.').pop() || '').toLowerCase();
       if (!ext) {
-        const msg = 'Ø§Ù…ØªØ¯Ø§Ø¯ Ø§Ù„Ù…Ù„Ù ØºÙŠØ± ÙˆØ§Ø¶Ø­ØŒ Ø§Ù„Ø±Ø¬Ø§Ø¡ Ø§Ø®ØªÙŠØ§Ø± Ù…Ù„Ù Ø¨ØµÙŠØºØ© JPG/PNG/PDF';
+        const msg = 'امتداد الملف غير واضح، الرجاء اختيار ملف بصيغة JPG/PNG/PDF';
         setUploadState((prev) => ({ ...prev, [u.key]: { status: 'error', error: msg } }));
         throw new Error(msg);
       }
@@ -516,7 +516,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
       await syncEmployeeApps(empId, v.selected_apps || []);
 
       toast({
-        title: isEdit ? 'ØªÙ… ØªØ­Ø¯ÙŠØ« Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ù†Ø¯ÙˆØ¨' : 'ØªÙ… Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ù…Ù†Ø¯ÙˆØ¨ Ø¨Ù†Ø¬Ø§Ø­',
+        title: isEdit ? 'تم تحديث بيانات المندوب' : 'تم إضافة المندوب بنجاح',
         description: v.name,
       });
 
@@ -534,24 +534,24 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
             employeeId: createdEmployeeId,
           });
           toast({
-            title: 'Ø®Ø·Ø£ ÙÙŠ Ø§Ù„Ø­ÙØ¸',
-            description: 'ÙØ´Ù„ Ø­ÙØ¸ Ø§Ù„Ù…ÙˆØ¸Ù ÙˆØªØ¹Ø°Ø± Ø§Ù„ØªØ±Ø§Ø¬Ø¹ Ø§Ù„ØªÙ„Ù‚Ø§Ø¦ÙŠ Ø¨Ø§Ù„ÙƒØ§Ù…Ù„. ÙŠØ±Ø¬Ù‰ Ù…Ø±Ø§Ø¬Ø¹Ø© Ø§Ù„Ø¯Ø¹Ù… Ø§Ù„ÙÙ†ÙŠ.',
+            title: 'خطأ في الحفظ',
+            description: 'فشل حفظ الموظف وتعذر التراجع التلقائي بالكامل. يرجى مراجعة الدعم الفني.',
             variant: 'destructive',
           });
           return;
         }
       }
-      toast({ title: 'Ø®Ø·Ø£ ÙÙŠ Ø§Ù„Ø­ÙØ¸', description: getErrorMessage(err), variant: 'destructive' });
+      toast({ title: 'خطأ في الحفظ', description: getErrorMessage(err), variant: 'destructive' });
     } finally {
       setSaving(false);
     }
   };
   const isLastStep = step === STEPS.length - 1;
-  let footerActionContent: React.ReactNode = <>Ø§Ù„ØªØ§Ù„ÙŠ <ChevronRight size={15} /></>;
+  let footerActionContent: React.ReactNode = <>التالي <ChevronRight size={15} /></>;
   if (saving) {
-    footerActionContent = 'Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø­ÙØ¸...';
+    footerActionContent = 'جاري الحفظ...';
   } else if (isLastStep) {
-    const submitLabel = isEdit ? 'Ø­ÙØ¸ Ø§Ù„ØªØ¹Ø¯ÙŠÙ„Ø§Øª' : 'Ø­ÙØ¸ Ø§Ù„Ù…Ù†Ø¯ÙˆØ¨';
+    const submitLabel = isEdit ? 'حفظ التعديلات' : 'حفظ المندوب';
     footerActionContent = <><Check size={15} /> {submitLabel}</>;
   }
 
@@ -561,7 +561,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <h2 className="text-lg font-bold text-foreground">
-            {isEdit ? 'ØªØ¹Ø¯ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ù†Ø¯ÙˆØ¨' : 'Ø¥Ø¶Ø§ÙØ© Ù…Ù†Ø¯ÙˆØ¨ Ø¬Ø¯ÙŠØ¯'}
+            {isEdit ? 'تعديل بيانات المندوب' : 'إضافة مندوب جديد'}
           </h2>
           <button onClick={onClose} className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground">
             <X size={18} />
@@ -596,17 +596,17 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
           {/* Step 0 */}
           {step === 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div className="sm:col-span-2"><SectionTitle title="â”€â”€ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø£Ø³Ø§Ø³ÙŠØ© â”€â”€" /></div>
-              <F label="Ø§Ù„Ø§Ø³Ù… Ø§Ù„ÙƒØ§Ù…Ù„" required error={errors.name?.message}>
+              <div className="sm:col-span-2"><SectionTitle title="── البيانات الأساسية ──" /></div>
+              <F label="الاسم الكامل" required error={errors.name?.message}>
                 <Input value={form.name} onChange={e => setField('name', e.target.value)} />
               </F>
               <F label="الاسم (إنجليزي)">
                 <Input value={form.name_en} onChange={e => setField('name_en', e.target.value)} dir="ltr" />
               </F>
-              <F label="Ø§Ù„Ù…Ø³Ù…Ù‰ Ø§Ù„ÙˆØ¸ÙŠÙÙŠ">
+              <F label="المسمى الوظيفي">
                 <Input value={form.job_title} onChange={e => setField('job_title', e.target.value)} />
               </F>
-              <F label="Ø±Ù‚Ù… Ø§Ù„Ù‡Ø§ØªÙ" required error={errors.phone?.message}>
+              <F label="رقم الهاتف" required error={errors.phone?.message}>
                 <Input
                   value={form.phone}
                   onChange={e => setField('phone', clampEmployeePhoneInput(e.target.value))}
@@ -615,10 +615,10 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                   maxLength={EMPLOYEE_INTL_PHONE_DIGITS}
                 />
               </F>
-              <F label="Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ">
+              <F label="البريد الإلكتروني">
                 <Input type="email" value={form.email} onChange={e => setField('email', e.target.value)} dir="ltr" />
               </F>
-              <F label="Ø±Ù‚Ù… Ø§Ù„Ù‡ÙˆÙŠØ© Ø§Ù„ÙˆØ·Ù†ÙŠØ©" required error={errors.national_id?.message}>
+              <F label="رقم الهوية الوطنية" required error={errors.national_id?.message}>
                 <Input
                   value={form.national_id}
                   onChange={e => setField('national_id', clampEmployeeNationalIdInput(e.target.value))}
@@ -627,36 +627,36 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                   maxLength={EMPLOYEE_NATIONAL_ID_DIGITS}
                 />
               </F>
-              <F label="Ø§Ù„Ø¬Ù†Ø³ÙŠØ©">
+              <F label="الجنسية">
                 <Select value={form.nationality} onValueChange={v => setField('nationality', v)}>
-                  <SelectTrigger><SelectValue placeholder="Ø§Ø®ØªØ± Ø§Ù„Ø¬Ù†Ø³ÙŠØ©" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="اختر الجنسية" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Ø³Ø¹ÙˆØ¯ÙŠ">Ø³Ø¹ÙˆØ¯ÙŠ</SelectItem>
-                    <SelectItem value="ÙŠÙ…Ù†ÙŠ">ÙŠÙ…Ù†ÙŠ</SelectItem>
-                    <SelectItem value="Ø¨Ø§ÙƒØ³ØªØ§Ù†ÙŠ">Ø¨Ø§ÙƒØ³ØªØ§Ù†ÙŠ</SelectItem>
-                    <SelectItem value="Ù…ØµØ±ÙŠ">Ù…ØµØ±ÙŠ</SelectItem>
-                    <SelectItem value="Ø³ÙˆØ¯Ø§Ù†ÙŠ">Ø³ÙˆØ¯Ø§Ù†ÙŠ</SelectItem>
-                    <SelectItem value="Ø¨Ù†ØºØ§Ù„ÙŠ">Ø¨Ù†ØºØ§Ù„ÙŠ</SelectItem>
-                    <SelectItem value="Ù‡Ù†Ø¯ÙŠ">Ù‡Ù†Ø¯ÙŠ</SelectItem>
-                    <SelectItem value="ÙÙ„Ø¨ÙŠÙ†ÙŠ">ÙÙ„Ø¨ÙŠÙ†ÙŠ</SelectItem>
-                    <SelectItem value="ÙÙ„Ø³Ø·ÙŠÙ†ÙŠ">ÙÙ„Ø³Ø·ÙŠÙ†ÙŠ</SelectItem>
-                    <SelectItem value="Ø³ÙˆØ±ÙŠ">Ø³ÙˆØ±ÙŠ</SelectItem>
-                    <SelectItem value="Ø£Ø±Ø¯Ù†ÙŠ">Ø£Ø±Ø¯Ù†ÙŠ</SelectItem>
-                    <SelectItem value="Ø¥Ø«ÙŠÙˆØ¨ÙŠ">Ø¥Ø«ÙŠÙˆØ¨ÙŠ</SelectItem>
-                    <SelectItem value="Ù†ÙŠØ¨Ø§Ù„ÙŠ">Ù†ÙŠØ¨Ø§Ù„ÙŠ</SelectItem>
-                    <SelectItem value="Ø£Ø®Ø±Ù‰">Ø£Ø®Ø±Ù‰</SelectItem>
+                    <SelectItem value="سعودي">سعودي</SelectItem>
+                    <SelectItem value="يمني">يمني</SelectItem>
+                    <SelectItem value="باكستاني">باكستاني</SelectItem>
+                    <SelectItem value="مصري">مصري</SelectItem>
+                    <SelectItem value="سوداني">سوداني</SelectItem>
+                    <SelectItem value="بنغالي">بنغالي</SelectItem>
+                    <SelectItem value="هندي">هندي</SelectItem>
+                    <SelectItem value="فلبيني">فلبيني</SelectItem>
+                    <SelectItem value="فلسطيني">فلسطيني</SelectItem>
+                    <SelectItem value="سوري">سوري</SelectItem>
+                    <SelectItem value="أردني">أردني</SelectItem>
+                    <SelectItem value="إثيوبي">إثيوبي</SelectItem>
+                    <SelectItem value="نيبالي">نيبالي</SelectItem>
+                    <SelectItem value="أخرى">أخرى</SelectItem>
                   </SelectContent>
                 </Select>
               </F>
-              <F label="Ø±Ù‚Ù… Ø§Ù„Ø­Ø³Ø§Ø¨ Ø§Ù„Ø¨Ù†ÙƒÙŠ">
+              <F label="رقم الحساب البنكي">
                 <Input value={form.bank_account_number} onChange={e => setField('bank_account_number', e.target.value)} dir="ltr" />
               </F>
-              <F label="Ø§Ù„Ù…Ø¯Ù†">
+              <F label="المدن">
                 <div className="space-y-3">
                   <div className="flex gap-2">
                     <Select onValueChange={upsertCity}>
                       <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Ø§Ø®ØªØ± Ù…Ø¯ÙŠÙ†Ø©" />
+                        <SelectValue placeholder="اختر مدينة" />
                       </SelectTrigger>
                       <SelectContent>
                         {CITY_OPTIONS.map(({ value, label }) => (
@@ -675,11 +675,11 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                       }}
                     />
                     <Button type="button" variant="outline" onClick={() => upsertCity(cityDraft)}>
-                      Ø¥Ø¶Ø§ÙØ©
+                      إضافة
                     </Button>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {selectedCities.length === 0 && <span className="text-xs text-muted-foreground">Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø¯Ù† Ù…Ø¶Ø§ÙØ©</span>}
+                    {selectedCities.length === 0 && <span className="text-xs text-muted-foreground">لا توجد مدن مضافة</span>}
                     {selectedCities.map((city) => (
                       <button
                         key={city}
@@ -694,10 +694,10 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                   </div>
                 </div>
               </F>
-              <F label="ØªØ§Ø±ÙŠØ® Ø§Ù„Ø§Ù†Ø¶Ù…Ø§Ù…">
+              <F label="تاريخ الانضمام">
                 <Input type="date" value={form.join_date} onChange={e => setField('join_date', e.target.value)} />
               </F>
-              <F label="ØªØ§Ø±ÙŠØ® Ø§Ù„Ù…ÙŠÙ„Ø§Ø¯">
+              <F label="تاريخ الميلاد">
                 <Input type="date" value={form.birth_date} onChange={e => setField('birth_date', e.target.value)} />
               </F>
               <F label="الحالة">
@@ -712,9 +712,9 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
               </F>
 
               <div className="sm:col-span-2">
-                <SectionTitle title="â”€â”€ ÙØªØ±Ø© Ø§Ù„ØªØ¬Ø±Ø¨Ø© (Ø§Ø®ØªÙŠØ§Ø±ÙŠ) â”€â”€" />
+                <SectionTitle title="── فترة التجربة (اختياري) ──" />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <F label="Ø¹Ø¯Ø¯ Ø§Ù„Ø£ÙŠØ§Ù…">
+                  <F label="عدد الأيام">
                     <Input
                       type="text"
                       value={form.probation_days}
@@ -723,7 +723,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                       inputMode="numeric"
                     />
                   </F>
-                  <F label="ØªØ§Ø±ÙŠØ® Ø§Ù†ØªÙ‡Ø§Ø¡ ÙØªØ±Ø© Ø§Ù„ØªØ¬Ø±Ø¨Ø©">
+                  <F label="تاريخ انتهاء فترة التجربة">
                     <Input type="date" value={form.probation_end_date} readOnly />
                     {form.probation_end_date && (
                       <button
@@ -731,17 +731,17 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                         onClick={() => { setField('probation_end_date', ''); setField('probation_days', ''); }}
                         className="text-xs text-destructive hover:underline mt-1"
                       >
-                        Ã— Ù…Ø³Ø­ ÙØªØ±Ø© Ø§Ù„ØªØ¬Ø±Ø¨Ø©
+                        × مسح فترة التجربة
                       </button>
                     )}
                   </F>
                 </div>
               </div>
-              <F label="Ù„ØºØ© ÙƒØ´Ù Ø§Ù„Ø±Ø§ØªØ¨">
+              <F label="لغة كشف الراتب">
                 <div className="flex gap-2 mt-1">
                   {([
-                    { v: 'ar', flag: 'ðŸ‡¸ðŸ‡¦', l: 'Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©' },
-                    { v: 'en', flag: 'ðŸ‡¬ðŸ‡§', l: 'English' },
+                    { v: 'ar', flag: '🇸🇦', l: 'العربية' },
+                    { v: 'en', flag: '🇬🇧', l: 'English' },
                   ] as { v: 'ar' | 'en'; flag: string; l: string }[]).map(({ v, flag, l }) => (
                     <button key={v} type="button" onClick={() => setField('preferred_language', v)}
                       className={`flex-1 py-2 px-2 rounded-lg border text-xs font-medium transition-colors flex items-center justify-center gap-1 ${form.preferred_language === v ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}>
@@ -756,45 +756,45 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
           {/* Step 1 */}
           {step === 1 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div className="sm:col-span-2"><SectionTitle title="â”€â”€ Ø§Ù„Ø¥Ù‚Ø§Ù…Ø© ÙˆØ§Ù„ÙˆØ«Ø§Ø¦Ù‚ â”€â”€" /></div>
+              <div className="sm:col-span-2"><SectionTitle title="── الإقامة والوثائق ──" /></div>
               <div className="sm:col-span-2">
-                <F label="ØªØ§Ø±ÙŠØ® Ø§Ù†ØªÙ‡Ø§Ø¡ Ø§Ù„Ø¥Ù‚Ø§Ù…Ø©" required error={errors.residency_expiry?.message}>
+                <F label="تاريخ انتهاء الإقامة" required error={errors.residency_expiry?.message}>
                   <Input type="date" value={form.residency_expiry} onChange={e => setField('residency_expiry', e.target.value)} />
                 </F>
                 {resStatus && (
                   <div className={`mt-2 flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg ${resStatus.valid ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
-                    {resStatus.valid ? 'âœ…' : 'ðŸ”´'}
+                    {resStatus.valid ? '✅' : '🔴'}
                     <span>
-                      Ø­Ø§Ù„Ø© Ø§Ù„Ø¥Ù‚Ø§Ù…Ø©: {resStatus.valid ? 'ØµØ§Ù„Ø­Ø©' : 'Ù…Ù†ØªÙ‡ÙŠØ©'} â€”
-                      {resStatus.valid ? ` Ù…ØªØ¨Ù‚ÙŠ ${resStatus.days} ÙŠÙˆÙ…` : ` Ù…Ù†Ø° ${Math.abs(resStatus.days)} ÙŠÙˆÙ…`}
+                      حالة الإقامة: {resStatus.valid ? 'صالحة' : 'منتهية'} —
+                      {resStatus.valid ? ` متبقي ${resStatus.days} يوم` : ` منذ ${Math.abs(resStatus.days)} يوم`}
                     </span>
                   </div>
                 )}
               </div>
-              <F label="ØªØ§Ø±ÙŠØ® Ø§Ù†ØªÙ‡Ø§Ø¡ Ø§Ù„ØªØ£Ù…ÙŠÙ† Ø§Ù„ØµØ­ÙŠ">
+              <F label="تاريخ انتهاء التأمين الصحي">
                 <Input type="date" value={form.health_insurance_expiry} onChange={e => setField('health_insurance_expiry', e.target.value)} />
               </F>
               <F label="تاريخ انتهاء الرخصة">
                 <Input type="date" value={form.license_expiry} onChange={e => setField('license_expiry', e.target.value)} />
               </F>
-              <F label="Ø­Ø§Ù„Ø© Ø§Ù„Ø±Ø®ØµØ©">
+              <F label="حالة الرخصة">
                 <Select value={form.license_status} onValueChange={v => setField('license_status', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="has_license">Ù„Ø¯ÙŠÙ‡ Ø±Ø®ØµØ©</SelectItem>
-                    <SelectItem value="no_license">Ù„ÙŠØ³ Ù„Ø¯ÙŠÙ‡ Ø±Ø®ØµØ©</SelectItem>
-                    <SelectItem value="applied">ØªÙ… Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ø¹Ù„ÙŠÙ‡Ø§</SelectItem>
+                    <SelectItem value="has_license">لديه رخصة</SelectItem>
+                    <SelectItem value="no_license">ليس لديه رخصة</SelectItem>
+                    <SelectItem value="applied">تم التقديم عليها</SelectItem>
                   </SelectContent>
                 </Select>
               </F>
-              <F label="Ø­Ø§Ù„Ø© Ø§Ù„ÙƒÙØ§Ù„Ø©">
+              <F label="حالة الكفالة">
                 <Select value={form.sponsorship_status} onValueChange={v => setField('sponsorship_status', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="sponsored">Ø¹Ù„Ù‰ Ø§Ù„ÙƒÙØ§Ù„Ø©</SelectItem>
-                    <SelectItem value="not_sponsored">Ù„ÙŠØ³ Ø¹Ù„Ù‰ Ø§Ù„ÙƒÙØ§Ù„Ø©</SelectItem>
-                    <SelectItem value="absconded">Ù‡Ø±ÙˆØ¨</SelectItem>
-                    <SelectItem value="terminated">Ø§Ù†ØªÙ‡Ø§Ø¡ Ø§Ù„Ø®Ø¯Ù…Ø©</SelectItem>
+                    <SelectItem value="sponsored">على الكفالة</SelectItem>
+                    <SelectItem value="not_sponsored">ليس على الكفالة</SelectItem>
+                    <SelectItem value="absconded">هروب</SelectItem>
+                    <SelectItem value="terminated">انتهاء الخدمة</SelectItem>
                   </SelectContent>
                 </Select>
               </F>
@@ -804,9 +804,9 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
           {/* Step 2 */}
           {step === 2 && (
             <div className="space-y-5">
-              <SectionTitle title="â”€â”€ Ù†ÙˆØ¹ Ø§Ù„Ø±Ø§ØªØ¨ â”€â”€" />
+              <SectionTitle title="── نوع الراتب ──" />
               <div className="flex gap-3">
-                {[{ v: 'orders', l: 'ðŸ“¦ Ø¨Ø§Ù„Ø·Ù„Ø¨' }, { v: 'shift', l: 'ðŸ• Ø«Ø§Ø¨Øª Ø´Ù‡Ø±ÙŠ' }].map(({ v, l }) => (
+                {[{ v: 'orders', l: '📦 بالطلب' }, { v: 'shift', l: '🕐 ثابت شهري' }].map(({ v, l }) => (
                   <button key={v} type="button" onClick={() => setField('salary_type', v)}
                     className={`flex-1 py-2.5 px-4 rounded-lg border text-sm font-medium transition-colors ${form.salary_type === v ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}>
                     {l}
@@ -814,11 +814,11 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                 ))}
               </div>
               {form.salary_type === 'shift' && (
-                <F label="Ø§Ù„Ø±Ø§ØªØ¨ Ø§Ù„Ø´Ù‡Ø±ÙŠ (Ø±.Ø³)" required error={errors.base_salary?.message}>
+                <F label="الراتب الشهري (ر.س)" required error={errors.base_salary?.message}>
                   <Input type="number" value={form.base_salary} onChange={e => setField('base_salary', e.target.value)} />
                 </F>
               )}
-              <SectionTitle title="â”€â”€ Ø§Ù„Ù…Ù†ØµØ§Øª Ø§Ù„Ù…Ø±ØªØ¨Ø·Ø© â”€â”€" />
+              <SectionTitle title="── المنصات المرتبطة ──" />
               <div className="flex flex-wrap gap-2">
                 {availableApps.map(app => (
                   <button key={app.id} type="button" onClick={() => toggleApp(app.name)}
@@ -854,7 +854,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                         }}
                       >
                         <SelectTrigger className="flex-1 h-8 text-xs">
-                          <SelectValue placeholder="Ø§Ø®ØªØ± Ø§Ù„Ø³ÙƒÙŠÙ…Ø©" />
+                          <SelectValue placeholder="اختر السكيمة" />
                         </SelectTrigger>
                         <SelectContent>
                           {schemes.map(s => (
@@ -872,10 +872,10 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
           {/* Step 3 */}
           {step === 3 && (
             <div className="space-y-5">
-              <SectionTitle title="â”€â”€ Ø±ÙØ¹ Ø§Ù„Ù…Ø³ØªÙ†Ø¯Ø§Øª â”€â”€" />
+              <SectionTitle title="── رفع المستندات ──" />
               <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
                 <div className="flex items-center justify-between text-xs mb-2">
-                  <span className="font-semibold text-foreground">ØªÙ‚Ø¯Ù… Ø±ÙØ¹ Ø§Ù„Ù…Ø³ØªÙ†Ø¯Ø§Øª</span>
+                  <span className="font-semibold text-foreground">تقدم رفع المستندات</span>
                   <span className="text-muted-foreground">{uploadedFilesCount}/{totalUploadSlots}</span>
                 </div>
                 <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -886,13 +886,13 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-1">
                   {uploadedFilesCount === totalUploadSlots
-                    ? 'ØªÙ… Ø±ÙØ¹ ÙƒÙ„ Ø§Ù„Ù…Ø³ØªÙ†Ø¯Ø§Øª Ø¨Ù†Ø¬Ø§Ø­.'
-                    : 'ÙŠÙ…ÙƒÙ†Ùƒ Ø±ÙØ¹ Ø§Ù„Ù…Ø³ØªÙ†Ø¯Ø§Øª Ø§Ù„Ø¢Ù† Ø£Ùˆ Ù„Ø§Ø­Ù‚Ø§Ù‹.'}
+                    ? 'تم رفع كل المستندات بنجاح.'
+                    : 'يمكنك رفع المستندات الآن أو لاحقاً.'}
                 </p>
               </div>
               <div className="flex gap-4">
                 <UploadArea
-                  label="Ø§Ù„ØµÙˆØ±Ø© Ø§Ù„Ø´Ø®ØµÙŠØ©" icon="ðŸ“·"
+                  label="الصورة الشخصية" icon="📷"
                   file={files.personal} existingStoragePath={editEmployee?.personal_photo_url}
                   onFile={f => { setFiles(p => ({ ...p, personal: f })); setUploadState((s) => ({ ...s, personal: { status: 'selected', error: null } })); }}
                   onRemove={() => { setFiles(p => ({ ...p, personal: null })); setUploadState((s) => ({ ...s, personal: { status: 'idle', error: null } })); }}
@@ -900,7 +900,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                   errorText={uploadState.personal.error}
                 />
                 <UploadArea
-                  label="ØµÙˆØ±Ø© Ø§Ù„Ù‡ÙˆÙŠØ©" icon="ðŸªª"
+                  label="صورة الهوية" icon="🪪"
                   file={files.id} existingStoragePath={editEmployee?.id_photo_url}
                   onFile={f => { setFiles(p => ({ ...p, id: f })); setUploadState((s) => ({ ...s, id: { status: 'selected', error: null } })); }}
                   onRemove={() => { setFiles(p => ({ ...p, id: null })); setUploadState((s) => ({ ...s, id: { status: 'idle', error: null } })); }}
@@ -908,7 +908,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                   errorText={uploadState.id.error}
                 />
                 <UploadArea
-                  label="ØµÙˆØ±Ø© Ø§Ù„Ø±Ø®ØµØ©" icon="ðŸš—"
+                  label="صورة الرخصة" icon="🚗"
                   file={files.license} existingStoragePath={editEmployee?.license_photo_url}
                   onFile={f => { setFiles(p => ({ ...p, license: f })); setUploadState((s) => ({ ...s, license: { status: 'selected', error: null } })); }}
                   onRemove={() => { setFiles(p => ({ ...p, license: null })); setUploadState((s) => ({ ...s, license: { status: 'idle', error: null } })); }}
@@ -916,7 +916,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                   errorText={uploadState.license.error}
                 />
               </div>
-              <p className="text-xs text-muted-foreground">Ø§Ù„Ù…Ù„ÙØ§Øª Ø§Ù„Ù…Ù‚Ø¨ÙˆÙ„Ø©: JPG, PNG, PDF â€” Ø§Ù„Ø­Ø¬Ù… Ø§Ù„Ø£Ù‚ØµÙ‰: 5MB Ù„ÙƒÙ„ Ù…Ù„Ù</p>
+              <p className="text-xs text-muted-foreground">الملفات المقبولة: JPG, PNG, PDF — الحجم الأقصى: 5MB لكل ملف</p>
             </div>
           )}
         </div>
@@ -924,7 +924,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
         {/* Footer */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-border shrink-0">
           <Button variant="outline" onClick={step === 0 ? onClose : back} disabled={saving}>
-            {step === 0 ? 'Ø¥Ù„ØºØ§Ø¡' : <><ChevronLeft size={15} /> Ø§Ù„Ø³Ø§Ø¨Ù‚</>}
+            {step === 0 ? 'إلغاء' : <><ChevronLeft size={15} /> السابق</>}
           </Button>
           <Button onClick={step === STEPS.length - 1 ? save : next} disabled={saving} className="gap-2">
             {footerActionContent}
