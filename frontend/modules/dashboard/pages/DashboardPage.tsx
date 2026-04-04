@@ -1,12 +1,18 @@
-import { useState, forwardRef } from 'react';
+import { Suspense, lazy, startTransition, useState, forwardRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { cn } from '@shared/lib/utils';
 import {
-  TrendingUp, ArrowUpRight, ArrowDownRight,
-  BarChart2, Activity,
-  Target, ChevronUp, ChevronDown,
-  Minus, Calendar,
+  ArrowUpRight,
+  ArrowDownRight,
+  BarChart2,
+  TrendingUp,
+  Activity,
+  Target,
+  ChevronUp,
+  ChevronDown,
+  Minus,
+  Calendar,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -14,12 +20,23 @@ import { dashboardService } from '@services/dashboardService';
 import { useTemporalContext } from '@app/providers/TemporalContext';
 import {
   format,
-  subMonths, startOfMonth, endOfMonth, getDaysInMonth, getDate,
+  subMonths,
+  startOfMonth,
+  endOfMonth,
+  getDaysInMonth,
+  getDate,
 } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Line, Legend,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Line,
+  Legend,
 } from 'recharts';
 import { useRealtimePostgresChanges, REALTIME_TABLES_DASHBOARD } from '@shared/hooks/useRealtimePostgresChanges';
 
@@ -30,8 +47,8 @@ import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGat
 import { QueryErrorRetry } from '@shared/components/QueryErrorRetry';
 import { StatsCards } from '@modules/dashboard/components/StatsCards';
 import { OrdersChart } from '@modules/dashboard/components/OrdersChart';
-
-
+import { DashboardHeader as DashboardHeaderSection } from '@modules/dashboard/components/DashboardHeader';
+import { DashboardOverviewTab } from '@modules/dashboard/components/DashboardOverviewTab';
 import { logError } from '@shared/lib/logger';
 import { AlertsWidget } from '@modules/dashboard/components/AlertsWidget';
 import { TopEmployees } from '@modules/dashboard/components/TopEmployees';
@@ -42,6 +59,13 @@ import {
   type EmpDetail,
 } from '@modules/dashboard/hooks/useDashboard';
 import { AttendanceChart } from '@modules/dashboard/components/AttendanceChart';
+
+const loadDashboardAnalyticsTab = () =>
+  import('@modules/dashboard/components/DashboardAnalyticsTab').then((module) => ({
+    default: module.DashboardAnalyticsTab,
+  }));
+
+const LazyDashboardAnalyticsTab = lazy(loadDashboardAnalyticsTab);
 
 
 
@@ -253,7 +277,8 @@ const DASHBOARD_SHORTCUTS = [
   { to: '/fuel', label: 'الوقود' },
 ] as const;
 
-const DashboardHeader = ({
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const LegacyDashboardHeader = ({
   activeTab,
   onTabChange,
 }: {
@@ -426,7 +451,8 @@ const buildRiderMetrics = (riderData: Record<string, number[]>, empMap: Record<s
     });
 };
 
-const AnalyticsTab = () => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const LegacyAnalyticsTab = () => {
   const { enabled, userId } = useAuthQueryGate();
   const uid = authQueryUserId(userId);
   const daysInMonth = getDaysInMonth(new Date());
@@ -963,7 +989,8 @@ type OverviewTabProps = {
   }>;
 };
 
-const OverviewTab = ({
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const LegacyOverviewTab = ({
   loading,
   monthYear: _monthYear,
   kpis,
@@ -1011,6 +1038,17 @@ const OverviewTab = ({
   );
 };
 
+function DashboardAnalyticsFallback() {
+  return (
+    <div className="flex items-center justify-center h-64">
+      <div className="text-center space-y-3">
+        <BarChart2 size={40} className="mx-auto text-primary animate-pulse" />
+        <p className="text-muted-foreground text-sm">جارٍ تحميل التحليلات...</p>
+      </div>
+    </div>
+  );
+}
+
 const Dashboard = () => {
   const { user } = useAuth();
   const { enabled, userId } = useAuthQueryGate();
@@ -1048,16 +1086,32 @@ const Dashboard = () => {
     useRealtimeInvalidation: useDashboardRealtimeInvalidation,
   });
 
+  const handleTabChange = (tab: DashboardTabKey) => {
+    if (tab === 'analytics') {
+      void loadDashboardAnalyticsTab();
+    }
+
+    startTransition(() => {
+      setActiveTab(tab);
+    });
+  };
 
 
   return (
     <div className="space-y-5">
-      <DashboardHeader
+      <DashboardHeaderSection
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
+        onAnalyticsIntent={() => {
+          void loadDashboardAnalyticsTab();
+        }}
       />
 
-      {activeTab === 'analytics' && <AnalyticsTab />}
+      {activeTab === 'analytics' ? (
+        <Suspense fallback={<DashboardAnalyticsFallback />}>
+          <LazyDashboardAnalyticsTab />
+        </Suspense>
+      ) : null}
       {activeTab === 'overview' && isError && (
         <QueryErrorRetry
           error={error}
@@ -1068,9 +1122,8 @@ const Dashboard = () => {
         />
       )}
       {activeTab === 'overview' && !isError && (
-        <OverviewTab
+        <DashboardOverviewTab
           loading={loading}
-          monthYear={currentMonth}
           kpis={kpis}
           orderGrowth={orderGrowth}
           ordersByApp={ordersByApp}

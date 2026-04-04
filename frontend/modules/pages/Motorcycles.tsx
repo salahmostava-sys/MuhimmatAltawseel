@@ -1,14 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { Search, Plus, FolderOpen, Edit, Trash2, Bike } from 'lucide-react';
 import { Input } from '@shared/components/ui/input';
 import { Button } from '@shared/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@shared/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select';
-import { Switch } from '@shared/components/ui/switch';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@shared/components/ui/dropdown-menu';
 import { vehicleService, VEHICLES_QUERY_MAX_ROWS } from '@services/vehicleService';
 import { useToast } from '@shared/hooks/use-toast';
-import * as XLSX from '@e965/xlsx';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import { usePermissions } from '@shared/hooks/usePermissions';
 import { Skeleton } from '@shared/components/ui/skeleton';
@@ -16,27 +13,30 @@ import { useMotorcyclesData } from '@shared/hooks/useMotorcyclesData';
 import { printHtmlTable } from '@shared/lib/printTable';
 import { MOTORCYCLE_IO_COLUMNS } from '@shared/constants/excelSchemas';
 import { logError } from '@shared/lib/logger';
+import type { Vehicle, VehicleStatus } from '@modules/pages/motorcycles.shared';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type VehicleStatus = 'active' | 'maintenance' | 'breakdown' | 'rental' | 'ended' | 'inactive';
+let xlsxLoader: Promise<typeof import('@e965/xlsx')> | null = null;
 
-type Vehicle = {
-  id: string;
-  plate_number: string;
-  plate_number_en?: string | null;
-  type: 'motorcycle' | 'car';
-  brand: string | null;
-  model: string | null;
-  year: number | null;
-  status: VehicleStatus;
-  has_fuel_chip: boolean;
-  insurance_expiry: string | null;
-  registration_expiry: string | null;
-  authorization_expiry: string | null;
-  chassis_number?: string | null;
-  serial_number?: string | null;
-  notes: string | null;
-  current_rider?: string | null; // name from active vehicle_assignment
+const loadXlsx = () => {
+  if (!xlsxLoader) {
+    xlsxLoader = import('@e965/xlsx');
+  }
+  return xlsxLoader;
+};
+
+const loadVehicleFormModal = () => import('@modules/pages/MotorcyclesVehicleFormModal');
+
+const LazyVehicleFormModal = lazy(() =>
+  loadVehicleFormModal().then((module) => ({ default: module.VehicleFormModal })),
+);
+
+const prefetchVehicleFormModal = () => {
+  void loadVehicleFormModal();
+};
+
+const prefetchXlsx = () => {
+  void loadXlsx();
 };
 
 const statusLabels: Record<string, string> = {
@@ -93,171 +93,6 @@ const _authBadge = (date: string | null) => {
   return <span className="badge-success">ساري</span>;
 };
 
-// ─── Vehicle Form Modal ───────────────────────────────────────────────────────
-const VehicleFormModal = ({
-  open, onClose, onSaved, editVehicle,
-}: {
-  open: boolean; onClose: () => void; onSaved: () => void; editVehicle?: Vehicle | null;
-}) => {
-  const { toast } = useToast();
-  const [saving, setSaving] = useState(false);
-  let saveButtonLabel = 'إضافة المركبة';
-  if (saving) saveButtonLabel = 'جاري الحفظ...';
-  else if (editVehicle) saveButtonLabel = 'حفظ التعديلات';
-  const [form, setForm] = useState({
-    plate_number: '', plate_number_en: '', type: 'motorcycle' as 'motorcycle' | 'car',
-    brand: '', model: '', year: '', status: 'active' as VehicleStatus,
-    has_fuel_chip: false,
-    insurance_expiry: '', registration_expiry: '', authorization_expiry: '',
-    chassis_number: '', serial_number: '', notes: '',
-  });
-
-  useEffect(() => {
-    if (editVehicle) {
-      setForm({
-        plate_number: editVehicle.plate_number,
-        plate_number_en: editVehicle.plate_number_en || '',
-        type: editVehicle.type,
-        brand: editVehicle.brand || '', model: editVehicle.model || '',
-        year: editVehicle.year?.toString() || '', status: editVehicle.status,
-        has_fuel_chip: editVehicle.has_fuel_chip ?? false,
-        insurance_expiry: editVehicle.insurance_expiry || '',
-        registration_expiry: editVehicle.registration_expiry || '',
-        authorization_expiry: editVehicle.authorization_expiry || '',
-        chassis_number: editVehicle.chassis_number || '',
-        serial_number: editVehicle.serial_number || '',
-        notes: editVehicle.notes || '',
-      });
-    } else {
-      setForm({ plate_number: '', plate_number_en: '', type: 'motorcycle', brand: '', model: '', year: '', status: 'active', has_fuel_chip: false, insurance_expiry: '', registration_expiry: '', authorization_expiry: '', chassis_number: '', serial_number: '', notes: '' });
-    }
-  }, [editVehicle, open]);
-
-  const handleSave = async () => {
-    if (!form.plate_number.trim()) return toast({ title: 'يرجى إدخال رقم اللوحة', variant: 'destructive' });
-    setSaving(true);
-    try {
-      const payload = {
-        plate_number: form.plate_number.trim(),
-        plate_number_en: form.plate_number_en.trim() || null,
-        type: form.type,
-        brand: form.brand || null, model: form.model || null,
-        year: form.year ? Number.parseInt(form.year) : null, status: form.status,
-        has_fuel_chip: form.has_fuel_chip,
-        insurance_expiry: form.insurance_expiry || null,
-        registration_expiry: form.registration_expiry || null,
-        authorization_expiry: form.authorization_expiry || null,
-        chassis_number: form.chassis_number.trim() || null,
-        serial_number: form.serial_number.trim() || null,
-        notes: form.notes || null,
-      };
-      if (editVehicle) {
-        await vehicleService.update(editVehicle.id, payload);
-      } else {
-        await vehicleService.create(payload);
-      }
-      toast({ title: editVehicle ? 'تم تحديث المركبة' : 'تم إضافة المركبة بنجاح' });
-      onSaved(); onClose();
-    } catch (e) {
-      logError('[Motorcycles] action failed', e);
-      const message = e instanceof Error ? e.message : 'حدث خطأ غير متوقع';
-      toast({ title: 'حدث خطأ', description: message, variant: 'destructive' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-lg" dir="rtl">
-        <DialogHeader>
-          <DialogTitle>{editVehicle ? 'تعديل بيانات المركبة' : 'إضافة مركبة جديدة'}</DialogTitle>
-        </DialogHeader>
-        <div className="grid grid-cols-2 gap-3 max-h-[70vh] overflow-y-auto pr-1">
-          <div>
-            <label htmlFor="vehicle-plate-ar" className="text-sm font-medium mb-1 block">رقم اللوحة (عربي) *</label>
-            <Input id="vehicle-plate-ar" value={form.plate_number} onChange={e => setForm(p => ({ ...p, plate_number: e.target.value }))} placeholder="مثال: أ ب ج 1234" />
-          </div>
-          <div>
-            <label htmlFor="vehicle-plate-en" className="text-sm font-medium mb-1 block">رقم اللوحة (إنجليزي)</label>
-            <Input id="vehicle-plate-en" value={form.plate_number_en} onChange={e => setForm(p => ({ ...p, plate_number_en: e.target.value }))} placeholder="AD 2469" dir="ltr" />
-          </div>
-          <div>
-            <label htmlFor="vehicle-type" className="text-sm font-medium mb-1 block">النوع</label>
-            <Select value={form.type} onValueChange={v => setForm(p => ({ ...p, type: v as 'motorcycle' | 'car' }))}>
-              <SelectTrigger id="vehicle-type"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="motorcycle">موتوسيكل</SelectItem>
-                <SelectItem value="car">سيارة</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label htmlFor="vehicle-status" className="text-sm font-medium mb-1 block">الحالة</label>
-            <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v as VehicleStatus }))}>
-              <SelectTrigger id="vehicle-status"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {ALL_STATUSES.map(s => <SelectItem key={s} value={s}>{statusLabels[s]}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label htmlFor="vehicle-brand" className="text-sm font-medium mb-1 block">الماركة</label>
-            <Input id="vehicle-brand" value={form.brand} onChange={e => setForm(p => ({ ...p, brand: e.target.value }))} placeholder="Honda, Yamaha..." />
-          </div>
-          <div>
-            <label htmlFor="vehicle-model" className="text-sm font-medium mb-1 block">الموديل</label>
-            <Input id="vehicle-model" value={form.model} onChange={e => setForm(p => ({ ...p, model: e.target.value }))} placeholder="CG125, R15..." />
-          </div>
-          <div>
-            <label htmlFor="vehicle-year" className="text-sm font-medium mb-1 block">سنة الصنع</label>
-            <Input id="vehicle-year" type="number" value={form.year} onChange={e => setForm(p => ({ ...p, year: e.target.value }))} placeholder="2022" />
-          </div>
-          <div>
-            <label htmlFor="vehicle-serial" className="text-sm font-medium mb-1 block">الرقم التسلسلي</label>
-            <Input id="vehicle-serial" value={form.serial_number} onChange={e => setForm(p => ({ ...p, serial_number: e.target.value }))} placeholder="333974020" dir="ltr" />
-          </div>
-          <div className="col-span-2">
-            <label htmlFor="vehicle-chassis" className="text-sm font-medium mb-1 block">رقم الهيكل</label>
-            <Input id="vehicle-chassis" value={form.chassis_number} onChange={e => setForm(p => ({ ...p, chassis_number: e.target.value }))} placeholder="ME4KC20F1NA014818" dir="ltr" />
-          </div>
-          <div>
-            <label htmlFor="vehicle-insurance-expiry" className="text-sm font-medium mb-1 block">انتهاء التأمين</label>
-            <Input id="vehicle-insurance-expiry" type="date" value={form.insurance_expiry} onChange={e => setForm(p => ({ ...p, insurance_expiry: e.target.value }))} />
-          </div>
-          <div>
-            <label htmlFor="vehicle-registration-expiry" className="text-sm font-medium mb-1 block">انتهاء التسجيل</label>
-            <Input id="vehicle-registration-expiry" type="date" value={form.registration_expiry} onChange={e => setForm(p => ({ ...p, registration_expiry: e.target.value }))} />
-          </div>
-          <div>
-            <label htmlFor="vehicle-authorization-expiry" className="text-sm font-medium mb-1 block">انتهاء التفويض</label>
-            <Input id="vehicle-authorization-expiry" type="date" value={form.authorization_expiry} onChange={e => setForm(p => ({ ...p, authorization_expiry: e.target.value }))} />
-          </div>
-          <div className="col-span-2 flex items-center gap-3 bg-muted/40 rounded-lg px-3 py-2.5">
-            <span className="text-lg">⛽</span>
-            <span className="text-sm font-medium flex-1">شريحة البنزين</span>
-            <Switch
-              checked={form.has_fuel_chip}
-              onCheckedChange={(checked) => setForm(p => ({ ...p, has_fuel_chip: checked }))}
-              aria-label="تبديل شريحة البنزين"
-            />
-            <span className={`text-xs font-semibold ${form.has_fuel_chip ? 'text-primary' : 'text-muted-foreground'}`}>
-              {form.has_fuel_chip ? 'يوجد' : 'لا يوجد'}
-            </span>
-          </div>
-          <div className="col-span-2">
-            <label htmlFor="vehicle-notes" className="text-sm font-medium mb-1 block">ملاحظات</label>
-            <Input id="vehicle-notes" value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="أي ملاحظات إضافية..." />
-          </div>
-        </div>
-        <DialogFooter className="mt-4 gap-2">
-          <Button variant="outline" onClick={onClose}>إلغاء</Button>
-          <Button onClick={handleSave} disabled={saving}>{saveButtonLabel}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
 
 // ─── Skeleton Row ─────────────────────────────────────────────────────────────
 const SkeletonRow = () => (
@@ -429,6 +264,20 @@ const Motorcycles = () => {
 
   const importRef = useRef<HTMLInputElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
+  const closeForm = () => {
+    setShowForm(false);
+    setEditVehicle(null);
+  };
+  const openCreateForm = () => {
+    prefetchVehicleFormModal();
+    setEditVehicle(null);
+    setShowForm(true);
+  };
+  const openEditForm = (vehicle: Vehicle) => {
+    prefetchVehicleFormModal();
+    setEditVehicle(vehicle);
+    setShowForm(true);
+  };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -436,6 +285,7 @@ const Motorcycles = () => {
     setFileIoHint(null);
     void (async () => {
       try {
+        const XLSX = await loadXlsx();
         const bytes = new Uint8Array(await file.arrayBuffer());
         const wb = XLSX.read(bytes, { type: 'array' });
         const ws = wb.Sheets[wb.SheetNames[0]];
@@ -496,7 +346,8 @@ const Motorcycles = () => {
     e.target.value = '';
   };
 
-  const handleTemplate = () => {
+  const handleTemplate = async () => {
+    const XLSX = await loadXlsx();
     const ws = XLSX.utils.aoa_to_sheet([VEHICLE_TEMPLATE_HEADERS.slice()]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'vehicles');
@@ -553,7 +404,8 @@ const Motorcycles = () => {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    const XLSX = await loadXlsx();
     const rows = filtered.map((v) => MOTORCYCLE_IO_COLUMNS.map((col) => exportCell(v, col.key)));
     const ws = XLSX.utils.aoa_to_sheet([VEHICLE_TEMPLATE_HEADERS, ...rows]);
     const wb = XLSX.utils.book_new();
@@ -599,13 +451,19 @@ const Motorcycles = () => {
           <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5 h-9"><FolderOpen size={14} /> ملفات</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-9"
+                onMouseEnter={prefetchXlsx}
+                onFocus={prefetchXlsx}
+              ><FolderOpen size={14} /> ملفات</Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleExport}>📊 تصدير Excel</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleTemplate}>📋 تحميل قالب الاستيراد</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { void handleExport(); }}>📊 تصدير Excel</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { void handleTemplate(); }}>📋 تحميل قالب الاستيراد</DropdownMenuItem>
               {permissions.can_edit && (
-                <DropdownMenuItem onClick={() => importRef.current?.click()}>
+                <DropdownMenuItem onClick={() => { prefetchXlsx(); importRef.current?.click(); }}>
                   ⬆️ استيراد Excel
                 </DropdownMenuItem>
               )}
@@ -614,7 +472,12 @@ const Motorcycles = () => {
             </DropdownMenuContent>
           </DropdownMenu>
           {permissions.can_edit && (
-            <Button className="gap-2" onClick={() => { setEditVehicle(null); setShowForm(true); }}>
+            <Button
+              className="gap-2"
+              onClick={openCreateForm}
+              onMouseEnter={prefetchVehicleFormModal}
+              onFocus={prefetchVehicleFormModal}
+            >
               <Plus size={16} /> إضافة مركبة
             </Button>
           )}
@@ -816,7 +679,9 @@ const Motorcycles = () => {
                       <div className="flex gap-1">
                         {permissions.can_edit && (
                           <button
-                            onClick={() => { setEditVehicle(v); setShowForm(true); }}
+                            onClick={() => openEditForm(v)}
+                            onMouseEnter={prefetchVehicleFormModal}
+                            onFocus={prefetchVehicleFormModal}
                             className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                             title="تعديل"
                           >
@@ -842,15 +707,20 @@ const Motorcycles = () => {
           </table>
         </div>
       </div>
-
-      <VehicleFormModal
-        open={showForm}
-        onClose={() => { setShowForm(false); setEditVehicle(null); }}
-        onSaved={() => { void refetchVehicles(); }}
-        editVehicle={editVehicle}
-      />
+      {showForm && (
+        <Suspense fallback={null}>
+          <LazyVehicleFormModal
+            open={showForm}
+            onClose={closeForm}
+            onSaved={() => { void refetchVehicles(); }}
+            editVehicle={editVehicle}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };
 
 export default Motorcycles;
+
+

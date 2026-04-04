@@ -1,5 +1,4 @@
 import { useMemo, useRef, useState, useCallback, type ChangeEvent } from 'react';
-import * as XLSX from '@e965/xlsx';
 import { format } from 'date-fns';
 import { applyFilters } from '@shared/lib/filterUtils';
 import type { FilterState } from '@shared/hooks/useAdvancedFilter';
@@ -10,6 +9,15 @@ import { ADVANCE_IO_COLUMNS } from '@shared/constants/excelSchemas';
 import { advanceService } from '@services/advanceService';
 import type { Advance, EmployeeSummary } from '@modules/advances/types/advance.types';
 import { calcPaid, calcPending } from '@modules/advances/types/advance.types';
+
+let xlsxLoader: Promise<typeof import('@e965/xlsx')> | null = null;
+
+const loadXlsx = () => {
+  if (!xlsxLoader) {
+    xlsxLoader = import('@e965/xlsx');
+  }
+  return xlsxLoader;
+};
 
 export function useAdvanceTable(
   advances: Advance[],
@@ -121,6 +129,7 @@ export function useAdvanceTable(
     const file = e.target.files?.[0];
     if (!file) return;
     void (async () => {
+      const XLSX = await loadXlsx();
       const bytes = new Uint8Array(await file.arrayBuffer());
       const wb = XLSX.read(bytes, { type: 'array' });
       const ws = wb.Sheets[wb.SheetNames[0]];
@@ -170,7 +179,8 @@ export function useAdvanceTable(
     e.target.value = '';
   }, [employees, toast, fetchAll]);
 
-  const handleExport = useCallback(() => {
+  const handleExport = useCallback(async () => {
+    const XLSX = await loadXlsx();
     const filteredEmployeeIds = new Set(filtered.map((s) => s.employeeId));
     const exportedAdvances = advances.filter((adv) => filteredEmployeeIds.has(adv.employee_id));
     const headerRow = ADVANCE_IO_COLUMNS.map((c) => c.label);
@@ -190,7 +200,8 @@ export function useAdvanceTable(
     XLSX.writeFile(wb, `السلف_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
   }, [filtered, advances]);
 
-  const handleTemplate = useCallback(() => {
+  const handleTemplate = useCallback(async () => {
+    const XLSX = await loadXlsx();
     const ws = XLSX.utils.aoa_to_sheet([ADVANCE_IO_COLUMNS.map((c) => c.label)]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'قالب السلف');

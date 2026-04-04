@@ -12,6 +12,7 @@ import SchemesContent from './settings-hub/SchemesContent';
 import ActivityLogContent from './settings-hub/ActivityLogContent';
 import CompanySettingsContent from './settings-hub/CompanySettingsContent';
 import ProfileSettingsContent from './settings-hub/ProfileSettingsContent';
+import SettingsHubOptimized from './SettingsHubOptimized';
 
 type TabKey = 'general' | 'company' | 'users' | 'schemes' | 'activity' | 'profile';
 
@@ -40,7 +41,8 @@ const TAB_TITLES: Record<TabKey, { ar: string; en: string }> = {
   'profile':  { ar: 'الملف الشخصي',               en: 'My Profile'           },
 };
 
-export default function SettingsHub() {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function SettingsHubLegacy() {
   const { isRTL } = useLanguage();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -184,3 +186,5 @@ export default function SettingsHub() {
     </div>
   );
 }
+
+export default SettingsHubOptimized;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { CreditCard, FolderOpen, UserPlus, AlertTriangle } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@shared/components/ui/dropdown-menu';
@@ -14,14 +14,30 @@ import type { Advance } from '@modules/advances/types/advance.types';
 import { useAdvanceTable } from '@modules/advances/hooks/useAdvanceTable';
 import { AdvanceFilters } from '@modules/advances/components/AdvanceFilters';
 import { AdvanceTable } from '@modules/advances/components/AdvanceTable';
-import {
-  EditAdvanceModal,
-  TransactionsModal,
-  WriteOffDialog,
-  RestoreWriteOffDialog,
-  AddEmployeeAdvanceDialog,
-  DeleteAllEmployeeAdvancesDialog,
-} from '@modules/advances/components/AddAdvanceModal';
+const loadAdvanceDialogs = () => import('@modules/advances/components/AddAdvanceModal');
+
+const EditAdvanceModal = lazy(() =>
+  loadAdvanceDialogs().then((module) => ({ default: module.EditAdvanceModal }))
+);
+const TransactionsModal = lazy(() =>
+  loadAdvanceDialogs().then((module) => ({ default: module.TransactionsModal }))
+);
+const WriteOffDialog = lazy(() =>
+  loadAdvanceDialogs().then((module) => ({ default: module.WriteOffDialog }))
+);
+const RestoreWriteOffDialog = lazy(() =>
+  loadAdvanceDialogs().then((module) => ({ default: module.RestoreWriteOffDialog }))
+);
+const AddEmployeeAdvanceDialog = lazy(() =>
+  loadAdvanceDialogs().then((module) => ({ default: module.AddEmployeeAdvanceDialog }))
+);
+const DeleteAllEmployeeAdvancesDialog = lazy(() =>
+  loadAdvanceDialogs().then((module) => ({ default: module.DeleteAllEmployeeAdvancesDialog }))
+);
+
+const prefetchAdvanceDialogs = () => {
+  void loadAdvanceDialogs();
+};
 const Advances = () => {
   const { toast } = useToast();
   const { enabled, userId } = useAuthQueryGate();
@@ -133,7 +149,16 @@ const Advances = () => {
             </DropdownMenuContent>
           </DropdownMenu>
           {permissions.can_edit && !showWrittenOff && (
-            <Button size="sm" className="gap-2 h-8" onClick={() => setShowAddEmployee(true)}>
+            <Button
+              size="sm"
+              className="gap-2 h-8"
+              onClick={() => {
+                prefetchAdvanceDialogs();
+                setShowAddEmployee(true);
+              }}
+              onFocus={prefetchAdvanceDialogs}
+              onMouseEnter={prefetchAdvanceDialogs}
+            >
               <UserPlus size={14} /> مندوب جديد
             </Button>
           )}
@@ -184,11 +209,14 @@ const Advances = () => {
                   size="sm"
                   variant="destructive"
                   className="h-7 text-xs gap-1"
-                  onClick={() => setWriteOffEmployee({
-                    name: emp.name,
-                    remaining: emp.remaining,
-                    advanceIds: emp.activeIds,
-                  })}
+                  onClick={() => {
+                    prefetchAdvanceDialogs();
+                    setWriteOffEmployee({
+                      name: emp.name,
+                      remaining: emp.remaining,
+                      advanceIds: emp.activeIds,
+                    });
+                  }}
                 >
                   <AlertTriangle size={12} /> إعدام الديون
                 </Button>
@@ -211,88 +239,100 @@ const Advances = () => {
         setFilter={setFilter}
         resetFilters={resetFilters}
         activeCount={activeCount}
-        setTransactionsEmployee={setTransactionsEmployee}
-        setDeleteEmployeeAdvancesId={setDeleteEmployeeAdvancesId}
-      />
-
-      {editAdvance && (
-        <EditAdvanceModal advance={editAdvance} onClose={() => setEditAdvance(null)} onSaved={fetchAll} />
-      )}
-
-      {transactionsEmployee && (
-        <TransactionsModal
-          employeeId={transactionsEmployee.id}
-          employeeName={transactionsEmployee.name}
-          nationalId={transactionsEmployee.nationalId}
-          totalDebt={transactionsEmployee.totalDebt}
-          totalPaid={transactionsEmployee.totalPaid}
-          remaining={transactionsEmployee.remaining}
-          advances={advances}
-          allAdvances={advances}
-          isWrittenOff={transactionsEmployee.isWrittenOff}
-          canEdit={permissions.can_edit}
-          onClose={() => setTransactionsEmployee(null)}
-          onRefresh={fetchAll}
-          onEditAdvance={(adv) => { setTransactionsEmployee(null); setEditAdvance(adv); }}
-          onWriteOff={() => {
-            const s = filtered.find(x => x.employeeId === transactionsEmployee.id);
-            if (s) setWriteOffEmployee({ name: s.employeeName, remaining: s.remaining, advanceIds: s.allAdvances.map(a => a.id) });
-            setTransactionsEmployee(null);
-          }}
-          onRestore={() => {
-            const s = filtered.find(x => x.employeeId === transactionsEmployee.id);
-            if (s) setRestoreWriteOffEmployee({ name: s.employeeName, advanceIds: s.allAdvances.map(a => a.id) });
-            setTransactionsEmployee(null);
-          }}
-        />
-      )}
-
-      {writeOffEmployee && (
-        <WriteOffDialog
-          employeeName={writeOffEmployee.name}
-          remaining={writeOffEmployee.remaining}
-          advanceIds={writeOffEmployee.advanceIds}
-          onClose={() => setWriteOffEmployee(null)}
-          onDone={fetchAll}
-        />
-      )}
-
-      {restoreWriteOffEmployee && (
-        <RestoreWriteOffDialog
-          employeeName={restoreWriteOffEmployee.name}
-          advanceIds={restoreWriteOffEmployee.advanceIds}
-          onClose={() => setRestoreWriteOffEmployee(null)}
-          onDone={fetchAll}
-        />
-      )}
-
-      <AddEmployeeAdvanceDialog
-        open={showAddEmployee}
-        onOpenChange={(v) => { if (!v) setShowAddEmployee(false); }}
-        addEmployeePickerOpen={addEmployeePickerOpen}
-        setAddEmployeePickerOpen={setAddEmployeePickerOpen}
-        employees={employees}
-        employeeSummaries={employeeSummaries}
-        onPickEmployee={(e) => {
-                                setTransactionsEmployee({
-                                  id: e.id,
-                                  name: e.name,
-                                  nationalId: '',
-                                  totalDebt: 0,
-                                  totalPaid: 0,
-                                  remaining: 0,
-                                  isWrittenOff: false,
-                                  allAdvances: [],
-                                });
+        setTransactionsEmployee={(value) => {
+          prefetchAdvanceDialogs();
+          setTransactionsEmployee(value);
+        }}
+        setDeleteEmployeeAdvancesId={(value) => {
+          if (value) prefetchAdvanceDialogs();
+          setDeleteEmployeeAdvancesId(value);
         }}
       />
 
-      <DeleteAllEmployeeAdvancesDialog
-        open={!!deleteEmployeeAdvancesId}
-        onOpenChange={(v) => { if (!v) setDeleteEmployeeAdvancesId(null); }}
-        deleting={deletingEmployeeAdvances}
-        onConfirm={handleDeleteEmployeeAllAdvances}
-      />
+      <Suspense fallback={null}>
+        {editAdvance && (
+          <EditAdvanceModal advance={editAdvance} onClose={() => setEditAdvance(null)} onSaved={fetchAll} />
+        )}
+
+        {transactionsEmployee && (
+          <TransactionsModal
+            employeeId={transactionsEmployee.id}
+            employeeName={transactionsEmployee.name}
+            nationalId={transactionsEmployee.nationalId}
+            totalDebt={transactionsEmployee.totalDebt}
+            totalPaid={transactionsEmployee.totalPaid}
+            remaining={transactionsEmployee.remaining}
+            advances={advances}
+            allAdvances={advances}
+            isWrittenOff={transactionsEmployee.isWrittenOff}
+            canEdit={permissions.can_edit}
+            onClose={() => setTransactionsEmployee(null)}
+            onRefresh={fetchAll}
+            onEditAdvance={(adv) => { setTransactionsEmployee(null); setEditAdvance(adv); }}
+            onWriteOff={() => {
+              const s = filtered.find(x => x.employeeId === transactionsEmployee.id);
+              if (s) setWriteOffEmployee({ name: s.employeeName, remaining: s.remaining, advanceIds: s.allAdvances.map(a => a.id) });
+              setTransactionsEmployee(null);
+            }}
+            onRestore={() => {
+              const s = filtered.find(x => x.employeeId === transactionsEmployee.id);
+              if (s) setRestoreWriteOffEmployee({ name: s.employeeName, advanceIds: s.allAdvances.map(a => a.id) });
+              setTransactionsEmployee(null);
+            }}
+          />
+        )}
+
+        {writeOffEmployee && (
+          <WriteOffDialog
+            employeeName={writeOffEmployee.name}
+            remaining={writeOffEmployee.remaining}
+            advanceIds={writeOffEmployee.advanceIds}
+            onClose={() => setWriteOffEmployee(null)}
+            onDone={fetchAll}
+          />
+        )}
+
+        {restoreWriteOffEmployee && (
+          <RestoreWriteOffDialog
+            employeeName={restoreWriteOffEmployee.name}
+            advanceIds={restoreWriteOffEmployee.advanceIds}
+            onClose={() => setRestoreWriteOffEmployee(null)}
+            onDone={fetchAll}
+          />
+        )}
+
+        {showAddEmployee && (
+          <AddEmployeeAdvanceDialog
+            open={showAddEmployee}
+            onOpenChange={(v) => { if (!v) setShowAddEmployee(false); }}
+            addEmployeePickerOpen={addEmployeePickerOpen}
+            setAddEmployeePickerOpen={setAddEmployeePickerOpen}
+            employees={employees}
+            employeeSummaries={employeeSummaries}
+            onPickEmployee={(e) => {
+              setTransactionsEmployee({
+                id: e.id,
+                name: e.name,
+                nationalId: '',
+                totalDebt: 0,
+                totalPaid: 0,
+                remaining: 0,
+                isWrittenOff: false,
+                allAdvances: [],
+              });
+            }}
+          />
+        )}
+
+        {!!deleteEmployeeAdvancesId && (
+          <DeleteAllEmployeeAdvancesDialog
+            open={!!deleteEmployeeAdvancesId}
+            onOpenChange={(v) => { if (!v) setDeleteEmployeeAdvancesId(null); }}
+            deleting={deletingEmployeeAdvances}
+            onConfirm={handleDeleteEmployeeAllAdvances}
+          />
+        )}
+      </Suspense>
     </div>
   );
 };
