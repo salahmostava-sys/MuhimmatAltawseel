@@ -1,5 +1,6 @@
 import { Edit2, Plus, Power, PowerOff, Trash2 } from 'lucide-react';
 import type { AppData } from '@modules/apps/types';
+import { getWorkTypeLabel } from '@shared/lib/workType';
 
 interface AppCardProps {
   app: AppData;
@@ -79,6 +80,14 @@ export const AppCard = ({
         <h3 className="truncate text-sm font-bold" style={{ color: app.text_color }}>
           {app.name}
         </h3>
+        <div className="mt-1 flex justify-center">
+          <span
+            className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+            style={{ backgroundColor: 'rgba(255,255,255,0.18)', color: app.text_color }}
+          >
+            {getWorkTypeLabel(app.work_type)}
+          </span>
+        </div>
 
         <div className="mt-3 space-y-1">
           <div className="flex items-center justify-between text-[11px]">

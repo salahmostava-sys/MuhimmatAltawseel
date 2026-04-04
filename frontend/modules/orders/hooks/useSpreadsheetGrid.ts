@@ -250,6 +250,7 @@ export function useSpreadsheetGrid() {
       dayArr,
       employees: sq.employees,
       apps: sq.apps,
+      appEmployeeIds: sq.appEmployeeIds,
       data,
       onApplyData: setData,
       targetAppId,

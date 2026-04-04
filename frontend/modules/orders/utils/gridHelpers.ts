@@ -25,9 +25,23 @@ export const buildDailyDataMap = (rows: OrderRawRow[]): DailyData => {
   const mapped: DailyData = {};
   rows.forEach((row) => {
     const day = new Date(`${row.date}T00:00:00`).getDate();
-    mapped[`${row.employee_id}::${row.app_id}::${day}`] = row.orders_count;
+    const key = `${row.employee_id}::${row.app_id}::${day}`;
+    mapped[key] = (mapped[key] ?? 0) + (row.orders_count ?? 0);
   });
   return mapped;
+};
+
+export const filterDailyDataByAppIds = (data: DailyData, appIds: ReadonlySet<string>): DailyData => {
+  if (appIds.size === 0) return {};
+
+  const filtered: DailyData = {};
+  Object.entries(data).forEach(([key, value]) => {
+    const [, appId] = key.split('::');
+    if (appId && appIds.has(appId)) {
+      filtered[key] = value;
+    }
+  });
+  return filtered;
 };
 
 export const calculatePlatformTotals = (

@@ -26,8 +26,9 @@ export function useOrdersMonthPaged(params: {
   page: number;
   pageSize: number;
   filters: OrdersPagedFilters;
+  enabled?: boolean;
 }) {
-  const { monthYear, page, pageSize, filters } = params;
+  const { monthYear, page, pageSize, filters, enabled = true } = params;
   const driverId = filters.driverId && filters.driverId !== 'all' ? filters.driverId : undefined;
   const appIds =
     filters.platformAppIds && filters.platformAppIds.length > 0 ? filters.platformAppIds : undefined;
@@ -35,6 +36,7 @@ export function useOrdersMonthPaged(params: {
   const search = filters.search?.trim() ? filters.search.trim() : undefined;
 
   return useAuthedPagedQuery<PagedResult<OrdersMonthPagedRow>>({
+    enabled,
     buildQueryKey: (uid) =>
       [
         'orders',

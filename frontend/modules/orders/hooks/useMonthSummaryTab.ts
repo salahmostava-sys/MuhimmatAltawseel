@@ -4,13 +4,14 @@ import { toast } from '@shared/components/ui/sonner';
 import { TOAST_ERROR_GENERIC, TOAST_SUCCESS_EDIT } from '@shared/lib/toastMessages';
 import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { usePermissions } from '@shared/hooks/usePermissions';
+import { isOrderCapableApp } from '@shared/lib/workType';
 import { defaultQueryRetry } from '@shared/lib/query';
 import { orderService } from '@services/orderService';
 import { filterRetainedEmployeesForMonth, filterVisibleEmployeesInMonth } from '@shared/lib/employeeVisibility';
 import { useMonthlyActiveEmployeeIds } from '@shared/hooks/useMonthlyActiveEmployeeIds';
 import type { App, AppTargetRow, DailyData, Employee, OrderRawRow } from '@modules/orders/types';
 import type { OrdersEmployeeSortField } from '@modules/orders/types';
-import { buildDailyDataMap, getOrdersEmployeeSortPair } from '@modules/orders/utils/gridHelpers';
+import { buildDailyDataMap, filterDailyDataByAppIds, getOrdersEmployeeSortPair } from '@modules/orders/utils/gridHelpers';
 import { getDaysInMonth, monthYear } from '@modules/orders/utils/dateMonth';
 import { ordersQueryKeys } from '@modules/orders/hooks/ordersQueryKeys';
 
@@ -57,7 +58,7 @@ export function useMonthSummaryTab() {
     },
     select: (base) => ({
       employees: base.employees,
-      apps: base.apps,
+      apps: base.apps.filter(isOrderCapableApp),
     }),
     retry: defaultQueryRetry,
     staleTime: 60_000,
@@ -84,7 +85,7 @@ export function useMonthSummaryTab() {
   });
 
   const {
-    data: summaryMonthData = {},
+    data: summaryMonthRawData = {},
     error: summaryMonthError,
     isLoading: summaryMonthLoading,
   } = useQuery({
@@ -110,6 +111,11 @@ export function useMonthSummaryTab() {
     [summaryBaseData, activeEmployeeIdsInMonth],
   );
   const apps = useMemo<App[]>(() => summaryBaseData?.apps ?? [], [summaryBaseData]);
+  const orderAppIds = useMemo(() => new Set(apps.map((app) => app.id)), [apps]);
+  const filteredMonthData = useMemo(
+    () => filterDailyDataByAppIds(summaryMonthRawData as DailyData, orderAppIds),
+    [orderAppIds, summaryMonthRawData],
+  );
 
   useEffect(() => {
     const t: Record<string, string> = {};
@@ -124,8 +130,8 @@ export function useMonthSummaryTab() {
   }, [summaryMonthMeta?.locked]);
 
   useEffect(() => {
-    setData(summaryMonthData);
-  }, [summaryMonthData]);
+    setData(filteredMonthData);
+  }, [filteredMonthData]);
 
   useEffect(() => {
     const error = summaryBaseError || summaryMonthMetaError || summaryMonthError;

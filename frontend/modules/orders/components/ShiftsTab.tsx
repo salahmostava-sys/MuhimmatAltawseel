@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@shared/components/ui/select';
 import { OrdersMonthNavigator } from '@shared/components/orders/OrdersMonthNavigator';
+import { isShiftCapableApp } from '@shared/lib/workType';
 import { monthLabel } from '@modules/orders/utils/dateMonth';
 import type { App, Employee } from '@modules/orders/types';
 
@@ -61,7 +62,7 @@ export function ShiftsTab({
   const [employeeFilter, setEmployeeFilter] = useState<string>('all');
   const [appFilter, setAppFilter] = useState<string>('all');
 
-  const shiftApps = useMemo(() => apps.filter((a) => a.work_type === 'shift' || a.work_type === 'hybrid'), [apps]);
+  const shiftApps = useMemo(() => apps.filter(isShiftCapableApp), [apps]);
 
   const filteredShifts = useMemo(() => {
     return localShifts.filter((s) => {

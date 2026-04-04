@@ -121,10 +121,19 @@ export const appService = {
   getActiveEmployeeAppsWithEmployees: async (appId: string) => {
     const { data, error } = await supabase
       .from('employee_apps')
-      .select('employee_id, employees!inner(id, name, national_id, phone, job_title, status, sponsorship_status)')
+      .select('app_id, employee_id, employees!inner(id, name, national_id, phone, job_title, status, sponsorship_status)')
       .eq('app_id', appId)
       .eq('status', 'active');
     if (error) handleSupabaseError(error, 'appService.getActiveEmployeeAppsWithEmployees');
+    return data ?? [];
+  },
+
+  getActiveAssignmentsWithEmployees: async () => {
+    const { data, error } = await supabase
+      .from('employee_apps')
+      .select('app_id, employee_id, employees!inner(id, name, national_id, phone, job_title, status, sponsorship_status)')
+      .eq('status', 'active');
+    if (error) handleSupabaseError(error, 'appService.getActiveAssignmentsWithEmployees');
     return data ?? [];
   },
 

@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from '@shared/components/ui/sonner';
 import { TOAST_ERROR_GENERIC, TOAST_SUCCESS_ACTION } from '@shared/lib/toastMessages';
 import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { defaultQueryRetry } from '@shared/lib/query';
+import { isOrderCapableApp } from '@shared/lib/workType';
 import { orderService } from '@services/orderService';
 import { filterRetainedEmployeesForMonth, filterVisibleEmployeesInMonth } from '@shared/lib/employeeVisibility';
 import { useMonthlyActiveEmployeeIds } from '@shared/hooks/useMonthlyActiveEmployeeIds';
@@ -49,13 +50,21 @@ export function useOrdersListTab() {
           ),
           activeEmployeeIdsInMonth,
         ) as unknown as Employee[],
-        apps: (apps || []) as App[],
+        apps: ((apps || []) as App[]).filter(isOrderCapableApp),
       };
     },
     enabled: enabled && !!activeIdsData,
     staleTime: 60_000,
     retry: defaultQueryRetry,
   });
+
+  const orderAppIds = useMemo(() => (baseData?.apps ?? []).map((app) => app.id), [baseData?.apps]);
+  const effectivePlatformAppIds = useMemo(() => {
+    if (orderAppIds.length === 0) return [];
+    if (filters.platformAppIds.length === 0) return orderAppIds;
+    const allowed = new Set(orderAppIds);
+    return filters.platformAppIds.filter((appId) => allowed.has(appId));
+  }, [filters.platformAppIds, orderAppIds]);
 
   useEffect(() => {
     setPage(1);
@@ -65,10 +74,11 @@ export function useOrdersListTab() {
     monthYear: monthKey,
     page,
     pageSize,
+    enabled: enabled && !!activeIdsData && !!baseData && orderAppIds.length > 0,
     filters: {
       branch: filters.branch,
       driverId: filters.driverId,
-      platformAppIds: filters.platformAppIds,
+      platformAppIds: effectivePlatformAppIds,
       search: filters.search,
     },
   });
@@ -84,7 +94,8 @@ export function useOrdersListTab() {
       const raw = await orderService.getMonthRaw(year, month);
       const empMap = Object.fromEntries((baseData?.employees ?? []).map((e) => [e.id, e]));
       const appMap = Object.fromEntries((baseData?.apps ?? []).map((a) => [a.id, a]));
-      const out = (raw || []).map((r) => ({
+      const allowedAppIds = new Set(Object.keys(appMap));
+      const out = (raw || []).filter((r) => allowedAppIds.has(r.app_id)).map((r) => ({
         التاريخ: r.date,
         المندوب: empMap[r.employee_id]?.name ?? r.employee_id,
         الفرع: toCityArabic(empMap[r.employee_id]?.city, ''),

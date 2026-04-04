@@ -12,9 +12,10 @@ import type { Json } from '@services/supabase/types';
 
 export const appsPageService = {
   getAppsOverview: async (monthYear: string): Promise<AppData[]> => {
-    const [apps, orderRows] = await Promise.all([
+    const [apps, orderRows, assignments] = await Promise.all([
       appService.getMonthlyApps(monthYear),
       dashboardService.getMonthOrders(monthYear),
+      appService.getActiveAssignmentsWithEmployees(),
     ]);
 
     return buildAppsOverview(
@@ -27,8 +28,10 @@ export const appsPageService = {
         is_active: boolean;
         is_active_this_month?: boolean;
         custom_columns?: Json | null;
+        work_type?: 'orders' | 'shift' | 'hybrid' | null;
       }>,
       orderRows as AppMonthlyOrderRow[],
+      assignments as AppEmployeeAssignmentRow[],
     );
   },
 

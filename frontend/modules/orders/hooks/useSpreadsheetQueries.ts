@@ -2,9 +2,10 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { orderService } from '@services/orderService';
 import { filterRetainedEmployeesForMonth, isEmployeeVisibleInMonth } from '@shared/lib/employeeVisibility';
+import { isOrderCapableApp } from '@shared/lib/workType';
 import { defaultQueryRetry } from '@shared/lib/query';
 import type { App, DailyData, Employee, EmployeeAppAssignmentRow, OrderRawRow } from '@modules/orders/types';
-import { buildAppEmployeeIdsMap, buildDailyDataMap } from '@modules/orders/utils/gridHelpers';
+import { buildAppEmployeeIdsMap, buildDailyDataMap, filterDailyDataByAppIds } from '@modules/orders/utils/gridHelpers';
 import { monthYear } from '@modules/orders/utils/dateMonth';
 import { ordersQueryKeys } from '@modules/orders/hooks/ordersQueryKeys';
 
@@ -36,11 +37,18 @@ export function useSpreadsheetQueries(
         employeeApps: (employeeApps || []) as EmployeeAppAssignmentRow[],
       };
     },
-    select: (base) => ({
-      employees: base.employees,
-      apps: base.apps,
-      appEmployeeIdsMap: buildAppEmployeeIdsMap(base.employeeApps),
-    }),
+    select: (base) => {
+      const apps = base.apps.filter(isOrderCapableApp);
+      const appIds = new Set(apps.map((app) => app.id));
+
+      return {
+        employees: base.employees,
+        apps,
+        appEmployeeIdsMap: buildAppEmployeeIdsMap(
+          base.employeeApps.filter((assignment) => appIds.has(assignment.app_id)),
+        ),
+      };
+    },
     retry: defaultQueryRetry,
     staleTime: 60_000,
     refetchOnWindowFocus: false,
@@ -48,7 +56,7 @@ export function useSpreadsheetQueries(
   });
 
   const {
-    data: spreadsheetMonthData = {},
+    data: spreadsheetMonthRawData = {},
     error: spreadsheetMonthError,
     isLoading: spreadsheetMonthLoading,
   } = useQuery({
@@ -82,9 +90,14 @@ export function useSpreadsheetQueries(
   const loading = spreadsheetBaseLoading || spreadsheetMonthLoading;
 
   const apps = useMemo<App[]>(() => spreadsheetBaseData?.apps ?? [], [spreadsheetBaseData]);
+  const orderAppIds = useMemo(() => new Set(apps.map((app) => app.id)), [apps]);
   const appEmployeeIds = useMemo(
     () => spreadsheetBaseData?.appEmployeeIdsMap ?? {},
     [spreadsheetBaseData],
+  );
+  const spreadsheetMonthData = useMemo(
+    () => filterDailyDataByAppIds(spreadsheetMonthRawData as DailyData, orderAppIds),
+    [orderAppIds, spreadsheetMonthRawData],
   );
   const employees = useMemo<Employee[]>(
     () => {
@@ -100,7 +113,7 @@ export function useSpreadsheetQueries(
     qk,
     spreadsheetBaseData,
     spreadsheetBaseError,
-    spreadsheetMonthData: spreadsheetMonthData as DailyData,
+    spreadsheetMonthData,
     spreadsheetMonthError,
     spreadsheetMonthLock,
     spreadsheetLockError,

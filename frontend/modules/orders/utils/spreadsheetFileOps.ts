@@ -9,6 +9,10 @@ import { orderService } from '@services/orderService';
 import type { App, DailyData, Employee } from '@modules/orders/types';
 import { ordersImportHeadersMatch } from '@modules/orders/utils/importHelpers';
 import { dateStr, monthLabel } from '@modules/orders/utils/dateMonth';
+import {
+  mergeImportedOrdersFromMatrixWithMapping,
+  type AppEmployeeIdsMap,
+} from '@modules/orders/utils/spreadsheetImportModel';
 import { loadXlsx } from '@modules/orders/utils/xlsx';
 import { matchEmployeeNames, type UnmatchedEmployeeName } from '@shared/lib/nameMatching';
 
@@ -64,12 +68,13 @@ export async function runSpreadsheetImport(params: {
   dayArr: number[];
   employees: Employee[];
   apps: App[];
+  appEmployeeIds: AppEmployeeIdsMap;
   data: DailyData;
   onApplyData: (next: DailyData) => void;
   targetAppId?: string;
   onShowNameMapping?: (unmatched: UnmatchedEmployeeName[], onConfirm: (mapping: Map<string, string>) => void) => void;
 }): Promise<SpreadsheetImportResult | null> {
-  const { file, dayArr, employees, apps, data, onApplyData, targetAppId, onShowNameMapping } = params;
+  const { file, dayArr, employees, apps, appEmployeeIds, data, onApplyData, targetAppId, onShowNameMapping } = params;
   try {
     // التحقق من نوع الملف
     if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
@@ -150,17 +155,19 @@ export async function runSpreadsheetImport(params: {
           nameMapping.forEach((id, name) => finalMapping.set(name, id));
 
           // استيراد البيانات مع المطابقات
-          const { newData, imported, skipped, errors } = mergeImportedOrdersFromMatrixWithMapping(
-            matrix.slice(1),
+          const { newData, imported, skipped, errors } = mergeImportedOrdersFromMatrixWithMapping({
+            matrixRows: matrix.slice(1),
             dayArr,
-            employees,
             apps,
-            data,
+            prev: data,
             targetAppId,
-            finalMapping
-          );
+            nameMapping: finalMapping,
+            appEmployeeIds,
+          });
           onApplyData(newData);
-          const appName = targetAppId ? apps.find((a) => a.id === targetAppId)?.name : 'جميع المنصات';
+          const appName = targetAppId
+            ? apps.find((a) => a.id === targetAppId)?.name
+            : 'التوزيع الذكي حسب تعيين الموظف';
           
           if (errors.length > 0) {
             toast.warning(`تم الاستيراد مع تحذيرات`, {
@@ -180,17 +187,19 @@ export async function runSpreadsheetImport(params: {
     const finalMapping = new Map<string, string>();
     matched.forEach((match, name) => finalMapping.set(name, match.id));
 
-    const { newData, imported, skipped, errors } = mergeImportedOrdersFromMatrixWithMapping(
-      matrix.slice(1),
+    const { newData, imported, skipped, errors } = mergeImportedOrdersFromMatrixWithMapping({
+      matrixRows: matrix.slice(1),
       dayArr,
-      employees,
       apps,
-      data,
+      prev: data,
       targetAppId,
-      finalMapping
-    );
+      nameMapping: finalMapping,
+      appEmployeeIds,
+    });
     onApplyData(newData);
-    const appName = targetAppId ? apps.find((a) => a.id === targetAppId)?.name : 'جميع المنصات';
+    const appName = targetAppId
+      ? apps.find((a) => a.id === targetAppId)?.name
+      : 'التوزيع الذكي حسب تعيين الموظف';
     
     if (errors.length > 0) {
       toast.warning(`تم الاستيراد مع تحذيرات`, {
@@ -212,7 +221,7 @@ export async function runSpreadsheetImport(params: {
   }
 }
 
-function mergeImportedOrdersFromMatrixWithMapping(
+export function mergeImportedOrdersFromMatrixWithMappingLegacy(
   matrixRows: unknown[],
   dayArr: number[],
   employees: Employee[],

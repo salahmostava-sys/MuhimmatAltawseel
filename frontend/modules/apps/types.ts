@@ -1,3 +1,5 @@
+import type { WorkType } from '@shared/types/shifts';
+
 export interface CustomColumn {
   key: string;
   label: string;
@@ -13,6 +15,7 @@ export interface AppData {
   is_active_this_month: boolean;
   employeeCount: number;
   ordersCount: number;
+  work_type?: WorkType | null;
   custom_columns: CustomColumn[];
 }
 
@@ -45,6 +48,7 @@ export interface AppMonthlyOrderRow {
 }
 
 export interface AppEmployeeAssignmentRow {
+  app_id: string;
   employee_id: string;
   employees: {
     id: string;

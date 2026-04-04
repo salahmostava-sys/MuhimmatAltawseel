@@ -1,5 +1,6 @@
 import { getDate, getDaysInMonth, format } from 'date-fns';
 import type { AppUpsertPayload } from '@services/appService';
+import type { WorkType } from '@shared/types/shifts';
 import type {
   AppData,
   AppEmployee,
@@ -20,6 +21,7 @@ type AppOverviewSource = {
   is_active: boolean;
   is_active_this_month?: boolean;
   custom_columns?: Json | null;
+  work_type?: WorkType | null;
 };
 
 const TERMINATED_SPONSORSHIP_STATUSES = new Set(['absconded', 'terminated']);
@@ -67,24 +69,27 @@ export const toAppUpsertPayload = (values: AppFormValues): AppUpsertPayload => (
 export const buildAppsOverview = (
   apps: AppOverviewSource[],
   orderRows: AppMonthlyOrderRow[],
+  assignments: AppEmployeeAssignmentRow[],
 ): AppData[] => {
-  const statsMap = new Map<string, { ordersCount: number; employeeIds: Set<string> }>();
+  const statsMap = new Map<string, { ordersCount: number }>();
+  const employeeIdsByApp = new Map<string, Set<string>>();
 
   orderRows.forEach((row) => {
     if (!row.app_id) return;
 
     const current = statsMap.get(row.app_id) ?? {
       ordersCount: 0,
-      employeeIds: new Set<string>(),
     };
 
     current.ordersCount += row.orders_count ?? 0;
-
-    if (row.employee_id) {
-      current.employeeIds.add(row.employee_id);
-    }
-
     statsMap.set(row.app_id, current);
+  });
+
+  assignments.forEach((assignment) => {
+    if (!assignment.app_id || !isVisibleEmployee(assignment.employees)) return;
+    const current = employeeIdsByApp.get(assignment.app_id) ?? new Set<string>();
+    current.add(assignment.employee_id);
+    employeeIdsByApp.set(assignment.app_id, current);
   });
 
   return apps.map((app) => {
@@ -98,8 +103,9 @@ export const buildAppsOverview = (
       text_color: app.text_color,
       is_active: app.is_active,
       is_active_this_month: app.is_active_this_month ?? app.is_active,
-      employeeCount: stats?.employeeIds.size ?? 0,
+      employeeCount: employeeIdsByApp.get(app.id)?.size ?? 0,
       ordersCount: stats?.ordersCount ?? 0,
+      work_type: app.work_type ?? null,
       custom_columns: normalizeCustomColumns(app.custom_columns),
     };
   });
