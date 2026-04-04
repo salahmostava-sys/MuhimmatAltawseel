@@ -13,7 +13,7 @@ export function ShiftsTabWrapper() {
   const { enabled, userId } = useAuthQueryGate();
   const uid = authQueryUserId(userId);
   const { permissions } = usePermissions('orders');
-  const { selectedMonth: globalMonth } = useTemporalContext();
+  const { selectedMonth: globalMonth, setSelectedMonth } = useTemporalContext();
   const queryClient = useQueryClient();
 
   const [yearStr, monthStr] = globalMonth.split('-');
@@ -43,13 +43,13 @@ export function ShiftsTabWrapper() {
 
   const handlePrevMonth = useCallback(() => {
     const n = shiftMonth(year, month, -1);
-    queryClient.setQueryData(['temporal', 'selectedMonth'], `${n.y}-${String(n.m).padStart(2, '0')}`);
-  }, [year, month, queryClient]);
+    setSelectedMonth(`${n.y}-${String(n.m).padStart(2, '0')}`);
+  }, [year, month, setSelectedMonth]);
 
   const handleNextMonth = useCallback(() => {
     const n = shiftMonth(year, month, 1);
-    queryClient.setQueryData(['temporal', 'selectedMonth'], `${n.y}-${String(n.m).padStart(2, '0')}`);
-  }, [year, month, queryClient]);
+    setSelectedMonth(`${n.y}-${String(n.m).padStart(2, '0')}`);
+  }, [year, month, setSelectedMonth]);
 
   const handleSave = useCallback(
     async (shiftsData: ShiftRow[]) => {
@@ -63,7 +63,11 @@ export function ShiftsTabWrapper() {
         }));
 
         await shiftService.bulkUpsert(rows);
-        await queryClient.invalidateQueries({ queryKey: ['shifts'] });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['shifts'] }),
+          queryClient.invalidateQueries({ queryKey: ['employees', uid, 'active-ids', globalMonth] }),
+          queryClient.invalidateQueries({ queryKey: ['salaries', uid, 'base-context', globalMonth] }),
+        ]);
         toast.success('تم حفظ بيانات الدوام بنجاح');
       } catch (error) {
         const message = error instanceof Error ? error.message : 'فشل حفظ البيانات';
@@ -71,7 +75,7 @@ export function ShiftsTabWrapper() {
         throw error;
       }
     },
-    [queryClient]
+    [globalMonth, queryClient, uid]
   );
 
   return (

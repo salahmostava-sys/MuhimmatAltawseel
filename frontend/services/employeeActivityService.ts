@@ -25,9 +25,14 @@ export const employeeActivityService = {
   getMonthlyActiveEmployeeIds: async (monthKey: string): Promise<MonthlyActiveEmployeeIdsResult> => {
     const { start, end } = monthStartEnd(monthKey);
 
-    const [ordersRes, attendanceRes, salariesRes] = await Promise.all([
+    const [ordersRes, shiftsRes, attendanceRes, salariesRes] = await Promise.all([
       supabase
         .from('daily_orders')
+        .select('employee_id')
+        .gte('date', start)
+        .lte('date', end),
+      supabase
+        .from('daily_shifts')
         .select('employee_id')
         .gte('date', start)
         .lte('date', end),
@@ -43,6 +48,7 @@ export const employeeActivityService = {
     ]);
 
     if (ordersRes.error) handleSupabaseError(ordersRes.error, 'employeeActivityService.getMonthlyActiveEmployeeIds.orders');
+    if (shiftsRes.error) handleSupabaseError(shiftsRes.error, 'employeeActivityService.getMonthlyActiveEmployeeIds.shifts');
     if (attendanceRes.error) handleSupabaseError(attendanceRes.error, 'employeeActivityService.getMonthlyActiveEmployeeIds.attendance');
     if (salariesRes.error) handleSupabaseError(salariesRes.error, 'employeeActivityService.getMonthlyActiveEmployeeIds.salaries');
 
@@ -53,6 +59,10 @@ export const employeeActivityService = {
       if (!row.employee_id) return;
       employeeIds.add(row.employee_id);
       orderEmployeeIds.add(row.employee_id);
+    });
+
+    (shiftsRes.data ?? []).forEach((row) => {
+      if (row.employee_id) employeeIds.add(row.employee_id);
     });
 
     (attendanceRes.data ?? []).forEach((row) => {

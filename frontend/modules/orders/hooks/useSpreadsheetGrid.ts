@@ -63,6 +63,14 @@ export function useSpreadsheetGrid() {
   const sq = useSpreadsheetQueries(uid, enabled, year, month, activeEmployeeIdsInMonth);
   const canEditMonth = permissions.can_edit && !isMonthLocked;
 
+  const invalidateMonthDependencies = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['orders', uid] }),
+      queryClient.invalidateQueries({ queryKey: ['employees', uid, 'active-ids', monthKey] }),
+      queryClient.invalidateQueries({ queryKey: ['salaries', uid, 'base-context', monthKey] }),
+    ]);
+  }, [monthKey, queryClient, uid]);
+
   useEffect(() => {
     setData(sq.spreadsheetMonthData);
   }, [sq.spreadsheetMonthData]);
@@ -217,7 +225,7 @@ export function useSpreadsheetGrid() {
 
   const persistSpreadsheetData = useCallback(
     async (nextData: DailyData) => {
-      await saveSpreadsheetMonth({
+      const saved = await saveSpreadsheetMonth({
         isMonthLocked,
         year,
         month,
@@ -227,8 +235,11 @@ export function useSpreadsheetGrid() {
         employees: sq.employees,
         apps: sq.apps,
       });
+      if (saved) {
+        await invalidateMonthDependencies();
+      }
     },
-    [days, isMonthLocked, month, sq.apps, sq.employees, year],
+    [days, invalidateMonthDependencies, isMonthLocked, month, sq.apps, sq.employees, year],
   );
 
   const handleImportConfirm = async (targetAppId: string | undefined) => {
@@ -333,7 +344,7 @@ export function useSpreadsheetGrid() {
       }
 
       toast.success(`تم حذف ${count} طلب بنجاح`);
-      await queryClient.invalidateQueries({ queryKey: sq.qk.spreadsheetMonthRaw(year, month) });
+      await invalidateMonthDependencies();
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'فشل الحذف';
       toast.error(TOAST_ERROR_GENERIC, { description: message });

@@ -13,7 +13,7 @@ import {
 import { OrderDetailsModal } from '@modules/salaries/components/OrderDetailsModal';
 import { shortEmployeeName } from '@modules/salaries/lib/salaryConstants';
 import type { SalaryRow, SchemeData, SortDir } from '@modules/salaries/types/salary.types';
-import { hasPlatformActivity } from '@modules/salaries/model/salaryUtils';
+import { getSalaryRowActivityTotals, hasPlatformActivity } from '@modules/salaries/model/salaryUtils';
 
 const thFrozenBase = "px-3 py-2 text-xs font-semibold text-muted-foreground whitespace-nowrap border border-border/40 bg-muted/60 text-right sticky z-20";
 const thBase = "px-3 py-2 text-xs font-semibold text-muted-foreground whitespace-nowrap border border-border/40 bg-muted/50 text-center";
@@ -88,9 +88,13 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
 
   const totals = useMemo(() => filtered.reduce((acc, r) => {
     const c = computeRow(r);
+    const activityTotals = getSalaryRowActivityTotals(r);
     platforms.forEach(p => {
-      acc.platform[p] = (acc.platform[p] || 0) + (r.platformOrders[p] || 0);
+      acc.platformOrders[p] = (acc.platformOrders[p] || 0) + (r.platformMetrics[p]?.ordersCount || 0);
+      acc.platformShiftDays[p] = (acc.platformShiftDays[p] || 0) + (r.platformMetrics[p]?.shiftDays || 0);
     });
+    acc.totalOrders += activityTotals.orders;
+    acc.totalShiftDays += activityTotals.shiftDays;
     acc.platformSalaries += c.totalPlatformSalary;
     acc.incentives += r.incentives;
     acc.sickAllowance += r.sickAllowance;
@@ -105,7 +109,10 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
     acc.remaining += c.remaining;
     return acc;
   }, {
-    platform: {} as Record<string, number>,
+    platformOrders: {} as Record<string, number>,
+    platformShiftDays: {} as Record<string, number>,
+    totalOrders: 0,
+    totalShiftDays: 0,
     platformSalaries: 0, incentives: 0, sickAllowance: 0,
     totalAdditions: 0, totalWithSalary: 0,
     advance: 0, externalDed: 0, violations: 0,
@@ -405,19 +412,28 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
                    {filtered.reduce((s, r) => s + r.fuelCost, 0).toLocaleString()}
                  </td>
                 {platforms.map(p => {
-                  const totalOrders = totals.platform[p] || 0;
+                  const totalOrders = totals.platformOrders[p] || 0;
+                  const totalShiftDays = totals.platformShiftDays[p] || 0;
                   const totalSal = filtered.reduce((s, r) => s + (r.platformSalaries[p] || 0), 0);
                   return (
                     <td key={`${p}-col`} className={`${tfClass} border-l border-border/20 text-foreground`}>
                       <div className="flex flex-col items-center leading-tight">
-                        <span>{totalOrders.toLocaleString()}</span>
+                        <span>{totalOrders.toLocaleString()} طلب</span>
+                        {totalShiftDays > 0 && (
+                          <span className="text-[10px] opacity-75 font-normal">{totalShiftDays.toLocaleString()} دوام</span>
+                        )}
                         <span className="text-[10px] opacity-75 font-normal">{totalSal.toLocaleString()} ر.س</span>
                       </div>
                     </td>
                   );
                  })}
                  <td className={`${tfClass} text-center font-bold text-foreground border-l border-border/20`}>
-                   {filtered.reduce((s, r) => s + Object.values(r.platformOrders).reduce((a, v) => a + v, 0), 0).toLocaleString()}
+                   <div className="flex flex-col items-center leading-tight">
+                     <span>{totals.totalOrders.toLocaleString()} طلب</span>
+                     {totals.totalShiftDays > 0 && (
+                       <span className="text-[10px] opacity-75 font-normal">{totals.totalShiftDays.toLocaleString()} دوام</span>
+                     )}
+                   </div>
                  </td>
                  <td className={`${tfClass} text-foreground border-l border-border/30`}>{totals.platformSalaries.toLocaleString()}</td>
                 <td className={`${tfClass} text-foreground`}>{totals.incentives.toLocaleString()}</td>

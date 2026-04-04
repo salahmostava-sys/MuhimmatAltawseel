@@ -343,13 +343,13 @@ export async function saveSpreadsheetMonth(params: {
   setSaving: (v: boolean) => void;
   employees: Employee[];
   apps: App[];
-}): Promise<void> {
+}): Promise<boolean> {
   const { isMonthLocked, year, month, days, data, setSaving, employees, apps } = params;
   if (isMonthLocked) {
     toast.error('الشهر مقفل', {
       description: 'لا يمكن حفظ التغييرات في شهر مقفل'
     });
-    return;
+    return false;
   }
   
   setSaving(true);
@@ -399,7 +399,7 @@ export async function saveSpreadsheetMonth(params: {
       description: 'لم يتم العثور على أي طلبات صحيحة للحفظ'
     });
     setSaving(false);
-    return;
+    return false;
   }
   
   try {
@@ -418,13 +418,14 @@ export async function saveSpreadsheetMonth(params: {
         description: `تم حفظ ${saved} إدخال — ${monthLabel(year, month)}`
       });
     }
+    return saved > 0;
   } catch (e: unknown) {
     const errorMsg = e instanceof Error ? e.message : 'خطأ غير معروف';
     toast.error('فشل عملية الحفظ', {
       description: `حدث خطأ: ${errorMsg}`
     });
     logError('Orders.handleSave', e);
-    return;
+    return false;
   } finally {
     setSaving(false);
   }

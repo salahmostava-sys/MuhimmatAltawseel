@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getDisplayedBaseSalary, isAdministrativeJobTitle } from './salaryUtils';
+import { getDisplayedBaseSalary, getSalaryRowActivityTotals, isAdministrativeJobTitle } from './salaryUtils';
 
 describe('isAdministrativeJobTitle', () => {
   it('matches common Arabic and English administration titles', () => {
@@ -31,5 +31,33 @@ describe('getDisplayedBaseSalary', () => {
         engineBaseSalary: 1800,
       }),
     ).toBe(1800);
+  });
+});
+
+describe('getSalaryRowActivityTotals', () => {
+  it('keeps order totals separate from shift days', () => {
+    expect(
+      getSalaryRowActivityTotals({
+        platformMetrics: {
+          Keeta: {
+            appName: 'Keeta',
+            workType: 'orders',
+            ordersCount: 7211,
+            shiftDays: 0,
+            salary: 0,
+          },
+          Hunger: {
+            appName: 'Hunger',
+            workType: 'hybrid',
+            ordersCount: 9572,
+            shiftDays: 1794,
+            salary: 0,
+          },
+        },
+      }),
+    ).toEqual({
+      orders: 16783,
+      shiftDays: 1794,
+    });
   });
 });
