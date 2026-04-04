@@ -1,4 +1,4 @@
-import type { ComponentProps } from 'react';
+﻿import type { ComponentProps } from 'react';
 import { differenceInDays, parseISO } from 'date-fns';
 import EmployeeProfile from '@shared/components/employees/EmployeeProfile';
 import {
@@ -8,6 +8,8 @@ import {
 } from '@shared/lib/employeeArabicTemplateImport';
 import { validateImportRow } from '@modules/employees/model/employeeValidation';
 import type { Employee } from '@modules/employees/model/employeeUtils';
+import { getEmployeeCities } from '@modules/employees/model/employeeUtils';
+import { cityLabel } from '@modules/employees/model/employeeCity';
 
 export type { Employee } from '@modules/employees/model/employeeUtils';
 export type { SortDir } from '@modules/employees/model/employeeUtils';
@@ -28,6 +30,8 @@ export type UploadLiveStats = {
   totalNames: number;
   currentName: string;
 };
+
+export const EMPTY_DATA_PLACEHOLDER = '•';
 
 export const processBulkImportRows = async (
   buffer: ArrayBuffer,
@@ -98,12 +102,11 @@ export const processBulkImportRows = async (
 
 export const ALL_COLUMNS = [
   { key: 'seq',                      label: 'م',                       sortable: false },
-  { key: 'employee_code',            label: 'الكود',                   sortable: true  },
   { key: 'name',                     label: 'اسم الموظف',              sortable: true  },
   { key: 'name_en',                  label: 'الاسم (إنجليزي)',         sortable: true  },
   { key: 'national_id',              label: 'رقم الهوية',              sortable: true  },
   { key: 'job_title',                label: 'المسمى الوظيفي',          sortable: true  },
-  { key: 'city',                     label: 'المدينة',                 sortable: true  },
+  { key: 'city',                     label: 'المدن',                   sortable: true  },
   { key: 'phone',                    label: 'رقم الهاتف',              sortable: true  },
   { key: 'nationality',              label: 'الجنسية',                 sortable: true  },
   { key: 'platform_apps',            label: 'المنصة',                  sortable: false },
@@ -113,11 +116,10 @@ export const ALL_COLUMNS = [
   { key: 'birth_date',               label: 'تاريخ الميلاد',           sortable: true  },
   { key: 'probation_end_date',       label: 'انتهاء فترة التجربة',     sortable: true  },
   { key: 'residency_combined',       label: 'الإقامة',                 sortable: true  },
-  { key: 'health_insurance_expiry',  label: 'انتهاء التأمين الصحي',   sortable: true  },
+  { key: 'health_insurance_expiry',  label: 'انتهاء التأمين الصحي',    sortable: true  },
   { key: 'license_status',           label: 'حالة الرخصة',             sortable: true  },
   { key: 'license_expiry',           label: 'انتهاء الرخصة',           sortable: true  },
-  { key: 'bank_account_number',      label: 'رقم الحساب البنكي',      sortable: false },
-  { key: 'iban',                     label: 'IBAN',                    sortable: false },
+  { key: 'bank_account_number',      label: 'رقم الحساب البنكي',       sortable: false },
   { key: 'email',                    label: 'البريد الإلكتروني',       sortable: false },
   { key: 'actions',                  label: 'الإجراءات',               sortable: false },
 ] as const;
@@ -125,7 +127,7 @@ export const ALL_COLUMNS = [
 export type ColKey = typeof ALL_COLUMNS[number]['key'];
 export type ColumnDef = typeof ALL_COLUMNS[number];
 
-export const DEFAULT_HIDDEN_COLS = new Set<ColKey>(['name_en', 'iban', 'license_expiry']);
+export const DEFAULT_HIDDEN_COLS = new Set<ColKey>(['name_en', 'license_expiry']);
 export const GRID_SKELETON_IDS = ['g1', 'g2', 'g3', 'g4', 'g5', 'g6'];
 export const FAST_SKELETON_IDS = ['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12'];
 
@@ -149,7 +151,15 @@ export const LICENSE_LABELS: Record<string, string> = {
   no_license: 'ليس لديه رخصة',
   applied: 'تم التقديم',
 };
-export const toCityLabel = (city?: string | null, fallback = '—') => CITY_LABELS[city || ''] || fallback;
+export const toCityLabel = (city?: string | null, fallback = EMPTY_DATA_PLACEHOLDER) => cityLabel(city, fallback);
+export const employeeCitySummary = (
+  employee: Pick<Employee, 'cities' | 'city'>,
+  fallback = EMPTY_DATA_PLACEHOLDER,
+) => {
+  const values = getEmployeeCities(employee);
+  if (values.length === 0) return fallback;
+  return values.map((value) => toCityLabel(value, value)).join('، ');
+};
 
 export const dayColorByThreshold = (days: number | null): string => {
   if (days === null) return '';

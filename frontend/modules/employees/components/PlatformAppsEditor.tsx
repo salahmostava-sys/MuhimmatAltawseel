@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Check, Loader2 } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
@@ -79,7 +79,7 @@ export function PlatformAppsEditor({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button className="flex gap-1 flex-wrap max-w-[200px] hover:opacity-80 transition-opacity">
+        <button className="flex max-w-[200px] flex-wrap justify-center gap-1 transition-opacity hover:opacity-80">
           {currentApps.length > 0 ? (
             currentApps.map(app => (
               <span
@@ -94,7 +94,7 @@ export function PlatformAppsEditor({
               </span>
             ))
           ) : (
-            <span className="text-muted-foreground/40 text-xs">—</span>
+            <span className="text-muted-foreground/40 text-xs">•</span>
           )}
         </button>
       </PopoverTrigger>
@@ -152,3 +152,4 @@ export function PlatformAppsEditor({
     </Popover>
   );
 }
+

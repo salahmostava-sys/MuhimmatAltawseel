@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { buildPlatformSetupWarnings } from './salaryDomain';
+﻿import { describe, expect, it } from 'vitest';
+import { buildPlatformSetupWarnings, shouldIncludeEmployeeInSalaryMonth } from './salaryDomain';
 import type { AppWithSchemeRow, SalaryRow } from '@modules/salaries/types/salary.types';
 import type { PricingRule } from '@services/salaryService';
 
@@ -79,5 +79,62 @@ describe('buildPlatformSetupWarnings', () => {
 
     expect(result.appsWithoutScheme).toEqual([]);
     expect(result.appsWithoutPricingRules).toEqual([]);
+  });
+});
+describe('shouldIncludeEmployeeInSalaryMonth', () => {
+  it('excludes absconded or terminated employees when they have no monthly activity', () => {
+    expect(
+      shouldIncludeEmployeeInSalaryMonth(
+        { id: 'emp-1', sponsorship_status: 'terminated' },
+        {},
+        {},
+        {},
+      ),
+    ).toBe(false);
+  });
+  it('keeps excluded employees when they still have monthly orders or attendance', () => {
+    expect(
+      shouldIncludeEmployeeInSalaryMonth(
+        { id: 'emp-1', sponsorship_status: 'absconded' },
+        { 'emp-1': { Keeta: 2 } },
+        {},
+        {},
+      ),
+    ).toBe(true);
+    expect(
+      shouldIncludeEmployeeInSalaryMonth(
+        { id: 'emp-2', sponsorship_status: 'terminated' },
+        {},
+        { 'emp-2': 1 },
+        {},
+      ),
+    ).toBe(true);
+  });
+  it('keeps excluded employees when preview data still shows platform activity', () => {
+    expect(
+      shouldIncludeEmployeeInSalaryMonth(
+        { id: 'emp-3', sponsorship_status: 'terminated' },
+        {},
+        {},
+        {
+          'emp-3': {
+            base_salary: 0,
+            advance_deduction: 0,
+            external_deduction: 0,
+            total_shift_days: 0,
+            platform_breakdown: {
+              Keeta: {
+                appName: 'Keeta',
+                workType: 'shift',
+                calculationMethod: null,
+                ordersCount: 0,
+                shiftDays: 2,
+                salary: 250,
+              },
+            },
+          },
+        },
+      ),
+    ).toBe(true);
   });
 });

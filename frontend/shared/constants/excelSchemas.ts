@@ -1,11 +1,10 @@
-export const EMPLOYEE_IMPORT_COLUMNS = [
-  { key: 'employee_code', label: 'كود الموظف' },
+﻿export const EMPLOYEE_IMPORT_COLUMNS = [
   { key: 'name', label: 'الاسم' },
   { key: 'name_en', label: 'الاسم (إنجليزي)' },
   { key: 'national_id', label: 'رقم الهوية' },
   { key: 'phone', label: 'رقم الهاتف' },
   { key: 'email', label: 'البريد الإلكتروني' },
-  { key: 'city', label: 'المدينة (makkah/jeddah)' },
+  { key: 'cities', label: 'المدن (افصل بينها بفاصلة)' },
   { key: 'nationality', label: 'الجنسية' },
   { key: 'job_title', label: 'المسمى الوظيفي' },
   { key: 'join_date', label: 'تاريخ الانضمام' },

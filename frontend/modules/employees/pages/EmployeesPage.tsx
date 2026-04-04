@@ -13,7 +13,7 @@ import { format } from 'date-fns';
 import { useToast } from '@shared/hooks/use-toast';
 import { usePermissions } from '@shared/hooks/usePermissions';
 import { isEmployeeVisibleInMonth } from '@shared/lib/employeeVisibility';
-import { createDefaultGlobalFilters } from '@shared/components/table/GlobalTableFilters';
+import { getEmployeeCities } from '@modules/employees/model/employeeUtils';
 import { useEmployeesData } from '@modules/employees/hooks/useEmployees';
 import { applyEmployeeFilters, sortEmployees } from '@modules/employees/model/employeeUtils';
 import { EmployeeActionsBar } from '@modules/employees/components/EmployeeActionsBar';
@@ -21,18 +21,13 @@ import { EmployeeDetailedTable } from '@modules/employees/components/EmployeeTab
 import { useEmployeeActions } from '@modules/employees/hooks/useEmployeeTable';
 import Loading from '@shared/components/Loading';
 import {
-  ALL_COLUMNS, DEFAULT_HIDDEN_COLS, toCityLabel,
+  ALL_COLUMNS, DEFAULT_HIDDEN_COLS,
   type Employee, type SortDir, type ColKey,
-  type EmployeeProfileProps, type EmployeeStatusFilter,
+  type EmployeeProfileProps,
   type UploadReport, type UploadLiveStats,
 } from '@modules/employees/types/employee.types';
 
 const EmployeeProfile = lazy(() => import('@shared/components/employees/EmployeeProfile'));
-const EmployeesFastListView = lazy(() =>
-  import('@modules/employees/components/EmployeesFastList').then((module) => ({
-    default: module.EmployeesFastList,
-  })),
-);
 const EmployeeFormModal = lazy(() =>
   import('@modules/employees/components/EmployeeFormModal').then((module) => ({
     default: module.EmployeeFormModal,
@@ -48,7 +43,6 @@ const Employees = () => {
   const { toast } = useToast();
   const { permissions } = usePermissions('employees');
   const [data, setData] = useState<Employee[]>([]);
-  const [viewMode, setViewMode] = useState<'detailed' | 'fast'>('detailed');
   const {
     employees: employeesData,
     activeEmployeeIdsInMonth,
@@ -64,10 +58,6 @@ const Employees = () => {
   const [colFilters, setColFilters] = useState<Record<string, string>>({});
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
-  const [fastPage, setFastPage] = useState(1);
-  const [fastPageSize] = useState(50);
-  const [fastFilters, setFastFilters] = useState(() => createDefaultGlobalFilters());
-  const [fastStatus, setFastStatus] = useState<EmployeeStatusFilter>('active');
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editEmployee, setEditEmployee] = useState<Employee | null>(null);
@@ -142,7 +132,7 @@ const Employees = () => {
   }, []);
 
   const uniqueVals = useMemo(() => ({
-    city:               [...new Set(data.map(e => e.city).filter(Boolean))] as string[],
+    city:               [...new Set(data.flatMap((e) => getEmployeeCities(e)).filter(Boolean))] as string[],
     nationality:        [...new Set(data.map(e => e.nationality).filter(Boolean))] as string[],
     sponsorship_status: ['sponsored', 'not_sponsored', 'absconded', 'terminated'],
     license_status:     ['has_license', 'no_license', 'applied'],
@@ -164,13 +154,13 @@ const Employees = () => {
   const {
     handleSort, saveField, handleSaveStatusWithDate, handleDelete,
     setColFilter, runExportDetailed, runTemplateDownload, runPrintDetailed,
-    runImportFile, runFastExportWrapped,
+    runImportFile,
   } = useEmployeeActions({
     data, setData, filtered, sortField, setSortField, sortDir, setSortDir,
     toast, permissions, deleteEmployee, setDeleteEmployee, setDeleting,
     setActionLoading, setIsUploading, setUploadProgress, setUploadReport,
     setUploadLiveStats, uploadIntervalRef, refetchEmployees,
-    syncSystemAfterEmployeeImport, fastFilters, fastStatus,
+    syncSystemAfterEmployeeImport,
     statusDateDialog, statusDate, setStatusDateSaving, setStatusDateDialog,
     tableRef, colFilters, setColFilters,
   });
@@ -199,31 +189,6 @@ const Employees = () => {
     }
   }
 
-  if (viewMode === 'fast') {
-    return (
-      <Suspense fallback={<InlineLoader minHeightClassName="min-h-[320px]" />}>
-        <EmployeesFastListView
-          loadingMain={loading}
-          onBackToDetailed={() => setViewMode('detailed')}
-          branch={fastFilters.branch}
-          search={fastFilters.search}
-          status={fastStatus}
-          onStatusChange={setFastStatus}
-          onFiltersChange={(next) => { setFastFilters(next); setFastPage(1); }}
-          page={fastPage}
-          onPageChange={setFastPage}
-          pageSize={fastPageSize}
-          onExport={runFastExportWrapped}
-          onDownloadTemplate={runTemplateDownload}
-          onImportFile={runImportFile}
-          actionLoading={actionLoading}
-          canEdit={permissions.can_edit}
-          toCityLabel={toCityLabel}
-        />
-      </Suspense>
-    );
-  }
-
   return (
     <div className="space-y-4">
       <EmployeeActionsBar
@@ -235,7 +200,6 @@ const Employees = () => {
         onImportFile={runImportFile}
         visibleCols={visibleCols}
         setVisibleCols={setVisibleCols}
-        onFastView={() => setViewMode('fast')}
         onAddEmployee={() => { setEditEmployee(null); setShowAddModal(true); }}
         isUploading={isUploading}
         uploadReport={uploadReport}

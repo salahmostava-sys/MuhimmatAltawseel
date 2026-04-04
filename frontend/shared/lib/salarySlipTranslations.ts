@@ -1,20 +1,13 @@
-// ─── Salary Slip Multi-Language Translation Dictionary ────────────────────────
-// Supports: Arabic (ar) | English (en) | Urdu (ur)
-// RTL languages: ar, ur  |  LTR languages: en
-
-export type SlipLanguage = 'ar' | 'en' | 'ur';
+﻿export type SlipLanguage = 'ar' | 'en';
 
 export const LANGUAGE_META: Record<SlipLanguage, { label: string; dir: 'rtl' | 'ltr'; flag: string; fontFamily: string }> = {
-  ar: { label: 'العربية',  dir: 'rtl', flag: '🇸🇦', fontFamily: 'Arial, sans-serif' },
-  en: { label: 'English',  dir: 'ltr', flag: '🇬🇧', fontFamily: 'Arial, sans-serif' },
-  ur: { label: 'اردو',     dir: 'rtl', flag: '🇵🇰', fontFamily: 'Arial, sans-serif' },
+  ar: { label: 'العربية', dir: 'rtl', flag: 'SA', fontFamily: 'Arial, sans-serif' },
+  en: { label: 'English', dir: 'ltr', flag: 'GB', fontFamily: 'Arial, sans-serif' },
 };
 
 export interface SlipTranslations {
-  // Header
   title: string;
   subtitle: string;
-  // Employee Info
   sectionEmployee: string;
   name: string;
   nationalId: string;
@@ -22,25 +15,19 @@ export interface SlipTranslations {
   month: string;
   status: string;
   paymentMethod: string;
-  // Status values
   statusPending: string;
   statusApproved: string;
   statusPaid: string;
-  // Payment methods
   payBank: string;
   payCash: string;
-  // Platforms
   sectionPlatforms: string;
   orders: string;
   platformTotal: string;
-  // Additions
   sectionAdditions: string;
   incentives: string;
   sickAllowance: string;
   totalWithSalary: string;
-  // Earnings section label
   sectionEarnings: string;
-  // Deductions
   sectionDeductions: string;
   advanceInstallment: string;
   externalDeductions: string;
@@ -50,17 +37,13 @@ export interface SlipTranslations {
   walletJahiz: string;
   foodDamage: string;
   totalDeductions: string;
-  // Net
   netSalary: string;
   transfer: string;
   remaining: string;
   advanceBalance: string;
-  // Footer
   signatureDriver: string;
   signatureAdmin: string;
-  // Currency
   currency: string;
-  // Buttons
   printPdf: string;
   approve: string;
   close: string;
@@ -135,8 +118,8 @@ const translations: Record<SlipLanguage, SlipTranslations> = {
     'معلّق',
     'معتمد',
     'مصروف',
-    '🏦 بنك',
-    '💵 كاش',
+    'تحويل بنكي',
+    'كاش',
     'الطلبات حسب المنصة',
     'طلب',
     'إجمالي الراتب الأساسي',
@@ -178,8 +161,8 @@ const translations: Record<SlipLanguage, SlipTranslations> = {
     'Pending',
     'Approved',
     'Paid',
-    '🏦 Bank Transfer',
-    '💵 Cash',
+    'Bank Transfer',
+    'Cash',
     'Orders by Platform',
     'orders',
     'Total Base Salary',
@@ -208,49 +191,6 @@ const translations: Record<SlipLanguage, SlipTranslations> = {
     'Approve',
     'Close',
   ]),
-  ur: toSlipTranslations([
-    'تنخواہ سلپ',
-    'ڈیلیوری مینجمنٹ سسٹم',
-    'ملازم کی معلومات',
-    'نام',
-    'شناختی نمبر',
-    'شہر',
-    'مہینہ',
-    'حیثیت',
-    'ادائیگی کا طریقہ',
-    'زیر التواء',
-    'منظور شدہ',
-    'ادا شدہ',
-    '🏦 بینک',
-    '💵 نقد',
-    'پلیٹ فارم کے مطابق آرڈرز',
-    'آرڈر',
-    'بنیادی تنخواہ کا مجموعہ',
-    'اضافے',
-    'مراعات',
-    'بیماری الاؤنس',
-    'تنخواہ سمیت کل',
-    'آمدنی',
-    'کٹوتیاں',
-    'پیشگی قسط',
-    'بیرونی کٹوتیاں',
-    'خلاف ورزیاں',
-    'ہنگر اسٹیشن والٹ',
-    'تویو والٹ',
-    'جاہز والٹ',
-    'کھانے کا نقصان',
-    'کل کٹوتیاں',
-    'خالص تنخواہ',
-    'ٹرانسفر',
-    'باقی',
-    'باقی پیشگی رقم',
-    'ڈرائیور کے دستخط',
-    'انتظامیہ کی منظوری',
-    'ریال',
-    'PDF پرنٹ',
-    'منظور کریں',
-    'بند کریں',
-  ]),
 };
 
 export const getSlipTranslations = (lang: SlipLanguage): SlipTranslations => translations[lang];
@@ -260,4 +200,9 @@ export const getStatusLabel = (status: string, lang: SlipLanguage): string => {
   if (status === 'approved') return t.statusApproved;
   if (status === 'paid') return t.statusPaid;
   return t.statusPending;
+};
+
+export const getPaymentMethodLabel = (method: string, lang: SlipLanguage): string => {
+  const t = translations[lang];
+  return method === 'bank' ? t.payBank : t.payCash;
 };

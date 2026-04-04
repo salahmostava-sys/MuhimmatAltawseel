@@ -1,6 +1,10 @@
-import type { EmployeeArabicRow } from '@shared/lib/employeeArabicTemplateImport';
+﻿import type { EmployeeArabicRow } from '@shared/lib/employeeArabicTemplateImport';
+import {
+  isValidEmployeeNationalId,
+  isValidEmployeePhone,
+} from '@modules/employees/model/employeeFieldValidation';
 
-export const isValidImportPhone = (value: string) => /^[+]?\d{8,15}$/.test(value.replaceAll(/\s/g, ''));
+export const isValidImportPhone = (value: string) => isValidEmployeePhone(value);
 
 export const validateImportRow = (row: EmployeeArabicRow, rowIndex: number) => {
   const issues: Array<{ rowIndex: number; issue: string }> = [];
@@ -12,6 +16,7 @@ export const validateImportRow = (row: EmployeeArabicRow, rowIndex: number) => {
   if (!phone) issues.push({ rowIndex, issue: 'رقم الهاتف مفقود' });
   else if (!isValidImportPhone(phone)) issues.push({ rowIndex, issue: 'رقم الهاتف غير صالح' });
   if (!nationalId) issues.push({ rowIndex, issue: 'رقم الهوية مفقود' });
+  else if (!isValidEmployeeNationalId(nationalId)) issues.push({ rowIndex, issue: 'رقم الهوية غير صالح' });
 
   return issues;
 };

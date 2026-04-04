@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Eye, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Checkbox } from '@shared/components/ui/checkbox';
@@ -9,15 +9,17 @@ import {
 } from '@shared/components/ui/dropdown-menu';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import {
-  CityBadge, LicenseBadge, SponsorBadge,
+  CityBadges, LicenseBadge, SponsorBadge,
   InlineSelect, EmployeeAvatar, SortIcon, ColFilterPopover,
   SkeletonRow, TextFilterInput,
 } from '@modules/employees/components/EmployeesViewParts';
+import { cityLabel } from '@modules/employees/model/employeeCity';
 import { PlatformAppsEditor } from '@modules/employees/components/PlatformAppsEditor';
 import { useActiveApps } from '@modules/employees/hooks/useActiveApps';
 import {
   calcResidency, dayColorByThreshold, probationColor,
   GRID_SKELETON_IDS,
+  EMPTY_DATA_PLACEHOLDER,
   type Employee, type SortDir, type ColumnDef,
 } from '@modules/employees/types/employee.types';
 
@@ -66,26 +68,25 @@ export function EmployeeDetailedTable({
   permissions, uniqueVals, setColFilter, tableRef, refetchEmployees,
 }: EmployeeDetailedTableProps) {
   const { data: availableApps = [] } = useActiveApps();
+  const emptyCell = <span className="text-muted-foreground/40">{EMPTY_DATA_PLACEHOLDER}</span>;
+  const cellText = (value?: string | null) => value || EMPTY_DATA_PLACEHOLDER;
 
   return (
     <div className="ta-table-wrap">
       <div className="overflow-x-auto">
-        <table className="w-full" ref={tableRef}>
+        <table className="w-full text-center align-middle" ref={tableRef}>
           <thead className="bg-yellow-400">
             <tr className="ta-thead">
               {activeCols.map(col => {
                 const isFilterable = !['seq', 'actions', 'platform_apps', 'residency_combined',
-                  'join_date', 'birth_date', 'bank_account_number', 'probation_end_date', 'iban', 'license_expiry',
+                  'join_date', 'birth_date', 'bank_account_number', 'probation_end_date', 'license_expiry',
                   'name_en', 'health_insurance_expiry'].includes(col.key);
                 const isActive = !!colFilters[col.key];
 
                 const filterContent = (() => {
                   if (!isFilterable) return null;
                   if (col.key === 'city') {
-                    const cityOptions = [
-                      { v: 'makkah', l: 'مكة' },
-                      { v: 'jeddah', l: 'جدة' },
-                    ] as const;
+                    const cityOptions = uniqueVals.city.map((value) => ({ v: value, l: cityLabel(value, value) }));
                     const selected = colFilters.city ? colFilters.city.split(',').map((s) => s.trim()).filter(Boolean) : [];
                     const toggleCity = (v: string) => {
                       const next = selected.includes(v) ? selected.filter((x) => x !== v) : [...selected, v];
@@ -104,10 +105,10 @@ export function EmployeeDetailedTable({
                   }
                   if (col.key === 'sponsorship_status') {
                     const kafalaOptions = [
-                      { v: 'sponsored', l: 'على الكفالة' },
-                      { v: 'not_sponsored', l: 'ليس على الكفالة' },
-                      { v: 'absconded', l: 'هروب' },
-                      { v: 'terminated', l: 'انتهاء الخدمة' },
+                      { v: 'sponsored', l: 'Ø¹Ù„Ù‰ Ø§Ù„ÙƒÙØ§Ù„Ø©' },
+                      { v: 'not_sponsored', l: 'Ù„ÙŠØ³ Ø¹Ù„Ù‰ Ø§Ù„ÙƒÙØ§Ù„Ø©' },
+                      { v: 'absconded', l: 'Ù‡Ø±ÙˆØ¨' },
+                      { v: 'terminated', l: 'Ø§Ù†ØªÙ‡Ø§Ø¡ Ø§Ù„Ø®Ø¯Ù…Ø©' },
                     ] as const;
                     const selected = colFilters.sponsorship_status
                       ? colFilters.sponsorship_status.split(',').map((s) => s.trim()).filter(Boolean)
@@ -131,29 +132,29 @@ export function EmployeeDetailedTable({
                   }
                   if (col.key === 'license_status') return (
                     <Select value={colFilters.license_status || 'all'} onValueChange={v => setColFilter('license_status', v)}>
-                      <SelectTrigger className="h-7 text-xs w-full"><SelectValue placeholder="الكل" /></SelectTrigger>
+                      <SelectTrigger className="h-7 text-xs w-full"><SelectValue placeholder="Ø§Ù„ÙƒÙ„" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">الكل</SelectItem>
-                        <SelectItem value="has_license">لديه رخصة</SelectItem>
-                        <SelectItem value="no_license">ليس لديه رخصة</SelectItem>
-                        <SelectItem value="applied">تم التقديم</SelectItem>
+                        <SelectItem value="all">Ø§Ù„ÙƒÙ„</SelectItem>
+                        <SelectItem value="has_license">Ù„Ø¯ÙŠÙ‡ Ø±Ø®ØµØ©</SelectItem>
+                        <SelectItem value="no_license">Ù„ÙŠØ³ Ù„Ø¯ÙŠÙ‡ Ø±Ø®ØµØ©</SelectItem>
+                        <SelectItem value="applied">ØªÙ… Ø§Ù„ØªÙ‚Ø¯ÙŠÙ…</SelectItem>
                       </SelectContent>
                     </Select>
                   );
                   if (col.key === 'nationality') return (
                     <Select value={colFilters.nationality || 'all'} onValueChange={v => setColFilter('nationality', v)}>
-                      <SelectTrigger className="h-7 text-xs w-full"><SelectValue placeholder="الكل" /></SelectTrigger>
+                      <SelectTrigger className="h-7 text-xs w-full"><SelectValue placeholder="Ø§Ù„ÙƒÙ„" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">الكل</SelectItem>
+                        <SelectItem value="all">Ø§Ù„ÙƒÙ„</SelectItem>
                         {uniqueVals.nationality.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   );
                   if (col.key === 'job_title') return (
                     <Select value={colFilters.job_title || 'all'} onValueChange={v => setColFilter('job_title', v)}>
-                      <SelectTrigger className="h-7 text-xs w-full"><SelectValue placeholder="الكل" /></SelectTrigger>
+                      <SelectTrigger className="h-7 text-xs w-full"><SelectValue placeholder="Ø§Ù„ÙƒÙ„" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">الكل</SelectItem>
+                        <SelectItem value="all">Ø§Ù„ÙƒÙ„</SelectItem>
                         {uniqueVals.job_title.map(j => <SelectItem key={j} value={j}>{j}</SelectItem>)}
                       </SelectContent>
                     </Select>
@@ -169,10 +170,10 @@ export function EmployeeDetailedTable({
                 return (
                   <th
                     key={col.key}
-                    className={`ta-th select-none whitespace-nowrap text-black ${col.key === 'seq' ? 'w-10 px-2 text-center' : ''} ${col.sortable ? 'cursor-pointer hover:text-gray-800' : ''}`}
+                    className={`ta-th select-none whitespace-nowrap text-center text-black ${col.key === 'seq' ? 'w-10 px-2' : ''} ${col.sortable ? 'cursor-pointer hover:text-gray-800' : ''}`}
                     onClick={col.sortable ? () => handleSort(col.key) : undefined}
                   >
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center justify-center gap-1">
                       <span>{col.label}</span>
                       {col.sortable && <SortIcon field={col.key} sortField={sortField} sortDir={sortDir} />}
                       {isFilterable && filterContent && (
@@ -200,9 +201,9 @@ export function EmployeeDetailedTable({
               <tr>
                 <td colSpan={activeCols.length} className="text-center py-16">
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <span className="text-4xl">👥</span>
-                    <p className="font-medium">لا توجد نتائج</p>
-                    <p className="text-xs">جرّب تغيير الفلاتر أو إضافة موظف جديد</p>
+                    <span className="text-4xl">ðŸ‘¥</span>
+                    <p className="font-medium">Ù„Ø§ ØªÙˆØ¬Ø¯ Ù†ØªØ§Ø¦Ø¬</p>
+                    <p className="text-xs">Ø¬Ø±Ù‘Ø¨ ØªØºÙŠÙŠØ± Ø§Ù„ÙÙ„Ø§ØªØ± Ø£Ùˆ Ø¥Ø¶Ø§ÙØ© Ù…ÙˆØ¸Ù Ø¬Ø¯ÙŠØ¯</p>
                   </div>
                 </td>
               </tr>
@@ -220,10 +221,10 @@ export function EmployeeDetailedTable({
 
                       case 'name':
                         return (
-                          <td key="name" className="px-3 py-2.5 whitespace-nowrap">
-                            <div className="flex items-center gap-2.5">
+                          <td key="name" className="px-3 py-2.5 whitespace-nowrap text-center align-middle">
+                            <div className="flex items-center justify-center gap-2.5">
                               <EmployeeAvatar path={emp.personal_photo_url} name={emp.name} />
-                              <button onClick={() => setSelectedEmployee(emp.id)} className="text-sm font-semibold text-foreground hover:text-primary transition-colors text-start">
+                              <button onClick={() => setSelectedEmployee(emp.id)} className="text-sm font-semibold text-foreground transition-colors hover:text-primary text-center">
                                 {emp.name}
                               </button>
                             </div>
@@ -231,41 +232,33 @@ export function EmployeeDetailedTable({
                         );
 
                       case 'name_en':
-                        return <td key="name_en" className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap" dir="ltr">{emp.name_en || '—'}</td>;
-
-                      case 'employee_code':
-                        return <td key="employee_code" className="px-3 py-2.5 text-sm text-muted-foreground tabular-nums whitespace-nowrap">{emp.employee_code || '—'}</td>;
+                        return <td key="name_en" className="px-3 py-2.5 text-center text-sm text-muted-foreground whitespace-nowrap" dir="ltr">{cellText(emp.name_en)}</td>;
 
                       case 'national_id':
-                        return <td key="national_id" className="px-3 py-2.5 text-sm text-muted-foreground tabular-nums whitespace-nowrap" dir="ltr">{emp.national_id || '—'}</td>;
+                        return <td key="national_id" className="px-3 py-2.5 text-center text-sm text-muted-foreground tabular-nums whitespace-nowrap" dir="ltr">{cellText(emp.national_id)}</td>;
 
                       case 'job_title':
-                        return <td key="job_title" className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap">{emp.job_title || '—'}</td>;
+                        return <td key="job_title" className="px-3 py-2.5 text-center text-sm text-muted-foreground whitespace-nowrap">{cellText(emp.job_title)}</td>;
 
                       case 'city':
                         return (
-                          <td key="city" className="px-3 py-2.5 whitespace-nowrap">
-                            <InlineSelect
-                              value={emp.city || ''}
-                              options={[{ value: 'makkah', label: 'مكة' }, { value: 'jeddah', label: 'جدة' }]}
-                              onSave={v => saveField(emp.id, 'city', v)}
-                              renderDisplay={() => <CityBadge city={emp.city} />}
-                            />
+                          <td key="city" className="px-3 py-2.5 whitespace-nowrap text-center">
+                            <CityBadges cities={emp.cities} city={emp.city} />
                           </td>
                         );
 
                       case 'phone':
-                        return <td key="phone" className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap" dir="ltr">{emp.phone || '—'}</td>;
+                        return <td key="phone" className="px-3 py-2.5 text-center text-sm text-muted-foreground whitespace-nowrap" dir="ltr">{cellText(emp.phone)}</td>;
 
                       case 'nationality':
                         return (
-                          <td key="nationality" className="px-3 py-2.5 whitespace-nowrap">
+                          <td key="nationality" className="px-3 py-2.5 whitespace-nowrap text-center">
                             <InlineSelect
                               value={emp.nationality || ''}
                               options={uniqueVals.nationality.map(n => ({ value: n, label: n }))}
                               onSave={v => saveField(emp.id, 'nationality', v)}
                               renderDisplay={() => (
-                                <span className="text-sm text-muted-foreground">{emp.nationality || '—'}</span>
+                                <span className="text-sm text-muted-foreground">{cellText(emp.nationality)}</span>
                               )}
                             />
                           </td>
@@ -273,7 +266,7 @@ export function EmployeeDetailedTable({
 
                       case 'platform_apps':
                         return (
-                          <td key="platform_apps" className="px-3 py-2.5 whitespace-nowrap">
+                          <td key="platform_apps" className="px-3 py-2.5 whitespace-nowrap text-center">
                             {permissions.can_edit ? (
                               <PlatformAppsEditor
                                 employeeId={emp.id}
@@ -283,7 +276,7 @@ export function EmployeeDetailedTable({
                                 onSuccess={refetchEmployees}
                               />
                             ) : (
-                              <div className="flex gap-1 flex-wrap max-w-[200px]">
+                              <div className="flex max-w-[200px] flex-wrap justify-center gap-1">
                                 {(emp as { platform_apps?: Array<{ id: string; name: string; brand_color?: string }> }).platform_apps?.length ? (
                                   (emp as { platform_apps: Array<{ id: string; name: string; brand_color?: string }> }).platform_apps.map(app => (
                                     <span
@@ -298,7 +291,7 @@ export function EmployeeDetailedTable({
                                     </span>
                                   ))
                                 ) : (
-                                  <span className="text-muted-foreground/40 text-xs">—</span>
+                                  emptyCell
                                 )}
                               </div>
                             )}
@@ -306,34 +299,34 @@ export function EmployeeDetailedTable({
                         );
 
                       case 'commercial_record':
-                        return <td key="commercial_record" className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap">{emp.commercial_record || '—'}</td>;
+                        return <td key="commercial_record" className="px-3 py-2.5 text-center text-sm text-muted-foreground whitespace-nowrap">{cellText(emp.commercial_record)}</td>;
 
                       case 'residency_combined':
                         return (
-                          <td key="residency_combined" className="px-3 py-2.5 whitespace-nowrap">
+                          <td key="residency_combined" className="px-3 py-2.5 whitespace-nowrap text-center">
                             {emp.residency_expiry ? (
-                              <div className="flex flex-col gap-0.5">
+                              <div className="flex flex-col items-center gap-0.5">
                                 <span className="text-xs text-muted-foreground">{format(parseISO(emp.residency_expiry), 'yyyy/MM/dd')}</span>
                                 {res.days !== null && (
                                   <span className={`text-xs font-medium ${daysColor}`}>
-                                    {res.days >= 0 ? `متبقي ${res.days} يوم` : `منتهية منذ ${Math.abs(res.days)} يوم`}
+                                    {res.days >= 0 ? `Ù…ØªØ¨Ù‚ÙŠ ${res.days} ÙŠÙˆÙ…` : `Ù…Ù†ØªÙ‡ÙŠØ© Ù…Ù†Ø° ${Math.abs(res.days)} ÙŠÙˆÙ…`}
                                   </span>
                                 )}
                               </div>
-                            ) : <span className="text-muted-foreground/40">—</span>}
+                            ) : emptyCell}
                           </td>
                         );
 
                       case 'sponsorship_status':
                         return (
-                          <td key="sponsorship_status" className="px-3 py-2.5 whitespace-nowrap">
+                          <td key="sponsorship_status" className="px-3 py-2.5 whitespace-nowrap text-center">
                             <InlineSelect
                               value={emp.sponsorship_status || 'not_sponsored'}
                               options={[
-                                { value: 'sponsored',     label: 'على الكفالة'      },
-                                { value: 'not_sponsored', label: 'ليس على الكفالة'  },
-                                { value: 'absconded',     label: 'هروب'             },
-                                { value: 'terminated',    label: 'انتهاء الخدمة'    },
+                                { value: 'sponsored',     label: 'Ø¹Ù„Ù‰ Ø§Ù„ÙƒÙØ§Ù„Ø©'      },
+                                { value: 'not_sponsored', label: 'Ù„ÙŠØ³ Ø¹Ù„Ù‰ Ø§Ù„ÙƒÙØ§Ù„Ø©'  },
+                                { value: 'absconded',     label: 'Ù‡Ø±ÙˆØ¨'             },
+                                { value: 'terminated',    label: 'Ø§Ù†ØªÙ‡Ø§Ø¡ Ø§Ù„Ø®Ø¯Ù…Ø©'    },
                               ]}
                               onSave={v => {
                                 if (v === 'absconded' || v === 'terminated') {
@@ -341,7 +334,7 @@ export function EmployeeDetailedTable({
                                   setStatusDateDialog({
                                     emp,
                                     newStatus: v,
-                                    label: v === 'absconded' ? 'هروب' : 'انتهاء الخدمة',
+                                    label: v === 'absconded' ? 'Ù‡Ø±ÙˆØ¨' : 'Ø§Ù†ØªÙ‡Ø§Ø¡ Ø§Ù„Ø®Ø¯Ù…Ø©',
                                   });
                                   return Promise.resolve();
                                 }
@@ -353,25 +346,25 @@ export function EmployeeDetailedTable({
                         );
 
                       case 'join_date':
-                        return <td key="join_date" className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap">{emp.join_date ? format(parseISO(emp.join_date), 'yyyy/MM/dd') : '—'}</td>;
+                        return <td key="join_date" className="px-3 py-2.5 text-center text-sm text-muted-foreground whitespace-nowrap">{emp.join_date ? format(parseISO(emp.join_date), 'yyyy/MM/dd') : EMPTY_DATA_PLACEHOLDER}</td>;
 
                       case 'birth_date':
-                        return <td key="birth_date" className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap">{emp.birth_date ? format(parseISO(emp.birth_date), 'yyyy/MM/dd') : '—'}</td>;
+                        return <td key="birth_date" className="px-3 py-2.5 text-center text-sm text-muted-foreground whitespace-nowrap">{emp.birth_date ? format(parseISO(emp.birth_date), 'yyyy/MM/dd') : EMPTY_DATA_PLACEHOLDER}</td>;
 
                       case 'probation_end_date': {
                         const probDays = emp.probation_end_date ? differenceInDays(parseISO(emp.probation_end_date), new Date()) : null;
                         return (
-                          <td key="probation_end_date" className="px-3 py-2.5 whitespace-nowrap">
+                          <td key="probation_end_date" className="px-3 py-2.5 whitespace-nowrap text-center">
                             {emp.probation_end_date ? (
-                              <div className="flex flex-col gap-0.5">
+                              <div className="flex flex-col items-center gap-0.5">
                                 <span className="text-xs text-muted-foreground">{format(parseISO(emp.probation_end_date), 'yyyy/MM/dd')}</span>
                                 {probDays !== null && (
                                   <span className={`text-xs font-medium ${probationColor(probDays)}`}>
-                                    {probDays < 0 ? 'انتهت' : `${probDays}ي متبقي`}
+                                    {probDays < 0 ? 'Ø§Ù†ØªÙ‡Øª' : `${probDays}ÙŠ Ù…ØªØ¨Ù‚ÙŠ`}
                                   </span>
                                 )}
                               </div>
-                            ) : <span className="text-muted-foreground/40">—</span>}
+                            ) : emptyCell}
                           </td>
                         );
                       }
@@ -381,30 +374,30 @@ export function EmployeeDetailedTable({
                         const hiDays   = hiExpiry ? differenceInDays(parseISO(hiExpiry), new Date()) : null;
                         const hiColor = dayColorByThreshold(hiDays);
                         return (
-                          <td key="health_insurance_expiry" className="px-3 py-2.5 whitespace-nowrap">
+                          <td key="health_insurance_expiry" className="px-3 py-2.5 whitespace-nowrap text-center">
                             {hiExpiry ? (
-                              <div className="flex flex-col gap-0.5">
+                              <div className="flex flex-col items-center gap-0.5">
                                 <span className={`text-xs ${hiColor}`}>{format(parseISO(hiExpiry), 'yyyy/MM/dd')}</span>
                                 {hiDays !== null && (
                                   <span className={`text-[10px] ${hiColor}`}>
-                                    {hiDays < 0 ? `منتهي منذ ${Math.abs(hiDays)} يوم` : `متبقي ${hiDays} يوم`}
+                                    {hiDays < 0 ? `Ù…Ù†ØªÙ‡ÙŠ Ù…Ù†Ø° ${Math.abs(hiDays)} ÙŠÙˆÙ…` : `Ù…ØªØ¨Ù‚ÙŠ ${hiDays} ÙŠÙˆÙ…`}
                                   </span>
                                 )}
                               </div>
-                            ) : <span className="text-muted-foreground/40">—</span>}
+                            ) : emptyCell}
                           </td>
                         );
                       }
 
                       case 'license_status':
                         return (
-                          <td key="license_status" className="px-3 py-2.5 whitespace-nowrap">
+                          <td key="license_status" className="px-3 py-2.5 whitespace-nowrap text-center">
                             <InlineSelect
                               value={emp.license_status || 'no_license'}
                               options={[
-                                { value: 'has_license', label: 'لديه رخصة'     },
-                                { value: 'no_license',  label: 'ليس لديه رخصة' },
-                                { value: 'applied',     label: 'تم التقديم'    },
+                                { value: 'has_license', label: 'Ù„Ø¯ÙŠÙ‡ Ø±Ø®ØµØ©'     },
+                                { value: 'no_license',  label: 'Ù„ÙŠØ³ Ù„Ø¯ÙŠÙ‡ Ø±Ø®ØµØ©' },
+                                { value: 'applied',     label: 'ØªÙ… Ø§Ù„ØªÙ‚Ø¯ÙŠÙ…'    },
                               ]}
                               onSave={v => saveField(emp.id, 'license_status', v)}
                               renderDisplay={() => <LicenseBadge status={emp.license_status} />}
@@ -417,53 +410,50 @@ export function EmployeeDetailedTable({
                         const leDays   = leExpiry ? differenceInDays(parseISO(leExpiry), new Date()) : null;
                         const leColor = dayColorByThreshold(leDays);
                         return (
-                          <td key="license_expiry" className="px-3 py-2.5 whitespace-nowrap">
+                          <td key="license_expiry" className="px-3 py-2.5 whitespace-nowrap text-center">
                             {leExpiry ? (
-                              <div className="flex flex-col gap-0.5">
+                              <div className="flex flex-col items-center gap-0.5">
                                 <span className={`text-xs ${leColor}`}>{format(parseISO(leExpiry), 'yyyy/MM/dd')}</span>
                                 {leDays !== null && (
                                   <span className={`text-[10px] ${leColor}`}>
-                                    {leDays < 0 ? `منتهية منذ ${Math.abs(leDays)} يوم` : `متبقي ${leDays} يوم`}
+                                    {leDays < 0 ? `Ù…Ù†ØªÙ‡ÙŠØ© Ù…Ù†Ø° ${Math.abs(leDays)} ÙŠÙˆÙ…` : `Ù…ØªØ¨Ù‚ÙŠ ${leDays} ÙŠÙˆÙ…`}
                                   </span>
                                 )}
                               </div>
-                            ) : <span className="text-muted-foreground/40">—</span>}
+                            ) : emptyCell}
                           </td>
                         );
                       }
 
                       case 'bank_account_number':
-                        return <td key="bank_account_number" className="px-3 py-2.5 text-sm text-muted-foreground tabular-nums whitespace-nowrap" dir="ltr">{emp.bank_account_number || '—'}</td>;
-
-                      case 'iban':
-                        return <td key="iban" className="px-3 py-2.5 text-sm text-muted-foreground tabular-nums whitespace-nowrap" dir="ltr">{emp.iban || '—'}</td>;
+                        return <td key="bank_account_number" className="px-3 py-2.5 text-center text-sm text-muted-foreground tabular-nums whitespace-nowrap" dir="ltr">{cellText(emp.bank_account_number)}</td>;
 
                       case 'email':
                         return (
-                          <td key="email" className="px-3 py-2.5 text-sm whitespace-nowrap" dir="ltr">
+                          <td key="email" className="px-3 py-2.5 text-center text-sm whitespace-nowrap" dir="ltr">
                             {emp.email
                               ? <a href={`mailto:${emp.email}`} className="text-primary hover:underline">{emp.email}</a>
-                              : <span className="text-muted-foreground/40">—</span>
+                              : emptyCell
                             }
                           </td>
                         );
 
                       case 'actions':
                         return (
-                          <td key="actions" className="px-3 py-2.5 whitespace-nowrap">
+                          <td key="actions" className="px-3 py-2.5 whitespace-nowrap text-center">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground">
-                                  ⋮
+                                  â‹®
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => setSelectedEmployee(emp.id)}>
-                                  <Eye size={14} className="me-2" /> عرض الملف
+                                  <Eye size={14} className="me-2" /> Ø¹Ø±Ø¶ Ø§Ù„Ù…Ù„Ù
                                 </DropdownMenuItem>
                                 {permissions.can_edit && (
                                   <DropdownMenuItem onClick={() => { setEditEmployee(emp); setShowAddModal(true); }}>
-                                    <Edit size={14} className="me-2" /> تعديل البيانات
+                                    <Edit size={14} className="me-2" /> ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª
                                   </DropdownMenuItem>
                                 )}
                                 {permissions.can_delete && (
@@ -473,7 +463,7 @@ export function EmployeeDetailedTable({
                                       onClick={() => setDeleteEmployee(emp)}
                                       className="text-destructive focus:text-destructive"
                                     >
-                                      <Trash2 size={14} className="me-2" /> حذف الموظف
+                                      <Trash2 size={14} className="me-2" /> Ø­Ø°Ù Ø§Ù„Ù…ÙˆØ¸Ù
                                     </DropdownMenuItem>
                                   </>
                                 )}
@@ -483,7 +473,7 @@ export function EmployeeDetailedTable({
                         );
 
                       default:
-                        return <td key={col.key} className="px-3 py-2.5">—</td>;
+                        return <td key={col.key} className="px-3 py-2.5 text-center">{EMPTY_DATA_PLACEHOLDER}</td>;
                     }
                   })}
                 </tr>
@@ -496,7 +486,7 @@ export function EmployeeDetailedTable({
       {!loading && filteredCount > 0 && (
         <div className="flex items-center justify-between gap-4 px-4 py-3 border-t border-border/30 flex-wrap">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">عرض:</span>
+            <span className="text-xs text-muted-foreground">Ø¹Ø±Ø¶:</span>
             <Select
               value={String(pageSize)}
               onValueChange={v => { setPageSize(Number(v)); setPage(1); }}
@@ -510,16 +500,16 @@ export function EmployeeDetailedTable({
                 <SelectItem value="100">100</SelectItem>
               </SelectContent>
             </Select>
-            <span className="text-xs text-muted-foreground">لكل صفحة</span>
+            <span className="text-xs text-muted-foreground">Ù„ÙƒÙ„ ØµÙØ­Ø©</span>
           </div>
 
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">
-              {Math.min((page - 1) * pageSize + 1, filteredCount)}–{Math.min(page * pageSize, filteredCount)} من {filteredCount}
+              {Math.min((page - 1) * pageSize + 1, filteredCount)}â€“{Math.min(page * pageSize, filteredCount)} Ù…Ù† {filteredCount}
             </span>
             <div className="flex items-center gap-1">
               <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => setPage(1)} disabled={page === 1}>
-                «
+                Â«
               </Button>
               <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => setPage(p => p - 1)} disabled={page === 1}>
                 <ChevronRight size={12} />
@@ -531,7 +521,7 @@ export function EmployeeDetailedTable({
                 <ChevronLeft size={12} />
               </Button>
               <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => setPage(totalPages)} disabled={page >= totalPages}>
-                »
+                Â»
               </Button>
             </div>
           </div>
@@ -540,3 +530,4 @@ export function EmployeeDetailedTable({
     </div>
   );
 }
+

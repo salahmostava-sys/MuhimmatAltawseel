@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+﻿import { useRef } from 'react';
 import { Button } from '@shared/components/ui/button';
 import { DataTableActions } from '@shared/components/table/DataTableActions';
 import { useToast } from '@shared/hooks/use-toast';
@@ -57,7 +57,6 @@ export function EmployeesFastList(props: Readonly<{
   type Row = {
     id: string;
     name: string;
-    employee_code: string | null;
     national_id: string | null;
     phone: string | null;
     city: string | null;
@@ -69,11 +68,11 @@ export function EmployeesFastList(props: Readonly<{
   const total = paged?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  const handleFastPrint = () => {
+  const handlePrint = () => {
     const table = fastTableRef.current;
     if (!table) return;
     printHtmlTable(table, {
-      title: 'الموظفين — قائمة سريعة',
+      title: 'الموظفين',
       subtitle: `إجمالي النتائج: ${total.toLocaleString()} — ${new Date().toLocaleDateString('ar-SA')}`,
     });
   };
@@ -81,10 +80,10 @@ export function EmployeesFastList(props: Readonly<{
   const runSafe = async (fn: () => void | Promise<void>, fallbackMessage: string) => {
     try {
       await fn();
-    } catch (e: unknown) {
+    } catch (error) {
       toast({
         title: 'حدث خطأ',
-        description: e instanceof Error ? e.message : fallbackMessage,
+        description: error instanceof Error ? error.message : fallbackMessage,
         variant: 'destructive',
       });
     }
@@ -93,13 +92,9 @@ export function EmployeesFastList(props: Readonly<{
   return (
     <div className="space-y-4">
       <div className="page-header">
-        <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center justify-between gap-3">
           <EmployeeStats total={total} loading={loadingMain} />
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="outline" size="sm" onClick={onBackToDetailed}>
-              رجوع للتفصيلي
-            </Button>
-          </div>
+          <Button variant="outline" size="sm" onClick={onBackToDetailed}>العودة للتفصيلي</Button>
         </div>
       </div>
 
@@ -108,7 +103,7 @@ export function EmployeesFastList(props: Readonly<{
           loading={actionLoading}
           onExport={() => runSafe(onExport, 'تعذر تنفيذ التصدير')}
           onDownloadTemplate={() => runSafe(onDownloadTemplate, 'تعذر تحميل القالب')}
-          onPrint={() => runSafe(() => { handleFastPrint(); }, 'تعذر طباعة الجدول')}
+          onPrint={() => runSafe(handlePrint, 'تعذر طباعة الجدول')}
           onImportFile={(file) => runSafe(() => onImportFile(file), 'تعذر استيراد الملف')}
           hideImport={!canEdit}
         />

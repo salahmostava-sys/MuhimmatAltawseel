@@ -7,14 +7,15 @@ import { auditService } from '@services/auditService';
 import { EMPLOYEE_IMPORT_COLUMNS } from '@shared/constants/excelSchemas';
 import { EMPLOYEE_TEMPLATE_AR_HEADERS } from '@shared/lib/employeeArabicTemplateImport';
 import { printHtmlTable } from '@shared/lib/printTable';
-import { getEmployeeFieldValue, parseBranchFilter } from '@modules/employees/model/employeeUtils';
+import { getEmployeeCities, getEmployeeFieldValue } from '@modules/employees/model/employeeUtils';
+import { cityLabel } from '@modules/employees/model/employeeCity';
 import {
+  employeeCitySummary,
   processBulkImportRows,
   type Employee,
   type SortDir,
   type UploadReport,
   type UploadLiveStats,
-  type EmployeeStatusFilter,
 } from '@modules/employees/types/employee.types';
 
 const loadXlsx = () => import('@e965/xlsx');
@@ -40,8 +41,6 @@ export function useEmployeeActions(params: {
   uploadIntervalRef: React.MutableRefObject<ReturnType<typeof setInterval> | null>;
   refetchEmployees: () => Promise<unknown>;
   syncSystemAfterEmployeeImport: () => Promise<void>;
-  fastFilters: { search: string; branch: string };
-  fastStatus: EmployeeStatusFilter;
   statusDateDialog: { emp: Employee; newStatus: string; label: string } | null;
   statusDate: string;
   setStatusDateSaving: React.Dispatch<React.SetStateAction<boolean>>;
@@ -55,7 +54,7 @@ export function useEmployeeActions(params: {
     toast, permissions, deleteEmployee, setDeleteEmployee, setDeleting,
     setActionLoading, setIsUploading, setUploadProgress, setUploadReport,
     setUploadLiveStats, uploadIntervalRef, refetchEmployees,
-    syncSystemAfterEmployeeImport, fastFilters, fastStatus,
+    syncSystemAfterEmployeeImport,
     statusDateDialog, statusDate, setStatusDateSaving, setStatusDateDialog,
     tableRef, setColFilters,
   } = params;
@@ -137,13 +136,12 @@ export function useEmployeeActions(params: {
   const handleExport = async () => {
     const XLSX = await loadXlsx();
     const rows = filtered.map((e) => ({
-      employee_code: e.employee_code || '',
       name: e.name || '',
       name_en: e.name_en || '',
       national_id: e.national_id || '',
       phone: e.phone || '',
       email: e.email || '',
-      city: e.city || '',
+      cities: employeeCitySummary(e, ''),
       nationality: e.nationality || '',
       job_title: e.job_title || '',
       join_date: e.join_date || '',
@@ -156,6 +154,7 @@ export function useEmployeeActions(params: {
       sponsorship_status: e.sponsorship_status || '',
       bank_account_number: e.bank_account_number || '',
       iban: e.iban || '',
+      commercial_record: e.commercial_record || '',
       salary_type: e.salary_type || 'shift',
       status: e.status || 'active',
     }));
@@ -169,17 +168,16 @@ export function useEmployeeActions(params: {
 
   const handleFastExport = async () => {
     const XLSX = await loadXlsx();
-    const branch = parseBranchFilter(fastFilters.branch as import('@shared/components/table/GlobalTableFilters').BranchKey);
-    const search = fastFilters.search?.trim() || undefined;
-    const isAllStatus = fastStatus === 'all';
-    const status = isAllStatus ? undefined : fastStatus;
+    const branch = undefined;
+    const search = undefined;
+    const status = undefined;
 
     let out: Array<{
       name: string;
-      employee_code: string | null;
       national_id: string | null;
       phone: string | null;
       city: string | null;
+      cities?: string[] | null;
       status: string;
       sponsorship_status: string | null;
       license_status: string | null;
@@ -197,11 +195,10 @@ export function useEmployeeActions(params: {
 
     const rows = out.map((e, i) => ({
       '#': i + 1,
-      'الكود': e.employee_code ?? '',
       'الاسم': e.name ?? '',
       'رقم الهوية': e.national_id ?? '',
       'رقم الهاتف': e.phone ?? '',
-      'المدينة': e.city ?? '',
+      'المدن': getEmployeeCities(e).map((city) => cityLabel(city, city)).join('، '),
       'الحالة': e.status ?? '',
       'حالة الكفالة': e.sponsorship_status ?? '',
       'حالة الرخصة': e.license_status ?? '',

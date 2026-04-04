@@ -1,16 +1,14 @@
-import { Button } from '@shared/components/ui/button';
-import { Wallet, Table2, TrendingUp, Users, Building2 } from 'lucide-react';
+import { Wallet, TrendingUp, Users, Building2 } from 'lucide-react';
 import { SalaryEngineStatusBadge } from '@modules/salaries/components/SalaryEngineStatusBadge';
 import type { SalaryRow } from '@modules/salaries/types/salary.types';
 
 interface SalaryMonthSelectorProps {
-  setPageMode: (v: 'detailed' | 'fast') => void;
   loadingData: boolean;
   previewBackendError: string | null;
 }
 
 export function SalaryMonthSelector(props: Readonly<SalaryMonthSelectorProps>) {
-  const { setPageMode, loadingData, previewBackendError } = props;
+  const { loadingData, previewBackendError } = props;
 
   return (
     <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -24,12 +22,6 @@ export function SalaryMonthSelector(props: Readonly<SalaryMonthSelectorProps>) {
         <div className="mt-1">
           <SalaryEngineStatusBadge loadingData={loadingData} previewBackendError={previewBackendError} />
         </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" className="gap-2" onClick={() => setPageMode('fast')}>
-          <Table2 size={16} />
-          <span>قائمة (سريعة)</span>
-        </Button>
       </div>
     </div>
   );

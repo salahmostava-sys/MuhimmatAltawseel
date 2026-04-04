@@ -10,6 +10,9 @@ import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGat
 import { useQueryErrorToast } from '@shared/hooks/useQueryErrorToast';
 import { useToast } from '@shared/hooks/use-toast';
 import { employeeService } from '@services/employeeService';
+import { getEmployeeCities } from '@modules/employees/model/employeeUtils';
+import { cityLabel } from '@modules/employees/model/employeeCity';
+import { EMPTY_DATA_PLACEHOLDER } from '@modules/employees/types/employee.types';
 import {
   employeeProfileService,
   type EmployeeProfileAdvance,
@@ -26,10 +29,10 @@ interface Employee {
   phone?: string | null;
   email?: string | null;
   national_id?: string | null;
-  employee_code?: string | null;
   iban?: string | null;
   bank_account_number?: string | null;
   city?: string | null;
+  cities?: string[] | null;
   join_date?: string | null;
   dob?: string | null;
   birth_date?: string | null;
@@ -41,6 +44,7 @@ interface Employee {
   probation_end_date?: string | null;
   nationality?: string | null;
   preferred_language?: string | null;
+  commercial_record?: string | null;
   id_photo_url?: string | null;
   license_photo_url?: string | null;
   personal_photo_url?: string | null;
@@ -66,6 +70,12 @@ interface MonthlyOrders {
 interface Props {
   employee: Employee;
   onBack: () => void;
+}
+
+function employeeCitySummary(employee: Pick<Employee, 'cities' | 'city'>): string {
+  const values = getEmployeeCities(employee);
+  if (values.length === 0) return EMPTY_DATA_PLACEHOLDER;
+  return values.map((value) => cityLabel(value, value)).join('، ');
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -287,7 +297,6 @@ const EmployeeProfile = ({ employee, onBack }: Props) => {
             <div className="flex gap-4 mt-2 flex-wrap text-sm text-muted-foreground">
               {employee.phone && <span>📱 {employee.phone}</span>}
               {employee.national_id && <span>🪪 {employee.national_id}</span>}
-              {employee.iban && <span>🏦 SA••••••••{employee.iban.slice(-4)}</span>}
             </div>
             <div className="flex gap-2 mt-3 flex-wrap">
               {employeeApps.map(ea => (
@@ -327,7 +336,6 @@ const EmployeeProfile = ({ employee, onBack }: Props) => {
             <h3 className="font-semibold text-foreground mb-5">البيانات الأساسية</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <InfoField label="الاسم الكامل" value={employee.name} />
-              {employee.employee_code && <InfoField label="كود الموظف" value={employee.employee_code} dir="ltr" />}
               {employee.phone && <InfoField label="رقم الهاتف" value={employee.phone} dir="ltr" />}
               {employee.national_id && <InfoField label="رقم الهوية" value={employee.national_id} dir="ltr" />}
               {/* Nationality - Editable */}
@@ -394,7 +402,6 @@ const EmployeeProfile = ({ employee, onBack }: Props) => {
                   </div>
                 )}
               </div>
-              {employee.iban && <InfoField label="رقم IBAN" value={`SA••••••••${employee.iban.slice(-4)}`} />}
               {employee.bank_account_number && <InfoField label="رقم الحساب البنكي" value={employee.bank_account_number} dir="ltr" />}
               {employee.email && (
                 <div>
@@ -407,10 +414,11 @@ const EmployeeProfile = ({ employee, onBack }: Props) => {
               {(employee.birth_date || employee.dob) && (
                 <InfoField label="تاريخ الميلاد" value={employee.birth_date || employee.dob || ''} />
               )}
-              {employee.city && <InfoField label="المدينة" value={employee.city === 'makkah' ? 'مكة المكرمة' : 'جدة'} />}
+              {(employee.city || employee.cities?.length) && <InfoField label="المدن" value={employeeCitySummary(employee)} />}
               {employee.job_title && <InfoField label="المسمى الوظيفي" value={employee.job_title} />}
               {employee.join_date && <InfoField label="تاريخ الانضمام" value={employee.join_date} />}
               {employee.probation_end_date && <InfoField label="انتهاء فترة التجربة" value={employee.probation_end_date} />}
+              {employee.commercial_record && <InfoField label="السجل التجاري" value={employee.commercial_record} dir="ltr" />}
               {employee.sponsorship_status && (
                 <InfoField label="حالة الكفالة" value={{
                   sponsored: 'على الكفالة', not_sponsored: 'ليس على الكفالة',
@@ -419,7 +427,7 @@ const EmployeeProfile = ({ employee, onBack }: Props) => {
               )}
               {employee.preferred_language && (
                 <InfoField label="لغة كشف الراتب" value={{
-                  ar: '🇸🇦 العربية', en: '🇬🇧 English', ur: '🇵🇰 اردو',
+                  ar: '🇸🇦 العربية', en: '🇬🇧 English',
                 }[employee.preferred_language] || employee.preferred_language} />
               )}
               <InfoField label="الحالة" value={statusLabels[employee.status] || employee.status} />
@@ -583,7 +591,7 @@ const EmployeeProfile = ({ employee, onBack }: Props) => {
                                       {installmentStatusLabel[inst.status] || inst.status}
                                     </span>
                                   </td>
-                                  <td className="p-2 text-muted-foreground">{inst.deducted_at ? inst.deducted_at.slice(0, 10) : '—'}</td>
+                                  <td className="p-2 text-muted-foreground">{inst.deducted_at ? inst.deducted_at.slice(0, 10) : EMPTY_DATA_PLACEHOLDER}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -666,8 +674,8 @@ const EmployeeProfile = ({ employee, onBack }: Props) => {
                             <tr key={s.id} className={`border-b border-border/20 ${idx % 2 === 0 ? '' : 'bg-muted/10'}`}>
                               <td className="p-3 font-medium">{monthLabel(s.month_year)}</td>
                               <td className="p-3 text-muted-foreground">{s.base_salary.toLocaleString()}</td>
-                              <td className="p-3 text-success">{s.allowances > 0 ? `+${s.allowances.toLocaleString()}` : '—'}</td>
-                              <td className="p-3 text-destructive">{totalDed > 0 ? `-${totalDed.toLocaleString()}` : '—'}</td>
+                              <td className="p-3 text-success">{s.allowances > 0 ? `+${s.allowances.toLocaleString()}` : EMPTY_DATA_PLACEHOLDER}</td>
+                              <td className="p-3 text-destructive">{totalDed > 0 ? `-${totalDed.toLocaleString()}` : EMPTY_DATA_PLACEHOLDER}</td>
                               <td className="p-3 font-bold text-success">{s.net_salary.toLocaleString()} ر.س</td>
                               <td className="p-3 text-center">
                                 <span className={s.is_approved ? 'badge-success' : 'badge-warning'}>
@@ -683,7 +691,7 @@ const EmployeeProfile = ({ employee, onBack }: Props) => {
                         <tr className="bg-muted/40 border-t-2 border-border/60 font-semibold">
                           <td className="p-3 text-foreground">الإجمالي</td>
                           <td className="p-3 text-foreground">{totalBase.toLocaleString()}</td>
-                          <td className="p-3 text-success">{salaries.reduce((s,r)=>s+r.allowances,0) > 0 ? `+${salaries.reduce((s,r)=>s+r.allowances,0).toLocaleString()}` : '—'}</td>
+                          <td className="p-3 text-success">{salaries.reduce((s,r)=>s+r.allowances,0) > 0 ? `+${salaries.reduce((s,r)=>s+r.allowances,0).toLocaleString()}` : EMPTY_DATA_PLACEHOLDER}</td>
                           <td className="p-3 text-destructive">-{totalDeduct.toLocaleString()}</td>
                           <td className="p-3 text-success text-base">{totalNet.toLocaleString()} ر.س</td>
                           <td className="p-3 text-center text-xs text-muted-foreground">{approvedCount}/{salaries.length} معتمد</td>
@@ -830,7 +838,7 @@ const EmployeeProfile = ({ employee, onBack }: Props) => {
 const InfoField = ({ label, value, dir }: { label: string; value: string; dir?: string }) => (
   <div>
     <p className="text-xs text-muted-foreground mb-1">{label}</p>
-    <p className="text-sm font-medium text-foreground" dir={dir}>{value}</p>
+    <p className="text-sm font-medium text-foreground" dir={dir}>{value || EMPTY_DATA_PLACEHOLDER}</p>
   </div>
 );
 

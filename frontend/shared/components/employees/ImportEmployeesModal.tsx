@@ -1,868 +1,267 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
-import { X, Upload, CheckCircle, AlertTriangle, XCircle, Info, Download, Loader2, AlertCircle } from 'lucide-react';
+﻿import { useCallback, useMemo, useRef, useState } from 'react';
+import { X, Upload, Loader2, CheckCircle, AlertTriangle, Download } from 'lucide-react';
+import * as XLSX from '@e965/xlsx';
 import { Button } from '@shared/components/ui/button';
 import { Progress } from '@shared/components/ui/progress';
 import { useToast } from '@shared/hooks/use-toast';
-import { employeeService } from '@services/employeeService';
-import * as XLSX from '@e965/xlsx';
-import { getErrorMessage } from '@shared/lib/query';
-import { logError } from '@shared/lib/logger';
+import {
+  processBulkImportRows,
+  type UploadLiveStats,
+  type UploadReport,
+} from '@modules/employees/types/employee.types';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-interface ParsedEmployee {
-  employee_code?: string;
-  national_id?: string;
-  base_salary?: number | null;
-  city?: 'makkah' | 'jeddah' | null;
-  job_title?: string;
-  sponsorship_status?: 'sponsored' | 'not_sponsored' | 'absconded' | 'terminated';
-  name: string;
-  platform?: string | null;
-  status: 'active' | 'inactive';
-  phone?: string;
-  nationality?: string;
-  birth_date?: string | null;
-  email?: string;
-  salary_type: 'orders' | 'shift';
-  rowCategory: 'active_delivery' | 'accident' | 'absconded' | 'supervisor';
-  _rowIndex: number;
-  _errors: string[];
-  _warnings: string[];
-}
-
-interface ImportSummary {
-  active_delivery: number;
-  accident: number;
-  absconded: number;
-  supervisor: number;
-  errors: number;
-  warnings: number;
-}
-
-interface Props {
+type Props = {
   onClose: () => void;
   onSuccess: () => void;
+};
+
+const EMPTY_LIVE_STATS: UploadLiveStats = {
+  processedNames: 0,
+  totalNames: 0,
+  currentName: '',
+};
+
+function downloadErrorReport(errors: UploadReport['errors']) {
+  const ws = XLSX.utils.json_to_sheet(errors);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Errors');
+  XLSX.writeFile(wb, 'employee_import_errors.xlsx');
 }
 
-type ImportError = { name: string; error: string };
-type PreviewFilter = 'all' | 'errors' | 'warnings';
-type SheetCell = string | number | boolean | Date | null | undefined;
-type SheetRow = SheetCell[];
-
-type EmployeeImportPayload = {
-  name: string;
-  status: 'active' | 'inactive';
-  salary_type: 'orders' | 'shift';
-  base_salary: number;
-  sponsorship_status?: 'sponsored' | 'not_sponsored' | 'absconded' | 'terminated';
-  employee_code?: string;
-  national_id?: string;
-  city?: 'makkah' | 'jeddah';
-  job_title?: string;
-  phone?: string;
-  nationality?: string;
-  birth_date?: string;
-  email?: string;
-};
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-const parseCity = (val: string | undefined): 'makkah' | 'jeddah' | null => {
-  if (!val) return null;
-  const v = val.trim();
-  if (['جدة', 'جده', 'جدّة'].includes(v)) return 'jeddah';
-  if (['مكة', 'مكه', 'مكّة', 'مكه المكرمة', 'مكة المكرمة'].includes(v)) return 'makkah';
-  return null;
-};
-
-const parseSponsorFromCol7 = (val: string | undefined): 'sponsored' | 'not_sponsored' | null => {
-  if (!val) return null;
-  const v = val.trim();
-  if (v.includes('على الكفال')) return 'sponsored';
-  if (v.includes('مش على') || v.includes('ليس على')) return 'not_sponsored';
-  return null;
-};
-
-const PLATFORM_MAP: Record<string, string> = {
-  'هنجر': 'هنقرستيشن',
-  'هنقرستيشن': 'هنقرستيشن',
-  'جاهز': 'جاهز',
-  'كيتا': 'كيتا',
-  'تويو': 'توبو',
-  'توبو': 'توبو',
-  'نينجا': 'نينجا',
-};
-
-const SUPERVISOR_KEYWORDS = ['ميكانيكى', 'ميكانيكي', 'مشرف', 'مشرف تشغيل', 'مشرف ميداني', 'غرفه عمليات', 'غرفة عمليات'];
-
-const toIsoDate = (date: Date): string | null => {
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toISOString().split('T')[0];
-};
-
-const parseDmyDate = (value: string): string | null => {
-  const match = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (!match) return null;
-  return toIsoDate(new Date(`${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}`));
-};
-
-const parseYmdDate = (value: string): string | null => {
-  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!match) return null;
-  return value;
-};
-
-const parseDate = (val: SheetCell): string | null => {
-  if (!val) return null;
-  if (typeof val === 'number') {
-    const date = XLSX.SSF.parse_date_code(val);
-    if (date) return toIsoDate(new Date(date.y, date.m - 1, date.d));
-    return null;
-  }
-  if (typeof val === 'string') {
-    const s = val.trim();
-    if (!s) return null;
-    const dmy = parseDmyDate(s);
-    if (dmy) return dmy;
-    const ymd = parseYmdDate(s);
-    if (ymd) return ymd;
-    return toIsoDate(new Date(s));
-  }
-  return null;
-};
-
-const isValidPhone = (phone?: string) => {
-  if (!phone) return true;
-  const value = phone.trim();
-  if (value.length < 7 || value.length > 15) return false;
-  for (const ch of value) {
-    const isDigit = ch >= '0' && ch <= '9';
-    if (!isDigit && ch !== '+' && ch !== '-' && ch !== ' ') return false;
-  }
-  return true;
-};
-
-const isValidEmail = (email?: string) => {
-  if (!email) return true;
-  const value = email.trim();
-  const atIndex = value.indexOf('@');
-  if (atIndex <= 0 || atIndex !== value.lastIndexOf('@')) return false;
-  const local = value.slice(0, atIndex);
-  const domain = value.slice(atIndex + 1);
-  if (!local || !domain || local.includes(' ') || domain.includes(' ')) return false;
-  if (domain.startsWith('.') || domain.endsWith('.')) return false;
-  return domain.includes('.');
-};
-
-const isValidNationalId = (id?: string) => {
-  if (!id) return true;
-  if (id.length !== 10) return false;
-  for (const ch of id) {
-    if (ch < '0' || ch > '9') return false;
-  }
-  return true;
-};
-
-const STEP_LABELS = ['رفع الملف', 'معاينة وتحقق', 'استيراد'] as const;
-
-const findStartRow = (rows: SheetRow[]): number => {
-  const maxHeaderScanRows = Math.min(5, rows.length);
-  for (let i = 0; i < maxHeaderScanRows; i++) {
-    const nameCell = rows[i]?.[7];
-    if (!nameCell || typeof nameCell !== 'string') continue;
-    const nameValue = nameCell.trim();
-    const lowerName = nameValue.toLowerCase();
-    const looksLikeHeader = nameValue.includes('اسم') || lowerName.includes('name');
-    const looksLikeDataRow = nameValue.length > 1 && !looksLikeHeader;
-    if (looksLikeDataRow) return i;
-  }
-  return 1;
-};
-
-const buildImportSummary = (employees: ParsedEmployee[]): ImportSummary => ({
-  active_delivery: employees.filter(e => e.rowCategory === 'active_delivery').length,
-  accident: employees.filter(e => e.rowCategory === 'accident').length,
-  absconded: employees.filter(e => e.rowCategory === 'absconded').length,
-  supervisor: employees.filter(e => e.rowCategory === 'supervisor').length,
-  errors: employees.filter(e => e._errors.length > 0).length,
-  warnings: employees.filter(e => e._warnings.length > 0).length,
-});
-
-const parseEmployeesFromSheetRows = (rows: SheetRow[]): ParsedEmployee[] => {
-  const startRow = findStartRow(rows);
-  const employees: ParsedEmployee[] = [];
-
-  for (let i = startRow; i < rows.length; i++) {
-    const row = rows[i];
-    if (!row || row.every((c) => !c)) continue;
-    const emp = parseRow(row, i + 1);
-    if (emp) employees.push(emp);
-  }
-
-  return employees;
-};
-
-const parseWorkbook = (arrayBuffer: ArrayBuffer): { employees: ParsedEmployee[]; summary: ImportSummary } => {
-  const data = new Uint8Array(arrayBuffer);
-  const wb = XLSX.read(data, { type: 'array', cellDates: false });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json<SheetRow>(ws, { header: 1, defval: '' });
-  const employees = parseEmployeesFromSheetRows(rows);
-  return { employees, summary: buildImportSummary(employees) };
-};
-
-const buildAppsMap = (appsData: { id: string; name: string }[]): Record<string, string> => {
-  const appsMap: Record<string, string> = {};
-  appsData.forEach(a => {
-    appsMap[a.name] = a.id;
-  });
-  return appsMap;
-};
-
-const getFilteredRows = (parsed: ParsedEmployee[], previewFilter: PreviewFilter): ParsedEmployee[] => {
-  if (previewFilter === 'errors') return parsed.filter(e => e._errors.length > 0);
-  if (previewFilter === 'warnings') return parsed.filter(e => e._warnings.length > 0 && e._errors.length === 0);
-  return parsed;
-};
-
-const getValidationCounts = (parsed: ParsedEmployee[]) => ({
-  criticalCount: parsed.filter(e => e._errors.length > 0).length,
-  warningCount: parsed.filter(e => e._warnings.length > 0).length,
-  validCount: parsed.filter(e => e._errors.length === 0).length,
-});
-
-const validateBeforeImport = (parsed: ParsedEmployee[]): boolean => {
-  const criticalErrors = parsed.filter(e => e._errors.length > 0);
-  if (criticalErrors.length === 0) return true;
-  return globalThis.confirm(`يوجد ${criticalErrors.length} صف به أخطاء. هل تريد الاستمرار وتخطّي هذه الصفوف؟`);
-};
-
-const rowCategoryLabel = (emp: ParsedEmployee) => {
-  if (emp.rowCategory === 'active_delivery') return { text: 'نشط — مندوب', cls: 'badge-success' };
-  if (emp.rowCategory === 'accident') return { text: 'موقوف — حادث', cls: 'badge-warning' };
-  if (emp.rowCategory === 'absconded') return { text: 'هروب', cls: 'badge-urgent' };
-  return { text: 'مشرف/ميكانيكي', cls: 'bg-muted text-muted-foreground text-xs font-medium px-2 py-0.5 rounded-full' };
-};
-
-const getStepBadgeClass = (isDone: boolean, isCurrent: boolean): string => {
-  if (isDone) return 'bg-success text-success-foreground';
-  if (isCurrent) return 'bg-primary text-primary-foreground';
-  return 'bg-muted text-muted-foreground';
-};
-
-const getStepLabelClass = (isCurrent: boolean): string => {
-  if (isCurrent) return 'text-foreground font-semibold';
-  return 'text-muted-foreground';
-};
-
-const getPreviewRowBgClass = (hasError: boolean, hasWarning: boolean): string => {
-  if (hasError) return 'bg-destructive/5';
-  if (hasWarning) return 'bg-warning/5';
-  return 'hover:bg-muted/20';
-};
-
-const resolveRowCategory = (
-  platformRaw: string,
-  sponsorCol7: 'sponsored' | 'not_sponsored' | null = 'not_sponsored'
-): Pick<ParsedEmployee, 'platform' | 'status' | 'sponsorship_status' | 'rowCategory'> => {
-  let platform: string | null = null;
-  let status: 'active' | 'inactive' = 'active';
-  let sponsorship_status: 'sponsored' | 'not_sponsored' | 'absconded' | 'terminated' = sponsorCol7;
-  let rowCategory: ParsedEmployee['rowCategory'] = 'active_delivery';
-
-  if (PLATFORM_MAP[platformRaw]) {
-    platform = PLATFORM_MAP[platformRaw];
-    rowCategory = 'active_delivery';
-  } else if (platformRaw === 'حادث') {
-    status = 'inactive';
-    rowCategory = 'accident';
-  } else if (platformRaw === 'هروب') {
-    status = 'inactive';
-    sponsorship_status = 'absconded';
-    rowCategory = 'absconded';
-  } else if (platformRaw === '' || SUPERVISOR_KEYWORDS.some(k => platformRaw.includes(k))) {
-    rowCategory = 'supervisor';
-  }
-
-  return { platform, status, sponsorship_status, rowCategory };
-};
-
-const ValidationMessages = ({ emp }: { emp: ParsedEmployee }) => {
-  if (emp._errors.length > 0) {
-    return (
-      <div className="space-y-0.5">
-        {emp._errors.map((errorMessage) => (
-          <div key={`err-${emp._rowIndex}-${errorMessage}`} className="flex items-center gap-1 text-destructive">
-            <AlertCircle size={10} className="flex-shrink-0" />
-            <span>{errorMessage}</span>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (emp._warnings.length > 0) {
-    return (
-      <div className="space-y-0.5">
-        {emp._warnings.map((warningMessage) => (
-          <div key={`warn-${emp._rowIndex}-${warningMessage}`} className="flex items-center gap-1 text-warning">
-            <AlertTriangle size={10} className="flex-shrink-0" />
-            <span>{warningMessage}</span>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <span className="flex items-center gap-1 text-success">
-      <CheckCircle size={11} /> صحيح
-    </span>
-  );
-};
-
-const parseRow = (row: SheetRow, rowIndex: number): ParsedEmployee | null => {
-  const col = (i: number) => {
-    const v = row[i - 1];
-    return v !== undefined && v !== null ? String(v).trim() : undefined;
-  };
-  const colRaw = (i: number) => row[i - 1];
-
-  const name = col(8);
-  if (!name) return null;
-
-  const _errors: string[] = [];
-  const _warnings: string[] = [];
-
-  const employee_code = col(2) || undefined;
-  const national_id = col(3) || undefined;
-  const salaryRaw = colRaw(4);
-  const base_salary = salaryRaw !== undefined && salaryRaw !== '' && salaryRaw !== null
-    ? Number.parseFloat(String(salaryRaw)) || null
-    : null;
-
-  const cityCol5 = parseCity(col(5));
-  const cityCol10 = parseCity(col(10));
-  const city = cityCol5 || cityCol10;
-
-  const job_title = col(6) || undefined;
-  const sponsorCol7 = parseSponsorFromCol7(col(7));
-
-  const platformRaw = col(9) || '';
-  const phone = col(11) ? col(11)!.replace(/\s/g, '') : undefined;
-  const nationality = col(12) || undefined;
-  const birth_date = parseDate(colRaw(13));
-  const email = col(14) || undefined;
-
-  // Validation
-  if (!national_id) _warnings.push('رقم الهوية مفقود');
-  else if (!isValidNationalId(national_id)) _errors.push('رقم الهوية يجب أن يكون 10 أرقام');
-
-  if (phone && !isValidPhone(phone)) _warnings.push('رقم الهاتف قد يكون غير صحيح');
-  if (email && !isValidEmail(email)) _errors.push('البريد الإلكتروني غير صحيح');
-  if (!city) _warnings.push('المدينة غير محددة');
-  if (base_salary !== null && base_salary < 0) _errors.push('الراتب لا يمكن أن يكون سالباً');
-
-  const salary_type: 'orders' | 'shift' = job_title?.includes('مندوب') ? 'orders' : 'shift';
-
-  const { platform, status, sponsorship_status, rowCategory } = resolveRowCategory(platformRaw, sponsorCol7);
-
-  return {
-    employee_code,
-    national_id,
-    base_salary,
-    city,
-    job_title,
-    sponsorship_status,
-    name,
-    platform,
-    status,
-    phone,
-    nationality,
-    birth_date,
-    email,
-    salary_type,
-    rowCategory,
-    _rowIndex: rowIndex,
-    _errors,
-    _warnings,
-  };
-};
-
-const buildEmployeePayload = (emp: ParsedEmployee): EmployeeImportPayload => {
-  const payload: EmployeeImportPayload = {
-    name: emp.name,
-    status: emp.status,
-    salary_type: emp.salary_type,
-    base_salary: emp.base_salary ?? 0,
-    sponsorship_status: emp.sponsorship_status,
-  };
-  if (emp.employee_code) payload.employee_code = emp.employee_code;
-  if (emp.national_id) payload.national_id = emp.national_id;
-  if (emp.city) payload.city = emp.city;
-  if (emp.job_title) payload.job_title = emp.job_title;
-  if (emp.phone) payload.phone = emp.phone;
-  if (emp.nationality) payload.nationality = emp.nationality;
-  if (emp.birth_date) payload.birth_date = emp.birth_date;
-  if (emp.email) payload.email = emp.email;
-  return payload;
-};
-
-const upsertEmployeeAndLinkApp = async (
-  emp: ParsedEmployee,
-  appsMap: Record<string, string>
-): Promise<void> => {
-  const payload = buildEmployeePayload(emp);
-  let empId: string | null = null;
-
-  if (emp.employee_code) {
-    const existing = await employeeService.findByEmployeeCode(emp.employee_code);
-    if (existing) {
-      await employeeService.updateEmployee(existing.id, payload);
-      empId = existing.id;
-    }
-  }
-
-  if (!empId && emp.national_id) {
-    const existing = await employeeService.findByNationalId(emp.national_id);
-    if (existing) {
-      await employeeService.updateEmployee(existing.id, payload);
-      empId = existing.id;
-    }
-  }
-
-  if (!empId) {
-    payload.status = payload.status || 'active';
-    const newEmp = await employeeService.createEmployee(payload);
-    empId = (newEmp as { id: string } | null)?.id ?? null;
-  }
-
-  if (!empId || !emp.platform || !appsMap[emp.platform]) return;
-  await employeeService.upsertEmployeeApp(empId, appsMap[emp.platform]);
-};
-
-const processEmployeeBatches = async (
-  validRows: ParsedEmployee[],
-  appsMap: Record<string, string>,
-  onProgress: (done: number, total: number) => void
-): Promise<ImportError[]> => {
-  const importErrors: ImportError[] = [];
-  const total = validRows.length;
-  const BATCH = 20;
-  let done = 0;
-
-  for (let i = 0; i < validRows.length; i += BATCH) {
-    const batch = validRows.slice(i, i + BATCH);
-    for (const emp of batch) {
-      try {
-        await upsertEmployeeAndLinkApp(emp, appsMap);
-      } catch (err: unknown) {
-        importErrors.push({ name: emp.name, error: getErrorMessage(err) });
-      }
-      done++;
-      onProgress(done, total);
-    }
-  }
-
-  return importErrors;
-};
-
-// ─── Sub-components ──────────────────────────────────────────────────────────
-
-const StepIndicator = ({ step }: { step: 1 | 2 | 3 }) => (
-  <div className="flex items-center gap-0 px-6 pt-4 pb-2 shrink-0">
-    {STEP_LABELS.map((label, i) => {
-      const stepNumber = i + 1;
-      const isDone = stepNumber < step;
-      const isCurrent = stepNumber === step;
-      return (
-        <div key={label} className="flex items-center flex-1 last:flex-none">
-          <div className="flex items-center gap-2">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${getStepBadgeClass(isDone, isCurrent)}`}>
-              {isDone ? <CheckCircle size={14} /> : stepNumber}
-            </div>
-            <span className={`text-xs hidden sm:block ${getStepLabelClass(isCurrent)}`}>{label}</span>
-          </div>
-          {i < 2 && <div className={`flex-1 h-px mx-2 ${isDone ? 'bg-success' : 'bg-border'}`} />}
-        </div>
-      );
-    })}
-  </div>
-);
-
-const CityBadge = ({ city }: { city: string | null | undefined }) => {
-  if (city === 'makkah') return <span className="bg-accent/20 text-accent-foreground px-1.5 py-0.5 rounded text-xs">مكة</span>;
-  if (city === 'jeddah') return <span className="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-xs">جدة</span>;
-  return <span className="text-warning text-xs">⚠️ غير محدد</span>;
-};
-
-const SummaryCards = ({ summary }: { summary: ImportSummary }) => (
-  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-    <div className="bg-success/10 rounded-xl p-3 text-center">
-      <CheckCircle size={18} className="text-success mx-auto mb-1" />
-      <p className="text-xl font-bold text-success">{summary.active_delivery}</p>
-      <p className="text-xs text-muted-foreground">✅ مندوب توصيل نشط</p>
-    </div>
-    <div className="bg-warning/10 rounded-xl p-3 text-center">
-      <AlertTriangle size={18} className="text-warning mx-auto mb-1" />
-      <p className="text-xl font-bold text-warning">{summary.accident}</p>
-      <p className="text-xs text-muted-foreground">⚠️ حادث (موقوف)</p>
-    </div>
-    <div className="bg-destructive/10 rounded-xl p-3 text-center">
-      <XCircle size={18} className="text-destructive mx-auto mb-1" />
-      <p className="text-xl font-bold text-destructive">{summary.absconded}</p>
-      <p className="text-xs text-muted-foreground">🔴 هروب (غير نشط)</p>
-    </div>
-    <div className="bg-muted rounded-xl p-3 text-center">
-      <Info size={18} className="text-muted-foreground mx-auto mb-1" />
-      <p className="text-xl font-bold text-foreground">{summary.supervisor}</p>
-      <p className="text-xs text-muted-foreground">ℹ️ مشرف/ميكانيكي</p>
-    </div>
-  </div>
-);
-
-const PREVIEW_TABLE_HEADERS = ['#', 'الاسم', 'الكود', 'رقم الهوية', 'الراتب', 'المنصة', 'المدينة', 'الجنسية', 'الهاتف', 'الحالة', 'تحقق'] as const;
-
-const PreviewTableHeader = () => (
-  <thead>
-    <tr className="border-b border-border bg-muted/50">
-      {PREVIEW_TABLE_HEADERS.map((header) => (
-        <th key={header} className="px-3 py-2 text-start text-muted-foreground font-medium whitespace-nowrap">{header}</th>
-      ))}
-    </tr>
-  </thead>
-);
-
-const PreviewRow = ({ emp }: { emp: ParsedEmployee }) => {
-  const st = rowCategoryLabel(emp);
-  const hasError = emp._errors.length > 0;
-  const hasWarning = emp._warnings.length > 0;
-  const rowBg = getPreviewRowBgClass(hasError, hasWarning);
-  const salaryText = emp.base_salary === null ? '—' : `${emp.base_salary.toLocaleString()} ر.س`;
-  const idHasError = emp._errors.some(e => e.includes('هوية'));
-  const phoneHasWarning = emp._warnings.some(w => w.includes('هاتف'));
-
-  return (
-    <tr className={`border-b border-border/50 ${rowBg}`}>
-      <td className="px-3 py-2 text-muted-foreground">{emp._rowIndex}</td>
-      <td className="px-3 py-2 font-medium text-foreground whitespace-nowrap">{emp.name}</td>
-      <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{emp.employee_code || '—'}</td>
-      <td className={`px-3 py-2 whitespace-nowrap font-mono text-xs ${idHasError ? 'text-destructive' : 'text-muted-foreground'}`}>
-        {emp.national_id || <span className="text-warning">⚠️ مفقود</span>}
-      </td>
-      <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">
-        {salaryText}
-      </td>
-      <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{emp.platform || '—'}</td>
-      <td className="px-3 py-2 whitespace-nowrap"><CityBadge city={emp.city} /></td>
-      <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{emp.nationality || '—'}</td>
-      <td className={`px-3 py-2 whitespace-nowrap font-mono text-xs ${phoneHasWarning ? 'text-warning' : 'text-muted-foreground'}`}>
-        {emp.phone || '—'}
-      </td>
-      <td className="px-3 py-2 whitespace-nowrap"><span className={st.cls}>{st.text}</span></td>
-      <td className="px-3 py-2 whitespace-nowrap min-w-[160px]">
-        <ValidationMessages emp={emp} />
-      </td>
-    </tr>
-  );
-};
-
-// ─── Component ────────────────────────────────────────────────────────────────
-const ImportEmployeesModal = ({ onClose, onSuccess }: Props) => {
+export default function ImportEmployeesModal(props: Readonly<Props>) {
+  const { onClose, onSuccess } = props;
   const { toast } = useToast();
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [parsed, setParsed] = useState<ParsedEmployee[]>([]);
-  const [summary, setSummary] = useState<ImportSummary | null>(null);
-  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [progressLabel, setProgressLabel] = useState('');
-  const [errors, setErrors] = useState<ImportError[]>([]);
-  const [showAllRows, setShowAllRows] = useState(false);
-  const [previewFilter, setPreviewFilter] = useState<PreviewFilter>('all');
+  const [headerWarnings, setHeaderWarnings] = useState(0);
+  const [liveStats, setLiveStats] = useState<UploadLiveStats>(EMPTY_LIVE_STATS);
+  const [report, setReport] = useState<UploadReport | null>(null);
 
-  const { criticalCount, warningCount, validCount } = useMemo(
-    () => getValidationCounts(parsed),
-    [parsed],
-  );
+  const hasFailures = (report?.failedRows ?? 0) > 0;
+  const hasSuccess = (report?.successfulRows ?? 0) > 0;
+  const topErrors = useMemo(() => report?.errors.slice(0, 8) ?? [], [report]);
 
-  const filteredRows = useMemo(
-    () => getFilteredRows(parsed, previewFilter),
-    [parsed, previewFilter],
-  );
-
-  const displayRows = useMemo(
-    () => (showAllRows ? filteredRows : filteredRows.slice(0, 15)),
-    [filteredRows, showAllRows],
-  );
-
-  const filterTabs = useMemo(() => {
-    const tabs: { key: PreviewFilter; label: string }[] = [
-      { key: 'all', label: `الكل (${parsed.length})` },
-    ];
-    if (criticalCount > 0) tabs.push({ key: 'errors', label: `🔴 أخطاء (${criticalCount})` });
-    if (warningCount > 0) tabs.push({ key: 'warnings', label: `⚠️ تحذيرات (${warningCount})` });
-    return tabs;
-  }, [parsed.length, criticalCount, warningCount]);
-
-  const handleFile = useCallback((file: File) => {
-    setFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const resultValue = e.target?.result;
-        if (resultValue instanceof ArrayBuffer) {
-          const result = parseWorkbook(resultValue);
-          setParsed(result.employees);
-          setSummary(result.summary);
-          setStep(2);
-          return;
-        }
-        throw new TypeError('تعذر قراءة محتوى الملف');
-      } catch (err: unknown) {
-        logError('[ImportEmployeesModal] parse file failed', err);
-        toast({ title: 'خطأ في قراءة الملف', description: getErrorMessage(err), variant: 'destructive' });
-      }
-    };
-    reader.readAsArrayBuffer(file);
-  }, [toast]);
-
-  const handleConfirm = async () => {
-    if (!validateBeforeImport(parsed)) return;
-
-    setImporting(true);
-    setStep(3);
+  const resetState = useCallback(() => {
+    setFile(null);
+    setProcessing(false);
     setProgress(0);
-
-    const validRows = parsed.filter(e => e._errors.length === 0);
-    if (validRows.length === 0) {
-      setErrors([]);
-      setImporting(false);
-      toast({ title: 'لا توجد صفوف صالحة للاستيراد', variant: 'destructive' });
-      return;
-    }
-
-    const appsData = await employeeService.getActiveApps();
-    if (!appsData || appsData.length === 0) {
-      setImporting(false);
-      toast({ title: 'لا توجد منصات فعّالة للربط', variant: 'destructive' });
-      return;
-    }
-
-    const appsMap = buildAppsMap(appsData);
-    const importErrors = await processEmployeeBatches(validRows, appsMap, (done, total) => {
-      const pct = Math.round((done / total) * 100);
-      setProgress(pct);
-      setProgressLabel(`جاري الاستيراد... ${done}/${total}`);
-    });
-
-    setErrors(importErrors);
-    setImporting(false);
-
-    if (importErrors.length === 0) {
-      toast({ title: `✅ تم استيراد ${validRows.length} موظف بنجاح` });
-      onSuccess();
-    } else {
-      toast({
-        title: `⚠️ فشل ${importErrors.length} موظف`,
-        description: 'يمكنك تحميل تقرير الأخطاء',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const downloadErrorReport = useCallback(() => {
-    const ws = XLSX.utils.json_to_sheet(errors);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'أخطاء');
-    XLSX.writeFile(wb, 'import_errors.xlsx');
-  }, [errors]);
-
-  const handleFilterChange = useCallback((key: PreviewFilter) => {
-    setPreviewFilter(key);
-    setShowAllRows(false);
+    setHeaderWarnings(0);
+    setLiveStats(EMPTY_LIVE_STATS);
+    setReport(null);
   }, []);
 
+  const handleFileChange = useCallback((nextFile: File | null | undefined) => {
+    if (!nextFile) return;
+    setFile(nextFile);
+    setReport(null);
+    setProgress(0);
+    setHeaderWarnings(0);
+    setLiveStats(EMPTY_LIVE_STATS);
+  }, []);
+
+  const handleImport = useCallback(async () => {
+    if (!file) {
+      toast({
+        title: 'اختر ملفًا أولًا',
+        description: 'الرجاء اختيار ملف Excel لاستيراد بيانات الموظفين.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setProcessing(true);
+    setProgress(0);
+    setHeaderWarnings(0);
+    setLiveStats(EMPTY_LIVE_STATS);
+    setReport(null);
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const result = await processBulkImportRows(buffer, setProgress, setLiveStats);
+      setHeaderWarnings(result.headerWarnings);
+      setReport(result.report);
+
+      if (result.report.successfulRows > 0) {
+        onSuccess();
+      }
+
+      if (result.report.successfulRows === 0) {
+        toast({
+          title: 'فشل الاستيراد',
+          description: result.report.errors[0]?.issue || 'لم يتم استيراد أي صف من الملف.',
+          variant: 'destructive',
+        });
+      } else if (result.report.failedRows > 0) {
+        toast({
+          title: 'اكتمل الاستيراد مع ملاحظات',
+          description: `نجح ${result.report.successfulRows} وفشل ${result.report.failedRows}.`,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'تم الاستيراد بنجاح',
+          description: `تمت معالجة ${result.report.successfulRows} صف بنجاح.`,
+        });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'حدث خطأ أثناء استيراد الملف.';
+      toast({
+        title: 'تعذر استيراد الملف',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setProcessing(false);
+    }
+  }, [file, onSuccess, toast]);
+
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] overflow-hidden flex flex-col border border-border/50">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <h2 className="text-lg font-bold text-foreground">استيراد بيانات الموظفين</h2>
-          <button type="button" onClick={onClose} className="p-2 hover:bg-muted rounded-lg text-muted-foreground">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">استيراد بيانات الموظفين</h2>
+            <p className="mt-1 text-xs text-muted-foreground">الاستيراد يستخدم نفس المسار الموحد المعتمد داخل النظام.</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted">
             <X size={18} />
           </button>
         </div>
 
-        <StepIndicator step={step} />
+        <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => fileInputRef.current?.click()}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                fileInputRef.current?.click();
+              }
+            }}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              handleFileChange(event.dataTransfer.files?.[0]);
+            }}
+            className="cursor-pointer rounded-2xl border-2 border-dashed border-border px-6 py-10 text-center transition-colors hover:border-primary/50 hover:bg-muted/20"
+          >
+            <Upload size={32} className="mx-auto mb-3 text-muted-foreground" />
+            <p className="font-medium text-foreground">اضغط لاختيار ملف أو اسحبه هنا</p>
+            <p className="mt-1 text-xs text-muted-foreground">الصيغ المدعومة: xlsx, xls</p>
+            {file && <p className="mt-3 text-sm font-medium text-primary">{file.name}</p>}
+          </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={(event) => handleFileChange(event.target.files?.[0])}
+          />
 
-          {/* ── Step 1: Upload ── */}
-          {step === 1 && (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                يدعم الملف بصيغة بيانات الموظفين الحالية (78 موظف أو أكثر)
-              </p>
-              <button
-                type="button"
-                className="border-2 border-dashed border-border hover:border-primary/50 rounded-xl p-10 text-center cursor-pointer transition-colors"
-                onClick={() => fileRef.current?.click()}
-                onDragOver={e => e.preventDefault()}
-                onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
-              >
-                <Upload size={32} className="mx-auto text-muted-foreground mb-3" />
-                <p className="font-medium text-foreground">اضغط لاختيار ملف أو اسحبه هنا</p>
-                <p className="text-xs text-muted-foreground mt-1">xlsx أو xls فقط</p>
-                {fileName && <p className="mt-2 text-sm text-primary font-medium">📄 {fileName}</p>}
-              </button>
-              <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden"
-                onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-            </div>
-          )}
-
-          {/* ── Step 2: Preview + Validation ── */}
-          {step === 2 && summary && (
-            <div className="space-y-4">
-              <SummaryCards summary={summary} />
-
-              {/* Validation summary */}
-              {(criticalCount > 0 || warningCount > 0) && (
-                <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-2">
-                  <p className="text-sm font-semibold text-foreground">نتائج التحقق من البيانات</p>
-                  <div className="flex flex-wrap gap-2">
-                    {criticalCount > 0 && (
-                      <span className="flex items-center gap-1.5 text-xs bg-destructive/10 text-destructive border border-destructive/20 px-3 py-1.5 rounded-full font-medium">
-                        <AlertCircle size={13} />
-                        {criticalCount} صف به أخطاء — سيتم تخطّيها
-                      </span>
-                    )}
-                    {warningCount > 0 && (
-                      <span className="flex items-center gap-1.5 text-xs bg-warning/10 text-warning border border-warning/20 px-3 py-1.5 rounded-full font-medium">
-                        <AlertTriangle size={13} />
-                        {warningCount} صف به تحذيرات — ستُستورد مع إشارة
-                      </span>
-                    )}
-                    <span className="flex items-center gap-1.5 text-xs bg-success/10 text-success border border-success/20 px-3 py-1.5 rounded-full font-medium">
-                      <CheckCircle size={13} />
-                      {validCount} صف جاهز للاستيراد
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Filter tabs */}
-              <div className="flex items-center justify-between">
-                <div className="flex gap-1">
-                  {filterTabs.map(f => (
-                    <button
-                      key={f.key}
-                      type="button"
-                      onClick={() => handleFilterChange(f.key)}
-                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${previewFilter === f.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}
-                    >
-                      {f.label}
-                    </button>
-                  ))}
-                </div>
+          {processing && (
+            <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <Loader2 size={16} className="animate-spin text-primary" />
+                جارٍ تنفيذ الاستيراد
+              </div>
+              <Progress value={progress} className="h-3" />
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                <span>{progress}%</span>
+                <span>
+                  {liveStats.processedNames} / {liveStats.totalNames}
+                </span>
+              </div>
+              {liveStats.currentName && (
                 <p className="text-xs text-muted-foreground">
-                  {showAllRows ? filteredRows.length : Math.min(15, filteredRows.length)} من {filteredRows.length} صف
+                  الحالي: <span className="font-medium text-foreground">{liveStats.currentName}</span>
                 </p>
-              </div>
-
-              {/* Preview table */}
-              <div className="overflow-x-auto rounded-lg border border-border">
-                <table className="w-full text-xs">
-                  <PreviewTableHeader />
-                  <tbody>
-                    {displayRows.map((emp) => (
-                      <PreviewRow
-                        key={`row-${emp._rowIndex}-${emp.national_id ?? emp.employee_code ?? ''}`}
-                        emp={emp}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {filteredRows.length > 15 && !showAllRows && (
-                <button
-                  type="button"
-                  onClick={() => setShowAllRows(true)}
-                  className="w-full text-xs text-muted-foreground hover:text-foreground py-2 border border-dashed border-border rounded-lg transition-colors"
-                >
-                  عرض جميع {filteredRows.length} صف...
-                </button>
               )}
             </div>
           )}
 
-          {/* ── Step 3: Progress / Done ── */}
-          {step === 3 && (
-            <div className="space-y-5 py-4">
-              {importing ? (
-                <>
-                  <div className="flex items-center justify-center gap-3">
-                    <Loader2 size={20} className="animate-spin text-primary" />
-                    <p className="font-medium text-foreground">{progressLabel}</p>
-                  </div>
-                  <Progress value={progress} className="h-3" />
-                  <p className="text-xs text-muted-foreground text-center">{progress}%</p>
-                </>
-              ) : (
-                <div className="text-center space-y-3">
-                  {errors.length === 0 ? (
-                    <>
-                      <CheckCircle size={48} className="text-success mx-auto" />
-                      <p className="text-lg font-bold text-foreground">✅ تم استيراد {validCount} موظف بنجاح</p>
-                    </>
+          {report && !processing && (
+            <div className="space-y-4">
+              <div className="grid gap-3 md:grid-cols-4">
+                <div className="rounded-xl border border-border bg-muted/20 p-4 text-center">
+                  <p className="text-xs text-muted-foreground">إجمالي الصفوف</p>
+                  <p className="mt-1 text-2xl font-semibold text-foreground">{report.totalProcessed}</p>
+                </div>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center">
+                  <p className="text-xs text-emerald-700">الصفوف الناجحة</p>
+                  <p className="mt-1 text-2xl font-semibold text-emerald-700">{report.successfulRows}</p>
+                </div>
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-center">
+                  <p className="text-xs text-rose-700">الصفوف الفاشلة</p>
+                  <p className="mt-1 text-2xl font-semibold text-rose-700">{report.failedRows}</p>
+                </div>
+                <div className="rounded-xl border border-border bg-muted/20 p-4 text-center">
+                  <p className="text-xs text-muted-foreground">تحذيرات الرأس</p>
+                  <p className="mt-1 text-2xl font-semibold text-foreground">{headerWarnings}</p>
+                </div>
+              </div>
+
+              <div className={`rounded-xl border px-4 py-3 ${hasFailures ? 'border-warning/40 bg-warning/10' : 'border-emerald-200 bg-emerald-50'}`}>
+                <div className="flex items-start gap-2">
+                  {hasFailures ? (
+                    <AlertTriangle size={18} className="mt-0.5 flex-shrink-0 text-warning" />
                   ) : (
-                    <>
-                      <AlertTriangle size={48} className="text-warning mx-auto" />
-                      <p className="text-lg font-bold text-foreground">
-                        ✅ نجح {validCount - errors.length} | ⚠️ فشل {errors.length}
-                      </p>
-                      <Button variant="outline" size="sm" onClick={downloadErrorReport} className="gap-2">
-                        <Download size={14} /> تحميل تقرير الأخطاء
-                      </Button>
-                    </>
+                    <CheckCircle size={18} className="mt-0.5 flex-shrink-0 text-emerald-600" />
                   )}
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      {hasFailures ? 'تم الاستيراد مع بعض الملاحظات' : 'تم الاستيراد بالكامل بنجاح'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {hasSuccess
+                        ? `تم حفظ ${report.successfulRows} صف في النظام.`
+                        : 'لم يتم حفظ أي صف في النظام.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {topErrors.length > 0 && (
+                <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-foreground">أهم الأخطاء والملاحظات</p>
+                    <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => downloadErrorReport(report.errors)}>
+                      <Download size={14} /> تنزيل التقرير
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {topErrors.map((item, index) => (
+                      <div key={`${item.rowIndex}-${index}`} className="rounded-lg border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                        <span className="font-medium text-foreground">السطر {item.rowIndex}:</span> {item.issue}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-border shrink-0">
-          <div>
-            {step === 2 && criticalCount > 0 && (
-              <p className="text-xs text-destructive flex items-center gap-1.5">
-                <AlertCircle size={13} />
-                {criticalCount} صف سيتم تخطّيه بسبب أخطاء
-              </p>
+        <div className="flex items-center justify-between gap-3 border-t border-border px-6 py-4">
+          <Button type="button" variant="outline" onClick={report ? resetState : onClose}>
+            {report ? 'استيراد ملف آخر' : 'إلغاء'}
+          </Button>
+          <div className="flex items-center gap-3">
+            {report && (
+              <Button type="button" variant="outline" onClick={onClose}>
+                إغلاق
+              </Button>
             )}
-          </div>
-          <div className="flex gap-3">
-            {step === 1 && (
-              <Button variant="outline" onClick={onClose}>إلغاء</Button>
-            )}
-            {step === 2 && (
-              <>
-                <Button variant="outline" onClick={() => setStep(1)}>رجوع</Button>
-                <Button onClick={handleConfirm} className="gap-2" disabled={validCount === 0}>
-                  تأكيد استيراد {validCount} موظف
-                </Button>
-              </>
-            )}
-            {step === 3 && !importing && (
-              <Button onClick={onClose}>إغلاق</Button>
-            )}
+            <Button type="button" onClick={handleImport} disabled={!file || processing} className="gap-2">
+              {processing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+              بدء الاستيراد
+            </Button>
           </div>
         </div>
       </div>
     </div>
   );
-};
-
-export default ImportEmployeesModal;
+}

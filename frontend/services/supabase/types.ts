@@ -584,12 +584,13 @@ export type Database = {
           bank_account_number: string | null
           base_salary: number
           birth_date: string | null
-          city: Database["public"]["Enums"]["city_enum"] | null
+          cities: string[] | null
+          city: string | null
+          commercial_record: string | null
           created_at: string
           department_id: string | null
           dob: string | null
           email: string | null
-          employee_code: string | null
           health_insurance_expiry: string | null
           iban: string | null
           id: string
@@ -625,12 +626,13 @@ export type Database = {
           bank_account_number?: string | null
           base_salary?: number
           birth_date?: string | null
-          city?: Database["public"]["Enums"]["city_enum"] | null
+          cities?: string[] | null
+          city?: string | null
+          commercial_record?: string | null
           created_at?: string
           department_id?: string | null
           dob?: string | null
           email?: string | null
-          employee_code?: string | null
           health_insurance_expiry?: string | null
           iban?: string | null
           id?: string
@@ -666,12 +668,13 @@ export type Database = {
           bank_account_number?: string | null
           base_salary?: number
           birth_date?: string | null
-          city?: Database["public"]["Enums"]["city_enum"] | null
+          cities?: string[] | null
+          city?: string | null
+          commercial_record?: string | null
           created_at?: string
           department_id?: string | null
           dob?: string | null
           email?: string | null
-          employee_code?: string | null
           health_insurance_expiry?: string | null
           iban?: string | null
           id?: string

@@ -1,5 +1,9 @@
 import { differenceInDays, parseISO } from 'date-fns';
 import type { BranchKey } from '@shared/components/table/GlobalTableFilters';
+import {
+  normalizeEmployeeCities,
+  normalizeEmployeeCityValue,
+} from '@modules/employees/model/employeeCity';
 
 export type Employee = {
   id: string;
@@ -9,10 +13,10 @@ export type Employee = {
   phone?: string | null;
   email?: string | null;
   national_id?: string | null;
-  employee_code?: string | null;
   bank_account_number?: string | null;
   iban?: string | null;
   city?: string | null;
+  cities?: string[] | null;
   join_date?: string | null;
   birth_date?: string | null;
   residency_expiry?: string | null;
@@ -42,6 +46,12 @@ export const parseBranchFilter = (branch: BranchKey): Exclude<BranchKey, 'all'> 
 export const getEmployeeFieldValue = (employee: Employee, field: string): unknown => {
   return (employee as Record<string, unknown>)[field];
 };
+
+export const getEmployeeCities = (employee: Pick<Employee, 'cities' | 'city'>): string[] =>
+  normalizeEmployeeCities(employee.cities ?? [], employee.city);
+
+export const getEmployeePrimaryCity = (employee: Pick<Employee, 'cities' | 'city'>): string | null =>
+  getEmployeeCities(employee)[0] ?? normalizeEmployeeCityValue(employee.city);
 
 const calcResidency = (expiry?: string | null) => {
   if (!expiry) return { days: null as number | null, status: 'unknown' as const };
@@ -73,15 +83,25 @@ function matchesMultiExact(source: string | null | undefined, filterValue: strin
   return parts.includes(source || '');
 }
 
+function matchesEmployeeCities(employee: Employee, filterValue: string): boolean {
+  const parts = filterValue
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (parts.length === 0) return true;
+
+  const employeeCities = getEmployeeCities(employee);
+  return employeeCities.some((city) => parts.includes(city));
+}
+
 function matchesColumnFilter(employee: Employee, key: string, filterValue: string): boolean {
   if (!filterValue) return true;
   const predicates: Record<string, () => boolean> = {
     name: () => matchesText(employee.name, filterValue),
     national_id: () => (employee.national_id || '').includes(filterValue),
-    employee_code: () => matchesText(employee.employee_code, filterValue),
     phone: () => (employee.phone || '').includes(filterValue),
     job_title: () => matchesExact(employee.job_title, filterValue),
-    city: () => matchesMultiExact(employee.city, filterValue),
+    city: () => matchesEmployeeCities(employee, filterValue),
     nationality: () => matchesExact(employee.nationality, filterValue),
     sponsorship_status: () => matchesMultiExact(employee.sponsorship_status, filterValue),
     license_status: () => matchesExact(employee.license_status, filterValue),

@@ -1,22 +1,36 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { ChevronDown, ChevronUp, ChevronsUpDown, Check, Loader2, Pencil, X, ChevronDown as FilterIcon } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { Input } from '@shared/components/ui/input';
 import { useSignedUrl, extractStoragePath } from '@shared/hooks/useSignedUrl';
+import { getEmployeeCities } from '@modules/employees/model/employeeUtils';
+import { cityLabel } from '@modules/employees/model/employeeCity';
 
 export const CityBadge = ({ city }: { city?: string | null }) => {
-  if (!city) return <span className="text-muted-foreground/40">—</span>;
-  return city === 'makkah' ? (
-    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-muted text-muted-foreground">مكة</span>
-  ) : (
-    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-muted text-muted-foreground">جدة</span>
+  if (!city) return <span className="text-muted-foreground/40">•</span>;
+  return (
+    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-muted text-muted-foreground">
+      {cityLabel(city, city)}
+    </span>
+  );
+};
+
+export const CityBadges = ({ cities, city }: { cities?: string[] | null; city?: string | null }) => {
+  const values = getEmployeeCities({ cities, city });
+  if (values.length === 0) return <span className="text-muted-foreground/40">•</span>;
+  return (
+    <div className="flex flex-wrap justify-center gap-1">
+      {values.map((value) => (
+        <CityBadge key={value} city={value} />
+      ))}
+    </div>
   );
 };
 
 export const LicenseBadge = ({ status }: { status?: string | null }) => {
-  if (!status) return <span className="text-muted-foreground/40">—</span>;
+  if (!status) return <span className="text-muted-foreground/40">•</span>;
   const map: Record<string, { label: string; cls: string }> = {
     has_license: { label: 'لديه رخصة', cls: 'badge-success' },
     no_license: { label: 'ليس لديه رخصة', cls: 'badge-urgent' },
@@ -27,7 +41,7 @@ export const LicenseBadge = ({ status }: { status?: string | null }) => {
 };
 
 export const SponsorBadge = ({ status }: { status?: string | null }) => {
-  if (!status) return <span className="text-muted-foreground/40">—</span>;
+  if (!status) return <span className="text-muted-foreground/40">•</span>;
   const map: Record<string, { label: string; cls: string }> = {
     sponsored: { label: 'على الكفالة', cls: 'badge-info' },
     not_sponsored: {
@@ -42,12 +56,12 @@ export const SponsorBadge = ({ status }: { status?: string | null }) => {
 };
 
 export const StatusBadge = ({ status }: { status?: string | null }) => {
-  if (!status) return <span className="text-muted-foreground/40">—</span>;
+  if (!status) return <span className="text-muted-foreground/40">•</span>;
   if (status === 'active') return <span className="badge-success">نشط</span>;
   if (status === 'inactive') return <span className="badge-warning">غير نشط</span>;
   if (status === 'ended')
     return <span className="bg-muted text-muted-foreground text-xs font-medium px-2.5 py-0.5 rounded-full">منتهي</span>;
-  return <span className="text-muted-foreground/40">{status}</span>;
+  return <span className="text-muted-foreground/40">{status || '•'}</span>;
 };
 
 export interface InlineSelectProps {
@@ -94,7 +108,7 @@ export const InlineSelect = ({ value, options, onSave, renderDisplay }: InlineSe
   }
 
   return (
-    <div className="group flex items-center gap-1 cursor-pointer" onClick={() => setEditing(true)} title="اضغط للتعديل">
+    <div className="group flex cursor-pointer items-center justify-center gap-1" onClick={() => setEditing(true)} title="اضغط للتعديل">
       {renderDisplay()}
       <Pencil size={10} className="text-muted-foreground/0 group-hover:text-muted-foreground/60 transition-opacity flex-shrink-0" />
     </div>
@@ -198,4 +212,5 @@ export const TextFilterInput = ({
     autoFocus
   />
 );
+
 

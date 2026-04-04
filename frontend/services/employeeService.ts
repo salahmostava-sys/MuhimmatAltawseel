@@ -64,7 +64,7 @@ export const employeeService = {
    * Server-side list for large volumes (pagination + filters).
    * Notes:
    * - Branch filter is derived from employees.city (makkah/jeddah).
-   * - Search matches common identifiers (name, code, national_id, phone).
+   * - Search matches common identifiers (name, national_id, phone).
    */
   async getPaged(params: {
     page: number; // 1-based
@@ -83,7 +83,7 @@ export const employeeService = {
     let query = supabase
       .from('employees')
       .select(
-        'id, name, employee_code, national_id, phone, city, status, sponsorship_status, license_status, residency_expiry, join_date, job_title',
+        'id, name, national_id, phone, city, cities, status, sponsorship_status, license_status, residency_expiry, join_date, job_title',
         { count: 'exact' }
       )
       .order('name', { ascending: true })
@@ -96,7 +96,6 @@ export const employeeService = {
       query = query.or(
         [
           `name.ilike.%${q}%`,
-          `employee_code.ilike.%${q}%`,
           `national_id.ilike.%${q}%`,
           `phone.ilike.%${q}%`,
         ].join(',')
@@ -136,7 +135,7 @@ export const employeeService = {
     return all;
   },
 
-  async updateCity(employeeId: string, city: 'makkah' | 'jeddah') {
+  async updateCity(employeeId: string, city: string) {
     const { error } = await supabase
       .from('employees')
       .update({ city })
@@ -151,16 +150,6 @@ export const employeeService = {
       .eq('id', employeeId)
       .single();
     if (error) throw toServiceError(error, 'employeeService.getById');
-    return data;
-  },
-
-  async findByEmployeeCode(employeeCode: string) {
-    const { data, error } = await supabase
-      .from('employees')
-      .select('id')
-      .eq('employee_code', employeeCode)
-      .maybeSingle();
-    if (error) throw toServiceError(error, 'employeeService.findByEmployeeCode');
     return data;
   },
 

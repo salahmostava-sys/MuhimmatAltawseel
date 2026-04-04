@@ -1,18 +1,16 @@
-import * as XLSX from '@e965/xlsx';
+﻿import * as XLSX from '@e965/xlsx';
 import { parseExcelDate } from '@shared/lib/excelDateParse';
 import { employeeService } from '@services/employeeService';
 import { EMPLOYEE_IMPORT_COLUMNS } from '@shared/constants/excelSchemas';
-
-export const EMPLOYEE_TEMPLATE_AR_HEADERS = EMPLOYEE_IMPORT_COLUMNS.map((c) => c.label);
+import { normalizeEmployeeCities } from '@modules/employees/model/employeeCity';
 
 type DbKey =
-  | 'employee_code'
   | 'name'
   | 'name_en'
   | 'national_id'
   | 'phone'
   | 'email'
-  | 'city'
+  | 'cities'
   | 'nationality'
   | 'job_title'
   | 'join_date'
@@ -33,6 +31,7 @@ type DbKey =
 const HEADER_TO_DB: Record<string, DbKey> = Object.fromEntries(
   EMPLOYEE_IMPORT_COLUMNS.map((c) => [c.label, c.key])
 ) as Record<string, DbKey>;
+export const EMPLOYEE_TEMPLATE_AR_HEADERS = EMPLOYEE_IMPORT_COLUMNS.map((column) => column.label) as readonly string[];
 
 function normalizeHeaderCell(raw: unknown): string {
   return String(raw ?? '')
@@ -41,21 +40,15 @@ function normalizeHeaderCell(raw: unknown): string {
     .trim();
 }
 
-function parseCity(val: string): 'makkah' | 'jeddah' | null {
-  const v = val.trim().toLowerCase();
-  if (!v) return null;
-  if (v === 'makkah' || v === 'مكة' || v === 'مكه') return 'makkah';
-  if (v === 'jeddah' || v === 'جدة' || v === 'جده') return 'jeddah';
-  return null;
-}
-
 function strVal(v: unknown): string | undefined {
   if (v === undefined || v === null || v === '') return undefined;
   const s = String(v).trim();
   return s === '' ? undefined : s;
 }
 
-export type EmployeeArabicRow = Partial<Record<DbKey, string | number | null>>;
+export type EmployeeArabicCell = string | number | string[] | null;
+export type EmployeeArabicRow = Partial<Record<DbKey, EmployeeArabicCell>>;
+
 const DATE_DB_KEYS = new Set<DbKey>([
   'join_date',
   'birth_date',
@@ -69,10 +62,7 @@ function isDateDbKey(key: DbKey): boolean {
   return DATE_DB_KEYS.has(key);
 }
 
-function parseEnumValue(
-  key: DbKey,
-  raw: unknown
-): string | undefined {
+function parseEnumValue(key: DbKey, raw: unknown): string | undefined {
   const v = String(raw).trim().toLowerCase();
   if (key === 'salary_type') return v === 'orders' || v === 'shift' ? v : undefined;
   if (key === 'status') return v === 'active' || v === 'inactive' || v === 'ended' ? v : undefined;
@@ -83,9 +73,12 @@ function parseEnumValue(
   return undefined;
 }
 
-function parseCellByDbKey(key: DbKey, raw: unknown): string | undefined {
+function parseCellByDbKey(key: DbKey, raw: unknown): EmployeeArabicCell | undefined {
   if (isDateDbKey(key)) return parseExcelDate(raw) ?? undefined;
-  if (key === 'city') return parseCity(String(raw)) ?? undefined;
+  if (key === 'cities') {
+    const parsed = normalizeEmployeeCities([strVal(raw)]);
+    return parsed.length > 0 ? parsed : undefined;
+  }
   const enumValue = parseEnumValue(key, raw);
   if (enumValue !== undefined) return enumValue;
   return strVal(raw);
@@ -94,13 +87,7 @@ function parseCellByDbKey(key: DbKey, raw: unknown): string | undefined {
 async function resolveEmployeeIdByKeys(
   row: EmployeeArabicRow,
   svc: typeof employeeService
-) : Promise<string | null> {
-  const code = strVal(row.employee_code);
-  if (code) {
-    const existingByCode = await svc.findByEmployeeCode(code);
-    if (existingByCode?.id) return existingByCode.id;
-  }
-
+): Promise<string | null> {
   const nid = strVal(row.national_id);
   if (!nid) return null;
   const existingByNid = await svc.findByNationalId(nid);
@@ -116,12 +103,12 @@ function mapHeadersToDbKeysStrict(
   headerRow: string[],
   headerErrors: string[]
 ): (DbKey | null)[] {
-  if (headerRow.length !== EMPLOYEE_TEMPLATE_AR_HEADERS.length) {
-    headerErrors.push(`عدد الأعمدة غير صحيح: المتوقع ${EMPLOYEE_TEMPLATE_AR_HEADERS.length}، والموجود ${headerRow.length}`);
+  if (headerRow.length !== EMPLOYEE_IMPORT_COLUMNS.length) {
+    headerErrors.push(`عدد الأعمدة غير صحيح: المتوقع ${EMPLOYEE_IMPORT_COLUMNS.length}، والموجود ${headerRow.length}`);
     return [];
   }
   return headerRow.map((h, idx) => {
-    const expected = EMPLOYEE_TEMPLATE_AR_HEADERS[idx];
+    const expected = EMPLOYEE_IMPORT_COLUMNS[idx].label;
     if (h !== expected) {
       headerErrors.push(`العمود رقم ${idx + 1} غير صحيح: المتوقع "${expected}" والموجود "${h || 'فارغ'}"`);
       return null;
@@ -189,16 +176,20 @@ export function parseEmployeeArabicWorkbook(buffer: ArrayBuffer): {
   return { rows, headerErrors: [...new Set(headerErrors)] };
 }
 
+function extractCities(row: EmployeeArabicRow): string[] {
+  const raw = row.cities;
+  if (Array.isArray(raw)) return normalizeEmployeeCities(raw);
+  return normalizeEmployeeCities([strVal(raw)]);
+}
+
 function buildPayload(row: EmployeeArabicRow): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  const keys: DbKey[] = [
-    'employee_code',
+  const keys: Array<Exclude<DbKey, 'cities' | 'base_salary'>> = [
     'name',
     'name_en',
     'national_id',
     'phone',
     'email',
-    'city',
     'nationality',
     'job_title',
     'join_date',
@@ -219,18 +210,24 @@ function buildPayload(row: EmployeeArabicRow): Record<string, unknown> {
     const v = row[k];
     if (v !== undefined && v !== null && v !== '') out[k] = v;
   }
+
+  const cities = extractCities(row);
+  out.cities = cities;
+  out.city = cities[0] ?? null;
+
   const st = row.salary_type;
   if (typeof st === 'string' && (st === 'orders' || st === 'shift')) out.salary_type = st;
   else out.salary_type = 'shift';
 
-  out.base_salary = 0;
+  const baseSalary = Number(row.base_salary ?? 0);
+  out.base_salary = Number.isFinite(baseSalary) ? baseSalary : 0;
   if (!out.status) out.status = 'active';
   if (!out.sponsorship_status) out.sponsorship_status = 'not_sponsored';
   return out;
 }
 
 /**
- * Upsert rows: match by employee_code, else national_id; otherwise insert.
+ * Upsert rows: match by national_id; otherwise insert.
  */
 export async function upsertEmployeeArabicRows(
   rows: EmployeeArabicRow[],
@@ -240,10 +237,13 @@ export async function upsertEmployeeArabicRows(
   let processed = 0;
 
   for (const row of rows) {
-    const nameHint = strVal(row.name) ?? strVal(row.employee_code) ?? strVal(row.national_id) ?? '—';
+    const nameHint = strVal(row.name) ?? strVal(row.national_id) ?? '—';
     try {
       const nm = strVal(row.name);
-      if (!nm) { failures.push({ name: nameHint, error: 'الاسم مطلوب' }); continue; }
+      if (!nm) {
+        failures.push({ name: nameHint, error: 'الاسم مطلوب' });
+        continue;
+      }
 
       const payload = buildPayload({ ...row, name: nm });
       const empId = await resolveEmployeeIdByKeys(row, svc);

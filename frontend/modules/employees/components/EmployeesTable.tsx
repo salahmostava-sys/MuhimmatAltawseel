@@ -1,11 +1,10 @@
-import React from 'react';
+﻿import React from 'react';
 import { Button } from '@shared/components/ui/button';
 import { Skeleton } from '@shared/components/ui/skeleton';
 
 type FastRow = {
   id: string;
   name: string;
-  employee_code: string | null;
   national_id: string | null;
   phone: string | null;
   city: string | null;
@@ -36,41 +35,35 @@ export function EmployeesTable({
   toCityLabel,
   onPageChange,
 }: EmployeesTableProps) {
-  let fastBodyRows: React.ReactNode;
+  let body: React.ReactNode;
   if (isLoading) {
-    fastBodyRows = FAST_SKELETON_IDS.map((id) => (
+    body = FAST_SKELETON_IDS.map((id) => (
       <tr key={`employees-table-skeleton-${id}`}>
-        <td className="px-4 py-3"><Skeleton className="h-4 w-48" /></td>
-        <td className="px-4 py-3"><Skeleton className="h-4 w-20" /></td>
-        <td className="px-4 py-3"><Skeleton className="h-4 w-28" /></td>
-        <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>
-        <td className="px-4 py-3"><Skeleton className="h-4 w-16" /></td>
-        <td className="px-4 py-3"><Skeleton className="h-4 w-16" /></td>
-        <td className="px-4 py-3"><Skeleton className="h-4 w-28" /></td>
+        <td className="px-4 py-3 text-center"><Skeleton className="h-4 w-48" /></td>
+        <td className="px-4 py-3 text-center"><Skeleton className="h-4 w-28" /></td>
+        <td className="px-4 py-3 text-center"><Skeleton className="h-4 w-24" /></td>
+        <td className="px-4 py-3 text-center"><Skeleton className="h-4 w-16" /></td>
+        <td className="px-4 py-3 text-center"><Skeleton className="h-4 w-28" /></td>
+        <td className="px-4 py-3 text-center"><Skeleton className="h-4 w-16" /></td>
       </tr>
     ));
   } else if (rows.length === 0) {
-    fastBodyRows = (
+    body = (
       <tr>
-        <td colSpan={7} className="py-10 text-center text-muted-foreground">
-          لا توجد نتائج
-        </td>
+        <td colSpan={6} className="py-10 text-center text-muted-foreground">لا توجد نتائج</td>
       </tr>
     );
   } else {
-    fastBodyRows = rows.map((r) => (
-      <tr key={r.id} className="hover:bg-muted/30 transition-colors">
-        <td className="px-4 py-3 font-semibold">{r.name}</td>
-        <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">{r.employee_code ?? '—'}</td>
-        <td className="px-4 py-3 text-xs tabular-nums">{r.national_id ?? '—'}</td>
-        <td className="px-4 py-3 text-xs tabular-nums">{r.phone ?? '—'}</td>
-        <td className="px-4 py-3">{toCityLabel(r.city)}</td>
-        <td className="px-4 py-3">
-          <span className="text-[11px] px-2 py-0.5 rounded-full border bg-muted text-muted-foreground border-border">
-            {r.status}
-          </span>
+    body = rows.map((row) => (
+      <tr key={row.id} className="transition-colors hover:bg-muted/30">
+        <td className="px-4 py-3 text-center font-semibold">{row.name}</td>
+        <td className="px-4 py-3 text-center text-xs tabular-nums">{row.national_id ?? '•'}</td>
+        <td className="px-4 py-3 text-center text-xs tabular-nums">{row.phone ?? '•'}</td>
+        <td className="px-4 py-3 text-center">{toCityLabel(row.city, '•')}</td>
+        <td className="px-4 py-3 text-center">
+          <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">{row.status}</span>
         </td>
-        <td className="px-4 py-3 text-xs tabular-nums">{r.residency_expiry ?? '—'}</td>
+        <td className="px-4 py-3 text-center text-xs tabular-nums">{row.residency_expiry ?? '•'}</td>
       </tr>
     ));
   }
@@ -78,46 +71,29 @@ export function EmployeesTable({
   return (
     <div className="ds-card overflow-hidden">
       <div className="overflow-x-auto">
-        <table ref={tableRef} className="w-full text-sm">
+        <table ref={tableRef} className="w-full text-center align-middle text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/40">
-              <th className="text-center font-semibold px-4 py-3">الاسم</th>
-              <th className="text-center font-semibold px-4 py-3">الكود</th>
-              <th className="text-center font-semibold px-4 py-3">رقم الهوية</th>
-              <th className="text-center font-semibold px-4 py-3">الهاتف</th>
-              <th className="text-center font-semibold px-4 py-3">الفرع</th>
-              <th className="text-center font-semibold px-4 py-3">الحالة</th>
-              <th className="text-center font-semibold px-4 py-3">انتهاء الإقامة</th>
+              <th className="px-4 py-3 text-center font-semibold">الاسم</th>
+              <th className="px-4 py-3 text-center font-semibold">رقم الهوية</th>
+              <th className="px-4 py-3 text-center font-semibold">الهاتف</th>
+              <th className="px-4 py-3 text-center font-semibold">المدينة</th>
+              <th className="px-4 py-3 text-center font-semibold">الحالة</th>
+              <th className="px-4 py-3 text-center font-semibold">انتهاء الإقامة</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
-            {fastBodyRows}
-          </tbody>
+          <tbody className="divide-y divide-border">{body}</tbody>
         </table>
       </div>
 
-      <div className="flex items-center justify-between px-4 py-3 border-t border-border text-xs">
+      <div className="flex items-center justify-between border-t border-border px-4 py-3 text-xs">
         <div className="text-muted-foreground">{total.toLocaleString()} نتيجة</div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8"
-            onClick={() => onPageChange(Math.max(1, page - 1))}
-            disabled={page <= 1}
-          >
+          <Button variant="outline" size="sm" className="h-8" onClick={() => onPageChange(Math.max(1, page - 1))} disabled={page <= 1}>
             السابق
           </Button>
-          <span className="tabular-nums text-muted-foreground">
-            {page} / {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8"
-            onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-            disabled={page >= totalPages}
-          >
+          <span className="tabular-nums text-muted-foreground">{page} / {totalPages}</span>
+          <Button variant="outline" size="sm" className="h-8" onClick={() => onPageChange(Math.min(totalPages, page + 1))} disabled={page >= totalPages}>
             التالي
           </Button>
         </div>
@@ -125,3 +101,4 @@ export function EmployeesTable({
     </div>
   );
 }
+

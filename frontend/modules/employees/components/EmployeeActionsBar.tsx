@@ -1,6 +1,7 @@
 import React from 'react';
 import { Plus, Columns, Filter, X } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
+import { cityLabel } from '@modules/employees/model/employeeCity';
 import {
   DropdownMenu, DropdownMenuContent,
   DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuLabel,
@@ -20,7 +21,6 @@ type EmployeeActionsBarProps = {
   onImportFile: (file: File) => Promise<void>;
   visibleCols: Set<ColKey>;
   setVisibleCols: React.Dispatch<React.SetStateAction<Set<ColKey>>>;
-  onFastView: () => void;
   onAddEmployee: () => void;
   isUploading: boolean;
   uploadReport: UploadReport | null;
@@ -39,7 +39,7 @@ export function EmployeeActionsBar({
   actionLoading, permissions,
   onExport, onDownloadTemplate, onPrint, onImportFile,
   visibleCols, setVisibleCols,
-  onFastView, onAddEmployee,
+  onAddEmployee,
   isUploading, uploadReport, setUploadReport,
   uploadProgress, uploadLiveStats,
   hasActiveFilters, colFilters, setColFilter, setColFilters,
@@ -135,9 +135,6 @@ export function EmployeeActionsBar({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button variant="outline" size="sm" className="gap-1.5 h-9" onClick={onFastView}>
-              <Columns size={14} /> قائمة (سريعة)
-            </Button>
           </div>
 
           {permissions.can_edit && (
@@ -174,7 +171,6 @@ export function EmployeeActionsBar({
           <span className="text-xs text-muted-foreground flex items-center gap-1"><Filter size={12} /> الفلاتر النشطة:</span>
           {Object.entries(colFilters).map(([key, val]) => {
             const colLabel = ALL_COLUMNS.find(c => c.key === key)?.label || key;
-            const cityLabels: Record<string, string> = { makkah: 'مكة', jeddah: 'جدة' };
             const kafalaLabels: Record<string, string> = {
               sponsored: 'على الكفالة',
               not_sponsored: 'ليس على الكفالة',
@@ -183,7 +179,7 @@ export function EmployeeActionsBar({
             };
             const displayVal =
               key === 'city'
-                ? val.split(',').map((v) => cityLabels[v.trim()] ?? v).join('، ')
+                ? val.split(',').map((v) => cityLabel(v.trim(), v.trim())).join('، ')
                 : key === 'sponsorship_status'
                   ? val.split(',').map((v) => kafalaLabels[v.trim()] ?? v).join('، ')
                   : val;

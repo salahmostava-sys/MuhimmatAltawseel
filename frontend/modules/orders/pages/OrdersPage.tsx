@@ -15,18 +15,13 @@ const MonthSummaryTab = lazy(() =>
     default: module.MonthSummaryTab,
   })),
 );
-const OrdersListTab = lazy(() =>
-  import('@modules/orders/components/OrdersListTab').then((module) => ({
-    default: module.OrdersListTab,
-  })),
-);
 const ShiftsTabWrapper = lazy(() =>
   import('@modules/orders/components/ShiftsTabWrapper').then((module) => ({
     default: module.ShiftsTabWrapper,
   })),
 );
 
-const ORDER_TABS = ['grid', 'summary', 'list', 'shifts'] as const;
+const ORDER_TABS = ['grid', 'summary', 'shifts'] as const;
 type OrderTab = (typeof ORDER_TABS)[number];
 
 const isOrderTab = (v: string | null): v is OrderTab =>
@@ -78,7 +73,6 @@ const OrdersPage = () => {
           options={[
             { value: 'grid', label: '📊 Grid الشهري', selectLabel: 'Grid الشهري' },
             { value: 'summary', label: 'ملخص الشهر', selectLabel: 'ملخص الشهر' },
-            { value: 'list', label: 'قائمة (سريعة)', selectLabel: 'قائمة (سريعة)' },
             { value: 'shifts', label: '⏰ الدوام', selectLabel: 'الدوام' },
           ]}
         />
@@ -90,11 +84,6 @@ const OrdersPage = () => {
         <TabsContent value="summary" className="mt-2 overflow-x-auto outline-none">
           <Suspense fallback={<TabLoader />}>
             <MonthSummaryTab />
-          </Suspense>
-        </TabsContent>
-        <TabsContent value="list" className="mt-2 outline-none">
-          <Suspense fallback={<TabLoader />}>
-            <OrdersListTab />
           </Suspense>
         </TabsContent>
         <TabsContent value="shifts" className="mt-2 outline-none">

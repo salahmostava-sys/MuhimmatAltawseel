@@ -1,11 +1,14 @@
-import {
+﻿import {
   salaryService,
   type PricingRule,
   type SalaryPreviewPlatformBreakdown,
   type SalarySchemeTier,
 } from '@services/salaryService';
 import { salaryDataService } from '@services/salaryDataService';
-import { filterVisibleEmployeesForSalaryMonth } from '@shared/lib/employeeVisibility';
+import {
+  filterVisibleEmployeesForSalaryMonth,
+  isExcludedSponsorshipStatus,
+} from '@shared/lib/employeeVisibility';
 import {
   getPrimaryPlatformActivityCount,
   hasPlatformActivity,
@@ -183,6 +186,40 @@ export const buildOrdersMap = (rows: OrderWithAppRow[] | null | undefined) => {
   return ordMap;
 };
 
+type SalaryMonthVisibilityEmployee = {
+  id: string;
+  sponsorship_status?: string | null;
+};
+
+const hasMonthlyPlatformPreviewActivity = (
+  employeeId: string,
+  previewMap: Record<string, PreviewMapEntry>,
+) =>
+  Object.values(previewMap[employeeId]?.platform_breakdown || {}).some(
+    (metric) => (metric.ordersCount || 0) > 0 || (metric.shiftDays || 0) > 0,
+  );
+
+export const shouldIncludeEmployeeInSalaryMonth = (
+  employee: SalaryMonthVisibilityEmployee,
+  ordMap: Record<string, Record<string, number>>,
+  attendanceDaysMap: Record<string, number>,
+  previewMap: Record<string, PreviewMapEntry>,
+) => {
+  if (!isExcludedSponsorshipStatus(employee.sponsorship_status ?? null)) return true;
+
+  const hasOrders = Object.values(ordMap[employee.id] || {}).some((count) => count > 0);
+  const hasAttendance = (attendanceDaysMap[employee.id] || 0) > 0;
+
+  return hasOrders || hasAttendance || hasMonthlyPlatformPreviewActivity(employee.id, previewMap);
+};
+
+export const filterSalaryMonthEmployees = <T extends SalaryMonthVisibilityEmployee>(
+  employees: readonly T[],
+  ordMap: Record<string, Record<string, number>>,
+  attendanceDaysMap: Record<string, number>,
+  previewMap: Record<string, PreviewMapEntry>,
+) => employees.filter((employee) => shouldIncludeEmployeeInSalaryMonth(employee, ordMap, attendanceDaysMap, previewMap));
+
 export const resolveRowStatus = (
   saved: { is_approved: boolean; net_salary: number } | undefined,
   pendingInstallmentsCount: number,
@@ -347,7 +384,7 @@ export const buildSalaryRows = ({
       employeeId,
       employeeName: String(emp.name || ''),
       jobTitle: String(emp.job_title || 'مندوب توصيل'),
-      nationalId: String(emp.national_id || '—'),
+      nationalId: String(emp.national_id || '•'),
       city: toCityArabicLabel(rawCity),
       cityKey,
       bankAccount: emp.iban ? String(emp.iban).slice(-6) : '',
@@ -480,18 +517,18 @@ export async function prepareSalaryState({
   );
 
   const monthStartIso = `${selectedMonth}-01`;
-  const employees = filterVisibleEmployeesForSalaryMonth(
+  const attendanceDaysMap = buildAttendanceDaysMap(attendanceRows as Array<{ employee_id: string }> | null | undefined);
+  const fuelCostMap = buildFuelCostMap(fuelRes as Array<{ employee_id: string; fuel_cost: number | string }> | null | undefined);
+  const ordMap = buildOrdersMap(orders as OrderWithAppRow[] | null);
+  const visibleEmployees = filterVisibleEmployeesForSalaryMonth(
     (empRows || []) as { id: string; sponsorship_status?: string | null; probation_end_date?: string | null }[],
     monthStartIso,
     activeEmployeeIdsInMonth
   );
+  const employees = filterSalaryMonthEmployees(visibleEmployees, ordMap, attendanceDaysMap, previewMap);
   if (employees.some((emp) => !previewMap[emp.id])) {
     throw new Error('PREVIEW_BACKEND: تعذر تحميل نتائج المعاينة من الخادم لكل الموظفين');
   }
-
-  const attendanceDaysMap = buildAttendanceDaysMap(attendanceRows as Array<{ employee_id: string }> | null | undefined);
-  const fuelCostMap = buildFuelCostMap(fuelRes as Array<{ employee_id: string; fuel_cost: number | string }> | null | undefined);
-  const ordMap = buildOrdersMap(orders as OrderWithAppRow[] | null);
   const appsFromApi = (appsWithSchemeRes as AppWithSchemeRow[] | null) || [];
   const { appSchemeMap, appNameToId, appWorkTypeMap } = buildAppMaps(appsFromApi);
   const platformNames = appsFromApi.map((a) => a.name);

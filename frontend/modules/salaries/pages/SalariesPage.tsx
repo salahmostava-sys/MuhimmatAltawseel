@@ -10,13 +10,11 @@ import { useSystemSettings } from '@app/providers/SystemSettingsContext';
 import type { PricingRule } from '@services/salaryService';
 import { salaryDataService } from '@services/salaryDataService';
 import { useMonthlyActiveEmployeeIds } from '@shared/hooks/useMonthlyActiveEmployeeIds';
-import { createDefaultGlobalFilters } from '@shared/components/table/GlobalTableFilters';
 import { isValidSalaryMonthYear } from '@shared/lib/salaryValidation';
 import { defaultQueryRetry } from '@shared/lib/query';
 import { loadJsPdf } from '@modules/salaries/lib/salaryPdfLoaders';
 import Loading from '@shared/components/Loading';
 
-import type { FastApprovedFilter } from '@modules/salaries/model/salaryUtils';
 import { SalarySchemeSelector } from '@modules/salaries/components/SalarySchemeSelector';
 import { useSalaryFilteredRows } from '@modules/salaries/hooks/useSalaryTable';
 import { useSalaryActions } from '@modules/salaries/hooks/useSalaryActions';
@@ -40,11 +38,6 @@ import type JSZip from 'jszip';
 
 import { useTemporalContext } from '@app/providers/TemporalContext';
 
-const SalariesFastList = lazy(() =>
-  import('@modules/salaries/components/SalaryFastList').then((module) => ({
-    default: module.SalaryFastList,
-  })),
-);
 const PayslipModal = lazy(() =>
   import('@modules/salaries/components/PayslipModal').then((module) => ({
     default: module.PayslipModal,
@@ -94,11 +87,6 @@ const Salaries = () => {
   const [loadingData, setLoadingData] = useState(true);
   const [previewBackendError, setPreviewBackendError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
-  const [pageMode, setPageMode] = useState<'detailed' | 'fast'>('detailed');
-  const [fastPage, setFastPage] = useState(1);
-  const [fastPageSize] = useState(50);
-  const [fastFilters, setFastFilters] = useState(() => createDefaultGlobalFilters());
-  const [fastApproved, setFastApproved] = useState<FastApprovedFilter>('all');
   const [markingPaid, setMarkingPaid] = useState<string | null>(null);
   const [editingCell, setEditingCell] = useState<{ rowId: string; platform: string } | null>(null);
   const [appsWithoutScheme, setAppsWithoutScheme] = useState<string[]>([]);
@@ -366,34 +354,11 @@ const Salaries = () => {
     return () => clearTimeout(timer);
   }, [batchIndex, batchQueue, batchZip, selectedMonth, toast, projectName]);
 
-  if (pageMode === 'fast') {
-    return (
-      <Suspense fallback={<InlineLoader minHeightClassName="min-h-[320px]" />}>
-        <SalariesFastList
-          monthYear={selectedMonth}
-          branch={fastFilters.branch}
-          search={fastFilters.search}
-          approved={fastApproved}
-          onApprovedChange={setFastApproved}
-          onFiltersChange={(next) => { setFastFilters(next); setFastPage(1); }}
-          page={fastPage}
-          pageSize={fastPageSize}
-          onPageChange={setFastPage}
-          onBack={() => setPageMode('detailed')}
-          onSalaryTemplate={actions.downloadSalaryTemplate}
-          onSalaryImport={actions.handleSalaryImportFile}
-          salaryActionLoading={salaryActionLoading}
-        />
-      </Suspense>
-    );
-  }
-
   const monthLabel = months.find(m => m.v === selectedMonth)?.l || selectedMonth;
 
   return (
     <div className="space-y-4" dir="rtl">
       <SalaryMonthSelector
-        setPageMode={setPageMode}
         loadingData={loadingData}
         previewBackendError={previewBackendError}
       />
