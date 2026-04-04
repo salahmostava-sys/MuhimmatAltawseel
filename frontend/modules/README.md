@@ -9,6 +9,5 @@ This folder follows a domain-first structure for easier onboarding and ownership
 
 Implementation note:
 
-- Legacy routes still live under `modules/pages/*` during migration.
-- Domain indexes (`hr/index.ts`, `finance/index.ts`, `operations/index.ts`, `settings/index.ts`)
-  are the stable entry points to avoid scattered imports.
+- Legacy route wrappers still live under `modules/pages/*` during migration.
+- Prefer importing concrete feature files from domain folders instead of keeping unused barrel layers.
