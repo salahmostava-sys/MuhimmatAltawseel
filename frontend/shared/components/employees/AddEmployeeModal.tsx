@@ -355,27 +355,6 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
     setField('cities', next);
   }, [getValues, setField]);
 
-  const applyProbationDays = useCallback((daysValue: string) => {
-    const digits = daysValue.replace(/\D/g, '').slice(0, 3);
-    setField('probation_days', digits);
-    if (!digits) {
-      setField('probation_end_date', '');
-      return;
-    }
-    const base = form.join_date ? new Date(form.join_date) : new Date();
-    if (Number.isNaN(base.getTime())) {
-      setField('probation_end_date', '');
-      return;
-    }
-    base.setDate(base.getDate() + Number(digits));
-    setField('probation_end_date', base.toISOString().split('T')[0]);
-  }, [form.join_date, setField]);
-
-  useEffect(() => {
-    if (!form.probation_days) return;
-    applyProbationDays(form.probation_days);
-  }, [applyProbationDays, form.join_date]);
-
   const resStatus = (() => {
     if (!form.residency_expiry) return null;
     try {
@@ -700,43 +679,6 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
               <F label="تاريخ الميلاد">
                 <Input type="date" value={form.birth_date} onChange={e => setField('birth_date', e.target.value)} />
               </F>
-              <F label="الحالة">
-                <Select value={form.status} onValueChange={v => setField('status', v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">نشط</SelectItem>
-                    <SelectItem value="inactive">غير نشط</SelectItem>
-                    <SelectItem value="ended">منتهي</SelectItem>
-                  </SelectContent>
-                </Select>
-              </F>
-
-              <div className="sm:col-span-2">
-                <SectionTitle title="── فترة التجربة (اختياري) ──" />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <F label="عدد الأيام">
-                    <Input
-                      type="text"
-                      value={form.probation_days}
-                      onChange={e => applyProbationDays(e.target.value)}
-                      dir="ltr"
-                      inputMode="numeric"
-                    />
-                  </F>
-                  <F label="تاريخ انتهاء فترة التجربة">
-                    <Input type="date" value={form.probation_end_date} readOnly />
-                    {form.probation_end_date && (
-                      <button
-                        type="button"
-                        onClick={() => { setField('probation_end_date', ''); setField('probation_days', ''); }}
-                        className="text-xs text-destructive hover:underline mt-1"
-                      >
-                        × مسح فترة التجربة
-                      </button>
-                    )}
-                  </F>
-                </div>
-              </div>
               <F label="لغة كشف الراتب">
                 <div className="flex gap-2 mt-1">
                   {([
@@ -773,9 +715,6 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
               </div>
               <F label="تاريخ انتهاء التأمين الصحي">
                 <Input type="date" value={form.health_insurance_expiry} onChange={e => setField('health_insurance_expiry', e.target.value)} />
-              </F>
-              <F label="تاريخ انتهاء الرخصة">
-                <Input type="date" value={form.license_expiry} onChange={e => setField('license_expiry', e.target.value)} />
               </F>
               <F label="حالة الرخصة">
                 <Select value={form.license_status} onValueChange={v => setField('license_status', v)}>
