@@ -22,6 +22,12 @@ interface OrderDetailsModalProps {
   empPlatformScheme: Record<string, Record<string, SchemeData | null>>;
 }
 
+function getWorkTypeBadge(workType?: string | null) {
+  if (workType === 'shift') return { label: 'دوام', className: 'bg-info/10 text-info border-info/20' };
+  if (workType === 'hybrid') return { label: 'مختلط', className: 'bg-warning/10 text-warning border-warning/20' };
+  return { label: 'طلبات', className: 'bg-primary/10 text-primary border-primary/20' };
+}
+
 export function OrderDetailsModal({ row, empPlatformScheme }: OrderDetailsModalProps) {
   const [open, setOpen] = useState(false);
   
@@ -89,12 +95,16 @@ export function OrderDetailsModal({ row, empPlatformScheme }: OrderDetailsModalP
                 const scheme = empPlatformScheme?.[row.employeeId]?.[platform];
                 const avgPerOrder = orders > 0 ? salary / orders : 0;
                 const avgPerShift = shiftDays > 0 ? salary / shiftDays : 0;
+                const workTypeBadge = getWorkTypeBadge(metric?.workType);
                 
                 return (
                   <div key={platform} className="px-3 py-3 flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-xs">{platform}</Badge>
+                        <Badge variant="outline" className={`text-[10px] ${workTypeBadge.className}`}>
+                          {workTypeBadge.label}
+                        </Badge>
                         {scheme?.scheme_type === 'fixed_monthly' && (
                           <span className="text-[10px] text-muted-foreground">(راتب ثابت)</span>
                         )}
@@ -135,7 +145,7 @@ export function OrderDetailsModal({ row, empPlatformScheme }: OrderDetailsModalP
             </div>
             <div className="text-xs space-y-1 text-muted-foreground">
               <p>• المنصات حسب الطلب تُحسب بالطلبات × الشريحة أو قاعدة التسعير.</p>
-              <p>• منصات الدوام تُحسب بعدد أيام الدوام المؤهلة.</p>
+              <p>• منصات الدوام لا تدخل ضمن الطلبات اليومية، وتُحسب بعدد أيام الدوام المؤهلة.</p>
               <p>• المنصات المختلطة قد تجمع بين الدوام والطلبات حسب إعداد المنصة.</p>
             </div>
           </div>

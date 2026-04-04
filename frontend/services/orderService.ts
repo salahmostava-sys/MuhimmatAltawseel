@@ -51,6 +51,7 @@ type ActiveApp = {
   name: string;
   name_en: string | null;
   logo_url?: string | null;
+  work_type?: 'orders' | 'shift' | 'hybrid' | null;
 };
 
 type EmployeeAppRow = {
@@ -353,7 +354,7 @@ export const orderService = {
   getActiveApps: async () => {
     const { data, error } = await supabase
       .from('apps')
-      .select('id, name, name_en, logo_url')
+      .select('id, name, name_en, logo_url, work_type')
       .eq('is_active', true)
       .order('name');
     if (error) throw toServiceError(error, 'orderService.getActiveApps');

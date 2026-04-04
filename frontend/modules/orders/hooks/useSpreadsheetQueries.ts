@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { orderService } from '@services/orderService';
-import { isExcludedSponsorshipStatus } from '@shared/lib/employeeVisibility';
+import { isEmployeeVisibleInMonth } from '@shared/lib/employeeVisibility';
 import { defaultQueryRetry } from '@shared/lib/query';
 import type { App, DailyData, Employee, EmployeeAppAssignmentRow, OrderRawRow } from '@modules/orders/types';
 import { buildAppEmployeeIdsMap, buildDailyDataMap } from '@modules/orders/utils/gridHelpers';
@@ -13,7 +13,7 @@ export function useSpreadsheetQueries(
   enabled: boolean,
   year: number,
   month: number,
-  _activeEmployeeIdsInMonth: ReadonlySet<string> | undefined,
+  activeEmployeeIdsInMonth: ReadonlySet<string> | undefined,
 ) {
   const qk = ordersQueryKeys(uid);
 
@@ -89,14 +89,16 @@ export function useSpreadsheetQueries(
   const employees = useMemo<Employee[]>(
     () => {
       const baseEmps = spreadsheetBaseData?.employees ?? [];
-      // For orders page: show all active employees, don't filter by activeEmployeeIdsInMonth
-      // The filtering will be done in useSpreadsheetGrid based on platform assignments
-      return baseEmps.filter(emp => 
-        emp.status === 'active' && 
-        !isExcludedSponsorshipStatus(emp.sponsorship_status)
+      // Keep historical month totals aligned with salaries:
+      // active employees remain visible, and absconded/terminated employees
+      // are still included when they have activity in the selected month.
+      return baseEmps.filter(
+        (emp) =>
+          emp.status === 'active' &&
+          isEmployeeVisibleInMonth(emp, activeEmployeeIdsInMonth),
       );
     },
-    [spreadsheetBaseData],
+    [spreadsheetBaseData, activeEmployeeIdsInMonth],
   );
 
   return {

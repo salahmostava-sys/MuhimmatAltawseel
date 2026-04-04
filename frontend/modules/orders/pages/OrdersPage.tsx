@@ -71,9 +71,9 @@ const OrdersPage = () => {
           selectAriaLabel="قسم الطلبات"
           tabsListClassName="bg-muted/50 p-0.5 h-9 items-stretch"
           options={[
-            { value: 'grid', label: '📊 Grid الشهري', selectLabel: 'Grid الشهري' },
-            { value: 'summary', label: 'ملخص الشهر', selectLabel: 'ملخص الشهر' },
-            { value: 'shifts', label: '⏰ الدوام', selectLabel: 'الدوام' },
+            { value: 'grid', label: '📦 شبكة الطلبات', selectLabel: 'شبكة الطلبات' },
+            { value: 'summary', label: '📊 ملخص الطلبات', selectLabel: 'ملخص الطلبات' },
+            { value: 'shifts', label: '⏰ الدوام والساعات', selectLabel: 'الدوام والساعات' },
           ]}
         />
         <TabsContent value="grid" className="mt-2 outline-none">

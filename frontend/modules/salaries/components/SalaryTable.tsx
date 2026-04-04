@@ -132,7 +132,7 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
                 <th colSpan={3} className={`${thFrozenBase} border-l border-border/50`} style={stickyLeft(40)}>بيانات المندوب</th>
                 <th colSpan={3} className="px-3 py-2 text-xs font-semibold text-info whitespace-nowrap border-b border-border/40 bg-info/10 text-center border-l border-border/40">📊 بيانات المندوب الشهرية</th>
                 <th colSpan={platforms.length} className="px-3 py-2 text-xs font-semibold text-primary whitespace-nowrap border-b border-border/50 bg-muted/40 text-center border-l border-border/50">
-                  المنصات (نشاط / راتب، ونقر مزدوج لتعديل الطلبات فقط)
+                  المنصات (طلبات أو دوام / راتب، ونقر مزدوج لتعديل الطلبات في منصات الطلب فقط)
                 </th>
                 <th colSpan={2} className="px-3 py-2 text-xs font-semibold text-primary whitespace-nowrap border-b border-border/40 bg-primary/10 text-center border-l border-border/40">إجمالي النشاط + الراتب الأساسي</th>
                 <th colSpan={4} className="px-3 py-2 text-xs font-semibold text-success whitespace-nowrap border-b border-border/40 bg-success/10 text-center border-l border-border/40">✅ الإضافات</th>
@@ -171,7 +171,7 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
                       onClick={() => handleSort(p)}>
                        <div className="flex flex-col items-center gap-0">
                          <span>{p}</span>
-                         <span className="text-[9px] opacity-80 font-normal">نشاط / راتب <SalarySortIcon field={p} sortField={sortField} sortDir={sortDir} /></span>
+                         <span className="text-[9px] opacity-80 font-normal">طلبات/دوام / راتب <SalarySortIcon field={p} sortField={sortField} sortDir={sortDir} /></span>
                        </div>
                     </th>
                   );

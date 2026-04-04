@@ -1,3 +1,5 @@
+import type { WorkType } from '@shared/types/shifts';
+
 export type Employee = {
   id: string;
   name: string;
@@ -8,7 +10,13 @@ export type Employee = {
   city?: string | null;
 };
 
-export type App = { id: string; name: string; name_en: string | null; logo_url?: string | null };
+export type App = {
+  id: string;
+  name: string;
+  name_en: string | null;
+  logo_url?: string | null;
+  work_type?: WorkType | null;
+};
 
 export type DailyData = Record<string, number>;
 

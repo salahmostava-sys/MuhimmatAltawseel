@@ -13,6 +13,29 @@ import { OrdersMonthNavigator } from '@shared/components/orders/OrdersMonthNavig
 import { cn } from '@shared/lib/utils';
 import { getAppColor, type AppColorData } from '@shared/hooks/useAppColors';
 import type { App } from '@modules/orders/types';
+import type { WorkType } from '@shared/types/shifts';
+
+const getWorkTypeMeta = (workType?: WorkType | null) => {
+  if (workType === 'shift') {
+    return {
+      icon: '⏰',
+      label: 'دوام',
+      title: 'منصة دوام: تسجيلها يتم من تبويب الدوام',
+    };
+  }
+  if (workType === 'hybrid') {
+    return {
+      icon: '🔄',
+      label: 'مختلط',
+      title: 'منصة مختلطة: قد تُسجل كطلبات أو دوام حسب الإعداد',
+    };
+  }
+  return {
+    icon: '📦',
+    label: 'طلبات',
+    title: 'منصة طلبات',
+  };
+};
 
 type Props = Readonly<{
   appColorsList: AppColorData[];
@@ -96,7 +119,7 @@ export function OrdersSpreadsheetToolbar(props: Props) {
 
       <div className="flex items-center gap-2 sm:gap-3 rounded-lg border border-border bg-background px-2.5 py-1.5 text-[11px] shrink-0">
         <span className="whitespace-nowrap">
-          <span className="text-muted-foreground">ملخص الشهر:</span>{' '}
+          <span className="text-muted-foreground">إجمالي الطلبات:</span>{' '}
           <span className="font-bold tabular-nums text-foreground">{monthGrandTotal.toLocaleString()}</span>
           <span className="text-muted-foreground mr-0.5"> طلب</span>
         </span>
@@ -126,6 +149,9 @@ export function OrdersSpreadsheetToolbar(props: Props) {
           <span className="hidden lg:inline text-border mx-0.5 select-none">|</span>
           <div className="flex items-center gap-1.5 flex-wrap min-w-0 max-w-full lg:max-w-[min(100%,42rem)]">
             <span className="text-[10px] text-muted-foreground shrink-0">المنصات:</span>
+            <span className="hidden xl:inline text-[10px] text-muted-foreground shrink-0">
+              📦 طلبات · ⏰ دوام · 🔄 مختلط
+            </span>
             <button
               type="button"
               onClick={() => onPlatformFilter('all')}
@@ -142,6 +168,7 @@ export function OrdersSpreadsheetToolbar(props: Props) {
               const count = platformOrderTotals[app.id] ?? 0;
               const active = platformFilter === app.id;
               const c = getAppColor(appColorsList, app.name);
+              const meta = getWorkTypeMeta(app.work_type);
               return (
                 <button
                   type="button"
@@ -154,8 +181,9 @@ export function OrdersSpreadsheetToolbar(props: Props) {
                       : 'bg-card text-muted-foreground border-border hover:border-primary/50 hover:text-foreground',
                   )}
                   style={active ? { backgroundColor: c.bg, color: c.text, borderColor: c.bg } : undefined}
-                  title={app.name}
+                  title={`${app.name} — ${meta.title}`}
                 >
+                  <span className="shrink-0" aria-hidden>{meta.icon}</span>
                   {app.logo_url && (
                     <img src={app.logo_url} className="w-3.5 h-3.5 rounded-full object-cover shrink-0" alt="" />
                   )}
@@ -250,7 +278,7 @@ export function OrdersSpreadsheetHint(props: Readonly<{ isMonthLocked: boolean }
     <p className="text-[10px] leading-snug text-muted-foreground flex-shrink-0">
       {isMonthLocked
         ? '🔒 هذا الشهر مقفول: كل الخلايا للقراءة فقط'
-        : '💡 انقر على خلية اليوم لإدخال الطلبات — السهم بجانب المندوب لعرض تفاصيل المنصات — اختر المنصة من الشريط أعلاه'}
+        : '💡 انقر على خلية اليوم لإدخال الطلبات — منصات الدوام تُسجل من تبويب الدوام — والرموز: 📦 طلبات، ⏰ دوام، 🔄 مختلط'}
     </p>
   );
 }
