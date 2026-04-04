@@ -10,7 +10,7 @@ import { employeeService, type EmployeeAppOption } from '@services/employeeServi
 import { useSignedUrl, extractStoragePath } from '@shared/hooks/useSignedUrl';
 import { validateUploadFile } from '@shared/lib/validation';
 import { auditService } from '@services/auditService';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldPath, type FieldPathValue } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { getErrorMessage } from '@shared/lib/query';
@@ -91,11 +91,14 @@ const CITY_OPTIONS = DEFAULT_EMPLOYEE_CITY_OPTIONS.map((value) => ({
   label: cityLabel(value, value),
 }));
 
+type UploadStatus = 'idle' | 'selected' | 'uploading' | 'uploaded' | 'error';
+type ResidencyStatus = { days: number; valid: boolean };
+
 // ─── Secure Upload Area — uses signed URLs for existing private docs ──────────
 const UploadArea = ({ label, icon, file, existingStoragePath, onFile, onRemove, status, errorText }: {
   label: string; icon: string; file: File | null; existingStoragePath?: string | null;
   onFile: (f: File) => void; onRemove: () => void;
-  status?: 'idle' | 'selected' | 'uploading' | 'uploaded' | 'error';
+  status?: UploadStatus;
   errorText?: string | null;
 }) => {
   const ref = useRef<HTMLInputElement>(null);
@@ -172,6 +175,27 @@ const UploadArea = ({ label, icon, file, existingStoragePath, onFile, onRemove, 
   );
 };
 
+function getResidencyStatus(expiry: string, onParseError: (error: unknown) => void): ResidencyStatus | null {
+  if (!expiry) return null;
+  try {
+    const days = differenceInDays(parseISO(expiry), new Date());
+    return { days, valid: days >= 0 };
+  } catch (error) {
+    onParseError(error);
+    return null;
+  }
+}
+
+async function validateEmployeeStep(
+  step: number,
+  trigger: ReturnType<typeof useForm<EmployeeFormValues>>['trigger']
+) {
+  if (step === 0) return await trigger(['name', 'phone', 'national_id']);
+  if (step === 1) return await trigger(['residency_expiry']);
+  if (step === 2) return await trigger(['salary_type', 'base_salary']);
+  return true;
+}
+
 const phoneSchema = z
   .string()
   .trim()
@@ -221,6 +245,7 @@ const employeeFormSchema = z
   });
 
 type EmployeeFormValues = z.infer<typeof employeeFormSchema>;
+type EmployeeFormFieldValue = EmployeeFormValues[keyof EmployeeFormValues];
 
 const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
   const isEdit = !!editEmployee;
@@ -311,9 +336,9 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
     personal: null, id: null, license: null,
   });
   const [uploadState, setUploadState] = useState<{
-    personal: { status: 'idle' | 'selected' | 'uploading' | 'uploaded' | 'error'; error: string | null };
-    id: { status: 'idle' | 'selected' | 'uploading' | 'uploaded' | 'error'; error: string | null };
-    license: { status: 'idle' | 'selected' | 'uploading' | 'uploaded' | 'error'; error: string | null };
+    personal: { status: UploadStatus; error: string | null };
+    id: { status: UploadStatus; error: string | null };
+    license: { status: UploadStatus; error: string | null };
   }>({
     personal: { status: editEmployee?.personal_photo_url ? 'uploaded' : 'idle', error: null },
     id: { status: editEmployee?.id_photo_url ? 'uploaded' : 'idle', error: null },
@@ -335,10 +360,13 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
   const totalUploadSlots = 3;
   const uploadProgressPct = Math.round((uploadedFilesCount / totalUploadSlots) * 100);
 
-  const setField = useCallback(
-    <K extends keyof EmployeeFormValues>(k: K, v: EmployeeFormValues[K]) => setValue(k, v, { shouldDirty: true }),
-    [setValue]
-  );
+  const setField = useCallback((k: keyof EmployeeFormValues, v: EmployeeFormFieldValue) => {
+    setValue(
+      k as FieldPath<EmployeeFormValues>,
+      v as FieldPathValue<EmployeeFormValues, FieldPath<EmployeeFormValues>>,
+      { shouldDirty: true }
+    );
+  }, [setValue]);
 
   const upsertCity = useCallback((value: string) => {
     const normalized = normalizeEmployeeCityValue(value);
@@ -355,16 +383,9 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
     setField('cities', next);
   }, [getValues, setField]);
 
-  const resStatus = (() => {
-    if (!form.residency_expiry) return null;
-    try {
-      const days = differenceInDays(parseISO(form.residency_expiry), new Date());
-      return { days, valid: days >= 0 };
-    } catch (e) {
-      logError('[AddEmployeeModal] could not parse residency_expiry', e, { level: 'warn' });
-      return null;
-    }
-  })();
+  const resStatus = getResidencyStatus(form.residency_expiry, (error) => {
+    logError('[AddEmployeeModal] could not parse residency_expiry', error, { level: 'warn' });
+  });
 
   const toggleApp = (app: string) => {
     const cur = getValues('selected_apps') || [];
@@ -372,12 +393,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
     setValue('selected_apps', next, { shouldDirty: true });
   };
 
-  const validateStep = async (s: number) => {
-    if (s === 0) return await trigger(['name', 'phone', 'national_id']);
-    if (s === 1) return await trigger(['residency_expiry']);
-    if (s === 2) return await trigger(['salary_type', 'base_salary']);
-    return true;
-  };
+  const validateStep = useCallback((s: number) => validateEmployeeStep(s, trigger), [trigger]);
 
   const next = async () => {
     const ok = await validateStep(step);
@@ -510,7 +526,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
           await employeeService.deleteById(createdEmployeeId);
         } catch (rollbackErr: unknown) {
           logError('[AddEmployeeModal] rollback failed after save failure', rollbackErr, {
-            employeeId: createdEmployeeId,
+            meta: { employeeId: createdEmployeeId },
           });
           toast({
             title: 'خطأ في الحفظ',
@@ -717,7 +733,10 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                 <Input type="date" value={form.health_insurance_expiry} onChange={e => setField('health_insurance_expiry', e.target.value)} />
               </F>
               <F label="حالة الرخصة">
-                <Select value={form.license_status} onValueChange={v => setField('license_status', v)}>
+                <Select
+                  value={form.license_status}
+                  onValueChange={(value) => setField('license_status', value as EmployeeFormValues['license_status'])}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="has_license">لديه رخصة</SelectItem>
@@ -727,7 +746,10 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                 </Select>
               </F>
               <F label="حالة الكفالة">
-                <Select value={form.sponsorship_status} onValueChange={v => setField('sponsorship_status', v)}>
+                <Select
+                  value={form.sponsorship_status}
+                  onValueChange={(value) => setField('sponsorship_status', value as EmployeeFormValues['sponsorship_status'])}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="sponsored">على الكفالة</SelectItem>

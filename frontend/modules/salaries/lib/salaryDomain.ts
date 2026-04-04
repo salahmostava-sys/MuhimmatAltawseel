@@ -375,7 +375,7 @@ export const buildSalaryRows = ({
     const hasIban = !!emp.iban;
     const rawCity = (emp.city as string | null | undefined) ?? null;
     const cityKey: 'makkah' | 'jeddah' | null = rawCity === 'makkah' || rawCity === 'jeddah' ? rawCity : null;
-    const preferredLanguage = ((emp as { preferred_language?: SlipLanguage | null }).preferred_language || 'ar') as SlipLanguage;
+    const preferredLanguage = (emp as { preferred_language?: SlipLanguage | null }).preferred_language || 'ar';
     const phone = (emp as { phone?: string | null }).phone || null;
     const workDays = Math.max(attendanceDays, preview.total_shift_days || 0);
 
