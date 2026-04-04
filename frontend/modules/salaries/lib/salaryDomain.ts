@@ -427,6 +427,38 @@ export const getManualDeductionTotal = (row: SalaryRow) =>
 export const getTotalDeductions = (row: SalaryRow) =>
   row.advanceDeduction + row.externalDeduction + row.violations + getManualDeductionTotal(row);
 
+export const buildPlatformSetupWarnings = ({
+  apps,
+  rulesMap,
+  rows,
+}: {
+  apps: AppWithSchemeRow[];
+  rulesMap: Record<string, PricingRule[]>;
+  rows: SalaryRow[];
+}) => {
+  const relevantAppNames = new Set(
+    rows.flatMap((row) => row.registeredApps)
+  );
+
+  if (relevantAppNames.size === 0) {
+    return {
+      appsWithoutPricingRules: [],
+      appsWithoutScheme: [],
+    };
+  }
+
+  const relevantApps = apps.filter((app) => relevantAppNames.has(app.name));
+
+  return {
+    appsWithoutPricingRules: relevantApps
+      .filter((app) => !rulesMap[app.id] || rulesMap[app.id].length === 0)
+      .map((app) => app.name),
+    appsWithoutScheme: relevantApps
+      .filter((app) => !app.salary_schemes)
+      .map((app) => app.name),
+  };
+};
+
 export async function prepareSalaryState({
   salaryBaseContext,
   selectedMonth,
@@ -483,8 +515,11 @@ export async function prepareSalaryState({
     fuelCostMap,
   });
   const hydratedRows = await hydrateRowsWithDraft(newRows, selectedMonth);
-  const appsWithoutPricingRules = appsFromApi.filter((a) => !rulesMap[a.id] || rulesMap[a.id].length === 0).map((a) => a.name);
-  const appsWithoutScheme = appsFromApi.filter((a) => !a.salary_schemes).map((a) => a.name);
+  const { appsWithoutPricingRules, appsWithoutScheme } = buildPlatformSetupWarnings({
+    apps: appsFromApi,
+    rulesMap,
+    rows: hydratedRows,
+  });
 
   return {
     appNameToId,
