@@ -12,6 +12,7 @@ import {
 import {
   getPrimaryPlatformActivityCount,
   hasPlatformActivity,
+  isAdministrativeJobTitle,
   toCityArabicLabel,
 } from '@modules/salaries/model/salaryUtils';
 import { logError } from '@shared/lib/logger';
@@ -188,6 +189,7 @@ export const buildOrdersMap = (rows: OrderWithAppRow[] | null | undefined) => {
 
 type SalaryMonthVisibilityEmployee = {
   id: string;
+  job_title?: string | null;
   sponsorship_status?: string | null;
 };
 
@@ -204,13 +206,16 @@ export const shouldIncludeEmployeeInSalaryMonth = (
   ordMap: Record<string, Record<string, number>>,
   attendanceDaysMap: Record<string, number>,
   previewMap: Record<string, PreviewMapEntry>,
+  savedEmployeeIds?: ReadonlySet<string>,
 ) => {
-  if (!isExcludedSponsorshipStatus(employee.sponsorship_status ?? null)) return true;
-
   const hasOrders = Object.values(ordMap[employee.id] || {}).some((count) => count > 0);
   const hasAttendance = (attendanceDaysMap[employee.id] || 0) > 0;
-
-  return hasOrders || hasAttendance || hasMonthlyPlatformPreviewActivity(employee.id, previewMap);
+  const hasPreviewActivity = hasMonthlyPlatformPreviewActivity(employee.id, previewMap);
+  const hasMonthlyActivity = hasOrders || hasAttendance || hasPreviewActivity;
+  if (hasMonthlyActivity) return true;
+  if (savedEmployeeIds?.has(employee.id)) return true;
+  if (isExcludedSponsorshipStatus(employee.sponsorship_status ?? null)) return false;
+  return isAdministrativeJobTitle(employee.job_title ?? null);
 };
 
 export const filterSalaryMonthEmployees = <T extends SalaryMonthVisibilityEmployee>(
@@ -218,7 +223,17 @@ export const filterSalaryMonthEmployees = <T extends SalaryMonthVisibilityEmploy
   ordMap: Record<string, Record<string, number>>,
   attendanceDaysMap: Record<string, number>,
   previewMap: Record<string, PreviewMapEntry>,
-) => employees.filter((employee) => shouldIncludeEmployeeInSalaryMonth(employee, ordMap, attendanceDaysMap, previewMap));
+  savedEmployeeIds?: ReadonlySet<string>,
+) =>
+  employees.filter((employee) =>
+    shouldIncludeEmployeeInSalaryMonth(
+      employee,
+      ordMap,
+      attendanceDaysMap,
+      previewMap,
+      savedEmployeeIds,
+    ),
+  );
 
 export const resolveRowStatus = (
   saved: { is_approved: boolean; net_salary: number } | undefined,
@@ -597,12 +612,25 @@ export async function prepareSalaryState({
   const attendanceDaysMap = buildAttendanceDaysMap(attendanceRows as Array<{ employee_id: string }> | null | undefined);
   const fuelCostMap = buildFuelCostMap(fuelRes as Array<{ employee_id: string; fuel_cost: number | string }> | null | undefined);
   const ordMap = buildOrdersMap(orders as OrderWithAppRow[] | null);
+  const savedEmployeeIds = new Set(Object.keys(savedMap));
   const visibleEmployees = filterRetainedEmployeesForSalaryMonth(
-    (empRows || []) as { id: string; status?: string | null; sponsorship_status?: string | null; probation_end_date?: string | null }[],
+    (empRows || []) as {
+      id: string;
+      status?: string | null;
+      job_title?: string | null;
+      sponsorship_status?: string | null;
+      probation_end_date?: string | null;
+    }[],
     monthStartIso,
     activeEmployeeIdsInMonth
   );
-  const employees = filterSalaryMonthEmployees(visibleEmployees, ordMap, attendanceDaysMap, previewMap);
+  const employees = filterSalaryMonthEmployees(
+    visibleEmployees,
+    ordMap,
+    attendanceDaysMap,
+    previewMap,
+    savedEmployeeIds,
+  );
   const appsFromApi = (appsWithSchemeRes as AppWithSchemeRow[] | null) || [];
   const { appSchemeMap, appNameToId, appWorkTypeMap } = buildAppMaps(appsFromApi);
   const platformNames = appsFromApi.map((a) => a.name);

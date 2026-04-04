@@ -13,6 +13,77 @@ const formatArabicCount = (count: number, noun: string) => `${count.toLocaleStri
 export const hasPlatformActivity = (metric?: PlatformSalaryMetric | null) =>
   Boolean(metric && (metric.ordersCount > 0 || metric.shiftDays > 0 || metric.salary > 0));
 
+const ADMIN_JOB_TITLE_KEYWORDS = [
+  'admin',
+  'administrator',
+  'manager',
+  'supervisor',
+  'coordinator',
+  'accountant',
+  'finance',
+  'financial',
+  'hr',
+  'human resources',
+  'operations',
+  'operation',
+  'office',
+  'reception',
+  'support',
+  'customer service',
+  'it',
+  'logistics',
+  'fleet',
+  'procurement',
+  'purchasing',
+  'payroll',
+  'ادارة',
+  'اداري',
+  'مدير',
+  'مشرف',
+  'منسق',
+  'محاسب',
+  'مالية',
+  'مالي',
+  'موارد',
+  'شؤون',
+  'استقبال',
+  'خدمة عملاء',
+  'دعم',
+  'تقنية',
+  'عمليات',
+  'تشغيل',
+  'لوجست',
+];
+
+const normalizeSalaryJobTitle = (value?: string | null) =>
+  String(value || '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u064B-\u065F\u0670]/g, '')
+    .replace(/[إأآٱ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+export const isAdministrativeJobTitle = (jobTitle?: string | null) => {
+  const normalized = normalizeSalaryJobTitle(jobTitle);
+  if (!normalized) return false;
+  return ADMIN_JOB_TITLE_KEYWORDS.some((keyword) => normalized.includes(keyword));
+};
+
+export const getDisplayedBaseSalary = (
+  row: Pick<SalaryRow, 'platformSalaries' | 'engineBaseSalary'>,
+) => {
+  const platformSalaryTotal = Object.values(row.platformSalaries || {}).reduce(
+    (sum, value) => sum + Number(value || 0),
+    0,
+  );
+  if (platformSalaryTotal > 0) return platformSalaryTotal;
+  return Number(row.engineBaseSalary || 0);
+};
+
 export const getPrimaryPlatformActivityCount = (metric?: PlatformSalaryMetric | null) => {
   if (!metric) return 0;
   if (metric.workType === 'shift') return metric.shiftDays;

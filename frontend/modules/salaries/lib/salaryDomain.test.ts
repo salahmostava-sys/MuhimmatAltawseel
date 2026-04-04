@@ -137,6 +137,37 @@ describe('shouldIncludeEmployeeInSalaryMonth', () => {
       ),
     ).toBe(true);
   });
+  it('includes administrative titles even without monthly activity', () => {
+    expect(
+      shouldIncludeEmployeeInSalaryMonth(
+        { id: 'emp-4', job_title: 'مدير عمليات', sponsorship_status: 'not_sponsored' },
+        {},
+        {},
+        {},
+      ),
+    ).toBe(true);
+  });
+  it('excludes non-administrative titles when they have no monthly activity', () => {
+    expect(
+      shouldIncludeEmployeeInSalaryMonth(
+        { id: 'emp-5', job_title: 'مندوب توصيل', sponsorship_status: 'not_sponsored' },
+        {},
+        {},
+        {},
+      ),
+    ).toBe(false);
+  });
+  it('keeps saved salary rows visible even when monthly activity is missing', () => {
+    expect(
+      shouldIncludeEmployeeInSalaryMonth(
+        { id: 'emp-6', job_title: 'مندوب توصيل', sponsorship_status: 'not_sponsored' },
+        {},
+        {},
+        {},
+        new Set(['emp-6']),
+      ),
+    ).toBe(true);
+  });
 });
 
 describe('buildSalaryRows', () => {

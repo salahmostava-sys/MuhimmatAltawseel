@@ -6,6 +6,7 @@ import { driverService } from '@services/driverService';
 import { getManualDeductionTotal } from '@modules/salaries/lib/salaryDomain';
 import { months } from '@modules/salaries/lib/salaryMonths';
 import type { SalaryRow } from '@modules/salaries/types/salary.types';
+import { getDisplayedBaseSalary } from '@modules/salaries/model/salaryUtils';
 import { useSafeAction } from '@shared/hooks/useSafeAction';
 
 import { toast as sonnerToast } from '@shared/components/ui/sonner';
@@ -47,23 +48,12 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
 
   const { run } = useSafeAction({ toast, errorTitle: 'حدث خطأ' });
 
-  const hasOperationalActivity = useCallback(
-    (row: SalaryRow) =>
-      Object.values(row.platformMetrics || {}).some(
-        (metric) => (metric.ordersCount || 0) > 0 || (metric.shiftDays || 0) > 0 || (metric.salary || 0) > 0,
-      ),
-    [],
-  );
-
   const resolveBaseSalaryForPersistence = useCallback(
     (row: SalaryRow, serverBaseSalary: number) => {
-      const manualBaseSalary = Number(row.engineBaseSalary || 0);
-      if (!hasOperationalActivity(row)) {
-        return manualBaseSalary > 0 ? manualBaseSalary : serverBaseSalary;
-      }
-      return serverBaseSalary;
+      const sheetBaseSalary = getDisplayedBaseSalary(row);
+      return sheetBaseSalary > 0 ? sheetBaseSalary : serverBaseSalary;
     },
-    [hasOperationalActivity],
+    [],
   );
 
   // ── Row updater (shared helper) ───────────────────────────────────────────
@@ -288,7 +278,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
     const records = pendingRows
       .filter((row) => {
         const calc = monthCalcMap.get(row.employeeId);
-        if (!calc && Number(row.engineBaseSalary || 0) <= 0) {
+        if (!calc && getDisplayedBaseSalary(row) <= 0) {
           skippedRows.push(row.employeeName);
           return false;
         }

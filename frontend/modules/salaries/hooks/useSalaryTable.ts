@@ -2,15 +2,10 @@ import { useCallback, useMemo } from 'react';
 import type { SalaryRow, SortDir } from '@modules/salaries/types/salary.types';
 import { getTotalDeductions } from '@modules/salaries/lib/salaryDomain';
 import { toComparableSortValue } from '@modules/salaries/lib/salaryConstants';
+import { getDisplayedBaseSalary } from '@modules/salaries/model/salaryUtils';
 
 export function computeSalaryRow(r: SalaryRow) {
-  const platformSalaryTotal = Object.values(r.platformSalaries || {}).reduce(
-    (sum, value) => sum + Number(value || 0),
-    0,
-  );
-  const totalPlatformSalary = platformSalaryTotal > 0
-    ? platformSalaryTotal
-    : Number(r.engineBaseSalary || 0);
+  const totalPlatformSalary = getDisplayedBaseSalary(r);
   const totalAdditions = r.incentives + r.sickAllowance;
   const totalWithSalary = totalPlatformSalary + totalAdditions;
   const totalDeductions = getTotalDeductions(r);
