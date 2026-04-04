@@ -83,25 +83,37 @@ export function useSpreadsheetGrid() {
     return collectEmployeeIdsWithOrdersOnApp(data, platformFilter);
   }, [data, platformFilter]);
 
-  const baseEmployees = useMemo(() => {
-    if (platformFilter === 'all') {
-      // Show all employees who have at least one active platform assignment OR have orders
-      const employeesWithPlatforms = sq.employees.filter(e => {
-        const hasAssignment = Object.values(sq.appEmployeeIds).some(appSet => appSet?.has(e.id));
-        const hasOrders = Object.keys(data).some(key => key.startsWith(`${e.id}::`));
+  const allEmployeesWithAssignmentsOrOrders = useMemo(
+    () =>
+      sq.employees.filter((employee) => {
+        const hasAssignment = Object.values(sq.appEmployeeIds).some((appSet) => appSet?.has(employee.id));
+        const hasOrders = Object.keys(data).some((key) => key.startsWith(`${employee.id}::`));
         return hasAssignment || hasOrders;
-      });
-      return employeesWithPlatforms;
-    }
-    // For specific platform filter
+      }),
+    [sq.employees, sq.appEmployeeIds, data],
+  );
+
+  const baseEmployees = useMemo(() => {
+    if (platformFilter === 'all') return allEmployeesWithAssignmentsOrOrders;
     const assigned = sq.appEmployeeIds[platformFilter];
     const withOrders = employeeIdsWithOrdersOnFilteredPlatform;
-    return sq.employees.filter((e) => Boolean(assigned?.has(e.id)) || withOrders.has(e.id));
-  }, [sq.employees, platformFilter, sq.appEmployeeIds, employeeIdsWithOrdersOnFilteredPlatform, data]);
+    return allEmployeesWithAssignmentsOrOrders.filter(
+      (employee) => Boolean(assigned?.has(employee.id)) || withOrders.has(employee.id),
+    );
+  }, [
+    allEmployeesWithAssignmentsOrOrders,
+    platformFilter,
+    sq.appEmployeeIds,
+    employeeIdsWithOrdersOnFilteredPlatform,
+  ]);
 
   const filteredEmployees = useMemo(
     () => baseEmployees.filter((emp) => emp.name.includes(search)),
     [baseEmployees, search],
+  );
+  const searchMatchedEmployees = useMemo(
+    () => allEmployeesWithAssignmentsOrOrders.filter((emp) => emp.name.includes(search)),
+    [allEmployeesWithAssignmentsOrOrders, search],
   );
   const visibleApps = platformFilter === 'all' ? sq.apps : sq.apps.filter((a) => a.id === platformFilter);
   const now = new Date();
@@ -134,10 +146,16 @@ export function useSpreadsheetGrid() {
     () => filteredEmployees.reduce((s, e) => s + empMonthTotal(e.id), 0),
     [filteredEmployees, empMonthTotal],
   );
+  const allPlatformsGrandTotal = useMemo(
+    () => searchMatchedEmployees.reduce((sum, employee) => sum + dayArr.reduce((daySum, d) => {
+      return daySum + sq.apps.reduce((appSum, app) => appSum + (data[`${employee.id}::${app.id}::${d}`] ?? 0), 0);
+    }, 0), 0),
+    [searchMatchedEmployees, dayArr, sq.apps, data],
+  );
   const monthDailyAvg = days > 0 ? Math.round(monthGrandTotal / days) : 0;
   const platformOrderTotals = useMemo(
-    () => calculatePlatformTotals(sq.apps, filteredEmployees, dayArr, data),
-    [sq.apps, filteredEmployees, dayArr, data],
+    () => calculatePlatformTotals(sq.apps, searchMatchedEmployees, dayArr, data),
+    [sq.apps, searchMatchedEmployees, dayArr, data],
   );
 
   const prevMonth = () => {
@@ -350,6 +368,7 @@ export function useSpreadsheetGrid() {
     permissions,
     canEditMonth,
     filteredEmployees,
+    allPlatformsGrandTotal,
     visibleApps,
     days,
     dayArr,

@@ -6,7 +6,7 @@
 } from '@services/salaryService';
 import { salaryDataService } from '@services/salaryDataService';
 import {
-  filterVisibleEmployeesForSalaryMonth,
+  filterRetainedEmployeesForSalaryMonth,
   isExcludedSponsorshipStatus,
 } from '@shared/lib/employeeVisibility';
 import {
@@ -388,7 +388,13 @@ export const buildSalaryRows = ({
     const employeeId = String(emp.id);
     const empOrders = ordMap[employeeId] || {};
     const attendanceDays = attendanceDaysMap[employeeId] || 0;
-    const preview = previewMap[employeeId];
+    const preview = previewMap[employeeId] ?? {
+      base_salary: 0,
+      advance_deduction: 0,
+      external_deduction: 0,
+      total_shift_days: 0,
+      platform_breakdown: {},
+    };
 
     const platformOrders: Record<string, number> = {};
     const platformSalaries: Record<string, number> = {};
@@ -591,15 +597,12 @@ export async function prepareSalaryState({
   const attendanceDaysMap = buildAttendanceDaysMap(attendanceRows as Array<{ employee_id: string }> | null | undefined);
   const fuelCostMap = buildFuelCostMap(fuelRes as Array<{ employee_id: string; fuel_cost: number | string }> | null | undefined);
   const ordMap = buildOrdersMap(orders as OrderWithAppRow[] | null);
-  const visibleEmployees = filterVisibleEmployeesForSalaryMonth(
-    (empRows || []) as { id: string; sponsorship_status?: string | null; probation_end_date?: string | null }[],
+  const visibleEmployees = filterRetainedEmployeesForSalaryMonth(
+    (empRows || []) as { id: string; status?: string | null; sponsorship_status?: string | null; probation_end_date?: string | null }[],
     monthStartIso,
     activeEmployeeIdsInMonth
   );
   const employees = filterSalaryMonthEmployees(visibleEmployees, ordMap, attendanceDaysMap, previewMap);
-  if (employees.some((emp) => !previewMap[emp.id])) {
-    throw new Error('PREVIEW_BACKEND: تعذر تحميل نتائج المعاينة من الخادم لكل الموظفين');
-  }
   const appsFromApi = (appsWithSchemeRes as AppWithSchemeRow[] | null) || [];
   const { appSchemeMap, appNameToId, appWorkTypeMap } = buildAppMaps(appsFromApi);
   const platformNames = appsFromApi.map((a) => a.name);

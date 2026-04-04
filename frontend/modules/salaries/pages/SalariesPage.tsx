@@ -261,6 +261,7 @@ const Salaries = () => {
           advanceDeduction: row.advanceDeduction,
           externalDeduction: row.externalDeduction,
           platformIncome: row.platformIncome,
+          engineBaseSalary: row.engineBaseSalary,
         };
       });
       localStorage.setItem(salariesDraftKey, JSON.stringify(draft));

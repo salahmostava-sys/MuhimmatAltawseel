@@ -57,4 +57,15 @@ describe('computeSalaryRow', () => {
 
     expect(result.totalPlatformSalary).toBe(1800);
   });
+
+  it('falls back to engineBaseSalary when platform salary entries are present but all zero', () => {
+    const result = computeSalaryRow(
+      buildRow({
+        platformSalaries: { Keeta: 0, Talabat: 0 },
+        engineBaseSalary: 2100,
+      }),
+    );
+
+    expect(result.totalPlatformSalary).toBe(2100);
+  });
 });

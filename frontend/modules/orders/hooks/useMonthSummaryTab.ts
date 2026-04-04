@@ -6,7 +6,7 @@ import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGat
 import { usePermissions } from '@shared/hooks/usePermissions';
 import { defaultQueryRetry } from '@shared/lib/query';
 import { orderService } from '@services/orderService';
-import { filterVisibleEmployeesInMonth } from '@shared/lib/employeeVisibility';
+import { filterRetainedEmployeesForMonth, filterVisibleEmployeesInMonth } from '@shared/lib/employeeVisibility';
 import { useMonthlyActiveEmployeeIds } from '@shared/hooks/useMonthlyActiveEmployeeIds';
 import type { App, AppTargetRow, DailyData, Employee, OrderRawRow } from '@modules/orders/types';
 import type { OrdersEmployeeSortField } from '@modules/orders/types';
@@ -102,7 +102,11 @@ export function useMonthSummaryTab() {
   const loading = summaryBaseLoading || summaryMonthLoading;
 
   const employees = useMemo<Employee[]>(
-    () => filterVisibleEmployeesInMonth(summaryBaseData?.employees ?? [], activeEmployeeIdsInMonth),
+    () =>
+      filterVisibleEmployeesInMonth(
+        filterRetainedEmployeesForMonth(summaryBaseData?.employees ?? [], activeEmployeeIdsInMonth),
+        activeEmployeeIdsInMonth,
+      ),
     [summaryBaseData, activeEmployeeIdsInMonth],
   );
   const apps = useMemo<App[]>(() => summaryBaseData?.apps ?? [], [summaryBaseData]);

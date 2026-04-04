@@ -6,7 +6,7 @@ import { Label } from '@shared/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select';
 import { useToast } from '@shared/hooks/use-toast';
 import { differenceInDays, parseISO } from 'date-fns';
-import { employeeService, type EmployeeAppOption } from '@services/employeeService';
+import { employeeService } from '@services/employeeService';
 import { useSignedUrl, extractStoragePath } from '@shared/hooks/useSignedUrl';
 import { validateUploadFile } from '@shared/lib/validation';
 import { auditService } from '@services/auditService';
@@ -67,7 +67,7 @@ interface Props {
   editEmployee?: EmployeeData | null;
 }
 
-const STEPS = ['البيانات الأساسية', 'الإقامة والوثائق', 'نوع الراتب', 'رفع المستندات'];
+const STEPS = ['البيانات الأساسية', 'الإقامة والوثائق', 'رفع المستندات'];
 
 const SectionTitle = ({ title }: { title: string }) => (
   <div className="flex items-center gap-3 mb-5">
@@ -192,7 +192,6 @@ async function validateEmployeeStep(
 ) {
   if (step === 0) return await trigger(['name', 'phone', 'national_id']);
   if (step === 1) return await trigger(['residency_expiry']);
-  if (step === 2) return await trigger(['salary_type', 'base_salary']);
   return true;
 }
 
@@ -229,19 +228,7 @@ const employeeFormSchema = z
     license_status: z.enum(['has_license', 'no_license', 'applied']),
     sponsorship_status: z.enum(['sponsored', 'not_sponsored', 'absconded', 'terminated']),
     status: z.enum(['active', 'inactive', 'ended']).default('active'),
-    salary_type: z.enum(['orders', 'shift']),
-    base_salary: z.string().optional().or(z.literal('')),
-    selected_apps: z.array(z.string()).default([]),
-    app_schemes: z.record(z.string()).default({}),
     preferred_language: z.enum(['ar', 'en']).default('ar'),
-  })
-  .superRefine((val, ctx) => {
-    if (val.salary_type === 'shift') {
-      const n = Number(val.base_salary || 0);
-      if (!n || n <= 0) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['base_salary'], message: 'الراتب مطلوب' });
-      }
-    }
   });
 
 type EmployeeFormValues = z.infer<typeof employeeFormSchema>;
@@ -252,26 +239,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
   const [step, setStep] = useState(0);
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
-  const [schemes, setSchemes] = useState<{ id: string; name: string }[]>([]);
-  const [availableApps, setAvailableApps] = useState<EmployeeAppOption[]>([]);
   const [citySelectValue, setCitySelectValue] = useState('');
-
-  const APP_COLOR_FALLBACKS: Record<string, { bg: string; fg: string }> = {
-    'هنقرستيشن': { bg: '#ea580c', fg: '#ffffff' },
-    'هنجر': { bg: '#ea580c', fg: '#ffffff' },
-    'كيتا': { bg: '#7c3aed', fg: '#ffffff' },
-  };
-
-  const getAppChipColors = (appName: string) => {
-    const app = availableApps.find((a) => a.name === appName);
-    if (app?.brand_color) {
-      return {
-        bg: app.brand_color,
-        fg: app.text_color || '#ffffff',
-      };
-    }
-    return APP_COLOR_FALLBACKS[appName] || { bg: '#6366f1', fg: '#ffffff' };
-  };
 
   const formApi = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeFormSchema),
@@ -295,10 +263,6 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
       license_status: (editEmployee?.license_status as EmployeeFormValues['license_status']) || 'no_license',
       sponsorship_status: (editEmployee?.sponsorship_status as EmployeeFormValues['sponsorship_status']) || 'not_sponsored',
       status: (editEmployee?.status as EmployeeFormValues['status']) || 'active',
-      salary_type: (editEmployee?.salary_type as EmployeeFormValues['salary_type']) || 'orders',
-      base_salary: editEmployee?.base_salary ? String(editEmployee.base_salary) : '',
-      selected_apps: [],
-      app_schemes: {},
       preferred_language: (editEmployee?.preferred_language as EmployeeFormValues['preferred_language']) || 'ar',
     },
     mode: 'onBlur',
@@ -308,29 +272,6 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
   const errors = formState.errors as Record<string, { message?: string }>;
   const form = watch();
   const selectedCities = form.cities ?? [];
-
-  useEffect(() => {
-    let isMounted = true;
-    Promise.all([
-      employeeService.getActiveSalarySchemes(),
-      employeeService.getActiveApps(),
-    ]).then(([schemes, apps]) => {
-      if (!isMounted) return;
-      setSchemes(schemes ?? []);
-      setAvailableApps(apps ?? []);
-    });
-
-    if (editEmployee) {
-      employeeService.getEmployeeAssignedAppNames(editEmployee.id).then((names) => {
-        if (!isMounted) return;
-        setValue('selected_apps', names ?? [], { shouldDirty: false });
-      });
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [editEmployee, setValue]);
 
   const [files, setFiles] = useState<{ personal: File | null; id: File | null; license: File | null }>({
     personal: null, id: null, license: null,
@@ -389,12 +330,6 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
 
   const availableCityOptions = CITY_OPTIONS.filter(({ value }) => !selectedCities.includes(value));
 
-  const toggleApp = (app: string) => {
-    const cur = getValues('selected_apps') || [];
-    const next = cur.includes(app) ? cur.filter((a) => a !== app) : [...cur, app];
-    setValue('selected_apps', next, { shouldDirty: true });
-  };
-
   const validateStep = useCallback((s: number) => validateEmployeeStep(s, trigger), [trigger]);
 
   const next = async () => {
@@ -424,8 +359,8 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
     license_status: v.license_status,
     sponsorship_status: v.sponsorship_status,
     status: v.status,
-    salary_type: v.salary_type,
-    base_salary: v.salary_type === 'shift' ? Number(v.base_salary || 0) : 0,
+    salary_type: editEmployee?.salary_type || 'orders',
+    base_salary: editEmployee?.base_salary || 0,
     preferred_language: v.preferred_language,
   });
 
@@ -491,13 +426,6 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
     return uploadedPaths;
   };
 
-  const syncEmployeeApps = async (empId: string, selectedApps: string[]) => {
-    const appIds = selectedApps
-      .map((appName) => availableApps.find((a) => a.name === appName)?.id)
-      .filter((id): id is string => Boolean(id));
-    await employeeService.replaceEmployeeApps(empId, appIds);
-  };
-
   const save = async () => {
     const ok = await validateStep(step);
     if (!ok) return;
@@ -510,7 +438,6 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
       const empId = await upsertEmployeeAndAudit(payload);
       if (!isEdit) createdEmployeeId = empId;
       uploadedDocumentPaths = await uploadEmployeeFiles(empId);
-      await syncEmployeeApps(empId, v.selected_apps || []);
 
       toast({
         title: isEdit ? 'تم تحديث بيانات المندوب' : 'تم إضافة المندوب بنجاح',
@@ -523,7 +450,6 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
       logError('[AddEmployeeModal] save failed', err);
       if (createdEmployeeId) {
         try {
-          await employeeService.replaceEmployeeApps(createdEmployeeId, []);
           await employeeService.deleteEmployeeDocuments(uploadedDocumentPaths);
           await employeeService.deleteById(createdEmployeeId);
         } catch (rollbackErr: unknown) {
@@ -757,74 +683,6 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
 
           {/* Step 2 */}
           {step === 2 && (
-            <div className="space-y-5">
-              <SectionTitle title="── نوع الراتب ──" />
-              <div className="flex gap-3">
-                {[{ v: 'orders', l: '📦 بالطلب' }, { v: 'shift', l: '🕐 ثابت شهري' }].map(({ v, l }) => (
-                  <button key={v} type="button" onClick={() => setField('salary_type', v)}
-                    className={`flex-1 py-2.5 px-4 rounded-lg border text-sm font-medium transition-colors ${form.salary_type === v ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-              {form.salary_type === 'shift' && (
-                <F label="الراتب الشهري (ر.س)" required error={errors.base_salary?.message}>
-                  <Input type="number" value={form.base_salary} onChange={e => setField('base_salary', e.target.value)} />
-                </F>
-              )}
-              <SectionTitle title="── المنصات المرتبطة ──" />
-              <div className="flex flex-wrap gap-2">
-                {availableApps.map(app => (
-                  <button key={app.id} type="button" onClick={() => toggleApp(app.name)}
-                    style={form.selected_apps.includes(app.name) ? {
-                      backgroundColor: getAppChipColors(app.name).bg,
-                      color: getAppChipColors(app.name).fg,
-                      borderColor: getAppChipColors(app.name).bg,
-                    } : undefined}
-                    className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${form.selected_apps.includes(app.name) ? '' : 'border-border text-muted-foreground hover:border-primary/50'}`}>
-                    {app.name}
-                  </button>
-                ))}
-              </div>
-              {form.selected_apps.length > 0 && (
-                <div className="space-y-3 bg-muted/30 rounded-xl p-4">
-                  {form.selected_apps.map(app => (
-                    <div key={app} className="flex items-center gap-3">
-                      <span
-                        style={{
-                          backgroundColor: getAppChipColors(app).bg,
-                          color: getAppChipColors(app).fg,
-                          borderColor: getAppChipColors(app).bg,
-                        }}
-                        className="text-xs font-semibold rounded-full border px-2.5 py-1 w-fit shrink-0"
-                      >
-                        {app}
-                      </span>
-                      <Select
-                        value={form.app_schemes?.[app] || ''}
-                        onValueChange={(v) => {
-                          const cur = getValues('app_schemes') || {};
-                          setValue('app_schemes', { ...cur, [app]: v }, { shouldDirty: true });
-                        }}
-                      >
-                        <SelectTrigger className="flex-1 h-8 text-xs">
-                          <SelectValue placeholder="اختر السكيمة" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {schemes.map(s => (
-                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Step 3 */}
-          {step === 3 && (
             <div className="space-y-5">
               <SectionTitle title="── رفع المستندات ──" />
               <div className="rounded-xl border border-border/60 bg-muted/20 p-3">

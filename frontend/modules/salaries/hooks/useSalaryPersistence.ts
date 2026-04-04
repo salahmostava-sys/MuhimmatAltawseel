@@ -47,6 +47,25 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
 
   const { run } = useSafeAction({ toast, errorTitle: 'حدث خطأ' });
 
+  const hasOperationalActivity = useCallback(
+    (row: SalaryRow) =>
+      Object.values(row.platformMetrics || {}).some(
+        (metric) => (metric.ordersCount || 0) > 0 || (metric.shiftDays || 0) > 0 || (metric.salary || 0) > 0,
+      ),
+    [],
+  );
+
+  const resolveBaseSalaryForPersistence = useCallback(
+    (row: SalaryRow, serverBaseSalary: number) => {
+      const manualBaseSalary = Number(row.engineBaseSalary || 0);
+      if (!hasOperationalActivity(row)) {
+        return manualBaseSalary > 0 ? manualBaseSalary : serverBaseSalary;
+      }
+      return serverBaseSalary;
+    },
+    [hasOperationalActivity],
+  );
+
   // ── Row updater (shared helper) ───────────────────────────────────────────
 
   const updateRow = useCallback(
@@ -81,7 +100,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
       const calc = (Array.isArray(calcData) ? calcData[0] : calcData) as
         | Record<string, number>
         | undefined;
-      const baseSalary = Number(calc?.base_salary ?? 0);
+      const baseSalary = resolveBaseSalaryForPersistence(row, Number(calc?.base_salary ?? 0));
       const advanceDeduction = Number(calc?.advance_deduction ?? row.advanceDeduction ?? 0);
       const externalDeduction = Number(calc?.external_deduction ?? row.externalDeduction ?? 0);
       const totalAdditions = row.incentives + row.sickAllowance;
@@ -97,7 +116,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
         netSalary,
       };
     },
-    [],
+    [resolveBaseSalaryForPersistence],
   );
 
   // ── Settle advance installments ───────────────────────────────────────────
@@ -269,18 +288,18 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
     const records = pendingRows
       .filter((row) => {
         const calc = monthCalcMap.get(row.employeeId);
-        if (!calc) {
+        if (!calc && Number(row.engineBaseSalary || 0) <= 0) {
           skippedRows.push(row.employeeName);
           return false;
         }
         return true;
       })
       .map((row) => {
-        const calc = monthCalcMap.get(row.employeeId)!;
+        const calc = monthCalcMap.get(row.employeeId);
         const manualDeduction = getManualDeductionTotal(row);
-        const baseSalary = Number(calc.base_salary ?? 0);
-        const advanceDeduction = Number(calc.advance_deduction ?? row.advanceDeduction ?? 0);
-        const externalDeduction = Number(calc.external_deduction ?? row.externalDeduction ?? 0);
+        const baseSalary = resolveBaseSalaryForPersistence(row, Number(calc?.base_salary ?? 0));
+        const advanceDeduction = Number(calc?.advance_deduction ?? row.advanceDeduction ?? 0);
+        const externalDeduction = Number(calc?.external_deduction ?? row.externalDeduction ?? 0);
         const totalAdditions = row.incentives + row.sickAllowance;
         const totalDeductions =
           row.violations + manualDeduction + advanceDeduction + externalDeduction;
@@ -323,7 +342,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
       });
     }
     toast.success(`✅ تم اعتماد ${records.length} راتب وحفظها`);
-  }, [filtered, selectedMonth, toast, user, run, setRows]);
+  }, [filtered, selectedMonth, toast, user, run, setRows, resolveBaseSalaryForPersistence]);
 
   // ── Persist employee fields ───────────────────────────────────────────────
 

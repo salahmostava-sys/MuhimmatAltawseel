@@ -5,7 +5,7 @@ import { TOAST_ERROR_GENERIC, TOAST_SUCCESS_ACTION } from '@shared/lib/toastMess
 import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { defaultQueryRetry } from '@shared/lib/query';
 import { orderService } from '@services/orderService';
-import { filterVisibleEmployeesInMonth } from '@shared/lib/employeeVisibility';
+import { filterRetainedEmployeesForMonth, filterVisibleEmployeesInMonth } from '@shared/lib/employeeVisibility';
 import { useMonthlyActiveEmployeeIds } from '@shared/hooks/useMonthlyActiveEmployeeIds';
 import { useOrdersMonthPaged, type OrdersMonthPagedRow } from '@shared/hooks/useOrdersPaged';
 import { createDefaultGlobalFilters, type GlobalTableFilterState } from '@shared/components/table/GlobalTableFilters';
@@ -43,7 +43,10 @@ export function useOrdersListTab() {
       ]);
       return {
         employees: filterVisibleEmployeesInMonth(
-          (empRows || []) as unknown as { id: string; sponsorship_status?: string | null }[],
+          filterRetainedEmployeesForMonth(
+            (empRows || []) as unknown as { id: string; status?: string | null; sponsorship_status?: string | null }[],
+            activeEmployeeIdsInMonth,
+          ),
           activeEmployeeIdsInMonth,
         ) as unknown as Employee[],
         apps: (apps || []) as App[],

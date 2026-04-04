@@ -105,6 +105,7 @@ export type SalaryDraftPatch = Pick<
   | 'advanceDeduction'
   | 'externalDeduction'
   | 'platformIncome'
+  | 'engineBaseSalary'
 >;
 
 export type MergedPdfComputed = {

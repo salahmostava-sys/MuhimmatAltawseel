@@ -23,6 +23,7 @@ export const SpreadsheetGridTab = React.memo(() => {
         search={g.search}
         onSearchChange={g.setSearch}
         monthGrandTotal={g.monthGrandTotal}
+        allPlatformsGrandTotal={g.allPlatformsGrandTotal}
         monthDailyAvg={g.monthDailyAvg}
         filteredEmployeesCount={g.filteredEmployees.length}
         platformFilter={g.platformFilter}

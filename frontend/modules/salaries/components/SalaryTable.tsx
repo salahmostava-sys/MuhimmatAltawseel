@@ -13,6 +13,7 @@ import {
 import { OrderDetailsModal } from '@modules/salaries/components/OrderDetailsModal';
 import { shortEmployeeName } from '@modules/salaries/lib/salaryConstants';
 import type { SalaryRow, SchemeData, SortDir } from '@modules/salaries/types/salary.types';
+import { hasPlatformActivity } from '@modules/salaries/model/salaryUtils';
 
 const thFrozenBase = "px-3 py-2 text-xs font-semibold text-muted-foreground whitespace-nowrap border border-border/40 bg-muted/60 text-right sticky z-20";
 const thBase = "px-3 py-2 text-xs font-semibold text-muted-foreground whitespace-nowrap border border-border/40 bg-muted/50 text-center";
@@ -205,6 +206,7 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
             <tbody>
               {filtered.map((r, rowIdx) => {
                 const c = computeRow(r);
+                const canEditManualBaseSalary = !Object.values(r.platformMetrics || {}).some((metric) => hasPlatformActivity(metric));
                 if (!c) return null;
                 return (
                   <tr key={r.id} className="border-b border-border hover:bg-muted/25 transition-colors">
@@ -277,7 +279,17 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
                         );
                       })()}
                     </td>
-                    <td className={`${tdClass} font-bold text-foreground border-l border-border/20 bg-primary/[0.06]`}>{c.totalPlatformSalary.toLocaleString()}</td>
+                    <td className={`${tdClass} font-bold text-foreground border-l border-border/20 bg-primary/[0.06]`}>
+                      {canEditManualBaseSalary ? (
+                        <EditableCell
+                          value={Number(r.engineBaseSalary || 0)}
+                          onChange={(value) => updateRow(r.id, { engineBaseSalary: value })}
+                          className="text-foreground"
+                        />
+                      ) : (
+                        c.totalPlatformSalary.toLocaleString()
+                      )}
+                    </td>
                     <td className={`${tdClass} bg-success/[0.04] border-l border-border/40`}><EditableCell value={r.incentives} onChange={v => updateRow(r.id, { incentives: v })} className="text-foreground" /></td>
                     <td className={`${tdClass} bg-success/[0.04]`}><EditableCell value={r.sickAllowance} onChange={v => updateRow(r.id, { sickAllowance: v })} className="text-foreground" /></td>
                     <td className={`${tdClass} text-foreground font-semibold bg-success/[0.04]`}>{c.totalAdditions.toLocaleString()}</td>

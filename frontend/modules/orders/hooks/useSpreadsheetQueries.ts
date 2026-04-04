@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { orderService } from '@services/orderService';
-import { isEmployeeVisibleInMonth } from '@shared/lib/employeeVisibility';
+import { filterRetainedEmployeesForMonth, isEmployeeVisibleInMonth } from '@shared/lib/employeeVisibility';
 import { defaultQueryRetry } from '@shared/lib/query';
 import type { App, DailyData, Employee, EmployeeAppAssignmentRow, OrderRawRow } from '@modules/orders/types';
 import { buildAppEmployeeIdsMap, buildDailyDataMap } from '@modules/orders/utils/gridHelpers';
@@ -89,13 +89,8 @@ export function useSpreadsheetQueries(
   const employees = useMemo<Employee[]>(
     () => {
       const baseEmps = spreadsheetBaseData?.employees ?? [];
-      // Keep historical month totals aligned with salaries:
-      // active employees remain visible, and absconded/terminated employees
-      // are still included when they have activity in the selected month.
-      return baseEmps.filter(
-        (emp) =>
-          emp.status === 'active' &&
-          isEmployeeVisibleInMonth(emp, activeEmployeeIdsInMonth),
+      return filterRetainedEmployeesForMonth(baseEmps, activeEmployeeIdsInMonth).filter((emp) =>
+        isEmployeeVisibleInMonth(emp, activeEmployeeIdsInMonth),
       );
     },
     [spreadsheetBaseData, activeEmployeeIdsInMonth],

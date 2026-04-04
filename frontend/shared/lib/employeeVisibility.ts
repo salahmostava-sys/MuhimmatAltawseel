@@ -3,6 +3,7 @@ export type ExcludedSponsorshipStatus = (typeof EXCLUDED_SPONSORSHIP_STATUSES)[n
 
 export type EmployeeLike = {
   id: string;
+  status?: string | null;
   sponsorship_status?: string | null;
   probation_end_date?: string | null;
 };
@@ -34,6 +35,22 @@ export function filterVisibleEmployeesInMonth<T extends EmployeeLike>(
   return employees.filter((e) => isEmployeeVisibleInMonth(e, activeEmployeeIdsInMonth));
 }
 
+export function isEmployeeRetainedForMonth<T extends EmployeeLike>(
+  employee: T,
+  activeEmployeeIdsInMonth: ReadonlySet<string> | null | undefined
+): boolean {
+  if (employee.status === 'active') return true;
+  if (activeEmployeeIdsInMonth === undefined) return false;
+  return !!activeEmployeeIdsInMonth?.has(employee.id);
+}
+
+export function filterRetainedEmployeesForMonth<T extends EmployeeLike>(
+  employees: readonly T[],
+  activeEmployeeIdsInMonth: ReadonlySet<string> | null | undefined
+): T[] {
+  return employees.filter((e) => isEmployeeRetainedForMonth(e, activeEmployeeIdsInMonth));
+}
+
 /**
  * الرواتب الشهرية: المستبعد من الهروب/إنهاء الخدمة يُدرَج في الشهر إذا كان ما زال ضمن
  * نافذة ذلك الشهر حسب `probation_end_date` (انظر `isAttendanceRosterVisibleInMonth`)،
@@ -56,6 +73,18 @@ export function filterVisibleEmployeesForSalaryMonth<T extends EmployeeLike>(
   activeEmployeeIdsInMonth: ReadonlySet<string> | null | undefined
 ): T[] {
   return employees.filter((e) => isEmployeeVisibleForSalaryMonth(e, monthStartIso, activeEmployeeIdsInMonth));
+}
+
+export function filterRetainedEmployeesForSalaryMonth<T extends EmployeeLike>(
+  employees: readonly T[],
+  monthStartIso: string,
+  activeEmployeeIdsInMonth: ReadonlySet<string> | null | undefined
+): T[] {
+  return employees.filter(
+    (e) =>
+      isEmployeeRetainedForMonth(e, activeEmployeeIdsInMonth) &&
+      isEmployeeVisibleForSalaryMonth(e, monthStartIso, activeEmployeeIdsInMonth),
+  );
 }
 
 function toDateOnlyIso(input: string | null | undefined): string | null {

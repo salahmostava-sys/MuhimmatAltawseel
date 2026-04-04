@@ -44,6 +44,7 @@ type Props = Readonly<{
   search: string;
   onSearchChange: (v: string) => void;
   monthGrandTotal: number;
+  allPlatformsGrandTotal: number;
   monthDailyAvg: number;
   filteredEmployeesCount: number;
   platformFilter: string;
@@ -76,6 +77,7 @@ export function OrdersSpreadsheetToolbar(props: Props) {
     search,
     onSearchChange,
     monthGrandTotal,
+    allPlatformsGrandTotal,
     monthDailyAvg,
     filteredEmployeesCount,
     platformFilter,
@@ -162,7 +164,7 @@ export function OrdersSpreadsheetToolbar(props: Props) {
                   : 'bg-card text-muted-foreground border-border hover:border-primary/50 hover:text-foreground',
               )}
             >
-              الكل ({monthGrandTotal.toLocaleString()})
+              الكل ({allPlatformsGrandTotal.toLocaleString()})
             </button>
             {apps.map((app) => {
               const count = platformOrderTotals[app.id] ?? 0;
