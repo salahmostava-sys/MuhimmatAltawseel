@@ -1,10 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
 import { orderService } from '@services/orderService';
 import type { BranchKey } from '@shared/components/table/GlobalTableFilters';
-import { useAuth } from '@app/providers/AuthContext';
-import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
-import { useQueryErrorToast } from '@shared/hooks/useQueryErrorToast';
-import { safeRetry, withQueryTimeout } from '@shared/lib/reactQuerySafety';
+import { useAuthedPagedQuery } from '@shared/hooks/useAuthedPagedQuery';
 import type { PagedResult } from '@shared/types/pagination';
 
 /** صف ناتج عن `orderService.getMonthPaged` مع العلاقات المضمّنة. */
@@ -31,10 +27,6 @@ export function useOrdersMonthPaged(params: {
   pageSize: number;
   filters: OrdersPagedFilters;
 }) {
-  const { user, session } = useAuth();
-  const { userId, authReady } = useAuthQueryGate();
-  const uid = authQueryUserId(user?.id ?? userId);
-  const enabled = !!session && authReady;
   const { monthYear, page, pageSize, filters } = params;
   const driverId = filters.driverId && filters.driverId !== 'all' ? filters.driverId : undefined;
   const appIds =
@@ -42,35 +34,31 @@ export function useOrdersMonthPaged(params: {
   const branch = filters.branch && filters.branch !== 'all' ? filters.branch : undefined;
   const search = filters.search?.trim() ? filters.search.trim() : undefined;
 
-  const q = useQuery<PagedResult<OrdersMonthPagedRow>>({
-    queryKey: [
-      'orders',
-      uid,
-      'month-paged',
-      monthYear,
-      page,
-      pageSize,
-      driverId ?? null,
-      appIds?.join(',') ?? null,
-      branch ?? null,
-      search ?? null,
-    ] as const,
+  return useAuthedPagedQuery<PagedResult<OrdersMonthPagedRow>>({
+    buildQueryKey: (uid) =>
+      [
+        'orders',
+        uid,
+        'month-paged',
+        monthYear,
+        page,
+        pageSize,
+        driverId ?? null,
+        appIds?.join(',') ?? null,
+        branch ?? null,
+        search ?? null,
+      ] as const,
     queryFn: async (): Promise<PagedResult<OrdersMonthPagedRow>> => {
-      const res = await withQueryTimeout(
+      const res = await
         orderService.getMonthPaged({
           monthYear,
           page,
           pageSize,
           filters: { employeeId: driverId, appIds, branch, search },
-        }),
-      );
+        });
       return res as PagedResult<OrdersMonthPagedRow>;
     },
-    retry: safeRetry,
-    staleTime: 15_000,
-    enabled,
+    errorTitle: 'تعذر تحميل الطلبات',
   });
-  useQueryErrorToast(q.isError, q.error, 'تعذر تحميل الطلبات', q.refetch);
-  return q;
 }
 

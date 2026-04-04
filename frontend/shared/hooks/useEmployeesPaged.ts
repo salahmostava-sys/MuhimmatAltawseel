@@ -1,10 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
 import { employeeService } from '@services/employeeService';
 import type { BranchKey } from '@shared/components/table/GlobalTableFilters';
-import { useAuth } from '@app/providers/AuthContext';
-import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
-import { useQueryErrorToast } from '@shared/hooks/useQueryErrorToast';
-import { safeRetry, withQueryTimeout } from '@shared/lib/reactQuerySafety';
+import { useAuthedPagedQuery } from '@shared/hooks/useAuthedPagedQuery';
 import type { PagedResult } from '@shared/types/pagination';
 
 export type EmployeesPagedFilters = {
@@ -18,25 +14,17 @@ export function useEmployeesPaged(params: {
   pageSize: number;
   filters: EmployeesPagedFilters;
 }) {
-  const { user, session } = useAuth();
-  const { userId, authReady } = useAuthQueryGate();
-  const uid = authQueryUserId(user?.id ?? userId);
-  const enabled = !!session && authReady;
   const { page, pageSize, filters } = params;
   const branch = filters.branch === 'all' ? undefined : filters.branch;
   const status = filters.status && filters.status !== 'all' ? filters.status : undefined;
   const search = filters.search?.trim() || undefined;
 
-  const q = useQuery<PagedResult>({
-    queryKey: ['employees', uid, 'paged', page, pageSize, branch ?? null, status ?? null, search ?? null] as const,
-    queryFn: async () => withQueryTimeout(
-      employeeService.getPaged({ page, pageSize, filters: { branch, status, search } })
-    ),
-    retry: safeRetry,
-    staleTime: 15_000,
-    enabled,
+  return useAuthedPagedQuery<PagedResult>({
+    buildQueryKey: (uid) =>
+      ['employees', uid, 'paged', page, pageSize, branch ?? null, status ?? null, search ?? null] as const,
+    queryFn: async () =>
+      employeeService.getPaged({ page, pageSize, filters: { branch, status, search } }),
+    errorTitle: 'تعذر تحميل الموظفين',
   });
-  useQueryErrorToast(q.isError, q.error, 'تعذر تحميل الموظفين', q.refetch);
-  return q;
 }
 

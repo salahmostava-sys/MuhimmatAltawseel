@@ -1,10 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
 import { fuelService } from '@services/fuelService';
 import type { BranchKey } from '@shared/components/table/GlobalTableFilters';
-import { useAuth } from '@app/providers/AuthContext';
-import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
-import { useQueryErrorToast } from '@shared/hooks/useQueryErrorToast';
-import { safeRetry, withQueryTimeout } from '@shared/lib/reactQuerySafety';
+import { useAuthedPagedQuery } from '@shared/hooks/useAuthedPagedQuery';
 import type { PagedResult } from '@shared/types/pagination';
 
 export type FuelDailyPagedFilters = {
@@ -20,31 +16,23 @@ export function useFuelDailyPaged(params: {
   pageSize: number;
   filters: FuelDailyPagedFilters;
 }) {
-  const { user, session } = useAuth();
-  const { userId, authReady } = useAuthQueryGate();
-  const uid = authQueryUserId(user?.id ?? userId);
-  const enabled = !!session && authReady;
   const { monthStart, monthEnd, page, pageSize, filters } = params;
   const employeeId = filters.driverId?.trim() || undefined;
   const branch = filters.branch === 'all' ? undefined : filters.branch;
   const search = filters.search?.trim() || undefined;
 
-  const q = useQuery<PagedResult<unknown>>({
-    queryKey: ['fuel', uid, 'daily', 'paged', monthStart, monthEnd, page, pageSize, employeeId ?? null, branch ?? null, search ?? null] as const,
-    queryFn: async () => withQueryTimeout(
+  return useAuthedPagedQuery<PagedResult<unknown>>({
+    buildQueryKey: (uid) =>
+      ['fuel', uid, 'daily', 'paged', monthStart, monthEnd, page, pageSize, employeeId ?? null, branch ?? null, search ?? null] as const,
+    queryFn: async () =>
       fuelService.getDailyMileagePaged({
         monthStart,
         monthEnd,
         page,
         pageSize,
         filters: { employeeId, branch, search },
-      })
-    ),
-    retry: safeRetry,
-    staleTime: 15_000,
-    enabled,
+      }),
+    errorTitle: 'تعذر تحميل بيانات الوقود',
   });
-  useQueryErrorToast(q.isError, q.error, 'تعذر تحميل بيانات الوقود', q.refetch);
-  return q;
 }
 
