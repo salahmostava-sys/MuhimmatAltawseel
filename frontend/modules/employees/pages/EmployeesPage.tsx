@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { Suspense, lazy, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, CalendarDays } from 'lucide-react';
 import { Input } from '@shared/components/ui/input';
@@ -10,24 +10,38 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@shared/components/ui/alert-dialog';
 import { format } from 'date-fns';
-import EmployeeProfile from '@shared/components/employees/EmployeeProfile';
 import { useToast } from '@shared/hooks/use-toast';
 import { usePermissions } from '@shared/hooks/usePermissions';
 import { isEmployeeVisibleInMonth } from '@shared/lib/employeeVisibility';
 import { createDefaultGlobalFilters } from '@shared/components/table/GlobalTableFilters';
 import { useEmployeesData } from '@modules/employees/hooks/useEmployees';
 import { applyEmployeeFilters, sortEmployees } from '@modules/employees/model/employeeUtils';
-import { EmployeesFastList as EmployeesFastListView } from '@modules/employees/components/EmployeesFastList';
-import { EmployeeFormModal } from '@modules/employees/components/EmployeeFormModal';
 import { EmployeeActionsBar } from '@modules/employees/components/EmployeeActionsBar';
 import { EmployeeDetailedTable } from '@modules/employees/components/EmployeeTable';
 import { useEmployeeActions } from '@modules/employees/hooks/useEmployeeTable';
+import Loading from '@shared/components/Loading';
 import {
   ALL_COLUMNS, DEFAULT_HIDDEN_COLS, toCityLabel,
   type Employee, type SortDir, type ColKey,
   type EmployeeProfileProps, type EmployeeStatusFilter,
   type UploadReport, type UploadLiveStats,
 } from '@modules/employees/types/employee.types';
+
+const EmployeeProfile = lazy(() => import('@shared/components/employees/EmployeeProfile'));
+const EmployeesFastListView = lazy(() =>
+  import('@modules/employees/components/EmployeesFastList').then((module) => ({
+    default: module.EmployeesFastList,
+  })),
+);
+const EmployeeFormModal = lazy(() =>
+  import('@modules/employees/components/EmployeeFormModal').then((module) => ({
+    default: module.EmployeeFormModal,
+  })),
+);
+
+const InlineLoader = ({ minHeightClassName = 'min-h-[260px]' }: Readonly<{ minHeightClassName?: string }>) => (
+  <Loading minHeightClassName={minHeightClassName} />
+);
 
 const Employees = () => {
   const queryClient = useQueryClient();
@@ -173,10 +187,12 @@ const Employees = () => {
       const isVisibleInMonth = isEmployeeVisibleInMonth(emp, activeEmployeeIdsInMonth);
       if (isVisibleInMonth) {
         return (
-          <EmployeeProfile
-            employee={emp as EmployeeProfileProps['employee']}
-            onBack={() => setSelectedEmployee(null)}
-          />
+          <Suspense fallback={<InlineLoader minHeightClassName="min-h-[420px]" />}>
+            <EmployeeProfile
+              employee={emp as EmployeeProfileProps['employee']}
+              onBack={() => setSelectedEmployee(null)}
+            />
+          </Suspense>
         );
       }
       setSelectedEmployee(null);
@@ -185,24 +201,26 @@ const Employees = () => {
 
   if (viewMode === 'fast') {
     return (
-      <EmployeesFastListView
-        loadingMain={loading}
-        onBackToDetailed={() => setViewMode('detailed')}
-        branch={fastFilters.branch}
-        search={fastFilters.search}
-        status={fastStatus}
-        onStatusChange={setFastStatus}
-        onFiltersChange={(next) => { setFastFilters(next); setFastPage(1); }}
-        page={fastPage}
-        onPageChange={setFastPage}
-        pageSize={fastPageSize}
-        onExport={runFastExportWrapped}
-        onDownloadTemplate={runTemplateDownload}
-        onImportFile={runImportFile}
-        actionLoading={actionLoading}
-        canEdit={permissions.can_edit}
-        toCityLabel={toCityLabel}
-      />
+      <Suspense fallback={<InlineLoader minHeightClassName="min-h-[320px]" />}>
+        <EmployeesFastListView
+          loadingMain={loading}
+          onBackToDetailed={() => setViewMode('detailed')}
+          branch={fastFilters.branch}
+          search={fastFilters.search}
+          status={fastStatus}
+          onStatusChange={setFastStatus}
+          onFiltersChange={(next) => { setFastFilters(next); setFastPage(1); }}
+          page={fastPage}
+          onPageChange={setFastPage}
+          pageSize={fastPageSize}
+          onExport={runFastExportWrapped}
+          onDownloadTemplate={runTemplateDownload}
+          onImportFile={runImportFile}
+          actionLoading={actionLoading}
+          canEdit={permissions.can_edit}
+          toCityLabel={toCityLabel}
+        />
+      </Suspense>
     );
   }
 
@@ -262,12 +280,16 @@ const Employees = () => {
       />
 
       {/* Modals */}
-      <EmployeeFormModal
-        open={showAddModal}
-        editEmployee={editEmployee}
-        onClose={() => { setShowAddModal(false); setEditEmployee(null); }}
-        onSuccess={() => { void refetchEmployees(); setShowAddModal(false); setEditEmployee(null); }}
-      />
+      {showAddModal && (
+        <Suspense fallback={<InlineLoader />} >
+          <EmployeeFormModal
+            open={showAddModal}
+            editEmployee={editEmployee}
+            onClose={() => { setShowAddModal(false); setEditEmployee(null); }}
+            onSuccess={() => { void refetchEmployees(); setShowAddModal(false); setEditEmployee(null); }}
+          />
+        </Suspense>
+      )}
 
       <AlertDialog open={!!deleteEmployee} onOpenChange={open => !open && setDeleteEmployee(null)}>
         <AlertDialogContent>
