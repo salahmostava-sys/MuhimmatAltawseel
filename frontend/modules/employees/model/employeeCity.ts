@@ -108,7 +108,20 @@ const CITY_LABEL_MAP: Record<string, string> = Object.fromEntries(
   EMPLOYEE_CITY_DEFINITIONS.map(({ value, label }) => [value, label] as const),
 );
 
-export const DEFAULT_EMPLOYEE_CITY_OPTIONS = EMPLOYEE_CITY_DEFINITIONS.map((city) => city.value);
+export const DEFAULT_EMPLOYEE_CITY_OPTIONS = [
+  'makkah',
+  'jeddah',
+  'riyadh',
+  'madinah',
+  'dammam',
+  'khobar',
+  'jubail',
+  'taif',
+  'abha',
+  'jazan',
+  'tabuk',
+  'buraidah',
+] as const;
 
 export function normalizeEmployeeCityValue(value: string | null | undefined): string | null {
   const trimmed = String(value ?? '').trim();

@@ -1,5 +1,5 @@
 ﻿import { describe, expect, it } from 'vitest';
-import { buildPlatformSetupWarnings, shouldIncludeEmployeeInSalaryMonth } from './salaryDomain';
+import { buildPlatformSetupWarnings, buildSalaryRows, shouldIncludeEmployeeInSalaryMonth } from './salaryDomain';
 import type { AppWithSchemeRow, SalaryRow } from '@modules/salaries/types/salary.types';
 import type { PricingRule } from '@services/salaryService';
 
@@ -136,5 +136,80 @@ describe('shouldIncludeEmployeeInSalaryMonth', () => {
         },
       ),
     ).toBe(true);
+  });
+});
+
+describe('buildSalaryRows', () => {
+  it('recomputes order-based preview salaries from the current scheme when preview earnings drift', () => {
+    const rows = buildSalaryRows({
+      employees: [
+        {
+          id: 'emp-1',
+          name: 'Employee One',
+          job_title: 'Driver',
+          national_id: '1234567890',
+          city: 'makkah',
+          iban: 'SA123456',
+          preferred_language: 'ar',
+          phone: '0550000000',
+        },
+      ],
+      selectedMonth: '2026-04',
+      platformNames: ['Keeta'],
+      appNameToId: { Keeta: 'keeta-id' },
+      appWorkTypeMap: { Keeta: 'orders' },
+      rulesMap: { 'keeta-id': [] },
+      appSchemeMap: {
+        Keeta: {
+          id: 'scheme-1',
+          name: 'Keeta Scheme',
+          name_en: null,
+          status: 'active',
+          scheme_type: 'order_based',
+          target_orders: null,
+          target_bonus: null,
+          salary_scheme_tiers: [
+            {
+              from_orders: 450,
+              to_orders: null,
+              price_per_order: 2500,
+              tier_order: 1,
+              tier_type: 'base_plus_incremental',
+              incremental_threshold: 450,
+              incremental_price: 5,
+            },
+          ],
+        },
+      },
+      ordMap: { 'emp-1': { Keeta: 542 } },
+      attendanceDaysMap: {},
+      savedMap: {},
+      previewMap: {
+        'emp-1': {
+          base_salary: 2910,
+          advance_deduction: 0,
+          external_deduction: 0,
+          total_shift_days: 0,
+          platform_breakdown: {
+            Keeta: {
+              appName: 'Keeta',
+              workType: 'orders',
+              calculationMethod: 'orders',
+              ordersCount: 542,
+              shiftDays: 0,
+              salary: 2910,
+            },
+          },
+        },
+      },
+      advInstIds: {},
+      deductedInstIds: {},
+      advRemainingMap: {},
+      fuelCostMap: {},
+    });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].platformSalaries.Keeta).toBe(2960);
+    expect(rows[0].platformMetrics.Keeta.salary).toBe(2960);
   });
 });

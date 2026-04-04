@@ -254,7 +254,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
   const [saving, setSaving] = useState(false);
   const [schemes, setSchemes] = useState<{ id: string; name: string }[]>([]);
   const [availableApps, setAvailableApps] = useState<EmployeeAppOption[]>([]);
-  const [cityDraft, setCityDraft] = useState('');
+  const [citySelectValue, setCitySelectValue] = useState('');
 
   const APP_COLOR_FALLBACKS: Record<string, { bg: string; fg: string }> = {
     'هنقرستيشن': { bg: '#ea580c', fg: '#ffffff' },
@@ -373,7 +373,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
     if (!normalized) return;
     const next = normalizeEmployeeCities([...(getValues('cities') || []), normalized]);
     setField('cities', next);
-    setCityDraft('');
+    setCitySelectValue('');
   }, [getValues, setField]);
 
   const removeCity = useCallback((value: string) => {
@@ -386,6 +386,8 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
   const resStatus = getResidencyStatus(form.residency_expiry, (error) => {
     logError('[AddEmployeeModal] could not parse residency_expiry', error, { level: 'warn' });
   });
+
+  const availableCityOptions = CITY_OPTIONS.filter(({ value }) => !selectedCities.includes(value));
 
   const toggleApp = (app: string) => {
     const cur = getValues('selected_apps') || [];
@@ -648,30 +650,21 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
               </F>
               <F label="المدن">
                 <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <Select onValueChange={upsertCity}>
-                      <SelectTrigger className="flex-1">
+                  <div>
+                    <Select value={citySelectValue || undefined} onValueChange={upsertCity}>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="اختر مدينة" />
                       </SelectTrigger>
                       <SelectContent>
-                        {CITY_OPTIONS.map(({ value, label }) => (
-                          <SelectItem key={value} value={value}>{label}</SelectItem>
-                        ))}
+                        {availableCityOptions.length > 0 ? (
+                          availableCityOptions.map(({ value, label }) => (
+                            <SelectItem key={value} value={value}>{label}</SelectItem>
+                          ))
+                        ) : (
+                          <div className="px-2 py-1.5 text-sm text-muted-foreground">{"\u062A\u0645\u062A \u0625\u0636\u0627\u0641\u0629 \u0643\u0644 \u0627\u0644\u0645\u062F\u0646 \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629"}</div>
+                        )}
                       </SelectContent>
                     </Select>
-                    <Input
-                      value={cityDraft}
-                      onChange={e => setCityDraft(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          upsertCity(cityDraft);
-                        }
-                      }}
-                    />
-                    <Button type="button" variant="outline" onClick={() => upsertCity(cityDraft)}>
-                      إضافة
-                    </Button>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {selectedCities.length === 0 && <span className="text-xs text-muted-foreground">لا توجد مدن مضافة</span>}
