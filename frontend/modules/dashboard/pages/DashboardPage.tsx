@@ -129,12 +129,6 @@ const buildEmployeeCounts = (details: EmpDetail[]): EmployeeCounts => {
   return counts;
 };
 
-const getOrdersByAppGridColsClass = (count: number) => {
-  if (count <= 2) return 'grid-cols-2';
-  if (count === 3) return 'grid-cols-3';
-  return 'grid-cols-2 sm:grid-cols-4';
-};
-
 type DashboardApp = { id: string; name: string; brand_color: string; text_color: string };
 type DashboardAttendanceToday = { present?: number; absent?: number; late?: number; leave?: number; sick?: number };
 type DashboardOrdersByCityRow = { city: string; orders: number };

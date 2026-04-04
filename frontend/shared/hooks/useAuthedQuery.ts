@@ -42,8 +42,11 @@ export function useAuthedQuery<TData, TQueryKey extends QueryKey = QueryKey>({
     refetchOnReconnect,
   });
 
-  if (notifyOnError) {
-    useQueryErrorToast(query.isError, query.error, errorTitle, query.refetch);
-  }
+  useQueryErrorToast(
+    notifyOnError && query.isError,
+    notifyOnError ? query.error : null,
+    errorTitle,
+    notifyOnError ? query.refetch : undefined,
+  );
   return query;
 }
