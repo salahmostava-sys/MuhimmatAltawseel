@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { appService } from '@services/appService';
-import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
+import { useAuthedQuery } from '@shared/hooks/useAuthedQuery';
 
 export interface CustomColumn {
   key: string;
@@ -57,16 +56,14 @@ export const getAppColor = (apps: AppColorData[], appName: string) => {
 };
 
 export const useAppColors = () => {
-  const { enabled, userId } = useAuthQueryGate();
-  const uid = authQueryUserId(userId);
-
-  const query = useQuery({
-    queryKey: appColorsQueryKey(uid),
-    enabled,
+  const query = useAuthedQuery({
+    buildQueryKey: appColorsQueryKey,
     staleTime: 30 * 60_000,
     gcTime: 60 * 60_000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
+    requireUser: false,
+    notifyOnError: false,
     queryFn: async (): Promise<AppColorData[]> => {
       const apps = await appService.getAll();
       return apps.map((app, index) => ({
