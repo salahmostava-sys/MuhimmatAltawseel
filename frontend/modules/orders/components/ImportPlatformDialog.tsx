@@ -38,7 +38,8 @@ export function ImportPlatformDialog({ open, apps, onConfirm, onCancel }: Props)
         <DialogHeader>
           <DialogTitle>اختر المنصة المستهدفة</DialogTitle>
           <DialogDescription>
-            حدد المنصة التي سيتم رفع الطلبات عليها. اختر "جميع المنصات" لتوزيع الطلبات على كل المنصات المفعلة للموظف.
+            اختر المنصة التي سيتم رفع الطلبات عليها. إذا كانت المنصة هجينة فسيتم استكمال جزء الدوام من صفحة الشفتات،
+            أما هنا فهذه النافذة مخصصة لرفع الطلبات فقط.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
@@ -50,7 +51,7 @@ export function ImportPlatformDialog({ open, apps, onConfirm, onCancel }: Props)
               </Label>
             </div>
             {apps.map((app) => (
-              <div key={app.id} className="flex items-center space-x-2 space-x-reverse mb-2">
+              <div key={app.id} className="flex items-center space-x-2 space-x-reverse mb-2 rounded-md border p-2">
                 <RadioGroupItem value={app.id} id={app.id} />
                 <Label htmlFor={app.id} className="cursor-pointer flex items-center gap-2">
                   {app.logo_url && (
