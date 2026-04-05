@@ -8,7 +8,7 @@ import { logError } from '@shared/lib/logger';
 import { orderService } from '@services/orderService';
 import type { App, DailyData, Employee } from '@modules/orders/types';
 import { ordersImportHeadersMatch } from '@modules/orders/utils/importHelpers';
-import { dateStr, monthLabel } from '@modules/orders/utils/dateMonth';
+import { dateStr, monthLabel, monthYear } from '@modules/orders/utils/dateMonth';
 import {
   mergeImportedOrdersFromMatrixWithMapping,
   type AppEmployeeIdsMap,
@@ -412,7 +412,7 @@ export async function saveSpreadsheetMonth(params: {
   }
   
   try {
-    const { saved, failed } = await orderService.bulkUpsert(rows);
+    const { saved, failed } = await orderService.replaceMonthData(monthYear(year, month), rows);
     
     if (failed.length > 0) {
       console.error('فشل حفظ بعض السجلات:', failed.slice(0, 10));

@@ -10,10 +10,12 @@ import { useSystemSettings } from '@app/providers/SystemSettingsContext';
 import type { PricingRule } from '@services/salaryService';
 import { salaryDataService } from '@services/salaryDataService';
 import { useMonthlyActiveEmployeeIds } from '@shared/hooks/useMonthlyActiveEmployeeIds';
+import { useRealtimePostgresChanges } from '@shared/hooks/useRealtimePostgresChanges';
 import { isValidSalaryMonthYear } from '@shared/lib/salaryValidation';
 import { defaultQueryRetry } from '@shared/lib/query';
 import { loadJsPdf } from '@modules/salaries/lib/salaryPdfLoaders';
 import Loading from '@shared/components/Loading';
+import { toast as sonnerToast } from '@shared/components/ui/sonner';
 
 import { SalarySchemeSelector } from '@modules/salaries/components/SalarySchemeSelector';
 import { useSalaryFilteredRows } from '@modules/salaries/hooks/useSalaryTable';
@@ -139,12 +141,17 @@ const Salaries = () => {
     Object.assign(PLATFORM_COLORS, platformColors);
   }, [platformColors]);
 
+  const salaryBaseContextQueryKey = useMemo(
+    () => ['salaries', uid, 'base-context', selectedMonth] as const,
+    [selectedMonth, uid],
+  );
+
   const {
     data: salaryBaseContext,
     error: salaryBaseContextError,
     isLoading: salaryBaseContextLoading,
   } = useQuery({
-    queryKey: ['salaries', uid, 'base-context', selectedMonth],
+    queryKey: salaryBaseContextQueryKey,
     enabled: enabled && isValidSalaryMonthYear(selectedMonth),
     queryFn: async () => {
       const monthlyContextPromise = salaryDataService.getMonthlyContext(selectedMonth);
@@ -173,6 +180,14 @@ const Salaries = () => {
     retry: defaultQueryRetry,
     staleTime: 20_000,
   });
+
+  useRealtimePostgresChanges(
+    `salaries-orders-sync-${uid}-${selectedMonth}`,
+    ['daily_orders'],
+    () => {
+      void queryClient.invalidateQueries({ queryKey: salaryBaseContextQueryKey });
+    },
+  );
 
   // ─── Data fetching ─────────────────────────────────────────────
   useEffect(() => {
@@ -275,7 +290,7 @@ const Salaries = () => {
 
   const actions = useSalaryActions({
     rows, setRows, filtered, computeRow, selectedMonth, platforms, platformColors,
-    toast, user, uid, queryClient, projectName,
+    toast: sonnerToast, user, uid, queryClient, projectName,
     payslipRow, setPayslipRow,
     sortField, setSortField, sortDir, setSortDir,
     salaryActionLoading, setSalaryActionLoading,

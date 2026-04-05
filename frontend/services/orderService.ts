@@ -83,6 +83,14 @@ async function upsertDailyOrderRows(rows: DailyOrderUpsertRow[]) {
   return supabase.from('daily_orders').upsert(rows, { onConflict: DAILY_ORDERS_UPSERT_CONFLICT });
 }
 
+function getMonthDateRange(monthYear: string) {
+  const [year, month] = monthYear.split('-');
+  const from = `${year}-${month}-01`;
+  const lastDay = new Date(Number(year), Number(month), 0).getDate();
+  const to = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+  return { from, to };
+}
+
 export const orderService = {
   getAll: async () => {
     const { data, error } = await supabase
@@ -281,6 +289,25 @@ export const orderService = {
       .lte('date', to);
     if (error) throw toServiceError(error, 'orderService.getMonthRaw');
     return data ?? [];
+  },
+
+  replaceMonthData: async (monthYear: string, rows: DailyOrderUpsertRow[], chunkSize = 200) => {
+    const { from, to } = getMonthDateRange(monthYear);
+    const { error: deleteError } = await supabase
+      .from('daily_orders')
+      .delete()
+      .gte('date', from)
+      .lte('date', to);
+
+    if (deleteError) {
+      throw toServiceError(deleteError, 'orderService.replaceMonthData.deleteMonthRange');
+    }
+
+    if (rows.length === 0) {
+      return { saved: 0, failed: [] as BulkUpsertFailure[] };
+    }
+
+    return orderService.bulkUpsert(rows, chunkSize);
   },
 
   bulkUpsert: async (rows: DailyOrderUpsertRow[], chunkSize = 200) => {
