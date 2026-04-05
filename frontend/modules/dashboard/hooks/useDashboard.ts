@@ -85,19 +85,16 @@ const EMPTY_ATTENDANCE_WEEK: DashboardData['attendanceWeek'] = [];
 const EMPTY_APPS: AppMeta[] = [];
 const EMPTY_SUPERVISOR_PERFORMANCE: DashboardData['supervisorPerformance'] = [];
 
-type EmployeeCounts = ReturnType<(empDetails: EmpDetail[]) => unknown>;
-
 export function useDashboard(params: {
   userId?: string;
   currentMonth: string;
   enabled: boolean;
   authUserId?: string;
   fetchDashboardKpis: (currentMonth: string, activeEmployeeIdsInMonth: ReadonlySet<string> | undefined) => Promise<DashboardData>;
-  buildEmployeeCounts: (empDetails: EmpDetail[]) => EmployeeCounts;
   parsePositiveIntOrNull: (raw: string) => number | null;
   useRealtimeInvalidation: (userId: string | undefined, month: string, queryClient: ReturnType<typeof useQueryClient>) => void;
 }) {
-  const { userId, currentMonth, enabled, authUserId, fetchDashboardKpis, buildEmployeeCounts, parsePositiveIntOrNull, useRealtimeInvalidation } = params;
+  const { userId, currentMonth, enabled, authUserId, fetchDashboardKpis, parsePositiveIntOrNull, useRealtimeInvalidation } = params;
   const [topN, setTopN] = useState(5);
   const [topNInput, setTopNInput] = useState('5');
   const queryClient = useQueryClient();
@@ -132,8 +129,6 @@ export function useDashboard(params: {
     () => (kpis.prevMonthOrders > 0 ? ((kpis.totalOrders - kpis.prevMonthOrders) / kpis.prevMonthOrders) * 100 : 0),
     [kpis.prevMonthOrders, kpis.totalOrders],
   );
-  const employeeCounts = useMemo(() => buildEmployeeCounts(empDetails), [buildEmployeeCounts, empDetails]);
-
   const monthPace = useMemo(() => {
     const now = new Date();
     return { daysInMonth: getDaysInMonth(now), daysPassed: Math.max(1, getDate(now)) };
@@ -207,7 +202,7 @@ export function useDashboard(params: {
 
   return {
     loading, isError, error, refetch, isFetching,
-    kpis, orderGrowth, employeeCounts, ordersByApp, ordersByCity, attendanceWeek,
+    kpis, orderGrowth, ordersByApp, ordersByCity, attendanceWeek,
     topNInput, setTopNInput, handleTopNBlur, topRidersOverall, maxOrderOverall, topRidersPerApp,
     bottomRidersPerApp, atRiskRiders, supervisorPerformance, data,
   };

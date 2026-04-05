@@ -10,7 +10,7 @@ import { format } from 'date-fns';
 import { useRealtimePostgresChanges, REALTIME_TABLES_DASHBOARD } from '@shared/hooks/useRealtimePostgresChanges';
 
 import { isEmployeeVisibleInMonth } from '@shared/lib/employeeVisibility';
-import { getDashboardCityKey, mapDashboardCityLabel, type DashboardCityKey } from '@shared/lib/dashboardCity';
+import { getDashboardCityKey, mapDashboardCityLabel } from '@shared/lib/dashboardCity';
 import { useAuth } from '@app/providers/AuthContext';
 import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { QueryErrorRetry } from '@shared/components/QueryErrorRetry';
@@ -39,95 +39,7 @@ const parsePositiveIntOrNull = (raw: string) => {
 
 type DashboardTabKey = 'overview' | 'analytics';
 
-type CityKey = DashboardCityKey;
-type LicenseKey = 'has_license' | 'applied' | 'no_license';
-
-type EmployeeCounts = {
-  makkah: {
-    has_license: number;
-    applied: number;
-    no_license: number;
-    sponsored: number;
-    not_sponsored: number;
-    has_license_sponsored: number;
-    has_license_not_sponsored: number;
-  };
-  jeddah: {
-    has_license: number;
-    applied: number;
-    no_license: number;
-    sponsored: number;
-    not_sponsored: number;
-    has_license_sponsored: number;
-    has_license_not_sponsored: number;
-  };
-  global: {
-    sponsored: number;
-    not_sponsored: number;
-    absconded: number;
-    terminated: number;
-  };
-};
-
-const getCityKey = (city: string | null): CityKey | null => getDashboardCityKey(city);
-
-const getLicenseKey = (licenseStatus: string | null): LicenseKey => {
-  if (licenseStatus === 'has_license') return 'has_license';
-  if (licenseStatus === 'applied') return 'applied';
-  return 'no_license';
-};
-
-const incrementGlobalSponsorshipCounts = (counts: EmployeeCounts, sponsorship: string | null) => {
-  if (sponsorship === 'sponsored') counts.global.sponsored++;
-  else if (sponsorship === 'not_sponsored') counts.global.not_sponsored++;
-  else if (sponsorship === 'absconded') counts.global.absconded++;
-  else if (sponsorship === 'terminated') counts.global.terminated++;
-};
-
-const incrementCityLicenseCounts = (counts: EmployeeCounts, city: CityKey, license: LicenseKey) => {
-  if (license === 'has_license') counts[city].has_license++;
-  else if (license === 'applied') counts[city].applied++;
-  else counts[city].no_license++;
-};
-
-const incrementCitySponsorshipCounts = (counts: EmployeeCounts, city: CityKey, sponsorship: string | null) => {
-  if (sponsorship === 'sponsored') counts[city].sponsored++;
-  else if (sponsorship === 'not_sponsored') counts[city].not_sponsored++;
-};
-
-const incrementCityComboCounts = (
-  counts: EmployeeCounts,
-  city: CityKey,
-  license: LicenseKey,
-  sponsorship: string | null,
-) => {
-  if (license !== 'has_license') return;
-  if (sponsorship === 'sponsored') counts[city].has_license_sponsored++;
-  else if (sponsorship === 'not_sponsored') counts[city].has_license_not_sponsored++;
-};
-
-const buildEmployeeCounts = (details: EmpDetail[]): EmployeeCounts => {
-  const counts: EmployeeCounts = {
-    makkah: { has_license: 0, applied: 0, no_license: 0, sponsored: 0, not_sponsored: 0, has_license_sponsored: 0, has_license_not_sponsored: 0 },
-    jeddah: { has_license: 0, applied: 0, no_license: 0, sponsored: 0, not_sponsored: 0, has_license_sponsored: 0, has_license_not_sponsored: 0 },
-    global: { sponsored: 0, not_sponsored: 0, absconded: 0, terminated: 0 },
-  };
-
-  for (const e of details) {
-    const city = getCityKey(e.city);
-    const license = getLicenseKey(e.license_status);
-    const sponsorship = e.sponsorship_status;
-
-    incrementGlobalSponsorshipCounts(counts, sponsorship);
-    if (!city) continue;
-
-    incrementCityLicenseCounts(counts, city, license);
-    incrementCitySponsorshipCounts(counts, city, sponsorship);
-    incrementCityComboCounts(counts, city, license, sponsorship);
-  }
-
-  return counts;
-};
+const getCityKey = (city: string | null) => getDashboardCityKey(city);
 
 type DashboardApp = { id: string; name: string; brand_color: string; text_color: string };
 type DashboardAttendanceToday = { present?: number; absent?: number; late?: number; leave?: number; sick?: number };
@@ -338,7 +250,6 @@ const Dashboard = () => {
     enabled,
     authUserId: user?.id,
     fetchDashboardKpis,
-    buildEmployeeCounts,
     parsePositiveIntOrNull,
     useRealtimeInvalidation: useDashboardRealtimeInvalidation,
   });

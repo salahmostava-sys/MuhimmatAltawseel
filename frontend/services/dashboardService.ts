@@ -447,8 +447,16 @@ export const dashboardService = {
       supabase.from('alerts').select('id, severity, is_resolved, type'),
     ]);
 
+    if (employeesRes.error) handleSupabaseError(employeesRes.error, 'dashboardService.getOperationalStats.employeesRes');
+    if (attendanceRes.error) handleSupabaseError(attendanceRes.error, 'dashboardService.getOperationalStats.attendanceRes');
+    if (ordersRes.error) handleSupabaseError(ordersRes.error, 'dashboardService.getOperationalStats.ordersRes');
+    if (fuelRes.error) handleSupabaseError(fuelRes.error, 'dashboardService.getOperationalStats.fuelRes');
+    if (maintenanceRes.error) handleSupabaseError(maintenanceRes.error, 'dashboardService.getOperationalStats.maintenanceRes');
+    if (vehiclesRes.error) handleSupabaseError(vehiclesRes.error, 'dashboardService.getOperationalStats.vehiclesRes');
+    if (alertsRes.error) handleSupabaseError(alertsRes.error, 'dashboardService.getOperationalStats.alertsRes');
+
     // Process employees
-    const employees = employeesRes.data ?? [];
+    const employees = filterOperationallyVisibleEmployees(employeesRes.data ?? []);
     const activeEmployees = employees.length;
     const employeesWithLicense = employees.filter(e => e.license_status === 'has_license').length;
     const employeesAppliedLicense = employees.filter(e => e.license_status === 'applied').length;
@@ -827,6 +835,12 @@ export const dashboardService = {
       supabase.from('advances').select('amount').eq('status', 'active'),
       supabase.from('salary_records').select('net_salary').eq('month_year', monthYear).eq('is_approved', true),
     ]);
+
+    if (fuelRes.error) handleSupabaseError(fuelRes.error, 'dashboardService.getAdditionalMetrics.fuelRes');
+    if (maintenanceRes.error) handleSupabaseError(maintenanceRes.error, 'dashboardService.getAdditionalMetrics.maintenanceRes');
+    if (violationsRes.error) handleSupabaseError(violationsRes.error, 'dashboardService.getAdditionalMetrics.violationsRes');
+    if (advancesRes.error) handleSupabaseError(advancesRes.error, 'dashboardService.getAdditionalMetrics.advancesRes');
+    if (salariesRes.error) handleSupabaseError(salariesRes.error, 'dashboardService.getAdditionalMetrics.salariesRes');
 
     const fuelCost = (fuelRes.data ?? []).reduce((s, r) => s + (r.cost ?? 0), 0);
     const fuelLiters = (fuelRes.data ?? []).reduce((s, r) => s + (r.liters ?? 0), 0);
