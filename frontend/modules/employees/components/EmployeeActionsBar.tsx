@@ -117,12 +117,15 @@ export function EmployeeActionsBar({
               <DropdownMenuContent align="end" className="w-52 max-h-80 overflow-y-auto">
                 <DropdownMenuLabel>إظهار / إخفاء الأعمدة</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {ALL_COLUMNS.filter(c => c.key !== 'seq' && c.key !== 'actions').map(col => (
+                {ALL_COLUMNS.map(col => (
                   <DropdownMenuCheckboxItem
                     key={col.key}
                     checked={visibleCols.has(col.key)}
                     onCheckedChange={checked => {
                       setVisibleCols(prev => {
+                        if (!checked && prev.size <= 1) {
+                          return prev;
+                        }
                         const next = new Set(prev);
                         if (checked) next.add(col.key); else next.delete(col.key);
                         return next;

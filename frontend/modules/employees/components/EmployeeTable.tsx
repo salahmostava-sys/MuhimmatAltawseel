@@ -2,6 +2,7 @@ import React from 'react';
 import { Eye, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Checkbox } from '@shared/components/ui/checkbox';
+import { Input } from '@shared/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -9,11 +10,17 @@ import {
 } from '@shared/components/ui/dropdown-menu';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import {
-  CityBadges, LicenseBadge, SponsorBadge,
-  InlineSelect, EmployeeAvatar, SortIcon, ColFilterPopover,
+  CityBadges, LicenseBadge, SponsorBadge, StatusBadge,
+  EmployeeAvatar, SortIcon, ColFilterPopover,
   SkeletonRow, TextFilterInput,
 } from '@modules/employees/components/EmployeesViewParts';
-import { cityLabel } from '@modules/employees/model/employeeCity';
+import { cityLabel, DEFAULT_EMPLOYEE_CITY_OPTIONS } from '@modules/employees/model/employeeCity';
+import { getEmployeeCities } from '@modules/employees/model/employeeUtils';
+import {
+  InlineInputEditor,
+  InlineMultiSelectEditor,
+  InlineSelectEditor,
+} from '@modules/employees/components/EmployeeInlineEditors';
 import { PlatformAppsEditor } from '@modules/employees/components/PlatformAppsEditor';
 import { useActiveApps } from '@modules/employees/hooks/useActiveApps';
 import {
@@ -70,6 +77,92 @@ export function EmployeeDetailedTable({
   const { data: availableApps = [] } = useActiveApps();
   const emptyCell = <span className="text-muted-foreground/40">{EMPTY_DATA_PLACEHOLDER}</span>;
   const cellText = (value?: string | null) => value || EMPTY_DATA_PLACEHOLDER;
+  const cityOptions = Array.from(new Set([...DEFAULT_EMPLOYEE_CITY_OPTIONS, ...uniqueVals.city]))
+    .map((value) => ({ value, label: cityLabel(value, value) }));
+  const sponsorshipOptions = [
+    { value: 'sponsored', label: 'على الكفالة' },
+    { value: 'not_sponsored', label: 'ليس على الكفالة' },
+    { value: 'absconded', label: 'هروب' },
+    { value: 'terminated', label: 'انتهاء الخدمة' },
+  ] as const;
+  const licenseOptions = [
+    { value: 'has_license', label: 'لديه رخصة' },
+    { value: 'no_license', label: 'ليس لديه رخصة' },
+    { value: 'applied', label: 'تم التقديم' },
+  ] as const;
+  const statusOptions = [
+    { value: 'active', label: 'نشط' },
+    { value: 'inactive', label: 'غير نشط' },
+    { value: 'ended', label: 'منتهي' },
+  ] as const;
+  const buildTextOptions = (values: string[], currentValue?: string | null) =>
+    Array.from(new Set([...values, currentValue || ''].filter(Boolean)))
+      .map((value) => ({ value, label: value }));
+  const nationalityOptions = buildTextOptions(uniqueVals.nationality);
+  const jobTitleOptions = buildTextOptions(uniqueVals.job_title);
+  const dateFilterKeys = new Set([
+    'join_date',
+    'birth_date',
+    'probation_end_date',
+    'residency_combined',
+    'health_insurance_expiry',
+    'license_expiry',
+  ]);
+  const formatDateCell = (value?: string | null) => (value ? format(parseISO(value), 'yyyy/MM/dd') : EMPTY_DATA_PLACEHOLDER);
+  const getDateInputValue = (value?: string | null) => value?.slice(0, 10) || '';
+  const renderTextValue = (
+    value?: string | null,
+    options?: Readonly<{ dir?: 'rtl' | 'ltr' | 'auto'; className?: string }>
+  ) => (
+    <span
+      className={`text-sm text-muted-foreground whitespace-nowrap ${options?.className || ''}`}
+      dir={options?.dir}
+    >
+      {cellText(value)}
+    </span>
+  );
+  const renderEditableTextCell = (
+    employeeId: string,
+    field: string,
+    value?: string | null,
+    options?: Readonly<{
+      dir?: 'rtl' | 'ltr' | 'auto';
+      className?: string;
+      placeholder?: string;
+      inputType?: 'text' | 'email';
+    }>
+  ) => {
+    const display = renderTextValue(value, options);
+    if (!permissions.can_edit) return display;
+    return (
+      <InlineInputEditor
+        value={value || ''}
+        inputType={options?.inputType || 'text'}
+        dir={options?.dir || 'auto'}
+        placeholder={options?.placeholder}
+        onSave={(nextValue) => saveField(employeeId, field, nextValue)}
+        renderDisplay={() => display}
+      />
+    );
+  };
+  const renderEditableDate = (
+    employeeId: string,
+    field: string,
+    value?: string | null,
+    display?: React.ReactNode
+  ) => {
+    const displayNode = display ?? (value ? renderTextValue(formatDateCell(value), { dir: 'ltr' }) : emptyCell);
+    if (!permissions.can_edit) return displayNode;
+    return (
+      <InlineInputEditor
+        value={getDateInputValue(value)}
+        inputType="date"
+        dir="ltr"
+        onSave={(nextValue) => saveField(employeeId, field, nextValue)}
+        renderDisplay={() => displayNode}
+      />
+    );
+  };
 
   return (
     <div className="ta-table-wrap">
@@ -78,15 +171,12 @@ export function EmployeeDetailedTable({
           <thead className="bg-yellow-400">
             <tr className="ta-thead">
               {activeCols.map(col => {
-                const isFilterable = !['seq', 'actions', 'platform_apps', 'residency_combined',
-                  'join_date', 'birth_date', 'bank_account_number', 'probation_end_date', 'license_expiry',
-                  'name_en', 'health_insurance_expiry'].includes(col.key);
+                const isFilterable = !['seq', 'actions'].includes(col.key);
                 const isActive = !!colFilters[col.key];
 
                 const filterContent = (() => {
                   if (!isFilterable) return null;
                   if (col.key === 'city') {
-                    const cityOptions = uniqueVals.city.map((value) => ({ v: value, l: cityLabel(value, value) }));
                     const selected = colFilters.city ? colFilters.city.split(',').map((s) => s.trim()).filter(Boolean) : [];
                     const toggleCity = (v: string) => {
                       const next = selected.includes(v) ? selected.filter((x) => x !== v) : [...selected, v];
@@ -94,10 +184,42 @@ export function EmployeeDetailedTable({
                     };
                     return (
                       <div className="space-y-2">
-                        {cityOptions.map(({ v, l }) => (
-                          <label key={v} className="flex items-center gap-2 text-xs cursor-pointer">
-                            <Checkbox checked={selected.includes(v)} onCheckedChange={() => toggleCity(v)} />
-                            {l}
+                        {cityOptions.map(({ value, label }) => (
+                          <label key={value} className="flex items-center gap-2 text-xs cursor-pointer">
+                            <Checkbox checked={selected.includes(value)} onCheckedChange={() => toggleCity(value)} />
+                            {label}
+                          </label>
+                        ))}
+                      </div>
+                    );
+                  }
+                  if (col.key === 'platform_apps') {
+                    const selected = colFilters.platform_apps
+                      ? colFilters.platform_apps.split(',').map((value) => value.trim()).filter(Boolean)
+                      : [];
+                    const toggleApp = (appId: string) => {
+                      const next = selected.includes(appId)
+                        ? selected.filter((value) => value !== appId)
+                        : [...selected, appId];
+                      const ordered = availableApps
+                        .map((app) => app.id)
+                        .filter((appIdValue) => next.includes(appIdValue));
+                      setColFilter('platform_apps', ordered.join(','));
+                    };
+                    if (availableApps.length === 0) {
+                      return <p className="text-xs text-muted-foreground text-center py-2">لا توجد منصات متاحة</p>;
+                    }
+                    return (
+                      <div className="space-y-2">
+                        {availableApps.map((app) => (
+                          <label key={app.id} className="flex items-center gap-2 text-xs cursor-pointer">
+                            <Checkbox checked={selected.includes(app.id)} onCheckedChange={() => toggleApp(app.id)} />
+                            <span
+                              className="inline-flex items-center rounded px-2 py-0.5 text-[10px] font-medium text-white"
+                              style={{ backgroundColor: app.brand_color || '#6366f1' }}
+                            >
+                              {app.name}
+                            </span>
                           </label>
                         ))}
                       </div>
@@ -130,6 +252,15 @@ export function EmployeeDetailedTable({
                       </div>
                     );
                   }
+                  if (dateFilterKeys.has(col.key)) return (
+                    <Input
+                      type="date"
+                      className="h-8 text-xs px-2"
+                      value={colFilters[col.key] || ''}
+                      onChange={(event) => setColFilter(col.key, event.target.value)}
+                      onClick={(event) => event.stopPropagation()}
+                    />
+                  );
                   if (col.key === 'license_status') return (
                     <Select value={colFilters.license_status || 'all'} onValueChange={v => setColFilter('license_status', v)}>
                       <SelectTrigger className="h-7 text-xs w-full"><SelectValue placeholder="الكل" /></SelectTrigger>
@@ -138,6 +269,17 @@ export function EmployeeDetailedTable({
                         <SelectItem value="has_license">لديه رخصة</SelectItem>
                         <SelectItem value="no_license">ليس لديه رخصة</SelectItem>
                         <SelectItem value="applied">تم التقديم</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  );
+                  if (col.key === 'status') return (
+                    <Select value={colFilters.status || 'all'} onValueChange={v => setColFilter('status', v)}>
+                      <SelectTrigger className="h-7 text-xs w-full"><SelectValue placeholder="الكل" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">الكل</SelectItem>
+                        {statusOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   );
@@ -224,45 +366,106 @@ export function EmployeeDetailedTable({
                           <td key="name" className="px-3 py-2.5 whitespace-nowrap text-center align-middle">
                             <div className="flex items-center justify-center gap-2.5">
                               <EmployeeAvatar path={emp.personal_photo_url} name={emp.name} />
-                              <button onClick={() => setSelectedEmployee(emp.id)} className="text-sm font-semibold text-foreground transition-colors hover:text-primary text-center">
-                                {emp.name}
-                              </button>
+                              <div className="flex items-center gap-1.5">
+                                <button onClick={() => setSelectedEmployee(emp.id)} className="text-sm font-semibold text-foreground transition-colors hover:text-primary text-center">
+                                  {emp.name}
+                                </button>
+                                {permissions.can_edit && (
+                                  <InlineInputEditor
+                                    value={emp.name || ''}
+                                    placeholder="اسم الموظف"
+                                    onSave={(nextValue) => saveField(emp.id, 'name', nextValue)}
+                                    renderDisplay={() => (
+                                      <span className="text-[11px] text-muted-foreground hover:text-primary">
+                                        تعديل
+                                      </span>
+                                    )}
+                                  />
+                                )}
+                              </div>
                             </div>
                           </td>
                         );
 
                       case 'name_en':
-                        return <td key="name_en" className="px-3 py-2.5 text-center text-sm text-muted-foreground whitespace-nowrap" dir="ltr">{cellText(emp.name_en)}</td>;
+                        return (
+                          <td key="name_en" className="px-3 py-2.5 text-center whitespace-nowrap" dir="ltr">
+                            {renderEditableTextCell(emp.id, 'name_en', emp.name_en, {
+                              dir: 'ltr',
+                              placeholder: 'الاسم بالإنجليزية',
+                            })}
+                          </td>
+                        );
 
                       case 'national_id':
-                        return <td key="national_id" className="px-3 py-2.5 text-center text-sm text-muted-foreground tabular-nums whitespace-nowrap" dir="ltr">{cellText(emp.national_id)}</td>;
+                        return (
+                          <td key="national_id" className="px-3 py-2.5 text-center whitespace-nowrap" dir="ltr">
+                            {renderEditableTextCell(emp.id, 'national_id', emp.national_id, {
+                              dir: 'ltr',
+                              className: 'tabular-nums',
+                              placeholder: 'رقم الهوية',
+                            })}
+                          </td>
+                        );
 
                       case 'job_title':
-                        return <td key="job_title" className="px-3 py-2.5 text-center text-sm text-muted-foreground whitespace-nowrap">{cellText(emp.job_title)}</td>;
+                        return (
+                          <td key="job_title" className="px-3 py-2.5 text-center whitespace-nowrap">
+                            {renderEditableTextCell(emp.id, 'job_title', emp.job_title, {
+                              placeholder: 'المسمى الوظيفي',
+                            })}
+                          </td>
+                        );
 
                       case 'city':
                         return (
                           <td key="city" className="px-3 py-2.5 whitespace-nowrap text-center">
-                            <CityBadges cities={emp.cities} city={emp.city} />
+                            {permissions.can_edit ? (
+                              <InlineMultiSelectEditor
+                                values={getEmployeeCities(emp)}
+                                options={cityOptions}
+                                onSave={(nextValues) => {
+                                  const ordered = cityOptions.map((option) => option.value).filter((value) => nextValues.includes(value));
+                                  return saveField(emp.id, 'city', ordered[0] ?? '', { cities: ordered });
+                                }}
+                                renderDisplay={() => <CityBadges cities={emp.cities} city={emp.city} />}
+                              />
+                            ) : (
+                              <CityBadges cities={emp.cities} city={emp.city} />
+                            )}
                           </td>
                         );
 
                       case 'phone':
-                        return <td key="phone" className="px-3 py-2.5 text-center text-sm text-muted-foreground whitespace-nowrap" dir="ltr">{cellText(emp.phone)}</td>;
-
-                      case 'nationality':
                         return (
-                          <td key="nationality" className="px-3 py-2.5 whitespace-nowrap text-center">
-                            <InlineSelect
-                              value={emp.nationality || ''}
-                              options={uniqueVals.nationality.map(n => ({ value: n, label: n }))}
-                              onSave={v => saveField(emp.id, 'nationality', v)}
-                              renderDisplay={() => (
-                                <span className="text-sm text-muted-foreground">{cellText(emp.nationality)}</span>
-                              )}
-                            />
+                          <td key="phone" className="px-3 py-2.5 text-center whitespace-nowrap" dir="ltr">
+                            {renderEditableTextCell(emp.id, 'phone', emp.phone, {
+                              dir: 'ltr',
+                              placeholder: 'رقم الهاتف',
+                            })}
                           </td>
                         );
+
+                      case 'nationality': {
+                        const nationalityEditorOptions = [
+                          { value: '', label: 'بدون تحديد' },
+                          ...buildTextOptions(uniqueVals.nationality, emp.nationality),
+                        ];
+                        return (
+                          <td key="nationality" className="px-3 py-2.5 whitespace-nowrap text-center">
+                            {permissions.can_edit ? (
+                              <InlineSelectEditor
+                                value={emp.nationality || ''}
+                                options={nationalityEditorOptions}
+                                onSave={(nextValue) => saveField(emp.id, 'nationality', nextValue)}
+                                renderDisplay={() => renderTextValue(emp.nationality)}
+                              />
+                            ) : (
+                              renderTextValue(emp.nationality)
+                            )}
+                          </td>
+                        );
+                      }
 
                       case 'platform_apps':
                         return (
@@ -271,14 +474,14 @@ export function EmployeeDetailedTable({
                               <PlatformAppsEditor
                                 employeeId={emp.id}
                                 employeeName={emp.name}
-                                currentApps={(emp as { platform_apps?: Array<{ id: string; name: string; brand_color?: string }> }).platform_apps || []}
+                                currentApps={emp.platform_apps || []}
                                 availableApps={availableApps}
                                 onSuccess={refetchEmployees}
                               />
                             ) : (
                               <div className="flex max-w-[200px] flex-wrap justify-center gap-1">
-                                {(emp as { platform_apps?: Array<{ id: string; name: string; brand_color?: string }> }).platform_apps?.length ? (
-                                  (emp as { platform_apps: Array<{ id: string; name: string; brand_color?: string }> }).platform_apps.map(app => (
+                                {emp.platform_apps?.length ? (
+                                  emp.platform_apps.map(app => (
                                     <span
                                       key={app.id}
                                       className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium"
@@ -299,72 +502,121 @@ export function EmployeeDetailedTable({
                         );
 
                       case 'commercial_record':
-                        return <td key="commercial_record" className="px-3 py-2.5 text-center text-sm text-muted-foreground whitespace-nowrap">{cellText(emp.commercial_record)}</td>;
+                        return (
+                          <td key="commercial_record" className="px-3 py-2.5 text-center whitespace-nowrap">
+                            {renderEditableTextCell(emp.id, 'commercial_record', emp.commercial_record, {
+                              placeholder: 'السجل التجاري',
+                            })}
+                          </td>
+                        );
 
                       case 'residency_combined':
                         return (
                           <td key="residency_combined" className="px-3 py-2.5 whitespace-nowrap text-center">
-                            {emp.residency_expiry ? (
-                              <div className="flex flex-col items-center gap-0.5">
-                                <span className="text-xs text-muted-foreground">{format(parseISO(emp.residency_expiry), 'yyyy/MM/dd')}</span>
-                                {res.days !== null && (
-                                  <span className={`text-xs font-medium ${daysColor}`}>
-                                    {res.days >= 0 ? `متبقي ${res.days} يوم` : `منتهية منذ ${Math.abs(res.days)} يوم`}
-                                  </span>
-                                )}
-                              </div>
-                            ) : emptyCell}
+                            {renderEditableDate(
+                              emp.id,
+                              'residency_expiry',
+                              emp.residency_expiry,
+                              emp.residency_expiry ? (
+                                <div className="flex flex-col items-center gap-0.5">
+                                  <span className="text-xs text-muted-foreground">{formatDateCell(emp.residency_expiry)}</span>
+                                  {res.days !== null && (
+                                    <span className={`text-xs font-medium ${daysColor}`}>
+                                      {res.days >= 0 ? `متبقي ${res.days} يوم` : `منتهية منذ ${Math.abs(res.days)} يوم`}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : emptyCell
+                            )}
                           </td>
                         );
 
                       case 'sponsorship_status':
                         return (
                           <td key="sponsorship_status" className="px-3 py-2.5 whitespace-nowrap text-center">
-                            <InlineSelect
-                              value={emp.sponsorship_status || 'not_sponsored'}
-                              options={[
-                                { value: 'sponsored',     label: 'على الكفالة'      },
-                                { value: 'not_sponsored', label: 'ليس على الكفالة'  },
-                                { value: 'absconded',     label: 'هروب'             },
-                                { value: 'terminated',    label: 'انتهاء الخدمة'    },
-                              ]}
-                              onSave={v => {
-                                if (v === 'absconded' || v === 'terminated') {
-                                  setStatusDate(format(new Date(), 'yyyy-MM-dd'));
-                                  setStatusDateDialog({
-                                    emp,
-                                    newStatus: v,
-                                    label: v === 'absconded' ? 'هروب' : 'انتهاء الخدمة',
-                                  });
-                                  return Promise.resolve();
-                                }
-                                return saveField(emp.id, 'sponsorship_status', v);
-                              }}
-                              renderDisplay={() => <SponsorBadge status={emp.sponsorship_status} />}
-                            />
+                            {permissions.can_edit ? (
+                              <InlineSelectEditor
+                                value={emp.sponsorship_status || 'not_sponsored'}
+                                options={sponsorshipOptions.map((option) => ({ value: option.value, label: option.label }))}
+                                onSave={(nextValue) => {
+                                  if (nextValue === 'absconded' || nextValue === 'terminated') {
+                                    setStatusDate(format(new Date(), 'yyyy-MM-dd'));
+                                    setStatusDateDialog({
+                                      emp,
+                                      newStatus: nextValue,
+                                      label: nextValue === 'absconded' ? 'هروب' : 'انتهاء الخدمة',
+                                    });
+                                    return Promise.resolve();
+                                  }
+                                  return saveField(emp.id, 'sponsorship_status', nextValue);
+                                }}
+                                renderDisplay={() => <SponsorBadge status={emp.sponsorship_status} />}
+                              />
+                            ) : (
+                              <SponsorBadge status={emp.sponsorship_status} />
+                            )}
+                          </td>
+                        );
+
+                      case 'status':
+                        return (
+                          <td key="status" className="px-3 py-2.5 whitespace-nowrap text-center">
+                            {permissions.can_edit ? (
+                              <InlineSelectEditor
+                                value={emp.status || 'active'}
+                                options={statusOptions.map((option) => ({ value: option.value, label: option.label }))}
+                                onSave={(nextValue) => saveField(emp.id, 'status', nextValue)}
+                                renderDisplay={() => <StatusBadge status={emp.status} />}
+                              />
+                            ) : (
+                              <StatusBadge status={emp.status} />
+                            )}
                           </td>
                         );
 
                       case 'join_date':
-                        return <td key="join_date" className="px-3 py-2.5 text-center text-sm text-muted-foreground whitespace-nowrap">{emp.join_date ? format(parseISO(emp.join_date), 'yyyy/MM/dd') : EMPTY_DATA_PLACEHOLDER}</td>;
+                        return (
+                          <td key="join_date" className="px-3 py-2.5 text-center whitespace-nowrap">
+                            {renderEditableDate(
+                              emp.id,
+                              'join_date',
+                              emp.join_date,
+                              emp.join_date ? renderTextValue(formatDateCell(emp.join_date), { dir: 'ltr' }) : emptyCell
+                            )}
+                          </td>
+                        );
 
                       case 'birth_date':
-                        return <td key="birth_date" className="px-3 py-2.5 text-center text-sm text-muted-foreground whitespace-nowrap">{emp.birth_date ? format(parseISO(emp.birth_date), 'yyyy/MM/dd') : EMPTY_DATA_PLACEHOLDER}</td>;
+                        return (
+                          <td key="birth_date" className="px-3 py-2.5 text-center whitespace-nowrap">
+                            {renderEditableDate(
+                              emp.id,
+                              'birth_date',
+                              emp.birth_date,
+                              emp.birth_date ? renderTextValue(formatDateCell(emp.birth_date), { dir: 'ltr' }) : emptyCell
+                            )}
+                          </td>
+                        );
 
                       case 'probation_end_date': {
                         const probDays = emp.probation_end_date ? differenceInDays(parseISO(emp.probation_end_date), new Date()) : null;
                         return (
                           <td key="probation_end_date" className="px-3 py-2.5 whitespace-nowrap text-center">
-                            {emp.probation_end_date ? (
-                              <div className="flex flex-col items-center gap-0.5">
-                                <span className="text-xs text-muted-foreground">{format(parseISO(emp.probation_end_date), 'yyyy/MM/dd')}</span>
-                                {probDays !== null && (
-                                  <span className={`text-xs font-medium ${probationColor(probDays)}`}>
-                                    {probDays < 0 ? 'انتهت' : `${probDays}ي متبقي`}
-                                  </span>
-                                )}
-                              </div>
-                            ) : emptyCell}
+                            {renderEditableDate(
+                              emp.id,
+                              'probation_end_date',
+                              emp.probation_end_date,
+                              emp.probation_end_date ? (
+                                <div className="flex flex-col items-center gap-0.5">
+                                  <span className="text-xs text-muted-foreground">{formatDateCell(emp.probation_end_date)}</span>
+                                  {probDays !== null && (
+                                    <span className={`text-xs font-medium ${probationColor(probDays)}`}>
+                                      {probDays < 0 ? 'انتهت' : `متبقي ${probDays} يوم`}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : emptyCell
+                            )}
                           </td>
                         );
                       }
@@ -375,16 +627,21 @@ export function EmployeeDetailedTable({
                         const hiColor = dayColorByThreshold(hiDays);
                         return (
                           <td key="health_insurance_expiry" className="px-3 py-2.5 whitespace-nowrap text-center">
-                            {hiExpiry ? (
-                              <div className="flex flex-col items-center gap-0.5">
-                                <span className={`text-xs ${hiColor}`}>{format(parseISO(hiExpiry), 'yyyy/MM/dd')}</span>
-                                {hiDays !== null && (
-                                  <span className={`text-[10px] ${hiColor}`}>
-                                    {hiDays < 0 ? `منتهي منذ ${Math.abs(hiDays)} يوم` : `متبقي ${hiDays} يوم`}
-                                  </span>
-                                )}
-                              </div>
-                            ) : emptyCell}
+                            {renderEditableDate(
+                              emp.id,
+                              'health_insurance_expiry',
+                              hiExpiry,
+                              hiExpiry ? (
+                                <div className="flex flex-col items-center gap-0.5">
+                                  <span className={`text-xs ${hiColor}`}>{formatDateCell(hiExpiry)}</span>
+                                  {hiDays !== null && (
+                                    <span className={`text-[10px] ${hiColor}`}>
+                                      {hiDays < 0 ? `منتهي منذ ${Math.abs(hiDays)} يوم` : `متبقي ${hiDays} يوم`}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : emptyCell
+                            )}
                           </td>
                         );
                       }
@@ -392,16 +649,16 @@ export function EmployeeDetailedTable({
                       case 'license_status':
                         return (
                           <td key="license_status" className="px-3 py-2.5 whitespace-nowrap text-center">
-                            <InlineSelect
-                              value={emp.license_status || 'no_license'}
-                              options={[
-                                { value: 'has_license', label: 'لديه رخصة'     },
-                                { value: 'no_license',  label: 'ليس لديه رخصة' },
-                                { value: 'applied',     label: 'تم التقديم'    },
-                              ]}
-                              onSave={v => saveField(emp.id, 'license_status', v)}
-                              renderDisplay={() => <LicenseBadge status={emp.license_status} />}
-                            />
+                            {permissions.can_edit ? (
+                              <InlineSelectEditor
+                                value={emp.license_status || 'no_license'}
+                                options={licenseOptions.map((option) => ({ value: option.value, label: option.label }))}
+                                onSave={(nextValue) => saveField(emp.id, 'license_status', nextValue)}
+                                renderDisplay={() => <LicenseBadge status={emp.license_status} />}
+                              />
+                            ) : (
+                              <LicenseBadge status={emp.license_status} />
+                            )}
                           </td>
                         );
 
@@ -411,30 +668,53 @@ export function EmployeeDetailedTable({
                         const leColor = dayColorByThreshold(leDays);
                         return (
                           <td key="license_expiry" className="px-3 py-2.5 whitespace-nowrap text-center">
-                            {leExpiry ? (
-                              <div className="flex flex-col items-center gap-0.5">
-                                <span className={`text-xs ${leColor}`}>{format(parseISO(leExpiry), 'yyyy/MM/dd')}</span>
-                                {leDays !== null && (
-                                  <span className={`text-[10px] ${leColor}`}>
-                                    {leDays < 0 ? `منتهية منذ ${Math.abs(leDays)} يوم` : `متبقي ${leDays} يوم`}
-                                  </span>
-                                )}
-                              </div>
-                            ) : emptyCell}
+                            {renderEditableDate(
+                              emp.id,
+                              'license_expiry',
+                              leExpiry,
+                              leExpiry ? (
+                                <div className="flex flex-col items-center gap-0.5">
+                                  <span className={`text-xs ${leColor}`}>{formatDateCell(leExpiry)}</span>
+                                  {leDays !== null && (
+                                    <span className={`text-[10px] ${leColor}`}>
+                                      {leDays < 0 ? `منتهية منذ ${Math.abs(leDays)} يوم` : `متبقي ${leDays} يوم`}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : emptyCell
+                            )}
                           </td>
                         );
                       }
 
                       case 'bank_account_number':
-                        return <td key="bank_account_number" className="px-3 py-2.5 text-center text-sm text-muted-foreground tabular-nums whitespace-nowrap" dir="ltr">{cellText(emp.bank_account_number)}</td>;
+                        return (
+                          <td key="bank_account_number" className="px-3 py-2.5 text-center whitespace-nowrap" dir="ltr">
+                            {renderEditableTextCell(emp.id, 'bank_account_number', emp.bank_account_number, {
+                              dir: 'ltr',
+                              className: 'tabular-nums',
+                              placeholder: 'رقم الحساب البنكي',
+                            })}
+                          </td>
+                        );
 
                       case 'email':
                         return (
-                          <td key="email" className="px-3 py-2.5 text-center text-sm whitespace-nowrap" dir="ltr">
-                            {emp.email
-                              ? <a href={`mailto:${emp.email}`} className="text-primary hover:underline">{emp.email}</a>
-                              : emptyCell
-                            }
+                          <td key="email" className="px-3 py-2.5 text-center whitespace-nowrap" dir="ltr">
+                            {permissions.can_edit ? (
+                              <InlineInputEditor
+                                value={emp.email || ''}
+                                inputType="email"
+                                dir="ltr"
+                                placeholder="البريد الإلكتروني"
+                                onSave={(nextValue) => saveField(emp.id, 'email', nextValue)}
+                                renderDisplay={() => renderTextValue(emp.email, { dir: 'ltr' })}
+                              />
+                            ) : emp.email ? (
+                              <a href={`mailto:${emp.email}`} className="text-primary hover:underline">{emp.email}</a>
+                            ) : (
+                              emptyCell
+                            )}
                           </td>
                         );
 

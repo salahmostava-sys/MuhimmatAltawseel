@@ -34,6 +34,7 @@ export type Employee = {
   nationality?: string | null;
   preferred_language?: string | null;
   commercial_record?: string | null;
+  platform_apps?: Array<{ id: string; name: string; brand_color?: string | null }> | null;
 };
 
 export type SortDir = 'asc' | 'desc' | null;
@@ -66,6 +67,9 @@ const matchesText = (source: string | null | undefined, filterValue: string): bo
 const matchesExact = (source: string | null | undefined, filterValue: string): boolean =>
   (source || '') === filterValue;
 
+const matchesDate = (source: string | null | undefined, filterValue: string): boolean =>
+  (source || '').slice(0, 10) === filterValue;
+
 function matchesResidencyFilter(employee: Employee, filterValue: string): boolean {
   const res = calcResidency(employee.residency_expiry);
   if (filterValue === 'valid') return res.status === 'valid';
@@ -94,19 +98,39 @@ function matchesEmployeeCities(employee: Employee, filterValue: string): boolean
   return employeeCities.some((city) => parts.includes(city));
 }
 
+function matchesPlatformApps(employee: Employee, filterValue: string): boolean {
+  const parts = filterValue
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (parts.length === 0) return true;
+
+  const appIds = (employee.platform_apps ?? []).map((app) => app.id);
+  return appIds.some((appId) => parts.includes(appId));
+}
+
 function matchesColumnFilter(employee: Employee, key: string, filterValue: string): boolean {
   if (!filterValue) return true;
   const predicates: Record<string, () => boolean> = {
     name: () => matchesText(employee.name, filterValue),
+    name_en: () => matchesText(employee.name_en, filterValue),
     national_id: () => (employee.national_id || '').includes(filterValue),
     phone: () => (employee.phone || '').includes(filterValue),
-    job_title: () => matchesExact(employee.job_title, filterValue),
+    job_title: () => matchesText(employee.job_title, filterValue),
     city: () => matchesEmployeeCities(employee, filterValue),
-    nationality: () => matchesExact(employee.nationality, filterValue),
+    nationality: () => matchesText(employee.nationality, filterValue),
+    platform_apps: () => matchesPlatformApps(employee, filterValue),
+    commercial_record: () => matchesText(employee.commercial_record, filterValue),
     sponsorship_status: () => matchesMultiExact(employee.sponsorship_status, filterValue),
     license_status: () => matchesExact(employee.license_status, filterValue),
     status: () => matchesExact(employee.status, filterValue),
     residency_status: () => matchesResidencyFilter(employee, filterValue),
+    join_date: () => matchesDate(employee.join_date, filterValue),
+    birth_date: () => matchesDate(employee.birth_date, filterValue),
+    probation_end_date: () => matchesDate(employee.probation_end_date, filterValue),
+    residency_combined: () => matchesDate(employee.residency_expiry, filterValue),
+    health_insurance_expiry: () => matchesDate(employee.health_insurance_expiry, filterValue),
+    license_expiry: () => matchesDate(employee.license_expiry, filterValue),
     email: () => matchesText(employee.email, filterValue),
     bank_account_number: () => (employee.bank_account_number || '').includes(filterValue),
   };

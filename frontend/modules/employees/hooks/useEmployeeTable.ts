@@ -7,7 +7,7 @@ import { auditService } from '@services/auditService';
 import { EMPLOYEE_IMPORT_COLUMNS } from '@shared/constants/excelSchemas';
 import { EMPLOYEE_TEMPLATE_AR_HEADERS } from '@shared/lib/employeeArabicTemplateImport';
 import { printHtmlTable } from '@shared/lib/printTable';
-import { getEmployeeCities, getEmployeeFieldValue } from '@modules/employees/model/employeeUtils';
+import { getEmployeeCities } from '@modules/employees/model/employeeUtils';
 import { cityLabel } from '@modules/employees/model/employeeCity';
 import {
   employeeCitySummary,
@@ -78,7 +78,7 @@ export function useEmployeeActions(params: {
       await driverService.update(id, updatePatch);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'تعذر حفظ التعديل';
-      setData(d => d.map(e => e.id === id ? { ...e, [field]: prev ? getEmployeeFieldValue(prev, field) : undefined } : e));
+      setData(d => d.map(e => e.id === id ? (prev ?? e) : e));
       toast({ title: 'خطأ في الحفظ', description: message, variant: 'destructive' });
     }
   }, [data, setData, toast]);

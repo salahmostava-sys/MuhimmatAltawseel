@@ -112,6 +112,7 @@ export const ALL_COLUMNS = [
   { key: 'platform_apps',            label: 'المنصة',                  sortable: false },
   { key: 'commercial_record',        label: 'السجل التجاري',           sortable: true  },
   { key: 'sponsorship_status',       label: 'حالة الكفالة',            sortable: true  },
+  { key: 'status',                   label: 'حالة الموظف',             sortable: true  },
   { key: 'join_date',                label: 'تاريخ الانضمام',          sortable: true  },
   { key: 'birth_date',               label: 'تاريخ الميلاد',           sortable: true  },
   { key: 'probation_end_date',       label: 'انتهاء فترة التجربة',     sortable: true  },
