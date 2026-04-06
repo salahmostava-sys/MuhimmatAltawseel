@@ -22,6 +22,17 @@ function getEmployeeAssignedApps(
   return apps.filter((app) => appEmployeeIds[app.id]?.has(empId));
 }
 
+function clearEmployeeAppMonthData(
+  nextData: DailyData,
+  empId: string,
+  appId: string,
+  dayArr: number[],
+) {
+  dayArr.forEach((day) => {
+    delete nextData[`${empId}::${appId}::${day}`];
+  });
+}
+
 function resolveImportTargetAppsForEmployee(params: {
   empId: string;
   apps: App[];
@@ -83,6 +94,7 @@ export function mergeImportedOrdersFromMatrixWithMapping(params: {
   let skipped = 0;
   const errors: string[] = [];
   const newData = { ...prev };
+  const clearedScopes = new Set<string>();
 
   if (apps.length === 0) {
     errors.push('لا توجد منصات طلبات نشطة');
@@ -120,6 +132,13 @@ export function mergeImportedOrdersFromMatrixWithMapping(params: {
     }
 
     let hasValidData = false;
+
+    for (const app of targetApps) {
+      const scopeKey = `${empId}::${app.id}`;
+      if (clearedScopes.has(scopeKey)) continue;
+      clearEmployeeAppMonthData(newData, empId, app.id, dayArr);
+      clearedScopes.add(scopeKey);
+    }
 
     for (let idx = 0; idx < dayArr.length; idx++) {
       const d = dayArr[idx];

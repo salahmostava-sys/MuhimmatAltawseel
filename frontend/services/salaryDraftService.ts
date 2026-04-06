@@ -17,15 +17,34 @@ const rowIdToEmployeeId = (rowId: string, monthYear: string) => {
   return rowId.endsWith(suffix) ? rowId.slice(0, -suffix.length) : rowId;
 };
 
+const getAuthenticatedUserId = async (
+  context: string,
+  required = true,
+): Promise<string | null> => {
+  const { data, error } = await supabase.auth.getUser();
+  throwIfError(error, `${context}.getUser`);
+
+  const userId = data.user?.id ?? null;
+  if (!userId && required) {
+    throw new Error('User not authenticated');
+  }
+
+  return userId;
+};
+
 export const salaryDraftService = {
   /**
    * Get all drafts for a specific month
    */
   getDraftsForMonth: async (monthYear: string): Promise<Record<string, SalaryDraftPatch>> => {
+    const userId = await getAuthenticatedUserId('salaryDraftService.getDraftsForMonth', false);
+    if (!userId) return {};
+
     const { data, error } = await supabase
       .from('salary_drafts')
       .select('employee_id, draft_data')
-      .eq('month_year', monthYear);
+      .eq('month_year', monthYear)
+      .eq('user_id', userId);
 
     throwIfError(error, 'salaryDraftService.getDraftsForMonth');
 
@@ -46,6 +65,7 @@ export const salaryDraftService = {
     employeeId: string,
     draftData: SalaryDraftPatch
   ): Promise<void> => {
+    const userId = await getAuthenticatedUserId('salaryDraftService.saveDraft');
     const { error } = await supabase
       .from('salary_drafts')
       .upsert(
@@ -53,7 +73,7 @@ export const salaryDraftService = {
           month_year: monthYear,
           employee_id: employeeId,
           draft_data: draftData,
-          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_id: userId,
         },
         {
           onConflict: 'user_id,month_year,employee_id',
@@ -70,8 +90,7 @@ export const salaryDraftService = {
     monthYear: string,
     drafts: Record<string, SalaryDraftPatch>
   ): Promise<void> => {
-    const userId = (await supabase.auth.getUser()).data.user?.id;
-    if (!userId) throw new Error('User not authenticated');
+    const userId = await getAuthenticatedUserId('salaryDraftService.saveDraftsBatch');
 
     const records = Object.entries(drafts).map(([rowId, draftData]) => {
       const employeeId = rowIdToEmployeeId(rowId, monthYear);
@@ -101,6 +120,7 @@ export const salaryDraftService = {
     monthYear: string,
     drafts: Record<string, SalaryDraftPatch>
   ): Promise<void> => {
+    const userId = await getAuthenticatedUserId('salaryDraftService.syncDraftsForMonth');
     const desiredEmployeeIds = Object.keys(drafts).map((rowId) => rowIdToEmployeeId(rowId, monthYear));
 
     if (desiredEmployeeIds.length > 0) {
@@ -110,7 +130,8 @@ export const salaryDraftService = {
     const { data, error } = await supabase
       .from('salary_drafts')
       .select('employee_id')
-      .eq('month_year', monthYear);
+      .eq('month_year', monthYear)
+      .eq('user_id', userId);
 
     throwIfError(error, 'salaryDraftService.syncDraftsForMonth.select');
 
@@ -125,6 +146,7 @@ export const salaryDraftService = {
       .from('salary_drafts')
       .delete()
       .eq('month_year', monthYear)
+      .eq('user_id', userId)
       .in('employee_id', staleEmployeeIds);
 
     throwIfError(deleteError, 'salaryDraftService.syncDraftsForMonth.delete');
@@ -134,10 +156,12 @@ export const salaryDraftService = {
    * Delete a specific draft
    */
   deleteDraft: async (monthYear: string, employeeId: string): Promise<void> => {
+    const userId = await getAuthenticatedUserId('salaryDraftService.deleteDraft');
     const { error } = await supabase
       .from('salary_drafts')
       .delete()
       .eq('month_year', monthYear)
+      .eq('user_id', userId)
       .eq('employee_id', employeeId);
 
     throwIfError(error, 'salaryDraftService.deleteDraft');
@@ -147,10 +171,12 @@ export const salaryDraftService = {
    * Delete all drafts for a specific month
    */
   clearDraftsForMonth: async (monthYear: string): Promise<void> => {
+    const userId = await getAuthenticatedUserId('salaryDraftService.clearDraftsForMonth');
     const { error } = await supabase
       .from('salary_drafts')
       .delete()
-      .eq('month_year', monthYear);
+      .eq('month_year', monthYear)
+      .eq('user_id', userId);
 
     throwIfError(error, 'salaryDraftService.clearDraftsForMonth');
   },

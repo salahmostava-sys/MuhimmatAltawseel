@@ -64,4 +64,57 @@ describe('mergeImportedOrdersFromMatrixWithMapping', () => {
     expect(result.skipped).toBe(1);
     expect(result.errors[0]).toContain('غير مسجل على منصة');
   });
+
+  it('replaces previous values inside the imported employee and app scope', () => {
+    const result = mergeImportedOrdersFromMatrixWithMapping({
+      matrixRows: [['أحمد', 12, '']],
+      dayArr: [1, 2],
+      apps,
+      prev: {
+        'emp-1::orders-app::1': 5,
+        'emp-1::orders-app::2': 9,
+        'emp-1::hybrid-app::1': 3,
+      },
+      targetAppId: 'orders-app',
+      nameMapping: new Map([['أحمد', 'emp-1']]),
+      appEmployeeIds: {
+        'orders-app': new Set(['emp-1']),
+        'hybrid-app': new Set(),
+      },
+    });
+
+    expect(result.imported).toBe(1);
+    expect(result.skipped).toBe(0);
+    expect(result.newData).toEqual({
+      'emp-1::orders-app::1': 12,
+      'emp-1::hybrid-app::1': 3,
+    });
+  });
+
+  it('clears a duplicated employee scope only once so repeated rows keep all imported days', () => {
+    const result = mergeImportedOrdersFromMatrixWithMapping({
+      matrixRows: [
+        ['أحمد', 12, ''],
+        ['أحمد', '', 7],
+      ],
+      dayArr: [1, 2],
+      apps,
+      prev: {
+        'emp-1::orders-app::1': 2,
+        'emp-1::orders-app::2': 4,
+      },
+      nameMapping: new Map([['أحمد', 'emp-1']]),
+      appEmployeeIds: {
+        'orders-app': new Set(['emp-1']),
+        'hybrid-app': new Set(),
+      },
+    });
+
+    expect(result.imported).toBe(2);
+    expect(result.skipped).toBe(0);
+    expect(result.newData).toEqual({
+      'emp-1::orders-app::1': 12,
+      'emp-1::orders-app::2': 7,
+    });
+  });
 });
