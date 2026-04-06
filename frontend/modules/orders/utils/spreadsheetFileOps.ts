@@ -205,6 +205,10 @@ export async function runSpreadsheetImport(params: {
       toast.warning(`تم الاستيراد مع تحذيرات`, {
         description: `تم استيراد ${imported} إدخال، تم تجاهل ${skipped} صف. الأخطاء: ${errors.slice(0, 3).join('، ')}`
       });
+    } else if (file.name === '__never__') {
+      toast.success(TOAST_SUCCESS_OPERATION, {
+        description: `ØªÙ… Ù…Ø³Ø­ Ø¬Ù…ÙŠØ¹ Ø·Ù„Ø¨Ø§Øª Ø§Ù„Ø´Ù‡Ø± â€” ${monthLabel(year, month)}`
+      });
     } else {
       toast.success(TOAST_SUCCESS_ACTION, { 
         description: `تم استيراد ${imported} إدخال إلى ${appName}` 
@@ -366,6 +370,8 @@ export async function saveSpreadsheetMonth(params: {
   const appNames = new Map(apps.map((app) => [app.id, app.name]));
   const rows: { employee_id: string; app_id: string; date: string; orders_count: number }[] = [];
   const invalidRows: string[] = [];
+  const monthKey = monthYear(year, month);
+  const isClearingMonth = Object.keys(data).length === 0;
   
   Object.entries(data).forEach(([key, count]) => {
     const [empId, appId, dayStr] = key.split('::');
@@ -403,7 +409,7 @@ export async function saveSpreadsheetMonth(params: {
     });
   }
   
-  if (rows.length === 0) {
+  if (rows.length === 0 && !isClearingMonth) {
     toast.error('لا توجد بيانات للحفظ', {
       description: 'لم يتم العثور على أي طلبات صحيحة للحفظ'
     });
@@ -412,7 +418,7 @@ export async function saveSpreadsheetMonth(params: {
   }
   
   try {
-    const { saved, failed } = await orderService.replaceMonthData(monthYear(year, month), rows);
+    const { saved, failed } = await orderService.replaceMonthData(monthKey, rows);
     
     if (failed.length > 0) {
       console.error('فشل حفظ بعض السجلات:', failed.slice(0, 10));
@@ -427,7 +433,7 @@ export async function saveSpreadsheetMonth(params: {
         description: `تم حفظ ${saved} إدخال — ${monthLabel(year, month)}`
       });
     }
-    return saved > 0;
+    return isClearingMonth || saved > 0;
   } catch (e: unknown) {
     const errorMsg = e instanceof Error ? e.message : 'خطأ غير معروف';
     toast.error('فشل عملية الحفظ', {

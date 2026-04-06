@@ -20,12 +20,17 @@ type Props = Readonly<{
 }>;
 
 export function ImportPlatformDialog({ open, apps, onConfirm, onCancel }: Props) {
-  const [selectedApp, setSelectedApp] = useState<string>(apps[0]?.id ?? 'all');
+  const [selectedApp, setSelectedApp] = useState<string>('all');
+
+  useEffect(() => {
+    if (!open) return;
+    setSelectedApp('all');
+  }, [open]);
 
   useEffect(() => {
     if (selectedApp === 'all') return;
     if (apps.some((app) => app.id === selectedApp)) return;
-    setSelectedApp(apps[0]?.id ?? 'all');
+    setSelectedApp('all');
   }, [apps, selectedApp]);
 
   const handleConfirm = () => {
