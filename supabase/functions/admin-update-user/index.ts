@@ -8,6 +8,11 @@ const corsHeaders = {
 const isUuid = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
+const VALID_ROLES = new Set(['admin', 'hr', 'finance', 'operations', 'viewer']);
+
+const isValidRole = (value: string): value is 'admin' | 'hr' | 'finance' | 'operations' | 'viewer' =>
+  VALID_ROLES.has(value);
+
 const logInfo = (message: string, meta: Record<string, unknown> = {}) => {
   console.log(JSON.stringify({ level: 'info', message, ...meta, ts: new Date().toISOString() }));
 };
@@ -59,16 +64,25 @@ Deno.serve(async (req) => {
     const {
       user_id,
       password,
+      email,
+      name,
+      role,
       action,
     } = await req.json() as {
       user_id?: string;
       password?: string;
-      action?: 'update_password' | 'revoke_session';
+      email?: string;
+      name?: string;
+      role?: string;
+      action?: 'update_password' | 'revoke_session' | 'create_user' | 'delete_user';
     };
-    if (!user_id) throw new Error('user_id is required');
-    if (!isUuid(user_id)) throw new Error('Invalid user_id');
     const normalizedAction = action ?? (password ? 'update_password' : undefined);
     if (!normalizedAction) throw new Error('action is required');
+
+    if (normalizedAction !== 'create_user') {
+      if (!user_id) throw new Error('user_id is required');
+      if (!isUuid(user_id)) throw new Error('Invalid user_id');
+    }
 
     const rateKey = `admin-update-user:${callerUser.id}`;
     const { data: rateRows, error: rateError } = await supabaseAdmin.rpc('enforce_rate_limit', {
@@ -101,7 +115,83 @@ Deno.serve(async (req) => {
       remaining: rate.remaining ?? null,
     });
 
-    if (normalizedAction === 'revoke_session') {
+    if (normalizedAction === 'create_user') {
+      const normalizedEmail = String(email ?? '').trim().toLowerCase();
+      const normalizedName = String(name ?? '').trim();
+      const normalizedRole = String(role ?? 'viewer').trim();
+
+      if (!normalizedEmail) throw new Error('email is required');
+      if (!normalizedEmail.includes('@')) throw new Error('Invalid email');
+      if (!password) throw new Error('password is required for create_user');
+      if (String(password).length < 8) throw new Error('Password must be at least 8 characters');
+      if (!normalizedName) throw new Error('name is required');
+      if (!isValidRole(normalizedRole)) throw new Error('Invalid role');
+
+      let createdUserId: string | null = null;
+      try {
+        const { data: createdUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+          email: normalizedEmail,
+          password,
+          email_confirm: true,
+          user_metadata: {
+            name: normalizedName,
+          },
+        });
+        if (createError) throw createError;
+
+        createdUserId = createdUser.user?.id ?? null;
+        if (!createdUserId) throw new Error('User creation returned no user id');
+
+        const { error: profileError } = await supabaseAdmin
+          .from('profiles')
+          .update({
+            email: normalizedEmail,
+            name: normalizedName,
+            is_active: true,
+          })
+          .eq('id', createdUserId);
+        if (profileError) throw profileError;
+
+        const { error: clearRolesError } = await supabaseAdmin
+          .from('user_roles')
+          .delete()
+          .eq('user_id', createdUserId);
+        if (clearRolesError) throw clearRolesError;
+
+        const { error: insertRoleError } = await supabaseAdmin
+          .from('user_roles')
+          .insert({
+            user_id: createdUserId,
+            role: normalizedRole,
+          });
+        if (insertRoleError) throw insertRoleError;
+      } catch (createUserFlowError) {
+        if (createdUserId) {
+          await supabaseAdmin.auth.admin.deleteUser(createdUserId).catch((cleanupError) => {
+            logError('Failed to cleanup partially created user', {
+              request_id: requestId,
+              target_user_id: createdUserId,
+              error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+            });
+          });
+        }
+        throw createUserFlowError;
+      }
+
+      return new Response(JSON.stringify({ success: true, user_id: createdUserId }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    }
+
+    if (normalizedAction === 'delete_user') {
+      if (user_id === callerUser.id) {
+        throw new Error('You cannot delete your own account');
+      }
+
+      const { error } = await supabaseAdmin.auth.admin.deleteUser(user_id);
+      if (error) throw error;
+    } else if (normalizedAction === 'revoke_session') {
       // Revoke all refresh tokens/sessions for target user.
       const authSchema = supabaseAdmin.schema('auth');
       const { error: refreshTokensError } = await authSchema

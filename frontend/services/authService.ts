@@ -12,6 +12,17 @@ export interface UserProfile {
   is_active: boolean;
 }
 
+export interface AdminCreateUserInput {
+  email: string;
+  password: string;
+  name: string;
+  role: AppRole;
+}
+
+type AdminCreateUserResult = {
+  user_id: string;
+};
+
 type ProfileActiveRow = {
   is_active?: boolean;
 };
@@ -143,5 +154,33 @@ export const authService = {
       body: { user_id: userId, action: "revoke_session" },
     });
     throwIfError(error, "authService.revokeSession");
+  },
+
+  createManagedUser: async (input: AdminCreateUserInput): Promise<AdminCreateUserResult> => {
+    const { data, error } = await supabase.functions.invoke("admin-update-user", {
+      body: {
+        action: "create_user",
+        email: input.email,
+        password: input.password,
+        name: input.name,
+        role: input.role,
+      },
+    });
+    throwIfError(error, "authService.createManagedUser");
+    const result = data as AdminCreateUserResult | null;
+    if (!result?.user_id) {
+      throw new Error("authService.createManagedUser: missing user_id");
+    }
+    return result;
+  },
+
+  deleteManagedUser: async (userId: string | null): Promise<void> => {
+    if (!userId) {
+      throw new Error("authService.deleteManagedUser: userId is required");
+    }
+    const { error } = await supabase.functions.invoke("admin-update-user", {
+      body: { user_id: userId, action: "delete_user" },
+    });
+    throwIfError(error, "authService.deleteManagedUser");
   },
 };

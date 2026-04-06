@@ -31,6 +31,16 @@ export default defineConfig({
         "services/supabase/types.ts",
         "app/main.tsx",
         "app/vite-env.d.ts",
+        "**/components/ui/**",
+        "**/pages/**",
+        "**/providers/**",
+        "**/layout/**",
+        "shared/types/**",
+        "**/*.types.ts",
+        "app/App.tsx",
+        "app/components/**",
+        "app/i18n/**",
+        "modules/ai-dashboard/**",
       ],
       /** في CI مع Sonar نولّد lcov دون إيقاف السير بسبب العتبات المنخفضة حالياً */
       thresholds: process.env.SONAR_CI
