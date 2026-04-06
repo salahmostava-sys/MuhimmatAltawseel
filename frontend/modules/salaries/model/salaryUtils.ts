@@ -74,8 +74,11 @@ export const isAdministrativeJobTitle = (jobTitle?: string | null) => {
 };
 
 export const getDisplayedBaseSalary = (
-  row: Pick<SalaryRow, 'platformSalaries' | 'engineBaseSalary'>,
+  row: Pick<SalaryRow, 'platformSalaries' | 'engineBaseSalary' | 'preferEngineBaseSalary'>,
 ) => {
+  if (row.preferEngineBaseSalary && Number(row.engineBaseSalary || 0) > 0) {
+    return Number(row.engineBaseSalary || 0);
+  }
   const platformSalaryTotal = Object.values(row.platformSalaries || {}).reduce(
     (sum, value) => sum + Number(value || 0),
     0,

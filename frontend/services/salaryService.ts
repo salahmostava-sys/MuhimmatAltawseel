@@ -417,10 +417,19 @@ export const salaryService = {
   },
 
   getMonthRecordsForSalaryContext: async (monthYear: string) => {
-    const { data, error } = await supabase
+    const primarySelect = 'employee_id, is_approved, base_salary, allowances, advance_deduction, net_salary, manual_deduction, attendance_deduction, external_deduction, payment_method, sheet_snapshot';
+    let { data, error } = await supabase
       .from('salary_records')
-      .select('employee_id, is_approved, advance_deduction, net_salary, manual_deduction, attendance_deduction, external_deduction')
+      .select(primarySelect)
       .eq('month_year', monthYear);
+
+    if (error && String(error.message || '').includes('sheet_snapshot')) {
+      ({ data, error } = await supabase
+        .from('salary_records')
+        .select('employee_id, is_approved, base_salary, allowances, advance_deduction, net_salary, manual_deduction, attendance_deduction, external_deduction, payment_method')
+        .eq('month_year', monthYear));
+    }
+
     if (error) handleSupabaseError(error, 'salaryService.getMonthRecordsForSalaryContext');
     return data ?? [];
   },
@@ -446,9 +455,17 @@ export const salaryService = {
   },
 
   upsertMany: async (records: Record<string, unknown>[]) => {
-    const { error } = await supabase
+    let { error } = await supabase
       .from('salary_records')
       .upsert(records as never, { onConflict: 'employee_id,month_year' });
+
+    if (error && String(error.message || '').includes('sheet_snapshot')) {
+      const fallbackRecords = records.map(({ sheet_snapshot, ...record }) => record);
+      ({ error } = await supabase
+        .from('salary_records')
+        .upsert(fallbackRecords as never, { onConflict: 'employee_id,month_year' }));
+    }
+
     if (error) handleSupabaseError(error, 'salaryService.upsertMany');
   },
 

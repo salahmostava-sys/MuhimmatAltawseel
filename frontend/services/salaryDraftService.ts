@@ -12,6 +12,11 @@ export interface SalaryDraft {
   updated_at: string;
 }
 
+const rowIdToEmployeeId = (rowId: string, monthYear: string) => {
+  const suffix = `-${monthYear}`;
+  return rowId.endsWith(suffix) ? rowId.slice(0, -suffix.length) : rowId;
+};
+
 export const salaryDraftService = {
   /**
    * Get all drafts for a specific month
@@ -69,7 +74,7 @@ export const salaryDraftService = {
     if (!userId) throw new Error('User not authenticated');
 
     const records = Object.entries(drafts).map(([rowId, draftData]) => {
-      const employeeId = rowId.split('-')[0];
+      const employeeId = rowIdToEmployeeId(rowId, monthYear);
       return {
         user_id: userId,
         month_year: monthYear,
@@ -87,6 +92,42 @@ export const salaryDraftService = {
       });
 
     throwIfError(error, 'salaryDraftService.saveDraftsBatch');
+  },
+
+  /**
+   * Replace the current user's drafts for a month without a delete-then-save gap.
+   */
+  syncDraftsForMonth: async (
+    monthYear: string,
+    drafts: Record<string, SalaryDraftPatch>
+  ): Promise<void> => {
+    const desiredEmployeeIds = Object.keys(drafts).map((rowId) => rowIdToEmployeeId(rowId, monthYear));
+
+    if (desiredEmployeeIds.length > 0) {
+      await salaryDraftService.saveDraftsBatch(monthYear, drafts);
+    }
+
+    const { data, error } = await supabase
+      .from('salary_drafts')
+      .select('employee_id')
+      .eq('month_year', monthYear);
+
+    throwIfError(error, 'salaryDraftService.syncDraftsForMonth.select');
+
+    const desiredEmployeeIdSet = new Set(desiredEmployeeIds);
+    const staleEmployeeIds = (data || [])
+      .map((draft) => String(draft.employee_id || ''))
+      .filter((employeeId) => employeeId && !desiredEmployeeIdSet.has(employeeId));
+
+    if (staleEmployeeIds.length === 0) return;
+
+    const { error: deleteError } = await supabase
+      .from('salary_drafts')
+      .delete()
+      .eq('month_year', monthYear)
+      .in('employee_id', staleEmployeeIds);
+
+    throwIfError(deleteError, 'salaryDraftService.syncDraftsForMonth.delete');
   },
 
   /**

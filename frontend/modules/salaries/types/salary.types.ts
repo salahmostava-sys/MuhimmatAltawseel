@@ -30,6 +30,7 @@ export interface SalaryRow {
   externalDeduction: number;
   status: 'pending' | 'approved' | 'paid';
   isDirty?: boolean;
+  preferEngineBaseSalary?: boolean;
   preferredLanguage: SlipLanguage;
   phone?: string | null;
   workDays: number;
@@ -97,6 +98,26 @@ export type AppWithSchemeRow = {
 export type SalaryDraftPatch = Pick<
   SalaryRow,
   | 'platformOrders'
+  | 'incentives'
+  | 'sickAllowance'
+  | 'violations'
+  | 'customDeductions'
+  | 'transfer'
+  | 'advanceDeduction'
+  | 'externalDeduction'
+  | 'platformIncome'
+  | 'engineBaseSalary'
+  | 'paymentMethod'
+>;
+
+export type SalaryRowSnapshot = Pick<
+  SalaryRow,
+  | 'bankAccount'
+  | 'hasIban'
+  | 'paymentMethod'
+  | 'platformOrders'
+  | 'platformSalaries'
+  | 'platformMetrics'
   | 'incentives'
   | 'sickAllowance'
   | 'violations'

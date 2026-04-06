@@ -143,13 +143,12 @@ export function useSalaryActions(params: UseSalaryActionsParams) {
           salary,
         };
         const newMetrics = { ...r.platformMetrics, [platform]: nextMetric };
-        const isDirty = r.status !== 'pending' ? true : r.isDirty;
         return {
           ...r,
           platformOrders: { ...newOrders, [platform]: getPrimaryPlatformActivityCount(nextMetric) },
           platformSalaries: newSalaries,
           platformMetrics: newMetrics,
-          isDirty,
+          isDirty: true,
         };
       }),
     );

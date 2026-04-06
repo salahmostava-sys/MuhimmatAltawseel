@@ -5,6 +5,7 @@
   type SalarySchemeTier,
 } from '@services/salaryService';
 import { salaryDataService } from '@services/salaryDataService';
+import { salaryDraftService } from '@services/salaryDraftService';
 import {
   filterRetainedEmployeesForSalaryMonth,
   isExcludedSponsorshipStatus,
@@ -22,8 +23,10 @@ import type {
   OrderWithAppRow,
   PlatformSalaryMetric,
   PreparedSalaryState,
+  SalaryDraftPatch,
   SalaryBaseContextData,
   SalaryRow,
+  SalaryRowSnapshot,
   SchemeData,
 } from '@modules/salaries/types/salary.types';
 import type { WorkType } from '@shared/types/shifts';
@@ -101,10 +104,104 @@ export const calculatePlatformSalary = ({
   return calculatedSalary;
 };
 
-export const buildSavedMap = (savedRecords: Array<{ employee_id: string; is_approved: boolean; net_salary: number }> | null | undefined) => {
-  const savedMap: Record<string, { is_approved: boolean; net_salary: number }> = {};
+type SavedSalaryRecord = {
+  is_approved: boolean;
+  net_salary: number;
+  base_salary?: number | null;
+  allowances?: number | null;
+  attendance_deduction?: number | null;
+  advance_deduction?: number | null;
+  external_deduction?: number | null;
+  manual_deduction?: number | null;
+  payment_method?: string | null;
+  sheet_snapshot?: SalaryRowSnapshot | null;
+};
+
+const isRecordObject = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === 'object' && !Array.isArray(value);
+
+const normalizePaymentMethod = (
+  value: unknown,
+  fallback: SalaryRow['paymentMethod'],
+): SalaryRow['paymentMethod'] => {
+  if (value === 'bank' || value === 'cash') return value;
+  return fallback;
+};
+
+const readSavedSnapshot = (value: unknown): Partial<SalaryRowSnapshot> | null =>
+  isRecordObject(value) ? (value as Partial<SalaryRowSnapshot>) : null;
+
+const getFallbackSavedCustomDeductions = (manualDeduction: number) => {
+  if (manualDeduction <= 0) return {};
+  return { 'saved___خصم يدوي محفوظ': manualDeduction };
+};
+
+export const buildSalaryDraftPatch = (row: SalaryRow): SalaryDraftPatch => ({
+  platformOrders: row.platformOrders,
+  incentives: row.incentives,
+  sickAllowance: row.sickAllowance,
+  violations: row.violations,
+  customDeductions: row.customDeductions,
+  transfer: row.transfer,
+  advanceDeduction: row.advanceDeduction,
+  externalDeduction: row.externalDeduction,
+  platformIncome: row.platformIncome,
+  engineBaseSalary: row.engineBaseSalary,
+  paymentMethod: row.paymentMethod,
+});
+
+export const buildSalaryRowSnapshot = (row: SalaryRow): SalaryRowSnapshot => ({
+  bankAccount: row.bankAccount,
+  hasIban: row.hasIban,
+  paymentMethod: row.paymentMethod,
+  platformOrders: row.platformOrders,
+  platformSalaries: row.platformSalaries,
+  platformMetrics: row.platformMetrics,
+  incentives: row.incentives,
+  sickAllowance: row.sickAllowance,
+  violations: row.violations,
+  customDeductions: row.customDeductions,
+  transfer: row.transfer,
+  advanceDeduction: row.advanceDeduction,
+  externalDeduction: row.externalDeduction,
+  platformIncome: row.platformIncome,
+  engineBaseSalary: row.engineBaseSalary,
+});
+
+const valuesMatch = (left: unknown, right: unknown) => {
+  if (left === right) return true;
+  if (!left && !right) return true;
+  if (
+    left &&
+    right &&
+    typeof left === 'object' &&
+    typeof right === 'object'
+  ) {
+    return JSON.stringify(left) === JSON.stringify(right);
+  }
+  return false;
+};
+
+const rowDiffersFromDraft = (row: SalaryRow, patch: SalaryDraftPatch) =>
+  Object.entries(patch).some(([key, value]) =>
+    !valuesMatch((row as unknown as Record<string, unknown>)[key], value),
+  );
+
+export const buildSavedMap = (savedRecords: Array<{ employee_id: string } & SavedSalaryRecord> | null | undefined) => {
+  const savedMap: Record<string, SavedSalaryRecord> = {};
   savedRecords?.forEach((r) => {
-    savedMap[r.employee_id] = { is_approved: r.is_approved, net_salary: r.net_salary };
+    savedMap[r.employee_id] = {
+      is_approved: r.is_approved,
+      net_salary: Number(r.net_salary || 0),
+      base_salary: Number(r.base_salary || 0),
+      allowances: Number(r.allowances || 0),
+      attendance_deduction: Number(r.attendance_deduction || 0),
+      advance_deduction: Number(r.advance_deduction || 0),
+      external_deduction: Number(r.external_deduction || 0),
+      manual_deduction: Number(r.manual_deduction || 0),
+      payment_method: r.payment_method ?? null,
+      sheet_snapshot: r.sheet_snapshot ?? null,
+    };
   });
   return savedMap;
 };
@@ -391,7 +488,7 @@ export const buildSalaryRows = ({
   appSchemeMap: Record<string, SchemeData | null>;
   ordMap: Record<string, Record<string, number>>;
   attendanceDaysMap: Record<string, number>;
-  savedMap: Record<string, { is_approved: boolean; net_salary: number }>;
+  savedMap: Record<string, SavedSalaryRecord>;
   previewMap: Record<string, PreviewMapEntry>;
   advInstIds: Record<string, string[]>;
   deductedInstIds: Record<string, string[]>;
@@ -458,9 +555,8 @@ export const buildSalaryRows = ({
       platformSalaries[platformName] = salary;
     }
 
-    const registeredApps = platformNames.filter((platformName) => hasPlatformActivity(platformMetrics[platformName]));
-
     const saved = savedMap[employeeId];
+    const savedSnapshot = readSavedSnapshot(saved?.sheet_snapshot);
     const pendingInstallmentsCount = (advInstIds[employeeId] || []).length;
     const deductedInstallmentsCount = (deductedInstIds[employeeId] || []).length;
     const status = resolveRowStatus(saved, pendingInstallmentsCount, deductedInstallmentsCount);
@@ -470,8 +566,8 @@ export const buildSalaryRows = ({
     const preferredLanguage = (emp as { preferred_language?: SlipLanguage | null }).preferred_language || 'ar';
     const phone = (emp as { phone?: string | null }).phone || null;
     const workDays = Math.max(attendanceDays, preview.total_shift_days || 0);
-
-    newRows.push({
+    const fallbackPaymentMethod = hasIban ? 'bank' : 'cash';
+    const baseRow: SalaryRow = {
       id: `${employeeId}-${selectedMonth}`,
       employeeId,
       employeeName: String(emp.name || ''),
@@ -481,45 +577,96 @@ export const buildSalaryRows = ({
       cityKey,
       bankAccount: emp.iban ? String(emp.iban).slice(-6) : '',
       hasIban,
-      paymentMethod: hasIban ? 'bank' : 'cash',
-      registeredApps,
+      paymentMethod: normalizePaymentMethod(saved?.payment_method, fallbackPaymentMethod),
+      registeredApps: platformNames.filter((platformName) => hasPlatformActivity(platformMetrics[platformName])),
       platformOrders,
       platformSalaries,
       platformMetrics,
-      incentives: 0,
+      incentives: Number(saved?.allowances || 0),
       sickAllowance: 0,
-      violations: 0,
-      customDeductions: {},
+      violations: Number(saved?.attendance_deduction || 0),
+      customDeductions: getFallbackSavedCustomDeductions(Number(saved?.manual_deduction || 0)),
       transfer: 0,
-      advanceDeduction: preview.advance_deduction,
+      advanceDeduction: Number(saved?.advance_deduction ?? preview.advance_deduction ?? 0),
       advanceInstallmentIds: advInstIds[employeeId] || [],
       advanceRemaining: advRemainingMap[employeeId] || 0,
-      externalDeduction: preview.external_deduction,
+      externalDeduction: Number(saved?.external_deduction ?? preview.external_deduction ?? 0),
       status,
       preferredLanguage,
       phone,
       workDays,
       fuelCost: fuelCostMap[employeeId] || 0,
       platformIncome: 0,
-      engineBaseSalary: preview.base_salary,
-    });
+      engineBaseSalary: Number(saved?.base_salary ?? preview.base_salary ?? 0),
+      preferEngineBaseSalary: !!saved && !savedSnapshot && Number(saved.base_salary || 0) > 0,
+    };
+
+    const mergedRow = savedSnapshot
+      ? {
+          ...baseRow,
+          ...savedSnapshot,
+          paymentMethod: normalizePaymentMethod(savedSnapshot.paymentMethod, baseRow.paymentMethod),
+          status,
+          preferredLanguage,
+          phone,
+          city: toCityArabicLabel(rawCity),
+          cityKey,
+          advanceInstallmentIds: advInstIds[employeeId] || [],
+          advanceRemaining: advRemainingMap[employeeId] || 0,
+          workDays,
+          fuelCost: fuelCostMap[employeeId] || 0,
+          preferEngineBaseSalary: false,
+        }
+      : baseRow;
+
+    mergedRow.registeredApps = platformNames.filter((platformName) =>
+      hasPlatformActivity(mergedRow.platformMetrics[platformName]),
+    );
+
+    newRows.push(mergedRow);
   }
 
   return newRows;
 };
 
-import { salaryDraftService } from '@services/salaryDraftService';
-
-export const hydrateRowsWithDraft = async (rows: SalaryRow[], monthYear: string) => {
+const readLocalSalaryDraftMap = (storageKey?: string): Record<string, SalaryDraftPatch> => {
+  if (!storageKey || typeof localStorage === 'undefined') return {};
   try {
-    const draftMap = await salaryDraftService.getDraftsForMonth(monthYear);
-    return rows.map((row) => {
-      const patch = draftMap[row.id];
-      return patch ? { ...row, ...patch, isDirty: true } : row;
-    });
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== 'object') return {};
+    return parsed as Record<string, SalaryDraftPatch>;
+  } catch (e) {
+    logError('[Salaries] Failed to read drafts from localStorage', e, { level: 'warn' });
+    return {};
+  }
+};
+
+export const hydrateRowsWithDraft = async (
+  rows: SalaryRow[],
+  monthYear: string,
+  storageKey?: string,
+) => {
+  const localDraftMap = readLocalSalaryDraftMap(storageKey);
+  const applyDraftPatch = (row: SalaryRow, patch?: SalaryDraftPatch) => {
+    if (!patch) return row;
+    const normalizedPatch = {
+      ...buildSalaryDraftPatch(row),
+      ...patch,
+    };
+    if (!rowDiffersFromDraft(row, normalizedPatch)) {
+      return row;
+    }
+    return { ...row, ...normalizedPatch, isDirty: true };
+  };
+
+  try {
+    const serverDraftMap = await salaryDraftService.getDraftsForMonth(monthYear);
+    return rows.map((row) => applyDraftPatch(row, serverDraftMap[row.id] ?? localDraftMap[row.id]));
   } catch (e) {
     logError('[Salaries] Failed to load drafts from server', e, { level: 'warn' });
-    return rows;
+    return rows.map((row) => applyDraftPatch(row, localDraftMap[row.id]));
   }
 };
 
@@ -601,7 +748,9 @@ export async function prepareSalaryState({
 }): Promise<PreparedSalaryState> {
   const { monthlyContext, previewData } = salaryBaseContext;
   const { employees: empRows, orders, appsWithSchemeRes, attendanceRows, fuelRes, savedRecords, allAdvances } = monthlyContext;
-  const savedMap = buildSavedMap(savedRecords as Array<{ employee_id: string; is_approved: boolean; net_salary: number }> | null | undefined);
+  const savedMap = buildSavedMap(
+    savedRecords as Array<{ employee_id: string } & SavedSalaryRecord> | null | undefined,
+  );
   const previewMap = buildPreviewMap((previewData || []) as Array<Record<string, unknown>>);
   const { advInstIds, deductedInstIds, advRemainingMap } = await buildAdvanceInstallmentMaps(
     selectedMonth,
@@ -653,7 +802,7 @@ export async function prepareSalaryState({
     advRemainingMap,
     fuelCostMap,
   });
-  const hydratedRows = await hydrateRowsWithDraft(newRows, selectedMonth);
+  const hydratedRows = await hydrateRowsWithDraft(newRows, selectedMonth, _salariesDraftKey);
   const { appsWithoutPricingRules, appsWithoutScheme } = buildPlatformSetupWarnings({
     apps: appsFromApi,
     rulesMap,

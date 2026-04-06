@@ -36,6 +36,7 @@ export function SalaryCardsView(props: Readonly<SalaryCardsViewProps>) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {filtered.map(r => {
             const c = computeRow(r);
+            const needsApproval = r.status === 'pending' || !!r.isDirty;
             return (
               <div key={r.id} className="bg-card border border-border/50 rounded-xl p-4 hover:shadow-md transition-shadow flex flex-col gap-3">
                 <div className="flex items-center gap-3">
@@ -77,12 +78,12 @@ export function SalaryCardsView(props: Readonly<SalaryCardsViewProps>) {
                   <span className="text-base font-black text-success">{c.netSalary.toLocaleString()} ر.س</span>
                 </div>
                 <div className="flex gap-2">
-                  {r.status === 'pending' && (
+                  {needsApproval && (
                     <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1 text-success border-success/30 hover:bg-success/10" onClick={() => approveRow(r.id)}>
                       <CheckCircle size={11} /> اعتماد
                     </Button>
                   )}
-                  {r.status === 'approved' && (
+                  {r.status === 'approved' && !r.isDirty && (
                     <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1 text-primary border-primary/30 hover:bg-primary/10"
                       onClick={() => markAsPaid(r)} disabled={markingPaid === r.id}>
                       {markingPaid === r.id ? '...' : '✅ تم الصرف'}

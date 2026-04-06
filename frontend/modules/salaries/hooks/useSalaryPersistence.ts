@@ -3,11 +3,13 @@ import { sendWhatsAppMessage } from '@shared/lib/whatsapp';
 import { isEmployeeIdUuid, isValidSalaryMonthYear } from '@shared/lib/salaryValidation';
 import { salaryDataService } from '@services/salaryDataService';
 import { driverService } from '@services/driverService';
-import { getManualDeductionTotal } from '@modules/salaries/lib/salaryDomain';
+import { salaryDraftService } from '@services/salaryDraftService';
+import { buildSalaryRowSnapshot, getManualDeductionTotal } from '@modules/salaries/lib/salaryDomain';
 import { months } from '@modules/salaries/lib/salaryMonths';
 import type { SalaryRow } from '@modules/salaries/types/salary.types';
 import { getDisplayedBaseSalary } from '@modules/salaries/model/salaryUtils';
 import { useSafeAction } from '@shared/hooks/useSafeAction';
+import { logError } from '@shared/lib/logger';
 
 import { toast as sonnerToast } from '@shared/components/ui/sonner';
 
@@ -60,11 +62,26 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
 
   const updateRow = useCallback(
     (id: string, patch: Partial<SalaryRow>) => {
+      const patchChangesRow = (row: SalaryRow) =>
+        Object.entries(patch).some(([key, value]) => {
+          const currentValue = (row as unknown as Record<string, unknown>)[key];
+          if (currentValue === value) return false;
+          if (
+            currentValue &&
+            value &&
+            typeof currentValue === 'object' &&
+            typeof value === 'object'
+          ) {
+            return JSON.stringify(currentValue) !== JSON.stringify(value);
+          }
+          return true;
+        });
+
       setRows((prev) =>
         prev.map((r) => {
           if (r.id !== id) return r;
           const updated = { ...r, ...patch };
-          if (r.status !== 'pending' && !('status' in patch) && !('isDirty' in patch)) {
+          if (patchChangesRow(r) && !('status' in patch) && !('isDirty' in patch)) {
             updated.isDirty = true;
           }
           return updated;
@@ -145,6 +162,11 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
       if (!calcResult) return;
 
       const { manualDeduction, baseSalary, advanceDeduction, externalDeduction, totalAdditions, netSalary } = calcResult;
+      const rowSnapshot = buildSalaryRowSnapshot({
+        ...row,
+        advanceDeduction,
+        externalDeduction,
+      });
 
       const saved = await run(
         async () => {
@@ -161,12 +183,18 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
             is_approved: true,
             approved_by: user?.id ?? null,
             approved_at: new Date().toISOString(),
+            payment_method: row.paymentMethod,
+            sheet_snapshot: rowSnapshot,
           });
           return true;
         },
         { errorTitle: 'تعذّر حفظ الاعتماد' },
       );
       if (!saved) return;
+
+      void salaryDraftService.deleteDraft(selectedMonth, row.employeeId).catch((e) => {
+        logError('[Salaries] Failed to clear draft after approve', e, { level: 'warn' });
+      });
 
       updateRow(id, { status: 'approved', isDirty: false, advanceDeduction, externalDeduction });
       toast.success('✅ تم اعتماد الراتب');
@@ -206,6 +234,11 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
             netSalary,
           } = await computeServerSalaryForPayment(row, selectedMonth);
           const nowStr = new Date().toISOString();
+          const rowSnapshot = buildSalaryRowSnapshot({
+            ...row,
+            advanceDeduction,
+            externalDeduction,
+          });
 
           await salaryDataService.upsertSalaryRecord({
             employee_id: row.employeeId,
@@ -221,9 +254,14 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
             approved_by: user?.id ?? null,
             approved_at: nowStr,
             payment_method: row.paymentMethod,
+            sheet_snapshot: rowSnapshot,
           });
 
           await settleAdvanceInstallments(row, nowStr);
+
+          void salaryDraftService.deleteDraft(selectedMonth, row.employeeId).catch((e) => {
+            logError('[Salaries] Failed to clear draft after payment', e, { level: 'warn' });
+          });
 
           updateRow(row.id, {
             status: 'paid',
@@ -253,8 +291,8 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
   // ── Approve all ───────────────────────────────────────────────────────────
 
   const approveAll = useCallback(async () => {
-    const pendingRows = filtered.filter((r) => r.status === 'pending');
-    if (pendingRows.length === 0) return;
+    const approvalRows = filtered.filter((r) => r.status === 'pending' || r.isDirty);
+    if (approvalRows.length === 0) return;
     if (!isValidSalaryMonthYear(selectedMonth)) {
       toast.error('خطأ', { description: 'الشهر المحدد غير صالح' });
       return;
@@ -275,7 +313,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
 
     const nowStr = new Date().toISOString();
     const skippedRows: string[] = [];
-    const records = pendingRows
+    const records = approvalRows
       .filter((row) => {
         const calc = monthCalcMap.get(row.employeeId);
         if (!calc && getDisplayedBaseSalary(row) <= 0) {
@@ -294,6 +332,11 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
         const totalDeductions =
           row.violations + manualDeduction + advanceDeduction + externalDeduction;
         const netSalary = Math.max(baseSalary + totalAdditions - totalDeductions, 0);
+        const rowSnapshot = buildSalaryRowSnapshot({
+          ...row,
+          advanceDeduction,
+          externalDeduction,
+        });
         return {
           employee_id: row.employeeId,
           month_year: selectedMonth,
@@ -307,6 +350,8 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
           is_approved: true,
           approved_by: user?.id ?? null,
           approved_at: nowStr,
+          payment_method: row.paymentMethod,
+          sheet_snapshot: rowSnapshot,
         };
       });
 
@@ -320,11 +365,24 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
     if (!saved) return;
 
     const approvedIds = records.map((r) => r.employee_id);
-    const approvedRowIds = pendingRows
+    const approvedRowIds = approvalRows
       .filter((r) => approvedIds.includes(r.employeeId))
       .map((r) => r.id);
+    await Promise.all(
+      approvalRows
+        .filter((r) => approvedIds.includes(r.employeeId))
+        .map((r) =>
+          salaryDraftService.deleteDraft(selectedMonth, r.employeeId).catch((e) => {
+            logError('[Salaries] Failed to clear draft after bulk approve', e, { level: 'warn' });
+          }),
+        ),
+    );
     setRows((prev) =>
-      prev.map((r) => (approvedRowIds.includes(r.id) ? { ...r, status: 'approved' as const } : r)),
+      prev.map((r) => (
+        approvedRowIds.includes(r.id)
+          ? { ...r, status: 'approved' as const, isDirty: false }
+          : r
+      )),
     );
     if (skippedRows.length > 0) {
       toast.warning(`تم تخطي ${skippedRows.length} موظف (لا يوجد حساب من الخادم)`, {
@@ -365,21 +423,11 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
         return;
       }
       setEmployeeFieldSaving(`${row.employeeId}:payment`);
-      await run(
-        async () => {
-          if (next === 'cash') {
-            await driverService.update(row.employeeId, { iban: null });
-          }
-          await queryClient.invalidateQueries({
-            queryKey: ['salaries', uid, 'base-context', selectedMonth],
-          });
-          toast.success('تم تحديث طريقة الصرف');
-        },
-        { errorTitle: 'فشل تحديث طريقة الصرف' },
-      );
+      updateRow(row.id, { paymentMethod: next });
+      toast.success('تم تحديث طريقة الصرف');
       setEmployeeFieldSaving(null);
     },
-    [toast, queryClient, uid, selectedMonth, setEmployeeFieldSaving, run],
+    [toast, setEmployeeFieldSaving, updateRow],
   );
 
   return {

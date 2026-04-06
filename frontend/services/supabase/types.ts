@@ -1053,6 +1053,7 @@ export type Database = {
           month_year: string
           net_salary: number
           payment_method: string
+          sheet_snapshot: Json | null
           updated_at: string
         }
         Insert: {
@@ -1072,6 +1073,7 @@ export type Database = {
           month_year: string
           net_salary?: number
           payment_method?: string
+          sheet_snapshot?: Json | null
           updated_at?: string
         }
         Update: {
@@ -1091,6 +1093,7 @@ export type Database = {
           month_year?: string
           net_salary?: number
           payment_method?: string
+          sheet_snapshot?: Json | null
           updated_at?: string
         }
         Relationships: [
