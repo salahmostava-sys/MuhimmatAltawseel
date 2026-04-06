@@ -161,7 +161,7 @@ export function PayslipModal({ row, onClose, onApprove, selectedMonth, companyNa
         <div className="flex gap-2 justify-between pt-2">
           <Button variant="outline" onClick={onClose}>{t.close}</Button>
           <div className="flex gap-2">
-            {row.status === 'pending' && (
+            {(row.status === 'pending' || row.isDirty) && (
               <Button variant="default" className="gap-2" onClick={onApprove}>
                 <CheckCircle size={14} /> {t.approve}
               </Button>
