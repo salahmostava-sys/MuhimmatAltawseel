@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSystemSettings } from '@app/providers/SystemSettingsContext';
 import type { PricingRule } from '@services/salaryService';
 import { salaryDataService } from '@services/salaryDataService';
+import { salaryDraftService } from '@services/salaryDraftService';
 import { useMonthlyActiveEmployeeIds } from '@shared/hooks/useMonthlyActiveEmployeeIds';
 import { useRealtimePostgresChanges } from '@shared/hooks/useRealtimePostgresChanges';
 import { isValidSalaryMonthYear } from '@shared/lib/salaryValidation';
@@ -16,6 +17,7 @@ import { defaultQueryRetry } from '@shared/lib/query';
 import { loadJsPdf } from '@modules/salaries/lib/salaryPdfLoaders';
 import Loading from '@shared/components/Loading';
 import { toast as sonnerToast } from '@shared/components/ui/sonner';
+import { logError } from '@shared/lib/logger';
 
 import { SalarySchemeSelector } from '@modules/salaries/components/SalarySchemeSelector';
 import { useSalaryFilteredRows } from '@modules/salaries/hooks/useSalaryTable';
@@ -65,6 +67,27 @@ const InlineLoader = ({ minHeightClassName = 'min-h-[220px]' }: Readonly<{ minHe
   <Loading minHeightClassName={minHeightClassName} />
 );
 
+const buildSalaryDraftMap = (rows: SalaryRow[]): Record<string, SalaryDraftPatch> => {
+  const draft: Record<string, SalaryDraftPatch> = {};
+  rows
+    .filter((row) => row.status === 'pending' || row.isDirty)
+    .forEach((row) => {
+      draft[row.id] = {
+        platformOrders: row.platformOrders,
+        incentives: row.incentives,
+        sickAllowance: row.sickAllowance,
+        violations: row.violations,
+        customDeductions: row.customDeductions,
+        transfer: row.transfer,
+        advanceDeduction: row.advanceDeduction,
+        externalDeduction: row.externalDeduction,
+        platformIncome: row.platformIncome,
+        engineBaseSalary: row.engineBaseSalary,
+      };
+    });
+  return draft;
+};
+
 const Salaries = () => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -104,6 +127,8 @@ const Salaries = () => {
   const [batchZip, setBatchZip] = useState<JSZip | null>(null);
   const [batchMonth, setBatchMonth] = useState('');
   const salaryToolbarImportRef = useRef<HTMLInputElement>(null);
+  const skipNextDraftSaveRef = useRef(true);
+  const lastDraftSignatureRef = useRef<string | null>(null);
   const salariesDraftKey = useMemo(
     () => `salaries:draft:${user?.id || 'anon'}:${selectedMonth}`,
     [user?.id, selectedMonth]
@@ -262,27 +287,44 @@ const Salaries = () => {
   ]);
 
   useEffect(() => {
-    if (loadingData || rows.length === 0) return;
+    skipNextDraftSaveRef.current = true;
+    lastDraftSignatureRef.current = null;
+  }, [selectedMonth, user?.id]);
+
+  useEffect(() => {
+    if (loadingData) return;
+
+    const draft = buildSalaryDraftMap(rows);
+    const serializedDraft = JSON.stringify(draft);
+
+    try {
+      localStorage.setItem(salariesDraftKey, serializedDraft);
+    } catch (e) {
+      logError('[Salaries] Failed to mirror drafts to localStorage', e, { level: 'warn' });
+    }
+
+    if (skipNextDraftSaveRef.current) {
+      skipNextDraftSaveRef.current = false;
+      lastDraftSignatureRef.current = serializedDraft;
+      return;
+    }
+
+    if (lastDraftSignatureRef.current === serializedDraft) return;
+
     const timer = setTimeout(() => {
-      const draft: Record<string, SalaryDraftPatch> = {};
-      rows.forEach((row) => {
-        draft[row.id] = {
-          platformOrders: row.platformOrders,
-          incentives: row.incentives,
-          sickAllowance: row.sickAllowance,
-          violations: row.violations,
-          customDeductions: row.customDeductions,
-          transfer: row.transfer,
-          advanceDeduction: row.advanceDeduction,
-          externalDeduction: row.externalDeduction,
-          platformIncome: row.platformIncome,
-          engineBaseSalary: row.engineBaseSalary,
-        };
-      });
-      localStorage.setItem(salariesDraftKey, JSON.stringify(draft));
-    }, 600);
+      void (async () => {
+        try {
+          await salaryDraftService.clearDraftsForMonth(selectedMonth);
+          await salaryDraftService.saveDraftsBatch(selectedMonth, draft);
+          lastDraftSignatureRef.current = serializedDraft;
+        } catch (e) {
+          logError('[Salaries] Failed to auto-save drafts to server', e, { level: 'warn' });
+        }
+      })();
+    }, 2000);
+
     return () => clearTimeout(timer);
-  }, [rows, loadingData, salariesDraftKey]);
+  }, [rows, loadingData, salariesDraftKey, selectedMonth]);
 
   const { filtered, computeRow } = useSalaryFilteredRows(
     rows, search, statusFilter, cityFilter, sortField, sortDir, platforms
@@ -301,7 +343,7 @@ const Salaries = () => {
   });
 
   const totalNet = filtered.reduce((s, r) => s + computeRow(r).netSalary, 0);
-  const pendingCount = filtered.filter(r => r.status === 'pending').length;
+  const pendingCount = filtered.filter((r) => r.status === 'pending' || r.isDirty).length;
 
   // ── Batch ZIP export: generate HTML-based PDFs sequentially ────
   useEffect(() => {

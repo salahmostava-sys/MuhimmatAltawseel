@@ -3,11 +3,13 @@ import { sendWhatsAppMessage } from '@shared/lib/whatsapp';
 import { isEmployeeIdUuid, isValidSalaryMonthYear } from '@shared/lib/salaryValidation';
 import { salaryDataService } from '@services/salaryDataService';
 import { driverService } from '@services/driverService';
+import { salaryDraftService } from '@services/salaryDraftService';
 import { getManualDeductionTotal } from '@modules/salaries/lib/salaryDomain';
 import { months } from '@modules/salaries/lib/salaryMonths';
 import type { SalaryRow } from '@modules/salaries/types/salary.types';
 import { getDisplayedBaseSalary } from '@modules/salaries/model/salaryUtils';
 import { useSafeAction } from '@shared/hooks/useSafeAction';
+import { logError } from '@shared/lib/logger';
 
 import { toast as sonnerToast } from '@shared/components/ui/sonner';
 
@@ -168,6 +170,10 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
       );
       if (!saved) return;
 
+      void salaryDraftService.deleteDraft(selectedMonth, row.employeeId).catch((e) => {
+        logError('[Salaries] Failed to clear draft after approve', e, { level: 'warn' });
+      });
+
       updateRow(id, { status: 'approved', isDirty: false, advanceDeduction, externalDeduction });
       toast.success('✅ تم اعتماد الراتب');
 
@@ -225,6 +231,10 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
 
           await settleAdvanceInstallments(row, nowStr);
 
+          void salaryDraftService.deleteDraft(selectedMonth, row.employeeId).catch((e) => {
+            logError('[Salaries] Failed to clear draft after payment', e, { level: 'warn' });
+          });
+
           updateRow(row.id, {
             status: 'paid',
             isDirty: false,
@@ -253,8 +263,8 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
   // ── Approve all ───────────────────────────────────────────────────────────
 
   const approveAll = useCallback(async () => {
-    const pendingRows = filtered.filter((r) => r.status === 'pending');
-    if (pendingRows.length === 0) return;
+    const approvalRows = filtered.filter((r) => r.status === 'pending' || r.isDirty);
+    if (approvalRows.length === 0) return;
     if (!isValidSalaryMonthYear(selectedMonth)) {
       toast.error('خطأ', { description: 'الشهر المحدد غير صالح' });
       return;
@@ -275,7 +285,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
 
     const nowStr = new Date().toISOString();
     const skippedRows: string[] = [];
-    const records = pendingRows
+    const records = approvalRows
       .filter((row) => {
         const calc = monthCalcMap.get(row.employeeId);
         if (!calc && getDisplayedBaseSalary(row) <= 0) {
@@ -320,11 +330,24 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
     if (!saved) return;
 
     const approvedIds = records.map((r) => r.employee_id);
-    const approvedRowIds = pendingRows
+    const approvedRowIds = approvalRows
       .filter((r) => approvedIds.includes(r.employeeId))
       .map((r) => r.id);
+    await Promise.all(
+      approvalRows
+        .filter((r) => approvedIds.includes(r.employeeId))
+        .map((r) =>
+          salaryDraftService.deleteDraft(selectedMonth, r.employeeId).catch((e) => {
+            logError('[Salaries] Failed to clear draft after bulk approve', e, { level: 'warn' });
+          }),
+        ),
+    );
     setRows((prev) =>
-      prev.map((r) => (approvedRowIds.includes(r.id) ? { ...r, status: 'approved' as const } : r)),
+      prev.map((r) => (
+        approvedRowIds.includes(r.id)
+          ? { ...r, status: 'approved' as const, isDirty: false }
+          : r
+      )),
     );
     if (skippedRows.length > 0) {
       toast.warning(`تم تخطي ${skippedRows.length} موظف (لا يوجد حساب من الخادم)`, {

@@ -214,6 +214,7 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
               {filtered.map((r, rowIdx) => {
                 const c = computeRow(r);
                 const canEditManualBaseSalary = !Object.values(r.platformMetrics || {}).some((metric) => hasPlatformActivity(metric));
+                const needsApproval = r.status === 'pending' || !!r.isDirty;
                 if (!c) return null;
                 return (
                   <tr key={r.id} className="border-b border-border hover:bg-muted/25 transition-colors">
@@ -372,12 +373,12 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
                     </td>
                     <td className={`${tdClass} border-l border-border`}>
                       <div className="flex items-center justify-center gap-1.5">
-                        {r.status === 'pending' && (
+                        {needsApproval && (
                           <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1 text-success border-success/40 hover:bg-success/10" onClick={() => approveRow(r.id)}>
                             <CheckCircle size={11} /> اعتماد
                           </Button>
                         )}
-                        {r.status === 'approved' && (
+                        {r.status === 'approved' && !r.isDirty && (
                           <Button
                             size="sm"
                             variant="outline"

@@ -510,16 +510,39 @@ export const buildSalaryRows = ({
 
 import { salaryDraftService } from '@services/salaryDraftService';
 
-export const hydrateRowsWithDraft = async (rows: SalaryRow[], monthYear: string) => {
+const readLocalSalaryDraftMap = (storageKey?: string): Record<string, SalaryDraftPatch> => {
+  if (!storageKey || typeof localStorage === 'undefined') return {};
   try {
-    const draftMap = await salaryDraftService.getDraftsForMonth(monthYear);
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== 'object') return {};
+    return parsed as Record<string, SalaryDraftPatch>;
+  } catch (e) {
+    logError('[Salaries] Failed to read drafts from localStorage', e, { level: 'warn' });
+    return {};
+  }
+};
+
+export const hydrateRowsWithDraft = async (
+  rows: SalaryRow[],
+  monthYear: string,
+  storageKey?: string,
+) => {
+  const localDraftMap = readLocalSalaryDraftMap(storageKey);
+
+  try {
+    const serverDraftMap = await salaryDraftService.getDraftsForMonth(monthYear);
     return rows.map((row) => {
-      const patch = draftMap[row.id];
+      const patch = serverDraftMap[row.id] ?? localDraftMap[row.id];
       return patch ? { ...row, ...patch, isDirty: true } : row;
     });
   } catch (e) {
     logError('[Salaries] Failed to load drafts from server', e, { level: 'warn' });
-    return rows;
+    return rows.map((row) => {
+      const patch = localDraftMap[row.id];
+      return patch ? { ...row, ...patch, isDirty: true } : row;
+    });
   }
 };
 
@@ -653,7 +676,7 @@ export async function prepareSalaryState({
     advRemainingMap,
     fuelCostMap,
   });
-  const hydratedRows = await hydrateRowsWithDraft(newRows, selectedMonth);
+  const hydratedRows = await hydrateRowsWithDraft(newRows, selectedMonth, _salariesDraftKey);
   const { appsWithoutPricingRules, appsWithoutScheme } = buildPlatformSetupWarnings({
     apps: appsFromApi,
     rulesMap,
