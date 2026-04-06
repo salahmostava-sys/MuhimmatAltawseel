@@ -82,7 +82,7 @@ describe('useAppColors', () => {
     expect(result.current.apps[0].text_color).toBe('#ffffff');
     expect(result.current.apps[0].custom_columns).toEqual([{ key: 'rating', label: 'Rating' }]);
     expect(result.current.apps[1].custom_columns).toEqual([]);
-    expect(useQueryErrorToastMock).not.toHaveBeenCalled();
+    expect(useQueryErrorToastMock).toHaveBeenCalledWith(false, null, undefined, undefined);
   });
 
   it('does not fetch when session is missing', async () => {

@@ -77,7 +77,6 @@ type DashboardData = {
 export type DashboardOperationalStats = DashboardData['operationalStats'];
 
 /** Stable empty refs so useMemo deps do not change every render when `data` is missing. */
-const EMPTY_EMP_DETAILS: EmpDetail[] = [];
 const EMPTY_ORDERS_BY_APP: DashboardData['ordersByApp'] = [];
 const EMPTY_ORDERS_BY_CITY: DashboardData['ordersByCity'] = [];
 const EMPTY_RIDERS: Rider[] = [];
@@ -117,7 +116,6 @@ export function useDashboard(params: {
   };
 
   const kpis = data?.kpis ?? defaultKpis;
-  const empDetails = data?.empDetails ?? EMPTY_EMP_DETAILS;
   const ordersByApp = data?.ordersByApp ?? EMPTY_ORDERS_BY_APP;
   const ordersByCity = data?.ordersByCity ?? EMPTY_ORDERS_BY_CITY;
   const allRiders = data?.allRiders ?? EMPTY_RIDERS;

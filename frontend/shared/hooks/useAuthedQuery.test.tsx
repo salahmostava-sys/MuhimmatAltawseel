@@ -109,6 +109,6 @@ describe('useAuthedQuery', () => {
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(useQueryErrorToastMock).not.toHaveBeenCalled();
+    expect(useQueryErrorToastMock).toHaveBeenCalledWith(false, null, undefined, undefined);
   });
 });

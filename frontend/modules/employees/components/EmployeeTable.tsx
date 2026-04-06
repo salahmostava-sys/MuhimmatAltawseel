@@ -98,8 +98,6 @@ export function EmployeeDetailedTable({
   const buildTextOptions = (values: string[], currentValue?: string | null) =>
     Array.from(new Set([...values, currentValue || ''].filter(Boolean)))
       .map((value) => ({ value, label: value }));
-  const nationalityOptions = buildTextOptions(uniqueVals.nationality);
-  const jobTitleOptions = buildTextOptions(uniqueVals.job_title);
   const dateFilterKeys = new Set([
     'join_date',
     'birth_date',

@@ -460,7 +460,7 @@ export const salaryService = {
       .upsert(records as never, { onConflict: 'employee_id,month_year' });
 
     if (error && String(error.message || '').includes('sheet_snapshot')) {
-      const fallbackRecords = records.map(({ sheet_snapshot, ...record }) => record);
+      const fallbackRecords = records.map(({ sheet_snapshot: _sheet_snapshot, ...record }) => record);
       ({ error } = await supabase
         .from('salary_records')
         .upsert(fallbackRecords as never, { onConflict: 'employee_id,month_year' }));
