@@ -19,11 +19,14 @@ async function formatInvokeError(error: unknown): Promise<string> {
     try {
       const data = (await err.context.clone().json()) as { error?: string };
       const responseError = data.error ?? '';
-      if (responseError.includes('OPENAI_API_KEY')) {
-        return 'المساعد غير مهيأ على الخادم (مفتاح الذكاء الاصطناعي). راجع إعدادات Supabase أو تواصل مع المسؤول.';
+      console.error("AI Chat Edge Function Error:", data, err.context.status);
+
+      if (responseError.includes('OPENAI_API_KEY') || responseError.includes('GROQ_API_KEY')) {
+        return 'المساعد غير مهيأ على الخادم (مفتاح الذكاء الاصطناعي). راجع إعدادات Supabase.';
       }
-      if (responseError.includes('Unauthorized') || err.context.status === 401) {
-        return 'انتهت الجلسة أو غير مصرّح. حدّث الصفحة أو سجّل الدخول من جديد.';
+      // إظهار الخطأ الحقيقي اللي جاي من الـ Edge Function للفهم والتشخيص
+      if (responseError) {
+        return `خطأ من الخادم (${err.context.status}): ${responseError}`;
       }
       if (responseError.length > 0 && responseError.length < 200) {
         return `تعذر إكمال الطلب: ${responseError}`;
