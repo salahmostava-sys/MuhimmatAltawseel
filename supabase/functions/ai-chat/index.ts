@@ -263,11 +263,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
-    const token = authHeader.replace('Bearer ', '');
+    const supabaseAdmin = createClient(supabaseUrl ?? '', serviceRoleKey ?? '');
+    const token = authHeader.replace('Bearer ', '').trim();
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      console.error('Auth error inside edge function:', authError, 'Token snippet:', token.substring(0, 10));
+      return new Response(JSON.stringify({ error: `Unauthorized: ${authError?.message || 'No user found'}` }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
