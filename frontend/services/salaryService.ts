@@ -326,13 +326,22 @@ export const salaryService = {
     if (!isValidSalaryMonthYear(my)) {
       return [] as SalaryPreviewRow[];
     }
-    const { data, error } = await supabase.functions.invoke('salary-engine', {
+    const res = await supabase.functions.invoke('salary-engine', {
       body: {
         mode: 'month_preview',
         month_year: my,
       },
     });
-    if (error) handleSupabaseError(error, 'salaryService.getSalaryPreviewForMonth');
+    const data = res.data;
+    const error = res.error;
+    if (error) {
+       let errorText = '';
+       if (error.context && typeof error.context.text === 'function') {
+         errorText = await error.context.clone().text().catch(() => '');
+       }
+       if (errorText) throw new Error(`[Edge Error] ${errorText}`);
+       handleSupabaseError(error, 'salaryService.getSalaryPreviewForMonth');
+    }
     const payload = ((data as { data?: unknown } | null)?.data ?? data) as SalaryPreviewRow[] | null;
     return payload || [];
   },
