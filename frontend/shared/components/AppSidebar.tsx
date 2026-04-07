@@ -60,13 +60,25 @@ function ensureSectionOpenForActiveRoute(
 ): Record<string, boolean> {
   const next = { ...prev };
   let changed = false;
+  let activeGroupKey: string | null = null;
+
+  // Find which group contains the active route
   navGroups.forEach((g) => {
     const hasActive = g.items.some((i) => isActive(i.path));
-    if (hasActive && next[g.key] === false) {
-      next[g.key] = true;
+    if (hasActive) {
+      activeGroupKey = g.key;
+    }
+  });
+
+  // Open the active group and close others
+  navGroups.forEach((g) => {
+    const shouldBeOpen = g.key === activeGroupKey;
+    if (next[g.key] !== shouldBeOpen) {
+      next[g.key] = shouldBeOpen;
       changed = true;
     }
   });
+
   if (changed) persistSectionOpenState(next);
   return changed ? next : prev;
 }
