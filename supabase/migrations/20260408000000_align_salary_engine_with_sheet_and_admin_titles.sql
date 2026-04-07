@@ -472,7 +472,8 @@ BEGIN
     payment_method,
     calc_status,
     calc_source,
-    is_approved
+    is_approved,
+    sheet_snapshot
   )
   VALUES (
     p_employee_id,
@@ -487,7 +488,8 @@ BEGIN
     COALESCE(NULLIF(TRIM(p_payment_method), ''), 'cash'),
     'calculated',
     'engine_v5_sheet_aligned',
-    false
+    false,
+    NULL
   )
   ON CONFLICT (employee_id, month_year)
   DO UPDATE SET
@@ -501,6 +503,7 @@ BEGIN
     payment_method = EXCLUDED.payment_method,
     calc_status = EXCLUDED.calc_status,
     calc_source = EXCLUDED.calc_source,
+    sheet_snapshot = NULL,
     updated_at = now()
   RETURNING
     public.salary_records.employee_id,
