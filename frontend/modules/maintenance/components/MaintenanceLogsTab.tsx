@@ -197,7 +197,7 @@ export function MaintenanceLogsTab() {
               {loading && (
                 <tr>
                   <td colSpan={9} className="py-12 text-center text-muted-foreground">
-                    <Loader2 className="inline animate-spin mr-2" size={18} />
+                    <Loader2 className="inline animate-spin me-2" size={18} />
                     جاري التحميل...
                   </td>
                 </tr>

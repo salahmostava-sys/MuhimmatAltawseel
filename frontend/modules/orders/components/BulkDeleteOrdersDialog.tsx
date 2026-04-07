@@ -188,7 +188,7 @@ export function BulkDeleteOrdersDialog({ open, employees, apps, year, month, onC
               (scope === 'app_month' && !appId)
             }
           >
-            {deleting && <Loader2 className="animate-spin size-4 ml-2" />}
+            {deleting && <Loader2 className="animate-spin size-4 me-2" />}
             حذف نهائي
           </Button>
         </DialogFooter>

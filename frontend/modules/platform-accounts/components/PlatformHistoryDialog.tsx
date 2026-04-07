@@ -88,14 +88,14 @@ export const PlatformHistoryDialog = ({
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           من:
-                          <span className="font-medium text-foreground mr-1">
+                          <span className="font-medium text-foreground ms-1">
                             {assignment.start_date}
                           </span>
                           {assignment.end_date && (
                             <>
                               {' '}
                               إلى:
-                              <span className="font-medium text-foreground mr-1">
+                              <span className="font-medium text-foreground ms-1">
                                 {assignment.end_date}
                               </span>
                             </>

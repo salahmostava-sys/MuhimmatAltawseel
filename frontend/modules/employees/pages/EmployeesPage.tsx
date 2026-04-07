@@ -326,7 +326,7 @@ const Employees = () => {
               onClick={handleSaveStatusWithDate}
               disabled={!statusDate || statusDateSaving}
             >
-              {statusDateSaving && <Loader2 size={14} className="animate-spin ml-1" />}
+              {statusDateSaving && <Loader2 size={14} className="animate-spin me-1" />}
               حفظ
             </Button>
           </DialogFooter>

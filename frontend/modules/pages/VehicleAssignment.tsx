@@ -106,7 +106,7 @@ const AssignmentFormModal = ({
           <div>
             <label className="text-sm font-medium mb-1 block">
               المركبة *
-              <span className="text-xs text-muted-foreground font-normal mr-2">
+              <span className="text-xs text-muted-foreground font-normal ms-2">
                 (المركبات الفاضية فقط — {freeVehicles.length} متاحة)
               </span>
             </label>

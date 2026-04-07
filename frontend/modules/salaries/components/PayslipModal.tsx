@@ -142,7 +142,7 @@ export function PayslipModal({ row, onClose, onApprove, selectedMonth, companyNa
             <span className="text-sm font-normal bg-primary/10 text-primary px-2 py-0.5 rounded-full flex items-center gap-1">
               <Globe size={12} /> {meta.flag} {meta.label}
             </span>
-            {analysisLoading && <Loader2 className="animate-spin text-muted-foreground ml-2" size={14} />}
+            {analysisLoading && <Loader2 className="animate-spin text-muted-foreground me-2" size={14} />}
             {analysis?.risk === 'underpaid' && (
               <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full animate-pulse">
                 تحليل AI: مخاوف من انخفاض الراتب

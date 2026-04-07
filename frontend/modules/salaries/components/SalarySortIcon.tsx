@@ -8,7 +8,7 @@ type SalarySortIconProps = Readonly<{
 }>;
 
 export function SalarySortIcon({ field, sortField, sortDir }: SalarySortIconProps) {
-  if (sortField !== field) return <ChevronsUpDown size={10} className="inline ml-0.5 opacity-40" />;
-  if (sortDir === 'asc') return <ChevronUp size={10} className="inline ml-0.5" />;
-  return <ChevronDown size={10} className="inline ml-0.5" />;
+  if (sortField !== field) return <ChevronsUpDown size={10} className="inline me-0.5 opacity-40" />;
+  if (sortDir === 'asc') return <ChevronUp size={10} className="inline me-0.5" />;
+  return <ChevronDown size={10} className="inline me-0.5" />;
 }

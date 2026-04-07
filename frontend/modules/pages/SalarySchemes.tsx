@@ -415,19 +415,19 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
 
   const renderTierDescription = (t: Tier) => {
     if (t.tierType === 'fixed_amount') {
-      return <span className="mr-auto font-semibold text-primary">{t.pricePerOrder} ر.س ثابت</span>;
+      return <span className="ms-auto font-semibold text-primary">{t.pricePerOrder} ر.س ثابت</span>;
     }
     if (t.tierType === 'base_plus_incremental') {
       return (
-        <span className="mr-auto font-semibold text-primary">
+        <span className="ms-auto font-semibold text-primary">
           {t.pricePerOrder} + (فوق {t.incrementalThreshold ?? t.from}) × {t.incrementalPrice ?? 0} ر.س
         </span>
       );
     }
     if (t.tierType === 'per_order_band') {
-      return <span className="mr-auto font-semibold text-primary">كل الطلبات × {t.pricePerOrder} ر.س</span>;
+      return <span className="ms-auto font-semibold text-primary">كل الطلبات × {t.pricePerOrder} ر.س</span>;
     }
-    return <span className="mr-auto font-semibold text-primary">{t.pricePerOrder} ر.س/طلب (تراكمي)</span>;
+    return <span className="ms-auto font-semibold text-primary">{t.pricePerOrder} ر.س/طلب (تراكمي)</span>;
   };
 
   return (
@@ -496,7 +496,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
                       {assignedApps.map(a => (
                         <span key={a.id} className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary rounded-full px-2.5 py-1">
                           {a.name}
-                          <button onClick={() => handleUnassignApp(a.id)} className="hover:text-destructive ml-0.5"><X size={10} /></button>
+                          <button onClick={() => handleUnassignApp(a.id)} className="hover:text-destructive me-0.5"><X size={10} /></button>
                         </span>
                       ))}
                     </div>
@@ -629,7 +629,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
                           </button>
                         )}
                         {(snapshots[s.id] || []).length > 0 && (
-                          <span className="text-[10px] text-muted-foreground mr-auto">
+                          <span className="text-[10px] text-muted-foreground ms-auto">
                             إجمالي {snapshots[s.id]!.length} شهر مثبت عبر السنوات
                           </span>
                         )}
@@ -805,7 +805,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowModal(false)}>إلغاء</Button>
             <Button onClick={handleSave} disabled={saving}>
-              {saving && <Loader2 size={14} className="animate-spin ml-1" />}
+              {saving && <Loader2 size={14} className="animate-spin me-1" />}
               {editing ? 'حفظ التعديلات' : 'إضافة السكيمة'}
             </Button>
           </DialogFooter>
@@ -837,7 +837,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowAssignModal(false)}>إلغاء</Button>
             <Button onClick={handleAssign} disabled={assigning || !assignAppId}>
-              {assigning && <Loader2 size={14} className="animate-spin ml-1" />}
+              {assigning && <Loader2 size={14} className="animate-spin me-1" />}
               ربط المنصة
             </Button>
           </DialogFooter>

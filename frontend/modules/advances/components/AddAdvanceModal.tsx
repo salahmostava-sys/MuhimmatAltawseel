@@ -459,7 +459,7 @@ export const TransactionsModal = ({ employeeId, employeeName, nationalId, totalD
               </DialogTitle>
               {/* Action buttons inside modal header */}
               {canEdit && !isWrittenOff && (
-                <div className="flex items-center gap-2 ml-8">
+                <div className="flex items-center gap-2 me-8">
                   <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => setShowInlineAdd(true)}>
                     <Plus size={12} /> إضافة
                   </Button>
@@ -486,7 +486,7 @@ export const TransactionsModal = ({ employeeId, employeeName, nationalId, totalD
                 </div>
               )}
               {canEdit && isWrittenOff && onRestore && (
-                <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 ml-8 text-warning border-warning/40 hover:bg-warning/10" onClick={onRestore}>
+                <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 me-8 text-warning border-warning/40 hover:bg-warning/10" onClick={onRestore}>
                   <RotateCcw size={12} /> استرداد الديون
                 </Button>
               )}

@@ -119,7 +119,7 @@ const AppsPage = () => {
                   {appDependencies && appDependencies.hasAnyDependencies && (
                     <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 space-y-2">
                       <p className="font-semibold text-warning">⚠️ تنبيه: المنصة مرتبطة ببيانات</p>
-                      <ul className="text-sm space-y-1 mr-4">
+                      <ul className="text-sm space-y-1 ms-4">
                         {appDependencies.employeeAppsCount > 0 && (
                           <li>• {appDependencies.employeeAppsCount} موظف مرتبط</li>
                         )}
@@ -151,7 +151,7 @@ const AppsPage = () => {
                   {appDependencies && (
                     <div className="bg-muted rounded-lg p-4 space-y-2">
                       <p className="font-semibold">📊 البيانات المرتبطة التي سيتم حذفها:</p>
-                      <ul className="text-sm space-y-1 mr-4">
+                      <ul className="text-sm space-y-1 ms-4">
                         <li>• {appDependencies.employeeAppsCount} ربط موظف</li>
                         <li>• {appDependencies.dailyOrdersCount} سجل طلبات يومي</li>
                         <li>• {appDependencies.appTargetsCount} هدف شهري</li>

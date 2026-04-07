@@ -103,7 +103,7 @@ export function TopEmployees(props: Readonly<{
                     <div key={`risk-${r.appId}-${r.name}-${idx}`} className="flex flex-wrap items-center justify-between gap-2 rounded-xl px-3 py-2.5 bg-amber-50/60 border border-amber-100">
                       <div className="min-w-0">
                         <span className="text-sm font-semibold text-foreground">{r.name}</span>
-                        <span className="text-[10px] text-muted-foreground ml-2 inline-flex items-center gap-1">
+                        <span className="text-[10px] text-muted-foreground ms-2 inline-flex items-center gap-1">
                           <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ backgroundColor: r.appColor }} />
                           {r.app}
                         </span>
