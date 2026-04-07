@@ -263,16 +263,24 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabaseAdmin = createClient(supabaseUrl ?? '', serviceRoleKey ?? '');
-    const token = authHeader.replace('Bearer ', '').trim();
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
-      console.error('Auth error inside edge function:', authError, 'Token snippet:', token.substring(0, 10));
-      return new Response(JSON.stringify({ error: `Unauthorized: ${authError?.message || 'No user found'}` }), {
+      console.error('Auth error:', authError);
+      return new Response(JSON.stringify({ error: `Auth Error: ${authError?.message}` }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Pass supabaseClient instead of admin to executeTool if we want RLS,
+    // but tools are passing supabaseAdmin. So let's keep a serviceRoleKey client for tools.
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
     // Parse request
     const { messages: clientMessages } = await req.json() as { messages: ChatMessage[] };
