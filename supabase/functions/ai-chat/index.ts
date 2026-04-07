@@ -196,7 +196,7 @@ async function executeTool(sb: SupabaseAdmin, name: string, args: Record<string,
   }
 }
 
-// ── OpenAI chat completion via fetch ──────────────────────────
+// ── Groq chat completion via fetch ──────────────────────────
 
 interface ChatMessage {
   role: string;
@@ -206,29 +206,30 @@ interface ChatMessage {
   name?: string;
 }
 
-async function openaiChat(
+async function groqChat(
   messages: ChatMessage[],
   apiKey: string,
   availableTools?: typeof tools,
 ): Promise<ChatMessage> {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: 'openai/gpt-oss-120b',
       messages,
       ...(availableTools ? { tools: availableTools, tool_choice: 'auto' } : {}),
       temperature: 0.3,
-      max_tokens: 1024,
+      max_completion_tokens: 1024,
+      reasoning_effort: 'medium',
     }),
   });
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`OpenAI API error ${res.status}: ${err}`);
+    throw new Error(`Groq API error ${res.status}: ${err}`);
   }
 
   const json = await res.json();
@@ -245,10 +246,10 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const openaiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openaiKey) {
+    const groqKey = Deno.env.get('GROQ_API_KEY');
+    if (!groqKey) {
       return new Response(
-        JSON.stringify({ error: 'OPENAI_API_KEY not configured' }),
+        JSON.stringify({ error: 'GROQ_API_KEY not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
@@ -287,7 +288,7 @@ Deno.serve(async (req) => {
       ...clientMessages.map((m) => ({ role: m.role, content: m.content })),
     ];
 
-    const responseMessage = await openaiChat(conversation, openaiKey, tools);
+    const responseMessage = await groqChat(conversation, groqKey, tools);
 
     if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
       conversation.push(responseMessage);
@@ -314,7 +315,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      const finalResponseMessage = await openaiChat(conversation, openaiKey);
+      const finalResponseMessage = await groqChat(conversation, groqKey);
       return new Response(
         JSON.stringify({ message: finalResponseMessage.content ?? '' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
