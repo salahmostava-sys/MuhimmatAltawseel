@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Columns, Filter, X } from 'lucide-react';
+import { Plus, Columns, Filter, Building2, X } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { cityLabel } from '@modules/employees/model/employeeCity';
 import {
@@ -22,6 +22,7 @@ type EmployeeActionsBarProps = {
   visibleCols: Set<ColKey>;
   setVisibleCols: React.Dispatch<React.SetStateAction<Set<ColKey>>>;
   onAddEmployee: () => void;
+  onManageCommercialRecords: () => void;
   isUploading: boolean;
   uploadReport: UploadReport | null;
   setUploadReport: React.Dispatch<React.SetStateAction<UploadReport | null>>;
@@ -40,6 +41,7 @@ export function EmployeeActionsBar({
   onExport, onDownloadTemplate, onPrint, onImportFile,
   visibleCols, setVisibleCols,
   onAddEmployee,
+  onManageCommercialRecords,
   isUploading, uploadReport, setUploadReport,
   uploadProgress, uploadLiveStats,
   hasActiveFilters, colFilters, setColFilter, setColFilters,
@@ -141,9 +143,14 @@ export function EmployeeActionsBar({
           </div>
 
           {permissions.can_edit && (
-            <Button onClick={onAddEmployee} className="gap-2 h-9">
+            <>
+              <Button variant="outline" onClick={onManageCommercialRecords} className="gap-2 h-9">
+                <Building2 size={15} /> السجلات التجارية
+              </Button>
+              <Button onClick={onAddEmployee} className="gap-2 h-9">
               <Plus size={15} /> إضافة موظف
             </Button>
+            </>
           )}
         </div>
       </div>

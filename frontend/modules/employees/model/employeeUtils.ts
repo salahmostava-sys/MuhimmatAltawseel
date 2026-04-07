@@ -26,6 +26,7 @@ export type Employee = {
   license_expiry?: string | null;
   sponsorship_status?: string | null;
   id_photo_url?: string | null;
+  iqama_photo_url?: string | null;
   license_photo_url?: string | null;
   personal_photo_url?: string | null;
   status: string;

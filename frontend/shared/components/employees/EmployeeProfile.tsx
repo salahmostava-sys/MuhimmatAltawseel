@@ -47,6 +47,7 @@ interface Employee {
   preferred_language?: string | null;
   commercial_record?: string | null;
   id_photo_url?: string | null;
+  iqama_photo_url?: string | null;
   license_photo_url?: string | null;
   personal_photo_url?: string | null;
   status: string;
@@ -123,6 +124,11 @@ function healthInsuranceExpiryTextClass(hiDays: number): string {
   return 'text-foreground';
 }
 
+function isImageDocument(path?: string | null) {
+  const normalized = (path ?? '').toLowerCase();
+  return ['.jpg', '.jpeg', '.png', '.webp'].some((ext) => normalized.endsWith(ext));
+}
+
 // ─── Secure Document Thumbnail ────────────────────────────────────────────────
 // Uses signed URLs for private employee-documents bucket
 const SecureDocThumb = ({
@@ -135,13 +141,22 @@ const SecureDocThumb = ({
 
   return (
     <div className="flex flex-col items-center gap-1">
-      {signedUrl ? (
+      {signedUrl && isImageDocument(path) ? (
         <a href={signedUrl} target="_blank" rel="noreferrer" className="group">
           <img
             src={signedUrl}
             className="w-20 h-20 object-cover rounded-lg border border-border group-hover:opacity-80 transition-opacity"
             alt={label}
           />
+        </a>
+      ) : signedUrl ? (
+        <a
+          href={signedUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="w-20 h-20 rounded-lg border border-border bg-muted flex items-center justify-center text-2xl"
+        >
+          📄
         </a>
       ) : (
         <div className="w-20 h-20 rounded-lg border border-border bg-muted flex items-center justify-center">
@@ -483,6 +498,7 @@ const EmployeeProfile = ({ employee, onBack }: Props) => {
             <div className="mt-5 flex gap-4 flex-wrap">
               <SecureDocThumb storagePath={employee.personal_photo_url} label="الصورة الشخصية" />
               <SecureDocThumb storagePath={employee.id_photo_url} label="صورة الهوية" />
+              <SecureDocThumb storagePath={employee.iqama_photo_url} label="صورة الإقامة" />
               <SecureDocThumb storagePath={employee.license_photo_url} label="صورة الرخصة" />
             </div>
 

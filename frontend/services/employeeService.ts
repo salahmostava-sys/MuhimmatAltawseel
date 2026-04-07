@@ -83,7 +83,7 @@ export const employeeService = {
     let query = supabase
       .from('employees')
       .select(
-        'id, name, national_id, phone, city, cities, status, sponsorship_status, license_status, residency_expiry, join_date, job_title',
+        'id, name, national_id, phone, city, cities, commercial_record, status, sponsorship_status, license_status, residency_expiry, join_date, job_title',
         { count: 'exact' }
       )
       .order('name', { ascending: true })

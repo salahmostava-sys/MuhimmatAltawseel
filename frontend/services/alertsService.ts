@@ -31,7 +31,7 @@ export const alertsService = {
     const fetchAll = Promise.all([
       supabase
         .from("employees")
-        .select("id, name, residency_expiry, probation_end_date, health_insurance_expiry, license_expiry, sponsorship_status")
+        .select("id, name, commercial_record, residency_expiry, probation_end_date, health_insurance_expiry, license_expiry, sponsorship_status")
         .eq("status", "active")
         .or(
           `residency_expiry.lte.${expiryHorizon},probation_end_date.lte.${expiryHorizon},health_insurance_expiry.lte.${expiryHorizon},license_expiry.lte.${expiryHorizon}`,

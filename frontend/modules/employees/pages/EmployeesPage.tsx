@@ -11,15 +11,18 @@ import {
 } from '@shared/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { useToast } from '@shared/hooks/use-toast';
+import { useSystemSettings } from '@app/providers/SystemSettingsContext';
 import { usePermissions } from '@shared/hooks/usePermissions';
 import { isEmployeeVisibleInMonth } from '@shared/lib/employeeVisibility';
 import { getEmployeeCities } from '@modules/employees/model/employeeUtils';
 import { useEmployeesData } from '@modules/employees/hooks/useEmployees';
 import { applyEmployeeFilters, sortEmployees } from '@modules/employees/model/employeeUtils';
 import { EmployeeActionsBar } from '@modules/employees/components/EmployeeActionsBar';
+import { EmployeeIqamaSummary } from '@modules/employees/components/EmployeeIqamaSummary';
 import { EmployeeDetailedTable } from '@modules/employees/components/EmployeeTable';
 import { useEmployeeActions } from '@modules/employees/hooks/useEmployeeTable';
 import Loading from '@shared/components/Loading';
+import CommercialRecordsManager from '@shared/components/employees/CommercialRecordsManager';
 import {
   ALL_COLUMNS, DEFAULT_HIDDEN_COLS,
   type Employee, type SortDir, type ColKey,
@@ -41,6 +44,7 @@ const InlineLoader = ({ minHeightClassName = 'min-h-[260px]' }: Readonly<{ minHe
 const Employees = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { settings } = useSystemSettings();
   const { permissions } = usePermissions('employees');
   const [data, setData] = useState<Employee[]>([]);
   const {
@@ -60,6 +64,7 @@ const Employees = () => {
   const [pageSize, setPageSize] = useState(50);
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showCommercialRecordsManager, setShowCommercialRecordsManager] = useState(false);
   const [editEmployee, setEditEmployee] = useState<Employee | null>(null);
   const [deleteEmployee, setDeleteEmployee] = useState<Employee | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -201,6 +206,7 @@ const Employees = () => {
         visibleCols={visibleCols}
         setVisibleCols={setVisibleCols}
         onAddEmployee={() => { setEditEmployee(null); setShowAddModal(true); }}
+        onManageCommercialRecords={() => setShowCommercialRecordsManager(true)}
         isUploading={isUploading}
         uploadReport={uploadReport}
         setUploadReport={setUploadReport}
@@ -212,6 +218,11 @@ const Employees = () => {
         setColFilters={setColFilters}
         filteredCount={filtered.length}
         totalCount={data.length}
+      />
+
+      <EmployeeIqamaSummary
+        employees={data}
+        alertDays={settings?.iqama_alert_days ?? 90}
       />
 
       <EmployeeDetailedTable
@@ -254,6 +265,11 @@ const Employees = () => {
           />
         </Suspense>
       )}
+
+      <CommercialRecordsManager
+        open={showCommercialRecordsManager}
+        onClose={() => setShowCommercialRecordsManager(false)}
+      />
 
       <AlertDialog open={!!deleteEmployee} onOpenChange={open => !open && setDeleteEmployee(null)}>
         <AlertDialogContent>

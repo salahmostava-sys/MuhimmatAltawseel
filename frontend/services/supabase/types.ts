@@ -578,6 +578,27 @@ export type Database = {
           },
         ]
       }
+      commercial_records: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           allowances: Json | null
@@ -595,6 +616,7 @@ export type Database = {
           iban: string | null
           id: string
           id_photo_url: string | null
+          iqama_photo_url: string | null
           is_sponsored: boolean
           job_title: string | null
           join_date: string | null
@@ -637,6 +659,7 @@ export type Database = {
           iban?: string | null
           id?: string
           id_photo_url?: string | null
+          iqama_photo_url?: string | null
           is_sponsored?: boolean
           job_title?: string | null
           join_date?: string | null
@@ -679,6 +702,7 @@ export type Database = {
           iban?: string | null
           id?: string
           id_photo_url?: string | null
+          iqama_photo_url?: string | null
           is_sponsored?: boolean
           job_title?: string | null
           join_date?: string | null

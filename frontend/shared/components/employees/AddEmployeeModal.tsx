@@ -16,6 +16,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { getErrorMessage } from '@shared/lib/query';
 import { cn } from '@shared/lib/utils';
 import { logError } from '@shared/lib/logger';
+import { useCommercialRecords } from '@shared/hooks/useCommercialRecords';
 import {
   DEFAULT_EMPLOYEE_CITY_OPTIONS,
   cityLabel,
@@ -51,7 +52,9 @@ interface EmployeeData {
   license_status?: string | null;
   license_expiry?: string | null;
   sponsorship_status?: string | null;
+  commercial_record?: string | null;
   id_photo_url?: string | null;
+  iqama_photo_url?: string | null;
   license_photo_url?: string | null;
   personal_photo_url?: string | null;
   status: string;
@@ -94,6 +97,16 @@ const CITY_OPTIONS = DEFAULT_EMPLOYEE_CITY_OPTIONS.map((value) => ({
 type UploadStatus = 'idle' | 'selected' | 'uploading' | 'uploaded' | 'error';
 type ResidencyStatus = { days: number; valid: boolean };
 
+const EMPLOYEE_DOCUMENT_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+
+function isImageDocument(nameOrPath?: string | null, mimeType?: string | null) {
+  const normalizedMime = mimeType?.toLowerCase() ?? '';
+  if (normalizedMime.startsWith('image/')) return true;
+
+  const normalizedName = (nameOrPath ?? '').toLowerCase();
+  return ['.jpg', '.jpeg', '.png', '.webp'].some((ext) => normalizedName.endsWith(ext));
+}
+
 // ─── Secure Upload Area — uses signed URLs for existing private docs ──────────
 const UploadArea = ({ label, icon, file, existingStoragePath, onFile, onRemove, status, errorText }: {
   label: string; icon: string; file: File | null; existingStoragePath?: string | null;
@@ -117,12 +130,14 @@ const UploadArea = ({ label, icon, file, existingStoragePath, onFile, onRemove, 
   const hasContent = file || existingStoragePath;
   let previewNode: React.ReactNode = null;
   if (file) {
-    const isImageFile = file.type.startsWith('image/');
+    const isImageFile = isImageDocument(file.name, file.type);
     previewNode = isImageFile
       ? <img src={URL.createObjectURL(file)} className="w-16 h-16 object-cover rounded-lg mx-auto" alt="" />
       : <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center mx-auto text-2xl">📄</div>;
   } else if (signedUrl) {
-    previewNode = <img src={signedUrl} className="w-16 h-16 object-cover rounded-lg mx-auto" alt="" />;
+    previewNode = isImageDocument(existingStoragePath)
+      ? <img src={signedUrl} className="w-16 h-16 object-cover rounded-lg mx-auto" alt="" />
+      : <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center mx-auto text-2xl">ðŸ“„</div>;
   } else if (existingStoragePath) {
     previewNode = <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center mx-auto text-xl">📄</div>;
   }
@@ -151,7 +166,7 @@ const UploadArea = ({ label, icon, file, existingStoragePath, onFile, onRemove, 
         onDragLeave={() => setDrag(false)}
         onDrop={handleDrop}
       >
-        <input ref={ref} type="file" accept=".jpg,.jpeg,.png,.pdf" className="hidden" onChange={e => e.target.files?.[0] && onFile(e.target.files[0])} />
+        <input ref={ref} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="hidden" onChange={e => e.target.files?.[0] && onFile(e.target.files[0])} />
         {hasContent ? (
           <div className="space-y-1">
             {previewNode}
@@ -166,7 +181,7 @@ const UploadArea = ({ label, icon, file, existingStoragePath, onFile, onRemove, 
             <div className="text-3xl mb-2">{icon}</div>
             <p className="text-xs font-medium text-foreground/70">{label}</p>
             <p className="text-[10px] text-muted-foreground mt-1">اضغط للرفع أو اسحب هنا</p>
-            <p className="text-[10px] text-muted-foreground">JPG, PNG, PDF — 5MB</p>
+            <p className="text-[10px] text-muted-foreground">JPG, PNG, WEBP, PDF — 5MB</p>
           </>
         )}
       </button>
@@ -216,6 +231,7 @@ const employeeFormSchema = z
     email: z.string().trim().email('بريد غير صحيح').optional().or(z.literal('')),
     national_id: nationalIdSchema,
     nationality: z.string().trim().optional().or(z.literal('')),
+    commercial_record: z.string().trim().optional().or(z.literal('')),
     bank_account_number: z.string().trim().optional().or(z.literal('')),
     cities: z.array(z.string().trim().min(1)).default([]),
     join_date: z.string().optional().or(z.literal('')),
@@ -251,6 +267,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
       email: editEmployee?.email || '',
       national_id: editEmployee?.national_id || '',
       nationality: editEmployee?.nationality || '',
+      commercial_record: editEmployee?.commercial_record || '',
       bank_account_number: editEmployee?.bank_account_number || '',
       cities: normalizeEmployeeCities(editEmployee?.cities ?? [], editEmployee?.city),
       join_date: editEmployee?.join_date || '',
@@ -272,17 +289,20 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
   const errors = formState.errors as Record<string, { message?: string }>;
   const form = watch();
   const selectedCities = form.cities ?? [];
+  const { recordNames: commercialRecordNames } = useCommercialRecords();
 
-  const [files, setFiles] = useState<{ personal: File | null; id: File | null; license: File | null }>({
-    personal: null, id: null, license: null,
+  const [files, setFiles] = useState<{ personal: File | null; id: File | null; iqama: File | null; license: File | null }>({
+    personal: null, id: null, iqama: null, license: null,
   });
   const [uploadState, setUploadState] = useState<{
     personal: { status: UploadStatus; error: string | null };
     id: { status: UploadStatus; error: string | null };
+    iqama: { status: UploadStatus; error: string | null };
     license: { status: UploadStatus; error: string | null };
   }>({
     personal: { status: editEmployee?.personal_photo_url ? 'uploaded' : 'idle', error: null },
     id: { status: editEmployee?.id_photo_url ? 'uploaded' : 'idle', error: null },
+    iqama: { status: editEmployee?.iqama_photo_url ? 'uploaded' : 'idle', error: null },
     license: { status: editEmployee?.license_photo_url ? 'uploaded' : 'idle', error: null },
   });
 
@@ -290,15 +310,16 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
     setUploadState({
       personal: { status: editEmployee?.personal_photo_url ? 'uploaded' : 'idle', error: null },
       id: { status: editEmployee?.id_photo_url ? 'uploaded' : 'idle', error: null },
+      iqama: { status: editEmployee?.iqama_photo_url ? 'uploaded' : 'idle', error: null },
       license: { status: editEmployee?.license_photo_url ? 'uploaded' : 'idle', error: null },
     });
-  }, [editEmployee?.personal_photo_url, editEmployee?.id_photo_url, editEmployee?.license_photo_url]);
+  }, [editEmployee?.personal_photo_url, editEmployee?.id_photo_url, editEmployee?.iqama_photo_url, editEmployee?.license_photo_url]);
 
-  const uploadedFilesCount = ['personal', 'id', 'license'].filter((k) => {
-    const key = k as 'personal' | 'id' | 'license';
+  const uploadedFilesCount = ['personal', 'id', 'iqama', 'license'].filter((k) => {
+    const key = k as 'personal' | 'id' | 'iqama' | 'license';
     return uploadState[key].status === 'uploaded';
   }).length;
-  const totalUploadSlots = 3;
+  const totalUploadSlots = 4;
   const uploadProgressPct = Math.round((uploadedFilesCount / totalUploadSlots) * 100);
 
   const setField = useCallback((k: keyof EmployeeFormValues, v: EmployeeFormFieldValue) => {
@@ -347,6 +368,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
     email: v.email || null,
     national_id: v.national_id || null,
     nationality: v.nationality || null,
+    commercial_record: v.commercial_record || null,
     bank_account_number: v.bank_account_number || null,
     city: v.cities[0] || null,
     cities: normalizeEmployeeCities(v.cities),
@@ -391,6 +413,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
     const uploads = [
       { key: 'personal' as const, file: files.personal, path: `${empId}/personal_photo`, field: 'personal_photo_url' },
       { key: 'id' as const, file: files.id, path: `${empId}/id_photo`, field: 'id_photo_url' },
+      { key: 'iqama' as const, file: files.iqama, path: `${empId}/iqama_photo`, field: 'iqama_photo_url' },
       { key: 'license' as const, file: files.license, path: `${empId}/license_photo`, field: 'license_photo_url' },
     ];
     const updates: Record<string, string> = {};
@@ -399,7 +422,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
       if (!u.file) continue;
       setUploadState((prev) => ({ ...prev, [u.key]: { status: 'uploading', error: null } }));
       const validation = validateUploadFile(u.file, {
-        allowedTypes: ['image/jpeg', 'image/png', 'application/pdf'],
+        allowedTypes: EMPLOYEE_DOCUMENT_ALLOWED_TYPES,
       });
       if (!validation.valid) {
         const msg = 'error' in validation ? validation.error : 'ملف غير صالح';
@@ -572,7 +595,42 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                 </Select>
               </F>
               <F label="رقم الحساب البنكي">
-                <Input value={form.bank_account_number} onChange={e => setField('bank_account_number', e.target.value)} dir="ltr" />
+                <div className="space-y-5">
+                  <F label="السجل التجاري">
+                    <div className="space-y-2">
+                      <Input
+                        list="employee-commercial-records"
+                        value={form.commercial_record}
+                        onChange={e => setField('commercial_record', e.target.value)}
+                        placeholder="أدخل أو اختر السجل التجاري"
+                      />
+                      <datalist id="employee-commercial-records">
+                        {commercialRecordNames.map((name) => (
+                          <option key={name} value={name} />
+                        ))}
+                      </datalist>
+                      {commercialRecordNames.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {commercialRecordNames.slice(0, 8).map((name) => (
+                            <button
+                              key={name}
+                              type="button"
+                              onClick={() => setField('commercial_record', name)}
+                              className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
+                                form.commercial_record === name
+                                  ? 'border-primary bg-primary/10 text-primary'
+                                  : 'border-border bg-muted/40 text-muted-foreground hover:border-primary/40'
+                              }`}
+                            >
+                              {name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </F>
+                  <Input value={form.bank_account_number} onChange={e => setField('bank_account_number', e.target.value)} dir="ltr" />
+                </div>
               </F>
               <F label="المدن">
                 <div className="space-y-3">
@@ -720,6 +778,14 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                   errorText={uploadState.id.error}
                 />
                 <UploadArea
+                  label="صورة الإقامة" icon="📄"
+                  file={files.iqama} existingStoragePath={editEmployee?.iqama_photo_url}
+                  onFile={f => { setFiles(p => ({ ...p, iqama: f })); setUploadState((s) => ({ ...s, iqama: { status: 'selected', error: null } })); }}
+                  onRemove={() => { setFiles(p => ({ ...p, iqama: null })); setUploadState((s) => ({ ...s, iqama: { status: 'idle', error: null } })); }}
+                  status={uploadState.iqama.status}
+                  errorText={uploadState.iqama.error}
+                />
+                <UploadArea
                   label="صورة الرخصة" icon="🚗"
                   file={files.license} existingStoragePath={editEmployee?.license_photo_url}
                   onFile={f => { setFiles(p => ({ ...p, license: f })); setUploadState((s) => ({ ...s, license: { status: 'selected', error: null } })); }}
@@ -728,7 +794,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                   errorText={uploadState.license.error}
                 />
               </div>
-              <p className="text-xs text-muted-foreground">الملفات المقبولة: JPG, PNG, PDF — الحجم الأقصى: 5MB لكل ملف</p>
+              <p className="text-xs text-muted-foreground">الملفات المقبولة: JPG, PNG, WEBP, PDF — الحجم الأقصى: 5MB لكل ملف</p>
             </div>
           )}
         </div>

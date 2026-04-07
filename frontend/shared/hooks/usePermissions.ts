@@ -73,7 +73,7 @@ const DEFAULT_PERMISSIONS: Record<AppRole, Record<string, PagePermission>> = {
     employee_tiers: { can_view: true, can_edit: false, can_delete: false },
   },
   operations: {
-    employees: { can_view: true, can_edit: false, can_delete: false },
+    employees: { can_view: true, can_edit: true, can_delete: false },
     attendance: { can_view: false, can_edit: false, can_delete: false },
     orders: { can_view: true, can_edit: true, can_delete: false },
     ai_analytics: { can_view: true, can_edit: false, can_delete: false },

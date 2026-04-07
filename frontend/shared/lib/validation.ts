@@ -6,6 +6,7 @@ export type FileValidationOptions = {
 export const DEFAULT_ALLOWED_UPLOAD_TYPES = [
   'image/png',
   'image/jpeg',
+  'image/webp',
   'application/pdf',
 ];
 

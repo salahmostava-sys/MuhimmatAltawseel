@@ -13,6 +13,7 @@ export interface Alert {
 export type EmployeeAlertRow = {
   id: string;
   name: string;
+  commercial_record?: string | null;
   residency_expiry: string | null;
   probation_end_date: string | null;
   health_insurance_expiry?: string | null;
@@ -84,12 +85,16 @@ const pushEmployeeExpiryAlerts = (
   threshold: string,
   today: Date
 ) => {
+  const employeeLabel = emp.commercial_record?.trim()
+    ? `${emp.name} • السجل: ${emp.commercial_record.trim()}`
+    : emp.name;
+
   if (emp.residency_expiry && emp.residency_expiry <= threshold) {
     const daysLeft = differenceInDays(parseISO(emp.residency_expiry), today);
     generatedAlerts.push({
       id: `res-${emp.id}`,
       type: "residency",
-      entityName: emp.name,
+      entityName: employeeLabel,
       dueDate: emp.residency_expiry,
       daysLeft,
       severity: getStandardSeverity(daysLeft),
@@ -102,7 +107,7 @@ const pushEmployeeExpiryAlerts = (
     generatedAlerts.push({
       id: `prob-${emp.id}`,
       type: "probation",
-      entityName: emp.name,
+      entityName: employeeLabel,
       dueDate: emp.probation_end_date,
       daysLeft,
       severity: getProbationSeverity(daysLeft),
@@ -115,7 +120,7 @@ const pushEmployeeExpiryAlerts = (
     generatedAlerts.push({
       id: `hi-${emp.id}`,
       type: "health_insurance",
-      entityName: emp.name,
+      entityName: employeeLabel,
       dueDate: emp.health_insurance_expiry,
       daysLeft,
       severity: getStandardSeverity(daysLeft),
@@ -128,7 +133,7 @@ const pushEmployeeExpiryAlerts = (
     generatedAlerts.push({
       id: `lic-${emp.id}`,
       type: "driving_license",
-      entityName: emp.name,
+      entityName: employeeLabel,
       dueDate: emp.license_expiry,
       daysLeft,
       severity: getStandardSeverity(daysLeft),
