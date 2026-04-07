@@ -1,23 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, forwardRef } from 'react';
 import { Check, Loader2, Pencil } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Checkbox } from '@shared/components/ui/checkbox';
 import { Input } from '@shared/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
 
-function InlineEditTrigger(props: Readonly<{
+const InlineEditTrigger = forwardRef<HTMLButtonElement, Readonly<{
   children: React.ReactNode;
   saving?: boolean;
   title?: string;
-}>) {
-  const { children, saving = false, title = 'اضغط للتعديل' } = props;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
+}>>((props, ref) => {
+  const { children, saving = false, title = 'اضغط للتعديل', onClick, ...rest } = props;
 
   return (
     <button
+      ref={ref}
       type="button"
       title={title}
       className="group inline-flex min-h-7 max-w-full items-center justify-center gap-1 rounded-md px-1.5 py-1 transition-colors hover:bg-muted/40"
-      onClick={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick?.(event);
+      }}
+      {...(rest as any)}
     >
       <span className="min-w-0">{children}</span>
       {saving ? (
@@ -27,7 +33,8 @@ function InlineEditTrigger(props: Readonly<{
       )}
     </button>
   );
-}
+});
+InlineEditTrigger.displayName = 'InlineEditTrigger';
 
 export type InlineSelectEditorProps = Readonly<{
   value: string;

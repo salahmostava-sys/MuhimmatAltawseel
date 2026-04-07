@@ -18,7 +18,7 @@ import { getEmployeeCities } from '@modules/employees/model/employeeUtils';
 import { useEmployeesData } from '@modules/employees/hooks/useEmployees';
 import { applyEmployeeFilters, sortEmployees } from '@modules/employees/model/employeeUtils';
 import { EmployeeActionsBar } from '@modules/employees/components/EmployeeActionsBar';
-import { EmployeeIqamaSummary } from '@modules/employees/components/EmployeeIqamaSummary';
+
 import { EmployeeDetailedTable } from '@modules/employees/components/EmployeeTable';
 import { useEmployeeActions } from '@modules/employees/hooks/useEmployeeTable';
 import Loading from '@shared/components/Loading';
@@ -220,10 +220,6 @@ const Employees = () => {
         totalCount={data.length}
       />
 
-      <EmployeeIqamaSummary
-        employees={data}
-        alertDays={settings?.iqama_alert_days ?? 90}
-      />
 
       <EmployeeDetailedTable
         activeCols={activeCols}
