@@ -26,7 +26,19 @@ export function toServiceError(error: unknown, context?: string): ServiceError {
     typeof (error as { message?: unknown }).message === "string" &&
     (error as { message: string }).message
   ) {
-    message = (error as { message: string }).message;
+    const rawMessage = (error as { message: string }).message;
+    if (rawMessage.includes("Edge Function returned a non-2xx status code")) {
+      const ctx = (error as { context?: unknown }).context;
+      if (ctx && typeof ctx === "object" && "error" in ctx && typeof (ctx as { error?: unknown }).error === "string") {
+        message = (ctx as { error: string }).error;
+      } else if (ctx && typeof ctx === "object" && "message" in ctx && typeof (ctx as { message?: unknown }).message === "string") {
+        message = (ctx as { message: string }).message;
+      } else {
+        message = rawMessage;
+      }
+    } else {
+      message = rawMessage;
+    }
   } else if (context) {
     message = `Service failure: ${context}`;
   } else {
