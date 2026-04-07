@@ -110,9 +110,9 @@ export function PlatformAppsEditor({
                 className="h-7 px-2 text-xs"
               >
                 {saving ? (
-                  <Loader2 size={12} className="animate-spin ml-1" />
+                  <Loader2 size={12} className="animate-spin me-1" />
                 ) : (
-                  <Check size={12} className="ml-1" />
+                  <Check size={12} className="me-1" />
                 )}
                 حفظ
               </Button>

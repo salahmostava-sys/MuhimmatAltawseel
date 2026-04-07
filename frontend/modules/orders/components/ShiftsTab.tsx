@@ -144,11 +144,11 @@ export function ShiftsTab({
         {canEdit && (
           <div className="flex items-center gap-2">
             <Button size="sm" variant="outline" onClick={handleAddRow}>
-              <Plus size={14} className="ml-1" />
+              <Plus size={14} className="me-1" />
               إضافة سطر
             </Button>
             <Button size="sm" onClick={handleSave} disabled={saving}>
-              {saving && <Loader2 size={14} className="animate-spin ml-1" />}
+              {saving && <Loader2 size={14} className="animate-spin me-1" />}
               حفظ
             </Button>
           </div>

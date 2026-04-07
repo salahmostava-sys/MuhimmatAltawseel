@@ -39,7 +39,7 @@ function RankingColumn(props: Readonly<{
                     {row.activeDays} يوم • متوسط {row.avgOrdersPerDay.toFixed(1)} • {trendLabel(row.trendCode)}
                   </p>
                 </div>
-                <div className="text-left">
+                <div className="text-start">
                   <p className="text-lg font-black text-foreground">{row.totalOrders.toLocaleString()}</p>
                   <p className={`text-[11px] font-bold ${row.growthPct >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
                     {row.growthPct >= 0 ? '+' : ''}

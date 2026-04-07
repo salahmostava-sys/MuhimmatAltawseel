@@ -7,6 +7,12 @@ function formatPercent(value: number) {
   return `${rounded > 0 ? '+' : ''}${rounded.toFixed(1)}%`;
 }
 
+/** Extract only the first two names from a full name */
+function getFirstTwoNames(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/);
+  return parts.slice(0, 2).join(' ');
+}
+
 function alertLabel(alert: PerformanceAlert) {
   switch (alert.alertType) {
     case 'declining':
@@ -43,7 +49,7 @@ function StatCard(props: Readonly<{
         <Icon size={18} />
       </div>
       <div className="mt-3">
-        <p className="text-2xl font-black text-foreground leading-none">{value}</p>
+        <p className="text-xl font-black text-foreground leading-tight">{value}</p>
         <p className="text-xs font-semibold text-foreground/75 mt-2">{label}</p>
         {sub ? <p className="text-[11px] text-muted-foreground mt-1">{sub}</p> : null}
       </div>
@@ -129,9 +135,9 @@ export function DashboardPerformanceOverviewTab(props: Readonly<{
   }
 
   const { summary, comparison, distribution, ordersByApp, ordersByCity, rankings, alerts, targets } = dashboard;
-  const bestToday = summary.topPerformerToday?.employeeName ?? 'لا يوجد';
+  const bestToday = summary.topPerformerToday?.employeeName ? getFirstTwoNames(summary.topPerformerToday.employeeName) : 'لا يوجد';
   const bestTodayOrders = summary.topPerformerToday?.totalOrders ?? 0;
-  const lowMonth = summary.lowPerformerMonth?.employeeName ?? 'لا يوجد';
+  const lowMonth = summary.lowPerformerMonth?.employeeName ? getFirstTwoNames(summary.lowPerformerMonth.employeeName) : 'لا يوجد';
   const lowMonthOrders = summary.lowPerformerMonth?.totalOrders ?? 0;
 
   return (

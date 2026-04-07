@@ -34,7 +34,7 @@ export const PlatformAccountsHeader = ({
           <p className="page-subtitle">
             {loading ? 'جارٍ التحميل...' : `${accountsCount} حساب - ${activeCount} نشط`}
             {warnCount > 0 && (
-              <span className="text-destructive mr-2 font-semibold">
+              <span className="text-destructive ms-2 font-semibold">
                 · {warnCount} إقامة تحتاج متابعة
               </span>
             )}

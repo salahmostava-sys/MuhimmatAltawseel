@@ -39,7 +39,7 @@ export function DashboardSupervisorTargetsCard({ loading, rows }: Props) {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[560px]">
+            <table className="w-full text-sm min-w-[560px]" dir="rtl">
               <thead className="bg-muted/40">
                 <tr>
                   <th className="px-3 py-2 text-right">المشرف</th>

@@ -78,7 +78,7 @@ export function SalaryDetailDialog(props: Readonly<SalaryDetailDialogProps>) {
                       <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: pc?.header || 'hsl(var(--primary))' }} />
                       <div>
                         <span className="font-medium text-xs text-foreground">{p}</span>
-                        <span className="text-[10px] text-muted-foreground mr-1.5">{activitySummary}</span>
+                        <span className="text-[10px] text-muted-foreground ms-1.5">{activitySummary}</span>
                       </div>
                     </div>
                     <span className="font-semibold text-xs" style={{ color: pc?.header || 'hsl(var(--primary))' }}>{salary.toLocaleString()} ر.س</span>

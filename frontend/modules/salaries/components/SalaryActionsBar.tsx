@@ -72,7 +72,7 @@ export function SalaryActionsBar(props: Readonly<SalaryActionsBarProps>) {
           </button>
         ))}
       </div>
-      <div className="flex gap-2 mr-auto items-center">
+      <div className="flex gap-2 ms-auto items-center">
         <div className="flex rounded-lg border border-border overflow-hidden">
           <button
             onClick={() => setViewMode('table')}
@@ -113,11 +113,11 @@ export function SalaryActionsBar(props: Readonly<SalaryActionsBarProps>) {
               onClick={startBatchZipExport}
               disabled={batchQueue.length > 0}
             >
-              <Archive size={13} className="ml-2" />
+              <Archive size={13} className="me-2" />
               {batchQueue.length > 0 ? `جارٍ التصدير ${batchIndex}/${batchQueue.length}...` : 'تحميل ZIP كل الكشوف'}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={exportMergedPDF}>
-              <FileText size={13} className="ml-2" /> PDF مدمج للكل
+              <FileText size={13} className="me-2" /> PDF مدمج للكل
             </DropdownMenuItem>
             <DropdownMenuItem onClick={openTemplateEditor} className="text-primary font-semibold">
               ⚙️ إدارة قوالب الكشوف

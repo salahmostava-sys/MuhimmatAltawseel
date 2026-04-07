@@ -84,7 +84,7 @@ const Attendance = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex items-center rounded-xl bg-muted/40 p-1 px-3 border border-border/50 text-[11px] font-bold text-muted-foreground mr-1">
+          <div className="inline-flex items-center rounded-xl bg-muted/40 p-1 px-3 border border-border/50 text-[11px] font-bold text-muted-foreground ms-1">
             <CalendarDays size={13} className="me-1.5 text-primary/70" />
             <span>فترة: {MONTHS[Number(selectedMonth)]} {selectedYear}</span>
           </div>

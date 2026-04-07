@@ -55,7 +55,7 @@ export const PlatformHistoryDialog = ({
                   <p className="text-xs font-bold text-foreground border-b border-border pb-1">
                     شهر {group.month} - {group.count} تعيين
                     {group.hasMultipleAssignments && (
-                      <span className="font-normal text-muted-foreground mr-2">
+                      <span className="font-normal text-muted-foreground ms-2">
                         (تعاقب عدة مناديب على نفس الحساب)
                       </span>
                     )}

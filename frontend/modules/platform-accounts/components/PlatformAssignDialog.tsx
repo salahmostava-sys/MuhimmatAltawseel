@@ -69,7 +69,7 @@ export const PlatformAssignDialog = ({
             <div className="flex items-center gap-2 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg p-3 text-sm">
               <span className="font-medium">المندوب الحالي:</span>
               <span>{assignTarget.current_employee.name}</span>
-              <span className="text-amber-600 text-xs mr-auto">
+              <span className="text-amber-600 text-xs ms-auto">
                 سيتم إغلاق تعيينه تلقائيًا
               </span>
             </div>
@@ -100,7 +100,7 @@ export const PlatformAssignDialog = ({
                 {selectedEmployeePreview.nationalId && (
                   <span className="block">
                     رقم الإقامة في ملف الموظف:
-                    <span className="font-mono dir-ltr inline-block mr-1">
+                    <span className="font-mono dir-ltr inline-block ms-1">
                       {selectedEmployeePreview.nationalId}
                     </span>
                   </span>
@@ -108,7 +108,7 @@ export const PlatformAssignDialog = ({
                 {selectedEmployeePreview.residencyExpiryLabel && (
                   <span className="block">
                     انتهاء الإقامة (ملف الموظف):
-                    <span className="font-medium mr-1">
+                    <span className="font-medium ms-1">
                       {selectedEmployeePreview.residencyExpiryLabel}
                     </span>
                   </span>

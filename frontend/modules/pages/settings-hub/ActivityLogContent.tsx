@@ -95,7 +95,7 @@ const formatJson = (obj: Record<string, unknown> | null) => {
 
 const getHeaderAlignmentClass = (index: number, isRTL: boolean) => {
   if (index === 2) return 'text-center';
-  return isRTL ? 'text-right' : 'text-left';
+  return isRTL ? 'text-start' : 'text-end';
 };
 
 const SKELETON_ROWS = [
@@ -213,7 +213,7 @@ export default function ActivityLogContent() {
             {`${totalCount.toLocaleString()} سجل محفوظ`}
           </p>
         </div>
-        <div className="flex items-center gap-2 mr-auto">
+        <div className="flex items-center gap-2 ms-auto">
           <Button variant="outline" size="sm" className="gap-2 h-8" onClick={() => void refetchLogs()}>
             <RefreshCw size={13} /> تحديث
           </Button>

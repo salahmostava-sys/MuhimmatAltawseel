@@ -192,7 +192,7 @@ export function AppWorkTypeSettings({ appId, appName, currentWorkType, onWorkTyp
 
         <div className="flex justify-end gap-2 pt-4">
           <Button onClick={handleSave} disabled={saving}>
-            {saving && <Loader2 className="animate-spin size-4 ml-2" />}
+            {saving && <Loader2 className="animate-spin size-4 me-2" />}
             حفظ الإعدادات
           </Button>
         </div>

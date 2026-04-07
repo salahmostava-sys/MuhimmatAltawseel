@@ -119,7 +119,7 @@ export function OrderDetailsModal({ row, empPlatformScheme }: OrderDetailsModalP
                         )}
                       </div>
                     </div>
-                    <div className="text-left">
+                    <div className="text-start">
                       <div className="font-semibold">{activityLabel}</div>
                       <div className="text-xs text-success font-medium">
                         {formatCurrency(salary)}

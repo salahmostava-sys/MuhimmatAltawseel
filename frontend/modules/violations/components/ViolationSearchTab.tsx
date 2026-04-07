@@ -92,7 +92,7 @@ export default function ViolationSearchTab({
                   >
                     <span className="font-semibold text-foreground">{v.plate_number}</span>
                     <span className="text-xs text-muted-foreground">
-                      {v.plate_number_en && <span className="ml-2 text-muted-foreground/60">{v.plate_number_en}</span>}
+                      {v.plate_number_en && <span className="ms-2 text-muted-foreground/60">{v.plate_number_en}</span>}
                       {v.brand && <span>{v.brand} · </span>}
                       <span>{v.type === 'motorcycle' ? 'دراجة' : 'سيارة'}</span>
                     </span>

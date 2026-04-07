@@ -17,13 +17,13 @@ export function SalarySchemeSelector(props: Readonly<{
         {appsWithoutScheme.length > 0 && (
           <p className="text-xs text-muted-foreground mt-0.5">
             بدون سكيمة رواتب:{' '}
-            <span className="font-semibold text-warning mr-1">{appsWithoutScheme.join(' · ')}</span>
+            <span className="font-semibold text-warning ms-1">{appsWithoutScheme.join(' · ')}</span>
           </p>
         )}
         {appsWithoutPricingRulesDeduped.length > 0 && (
           <p className="text-xs text-muted-foreground mt-0.5">
             بدون Pricing Rules:{' '}
-            <span className="font-semibold text-warning mr-1">{appsWithoutPricingRulesDeduped.join(' · ')}</span>
+            <span className="font-semibold text-warning ms-1">{appsWithoutPricingRulesDeduped.join(' · ')}</span>
           </p>
         )}
       </div>

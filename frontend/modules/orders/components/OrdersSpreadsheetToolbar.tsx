@@ -123,13 +123,13 @@ export function OrdersSpreadsheetToolbar(props: Props) {
         <span className="whitespace-nowrap">
           <span className="text-muted-foreground">إجمالي الطلبات:</span>{' '}
           <span className="font-bold tabular-nums text-foreground">{monthGrandTotal.toLocaleString()}</span>
-          <span className="text-muted-foreground mr-0.5"> طلب</span>
+          <span className="text-muted-foreground ms-0.5"> طلب</span>
         </span>
         <span className="hidden sm:inline h-3 w-px bg-border" aria-hidden />
         <span className="whitespace-nowrap">
           <span className="text-muted-foreground">شهري:</span>{' '}
           <span className="font-semibold tabular-nums text-foreground">{monthDailyAvg.toLocaleString()}</span>
-          <span className="text-muted-foreground mr-0.5"> /يوم</span>
+          <span className="text-muted-foreground ms-0.5"> /يوم</span>
         </span>
         <span className="h-3 w-px bg-border" aria-hidden />
         <span className="whitespace-nowrap">
@@ -198,7 +198,7 @@ export function OrdersSpreadsheetToolbar(props: Props) {
         </>
       )}
 
-      <div className="flex items-center gap-1.5 mr-auto shrink-0">
+      <div className="flex items-center gap-1.5 ms-auto shrink-0">
         <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={onImportChange} />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
