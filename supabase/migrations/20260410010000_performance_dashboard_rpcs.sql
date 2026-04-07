@@ -351,8 +351,11 @@ BEGIN
         'activeRiders', COALESCE((SELECT COUNT(*)::INTEGER FROM current_month WHERE total_orders > 0), 0),
         'activeEmployees', COALESCE((SELECT total FROM active_employees), 0),
         'avgOrdersPerRider', COALESCE((
-          SELECT ROUND(current_orders::NUMERIC / NULLIF(COUNT(*) FILTER (WHERE total_orders > 0), 0), 2)
-          FROM month_comparison, current_month
+          SELECT ROUND(
+            COALESCE((SELECT current_orders FROM month_comparison), 0)::NUMERIC
+            / NULLIF((SELECT COUNT(*)::INTEGER FROM current_month WHERE total_orders > 0), 0),
+            2
+          )
         ), 0),
         'topPerformerToday', (
           SELECT jsonb_build_object(
