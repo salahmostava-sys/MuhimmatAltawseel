@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Credentials': 'true',
 };
 
 const isUuid = (value: string) =>
@@ -30,12 +31,20 @@ Deno.serve(async (req) => {
 
   try {
     if (req.method !== 'POST') {
-      throw new Error('Method not allowed');
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 405,
+      });
     }
 
     // Verify caller is authenticated and is admin
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) throw new Error('No authorization header');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'No authorization header' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      });
+    }
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -44,7 +53,12 @@ Deno.serve(async (req) => {
     );
 
     const { data: { user: callerUser } } = await supabaseClient.auth.getUser();
-    if (!callerUser) throw new Error('Not authenticated');
+    if (!callerUser) {
+      return new Response(JSON.stringify({ error: 'Not authenticated' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      });
+    }
 
     // Check caller is admin
     const { data: roleData } = await supabaseClient
@@ -53,7 +67,12 @@ Deno.serve(async (req) => {
       .eq('user_id', callerUser.id)
       .maybeSingle();
 
-    if (roleData?.role !== 'admin') throw new Error('Only admins can update users');
+    if (roleData?.role !== 'admin') {
+      return new Response(JSON.stringify({ error: 'Only admins can update users' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 403,
+      });
+    }
 
     // Use service role to update user
     const supabaseAdmin = createClient(
