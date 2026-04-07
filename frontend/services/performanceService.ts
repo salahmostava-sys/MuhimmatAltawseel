@@ -213,6 +213,7 @@ export interface OrderImportBatch {
   imported_rows: number;
   skipped_rows: number;
   error_count: number;
+  error_summary: Array<{ row?: number; reason: string; details?: string }> | null;
   started_at: string;
   completed_at: string | null;
 }
@@ -283,7 +284,7 @@ export const performanceService = {
     const { data, error } = await sb
       .from('order_import_batches')
       .select(
-        'id, month_year, source_type, file_name, status, total_rows, imported_rows, skipped_rows, error_count, started_at, completed_at',
+        'id, month_year, source_type, file_name, status, total_rows, imported_rows, skipped_rows, error_count, error_summary, started_at, completed_at',
       )
       .eq('month_year', monthYear)
       .order('started_at', { ascending: false })
@@ -304,6 +305,17 @@ export const performanceService = {
     }
 
     return (data ?? []) as OrderImportBatch[];
+  },
+
+  deleteImportBatch: async (batchId: string) => {
+    const { error } = await sb
+      .from('order_import_batches')
+      .delete()
+      .eq('id', batchId);
+
+    if (error) {
+      throw toServiceError(error, 'performanceService.deleteImportBatch');
+    }
   },
 
   captureSalaryMonthSnapshot: async (monthYear: string) => {

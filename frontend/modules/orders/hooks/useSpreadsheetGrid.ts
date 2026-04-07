@@ -376,6 +376,17 @@ export function useSpreadsheetGrid() {
     }
   };
 
+  const handleDeleteImportBatch = useCallback(async (batchId: string) => {
+    try {
+      await performanceService.deleteImportBatch(batchId);
+      toast.success('تم حذف سجل الاستيراد');
+      await queryClient.invalidateQueries({ queryKey: ['orders', uid, 'import-history', monthKey] });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'فشل حذف السجل';
+      toast.error(TOAST_ERROR_GENERIC, { description: message });
+    }
+  }, [monthKey, queryClient, uid]);
+
   const seqColMin = 36;
   const repColMin = 132;
 
@@ -438,6 +449,7 @@ export function useSpreadsheetGrid() {
     unmatchedNames,
     handleNameMappingConfirm,
     handleNameMappingCancel,
+    handleDeleteImportBatch,
     seqColMin,
     repColMin,
   };

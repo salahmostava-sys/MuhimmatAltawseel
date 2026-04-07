@@ -50,7 +50,7 @@ export const SpreadsheetGridTab = React.memo(() => {
       />
 
       <OrdersSpreadsheetHint isMonthLocked={g.isMonthLocked} />
-      <OrdersImportHistorySummary batches={g.importHistory} />
+      <OrdersImportHistorySummary batches={g.importHistory} onDelete={g.handleDeleteImportBatch} />
 
       <OrdersGridTable
         loading={g.loading}
