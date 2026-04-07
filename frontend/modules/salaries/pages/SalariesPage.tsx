@@ -474,6 +474,7 @@ const Salaries = () => {
             filtered={filtered}
             computeRow={computeRow}
             approveRow={actions.approveRow}
+            approvingRowId={actions.approvingRowId}
             markAsPaid={actions.markAsPaid}
             markingPaid={markingPaid}
             setPayslipRow={setPayslipRow}
@@ -497,6 +498,7 @@ const Salaries = () => {
           updateRow={actions.updateRow}
           updatePlatformOrders={actions.updatePlatformOrders}
           approveRow={actions.approveRow}
+          approvingRowId={actions.approvingRowId}
           markAsPaid={actions.markAsPaid}
           markingPaid={markingPaid}
           editingCell={editingCell}

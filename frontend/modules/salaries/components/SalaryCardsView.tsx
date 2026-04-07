@@ -8,13 +8,14 @@ interface SalaryCardsViewProps {
   filtered: SalaryRow[];
   computeRow: (r: SalaryRow) => { totalPlatformSalary: number; totalAdditions: number; totalWithSalary: number; totalDeductions: number; netSalary: number; remaining: number };
   approveRow: (id: string) => void;
+  approvingRowId: string | null;
   markAsPaid: (row: SalaryRow) => void;
   markingPaid: string | null;
   setPayslipRow: React.Dispatch<React.SetStateAction<SalaryRow | null>>;
 }
 
 export function SalaryCardsView(props: Readonly<SalaryCardsViewProps>) {
-  const { loadingData, filtered, computeRow, approveRow, markAsPaid, markingPaid, setPayslipRow } = props;
+  const { loadingData, filtered, computeRow, approveRow, approvingRowId, markAsPaid, markingPaid, setPayslipRow } = props;
 
   return (
     <div>
@@ -79,8 +80,8 @@ export function SalaryCardsView(props: Readonly<SalaryCardsViewProps>) {
                 </div>
                 <div className="flex gap-2">
                   {needsApproval && (
-                    <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1 text-success border-success/30 hover:bg-success/10" onClick={() => approveRow(r.id)}>
-                      <CheckCircle size={11} /> اعتماد
+                    <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1 text-success border-success/30 hover:bg-success/10" onClick={() => approveRow(r.id)} disabled={approvingRowId === r.id}>
+                      {approvingRowId === r.id ? '...' : <><CheckCircle size={11} /> اعتماد</>}
                     </Button>
                   )}
                   {r.status === 'approved' && !r.isDirty && (

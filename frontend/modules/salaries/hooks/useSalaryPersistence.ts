@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { sendWhatsAppMessage } from '@shared/lib/whatsapp';
 import { isEmployeeIdUuid, isValidSalaryMonthYear } from '@shared/lib/salaryValidation';
 import { salaryDataService } from '@services/salaryDataService';
@@ -49,6 +49,8 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
   } = params;
 
   const { run } = useSafeAction({ toast, errorTitle: 'حدث خطأ' });
+
+  const [approvingRowId, setApprovingRowId] = useState<string | null>(null);
 
   const resolveBaseSalaryForPersistence = useCallback(
     (row: SalaryRow, serverBaseSalary: number) => {
@@ -161,11 +163,15 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
         return;
       }
 
+      setApprovingRowId(id);
       const calcResult = await run(
         async () => computeServerSalaryForPayment(row, selectedMonth),
         { errorTitle: 'تعذّر حساب الراتب من الخادم' },
       );
-      if (!calcResult) return;
+      if (!calcResult) {
+        setApprovingRowId(null);
+        return;
+      }
 
       const { manualDeduction, baseSalary, advanceDeduction, externalDeduction, totalAdditions, netSalary } = calcResult;
       const rowSnapshot = buildSalaryRowSnapshot({
@@ -196,7 +202,10 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
         },
         { errorTitle: 'تعذّر حفظ الاعتماد' },
       );
-      if (!saved) return;
+      if (!saved) {
+        setApprovingRowId(null);
+        return;
+      }
 
       refreshMonthSnapshot();
 
@@ -205,6 +214,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
       });
 
       updateRow(id, { status: 'approved', isDirty: false, advanceDeduction, externalDeduction });
+      setApprovingRowId(null);
       toast.success('✅ تم اعتماد الراتب');
 
       if (row.phone) {
@@ -444,6 +454,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
   return {
     updateRow,
     approveRow,
+    approvingRowId,
     markAsPaid,
     approveAll,
     persistEmployeeCity,

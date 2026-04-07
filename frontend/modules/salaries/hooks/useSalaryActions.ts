@@ -170,6 +170,7 @@ export function useSalaryActions(params: UseSalaryActionsParams) {
     persistEmployeeCity: persistence.persistEmployeeCity,
     persistEmployeePaymentMethod: persistence.persistEmployeePaymentMethod,
     approveRow: persistence.approveRow,
+    approvingRowId: persistence.approvingRowId,
     markAsPaid: persistence.markAsPaid,
     approveAll: persistence.approveAll,
     computeServerSalaryForPayment: persistence.computeServerSalaryForPayment,

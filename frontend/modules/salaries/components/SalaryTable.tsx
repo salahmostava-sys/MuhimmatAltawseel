@@ -36,6 +36,7 @@ interface SalaryTableProps {
   updateRow: (id: string, patch: Partial<SalaryRow>) => void;
   updatePlatformOrders: (id: string, platform: string, value: number) => void;
   approveRow: (id: string) => void;
+  approvingRowId: string | null;
   markAsPaid: (row: SalaryRow) => void;
   markingPaid: string | null;
   editingCell: { rowId: string; platform: string } | null;
@@ -63,6 +64,7 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
     updateRow,
     updatePlatformOrders,
     approveRow,
+    approvingRowId,
     markAsPaid,
     markingPaid,
     editingCell,
@@ -374,8 +376,8 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
                     <td className={`${tdClass} border-l border-border`}>
                       <div className="flex items-center justify-center gap-1.5">
                         {needsApproval && (
-                          <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1 text-success border-success/40 hover:bg-success/10" onClick={() => approveRow(r.id)}>
-                            <CheckCircle size={11} /> اعتماد
+                          <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1 text-success border-success/40 hover:bg-success/10" onClick={() => approveRow(r.id)} disabled={approvingRowId === r.id}>
+                            {approvingRowId === r.id ? <Loader2 size={11} className="animate-spin" /> : <><CheckCircle size={11} /> اعتماد</>}
                           </Button>
                         )}
                         {r.status === 'approved' && !r.isDirty && (
