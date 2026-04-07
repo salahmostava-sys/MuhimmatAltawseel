@@ -37,7 +37,7 @@ const parsePositiveIntOrNull = (raw: string) => {
   return n;
 };
 
-type DashboardTabKey = 'overview' | 'analytics';
+type DashboardTabKey = 'overview' | 'analytics' | 'ranking';
 
 const getCityKey = (city: string | null) => getDashboardCityKey(city);
 
@@ -311,4 +311,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export { default } from './DashboardPerformancePage';

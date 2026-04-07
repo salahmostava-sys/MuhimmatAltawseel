@@ -25,6 +25,12 @@ export type BulkUpsertFailure = {
   error: string;
 };
 
+export type ReplaceMonthDataMeta = {
+  sourceType?: 'manual' | 'excel' | 'api';
+  fileName?: string | null;
+  targetAppId?: string | null;
+};
+
 export interface OrderFilter {
   employeeId?: string;
   appId?: string;
@@ -89,6 +95,21 @@ function getMonthDateRange(monthYear: string) {
   const lastDay = new Date(Number(year), Number(month), 0).getDate();
   const to = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
   return { from, to };
+}
+
+function isMissingReplaceMonthRpc(error: unknown): boolean {
+  const message =
+    error &&
+    typeof error === 'object' &&
+    'message' in error &&
+    typeof (error as { message?: unknown }).message === 'string'
+      ? (error as { message: string }).message
+      : '';
+
+  return (
+    message.includes('replace_daily_orders_month_rpc')
+    && message.includes('Could not find the function')
+  );
 }
 
 export const orderService = {
@@ -291,7 +312,39 @@ export const orderService = {
     return data ?? [];
   },
 
-  replaceMonthData: async (monthYear: string, rows: DailyOrderUpsertRow[], chunkSize = 200) => {
+  replaceMonthData: async (
+    monthYear: string,
+    rows: DailyOrderUpsertRow[],
+    chunkSize = 200,
+    meta: ReplaceMonthDataMeta = {},
+  ) => {
+    try {
+      const { data, error } = await supabase.rpc('replace_daily_orders_month_rpc', {
+        p_month_year: monthYear,
+        p_rows: rows,
+        p_source_type: meta.sourceType ?? 'manual',
+        p_file_name: meta.fileName ?? null,
+        p_target_app_id: meta.targetAppId ?? null,
+      });
+
+      if (error) {
+        if (!isMissingReplaceMonthRpc(error)) {
+          throw toServiceError(error, 'orderService.replaceMonthData.rpc');
+        }
+      } else {
+        const resultRow = Array.isArray(data) ? data[0] : data;
+        return {
+          saved: Number(resultRow?.saved_rows ?? rows.length),
+          failed: [] as BulkUpsertFailure[],
+          batchId: typeof resultRow?.batch_id === 'string' ? resultRow.batch_id : null,
+        };
+      }
+    } catch (error) {
+      if (!isMissingReplaceMonthRpc(error)) {
+        throw error;
+      }
+    }
+
     const { from, to } = getMonthDateRange(monthYear);
     const { error: deleteError } = await supabase
       .from('daily_orders')
@@ -304,10 +357,11 @@ export const orderService = {
     }
 
     if (rows.length === 0) {
-      return { saved: 0, failed: [] as BulkUpsertFailure[] };
+      return { saved: 0, failed: [] as BulkUpsertFailure[], batchId: null };
     }
 
-    return orderService.bulkUpsert(rows, chunkSize);
+    const fallbackResult = await orderService.bulkUpsert(rows, chunkSize);
+    return { ...fallbackResult, batchId: null };
   },
 
   bulkUpsert: async (rows: DailyOrderUpsertRow[], chunkSize = 200) => {

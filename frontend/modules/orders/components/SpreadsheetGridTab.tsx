@@ -9,6 +9,7 @@ import { OrdersSpreadsheetHint, OrdersSpreadsheetToolbar } from '@modules/orders
 import { ImportPlatformDialog } from '@modules/orders/components/ImportPlatformDialog';
 import { BulkDeleteOrdersDialog } from '@modules/orders/components/BulkDeleteOrdersDialog';
 import { NameMappingDialog } from '@modules/orders/components/NameMappingDialog';
+import { OrdersImportHistorySummary } from '@modules/orders/components/OrdersImportHistorySummary';
 
 export const SpreadsheetGridTab = React.memo(() => {
   const g = useSpreadsheetGrid();
@@ -49,6 +50,7 @@ export const SpreadsheetGridTab = React.memo(() => {
       />
 
       <OrdersSpreadsheetHint isMonthLocked={g.isMonthLocked} />
+      <OrdersImportHistorySummary batches={g.importHistory} />
 
       <OrdersGridTable
         loading={g.loading}

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type React from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMonthlyActiveEmployeeIds } from '@shared/hooks/useMonthlyActiveEmployeeIds';
 import { usePermissions } from '@shared/hooks/usePermissions';
 import { toast } from '@shared/components/ui/sonner';
 import { TOAST_ERROR_GENERIC } from '@shared/lib/toastMessages';
 import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { orderService } from '@services/orderService';
+import { performanceService } from '@services/performanceService';
 import { bulkDeleteService } from '@services/bulkDeleteService';
 import type { DailyData } from '@modules/orders/types';
 import type { OrdersPopoverState } from '@shared/components/orders/OrdersCellPopover';
@@ -62,12 +63,19 @@ export function useSpreadsheetGrid() {
 
   const sq = useSpreadsheetQueries(uid, enabled, year, month, activeEmployeeIdsInMonth);
   const canEditMonth = permissions.can_edit && !isMonthLocked;
+  const { data: importHistory = [] } = useQuery({
+    queryKey: ['orders', uid, 'import-history', monthKey],
+    enabled,
+    staleTime: 60_000,
+    queryFn: async () => performanceService.getImportHistory(monthKey),
+  });
 
   const invalidateMonthDependencies = useCallback(async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['orders', uid] }),
       queryClient.invalidateQueries({ queryKey: ['employees', uid, 'active-ids', monthKey] }),
       queryClient.invalidateQueries({ queryKey: ['salaries', uid, 'base-context', monthKey] }),
+      queryClient.invalidateQueries({ queryKey: ['orders', uid, 'import-history', monthKey] }),
     ]);
   }, [monthKey, queryClient, uid]);
 
@@ -224,7 +232,14 @@ export function useSpreadsheetGrid() {
   };
 
   const persistSpreadsheetData = useCallback(
-    async (nextData: DailyData) => {
+    async (
+      nextData: DailyData,
+      saveMeta?: {
+        sourceType?: 'manual' | 'excel' | 'api';
+        fileName?: string | null;
+        targetAppId?: string | null;
+      },
+    ) => {
       const saved = await saveSpreadsheetMonth({
         isMonthLocked,
         year,
@@ -234,6 +249,7 @@ export function useSpreadsheetGrid() {
         setSaving,
         employees: sq.employees,
         apps: sq.apps,
+        saveMeta,
       });
       if (saved) {
         await invalidateMonthDependencies();
@@ -261,7 +277,11 @@ export function useSpreadsheetGrid() {
       },
     });
     if (importResult?.appliedData && importResult.imported > 0) {
-      await persistSpreadsheetData(importResult.appliedData);
+      await persistSpreadsheetData(importResult.appliedData, {
+        sourceType: 'excel',
+        fileName: pendingImportFile.name,
+        targetAppId: targetAppId ?? null,
+      });
     }
     setPendingImportFile(null);
   };
@@ -296,7 +316,10 @@ export function useSpreadsheetGrid() {
       filteredEmployeeCount: filteredEmployees.length,
     });
 
-  const handleSave = () => void persistSpreadsheetData(data);
+  const handleSave = () =>
+    void persistSpreadsheetData(data, {
+      sourceType: 'manual',
+    });
 
   const handleLockMonth = async () => {
     const my = monthYear(year, month);
@@ -403,6 +426,7 @@ export function useSpreadsheetGrid() {
     handleImportConfirm,
     handleImportCancel,
     showImportDialog,
+    importHistory,
     handleTemplate,
     handlePrint,
     handleSave,

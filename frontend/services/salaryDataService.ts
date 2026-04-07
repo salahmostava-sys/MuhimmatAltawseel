@@ -6,6 +6,7 @@ import { fuelService } from '@services/fuelService';
 import { salaryService } from '@services/salaryService';
 import { advanceService } from '@services/advanceService';
 import { externalDeductionService } from '@services/externalDeductionService';
+import { performanceService } from '@services/performanceService';
 
 export const salaryDataService = {
   async calculateSalaryForEmployeeMonth(
@@ -63,6 +64,10 @@ export const salaryDataService = {
 
   async upsertSalaryRecords(records: Record<string, unknown>[]) {
     await salaryService.upsertMany(records);
+  },
+
+  async captureMonthSnapshot(monthYear: string) {
+    return performanceService.captureSalaryMonthSnapshot(monthYear);
   },
 
   async markInstallmentsDeducted(installmentIds: string[], deductedAtIso: string) {

@@ -171,7 +171,7 @@ describe('shouldIncludeEmployeeInSalaryMonth', () => {
 });
 
 describe('buildSalaryRows', () => {
-  it('recomputes order-based preview salaries from the current scheme when preview earnings drift', () => {
+  it('keeps backend preview salaries as the single source of truth for order-based platforms', () => {
     const rows = buildSalaryRows({
       employees: [
         {
@@ -240,8 +240,8 @@ describe('buildSalaryRows', () => {
     });
 
     expect(rows).toHaveLength(1);
-    expect(rows[0].platformSalaries.Keeta).toBe(2960);
-    expect(rows[0].platformMetrics.Keeta.salary).toBe(2960);
+    expect(rows[0].platformSalaries.Keeta).toBe(2910);
+    expect(rows[0].platformMetrics.Keeta.salary).toBe(2910);
   });
 
   it('restores approved salary rows from the saved sheet snapshot', () => {

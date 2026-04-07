@@ -20,6 +20,7 @@ import {
   type EmployeeProfileDailyOrder,
   type EmployeeProfileSalaryRecord,
 } from '@services/employeeProfileService';
+import { EmployeePerformanceTab } from '@shared/components/employees/EmployeePerformanceTab';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Employee {
@@ -328,6 +329,7 @@ const EmployeeProfile = ({ employee, onBack }: Props) => {
           <TabsTrigger value="attendance" className="gap-1.5"><Clock size={14} /> الحضور</TabsTrigger>
           <TabsTrigger value="salaries" className="gap-1.5"><DollarSign size={14} /> الرواتب الشهرية</TabsTrigger>
           <TabsTrigger value="orders" className="gap-1.5"><TrendingUp size={14} /> الطلبات الشهرية</TabsTrigger>
+          <TabsTrigger value="performance" className="gap-1.5"><TrendingUp size={14} /> الأداء</TabsTrigger>
         </TabsList>
 
         {/* Tab 1: Basic Data */}
@@ -703,6 +705,10 @@ const EmployeeProfile = ({ employee, onBack }: Props) => {
               );
             })()}
           </div>
+        </TabsContent>
+
+        <TabsContent value="performance">
+          <EmployeePerformanceTab employeeId={employee.id} />
         </TabsContent>
 
         {/* Tab 8: Monthly Orders */}

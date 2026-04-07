@@ -6,26 +6,32 @@ import { ar } from 'date-fns/locale';
 import { useTemporalContext } from '@app/providers/TemporalContext';
 import { cn } from '@shared/lib/utils';
 
-export type DashboardTabKey = 'overview' | 'analytics' | 'ranking';
+export type DashboardPerformanceTabKey = 'overview' | 'analytics' | 'ranking';
 
 const DASHBOARD_SHORTCUTS = [
   { to: '/orders', label: 'الطلبات' },
-  { to: '/attendance', label: 'الحضور' },
+  { to: '/employees', label: 'المناديب' },
   { to: '/alerts', label: 'التنبيهات' },
-  { to: '/fuel', label: 'الوقود' },
+  { to: '/salaries', label: 'الرواتب' },
 ] as const;
 
-type DashboardHeaderProps = {
-  activeTab: DashboardTabKey;
-  onTabChange: (tab: DashboardTabKey) => void;
-  onAnalyticsIntent?: () => void;
+type DashboardPerformanceHeaderProps = {
+  activeTab: DashboardPerformanceTabKey;
+  onTabChange: (tab: DashboardPerformanceTabKey) => void;
+  onPrefetchIntent?: () => void;
 };
 
-export function DashboardHeader({
+const TAB_LABELS: Record<DashboardPerformanceTabKey, string> = {
+  overview: 'النظرة العامة',
+  analytics: 'التحليلات',
+  ranking: 'التصنيف',
+};
+
+export function DashboardPerformanceHeader({
   activeTab,
   onTabChange,
-  onAnalyticsIntent,
-}: Readonly<DashboardHeaderProps>) {
+  onPrefetchIntent,
+}: Readonly<DashboardPerformanceHeaderProps>) {
   const { selectedMonth } = useTemporalContext();
 
   return (
@@ -44,33 +50,24 @@ export function DashboardHeader({
         </div>
 
         <div className="flex items-center bg-muted rounded-xl p-1 gap-1 overflow-x-auto">
-          {(['overview', 'analytics', 'ranking'] as const).map((tab) => {
-            const isAnalyticsTab = tab === 'analytics';
-            const isRankingTab = tab === 'ranking';
-
-            return (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => onTabChange(tab)}
-                onFocus={isAnalyticsTab || isRankingTab ? onAnalyticsIntent : undefined}
-                onMouseEnter={isAnalyticsTab || isRankingTab ? onAnalyticsIntent : undefined}
-                onTouchStart={isAnalyticsTab || isRankingTab ? onAnalyticsIntent : undefined}
-                className={cn(
-                  'px-4 py-1.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap',
-                  activeTab === tab ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground/75',
-                )}
-              >
-                {isAnalyticsTab && <TrendingUp size={13} />}
-                {isRankingTab && <Medal size={13} />}
-                {tab === 'overview'
-                  ? 'النظرة العامة'
-                  : tab === 'analytics'
-                    ? 'التحليلات والتوقعات'
-                    : 'التصنيفات'}
-              </button>
-            );
-          })}
+          {(['overview', 'analytics', 'ranking'] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => onTabChange(tab)}
+              onFocus={tab !== 'overview' ? onPrefetchIntent : undefined}
+              onMouseEnter={tab !== 'overview' ? onPrefetchIntent : undefined}
+              onTouchStart={tab !== 'overview' ? onPrefetchIntent : undefined}
+              className={cn(
+                'px-4 py-1.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap',
+                activeTab === tab ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground/75',
+              )}
+            >
+              {tab === 'analytics' ? <TrendingUp size={13} /> : null}
+              {tab === 'ranking' ? <Medal size={13} /> : null}
+              {TAB_LABELS[tab]}
+            </button>
+          ))}
         </div>
       </div>
 

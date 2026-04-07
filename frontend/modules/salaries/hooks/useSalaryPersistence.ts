@@ -58,6 +58,12 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
     [],
   );
 
+  const refreshMonthSnapshot = useCallback(() => {
+    void salaryDataService.captureMonthSnapshot(selectedMonth).catch((error) => {
+      logError('[Salaries] Failed to refresh salary month snapshot', error, { level: 'warn' });
+    });
+  }, [selectedMonth]);
+
   // ── Row updater (shared helper) ───────────────────────────────────────────
 
   const updateRow = useCallback(
@@ -192,6 +198,8 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
       );
       if (!saved) return;
 
+      refreshMonthSnapshot();
+
       void salaryDraftService.deleteDraft(selectedMonth, row.employeeId).catch((e) => {
         logError('[Salaries] Failed to clear draft after approve', e, { level: 'warn' });
       });
@@ -209,7 +217,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
         });
       }
     },
-    [rows, selectedMonth, toast, user, run, computeServerSalaryForPayment, updateRow],
+    [rows, selectedMonth, toast, user, run, computeServerSalaryForPayment, updateRow, refreshMonthSnapshot],
   );
 
   // ── Mark as paid ──────────────────────────────────────────────────────────
@@ -283,9 +291,10 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
         },
         { errorTitle: 'خطأ أثناء الصرف' },
       );
+      refreshMonthSnapshot();
       setMarkingPaid(null);
     },
-    [selectedMonth, toast, user, run, computeServerSalaryForPayment, settleAdvanceInstallments, updateRow, setMarkingPaid],
+    [selectedMonth, toast, user, run, computeServerSalaryForPayment, settleAdvanceInstallments, updateRow, setMarkingPaid, refreshMonthSnapshot],
   );
 
   // ── Approve all ───────────────────────────────────────────────────────────
@@ -364,6 +373,8 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
     );
     if (!saved) return;
 
+    refreshMonthSnapshot();
+
     const approvedIds = records.map((r) => r.employee_id);
     const approvedRowIds = approvalRows
       .filter((r) => approvedIds.includes(r.employeeId))
@@ -390,7 +401,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
       });
     }
     toast.success(`✅ تم اعتماد ${records.length} راتب وحفظها`);
-  }, [filtered, selectedMonth, toast, user, run, setRows, resolveBaseSalaryForPersistence]);
+  }, [filtered, selectedMonth, toast, user, run, setRows, resolveBaseSalaryForPersistence, refreshMonthSnapshot]);
 
   // ── Persist employee fields ───────────────────────────────────────────────
 

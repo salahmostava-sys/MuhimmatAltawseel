@@ -400,66 +400,12 @@ export const buildAdvanceInstallmentMaps = async (
   return { advInstIds, deductedInstIds, advRemainingMap };
 };
 
-const shouldPreferCurrentOrderSchemeSalary = ({
-  previewMetric,
-  scheme,
-}: {
-  previewMetric?: PlatformSalaryMetric | null;
-  scheme: SchemeData | null;
-}) => {
-  if (!previewMetric || !scheme) return false;
-  if (previewMetric.workType !== 'orders') return false;
-  if ((previewMetric.ordersCount || 0) <= 0) return false;
-  if (scheme.scheme_type === 'fixed_monthly') return false;
-  if (previewMetric.calculationMethod === 'shift' || previewMetric.calculationMethod === 'mixed') return false;
-  return true;
-};
-
 const resolvePlatformPreviewMetric = ({
   previewMetric,
-  platformName,
-  attendanceDays,
-  platformNames,
-  appNameToId,
-  rulesMap,
-  appSchemeMap,
-  platformSalaries,
 }: {
   previewMetric?: PlatformSalaryMetric | null;
-  platformName: string;
-  attendanceDays: number;
-  platformNames: string[];
-  appNameToId: Record<string, string>;
-  rulesMap: Record<string, PricingRule[]>;
-  appSchemeMap: Record<string, SchemeData | null>;
-  platformSalaries: Record<string, number>;
 }): PlatformSalaryMetric | null => {
-  if (!previewMetric) return null;
-
-  const scheme = appSchemeMap[platformName] ?? null;
-  if (!shouldPreferCurrentOrderSchemeSalary({ previewMetric, scheme })) {
-    return previewMetric;
-  }
-
-  const recomputedSalary = calculatePlatformSalary({
-    platformName,
-    orders: previewMetric.ordersCount || 0,
-    attendanceDays,
-    platformNames,
-    appNameToId,
-    rulesMap,
-    appSchemeMap,
-    platformSalaries,
-  });
-
-  if (Math.round(previewMetric.salary || 0) === recomputedSalary) {
-    return previewMetric;
-  }
-
-  return {
-    ...previewMetric,
-    salary: recomputedSalary,
-  };
+  return previewMetric ?? null;
 };
 
 export const buildSalaryRows = ({
@@ -514,13 +460,6 @@ export const buildSalaryRows = ({
     for (const platformName of platformNames) {
       const previewMetric = resolvePlatformPreviewMetric({
         previewMetric: preview?.platform_breakdown[platformName],
-        platformName,
-        attendanceDays,
-        platformNames,
-        appNameToId,
-        rulesMap,
-        appSchemeMap,
-        platformSalaries,
       });
       if (previewMetric) {
         platformMetrics[platformName] = previewMetric;

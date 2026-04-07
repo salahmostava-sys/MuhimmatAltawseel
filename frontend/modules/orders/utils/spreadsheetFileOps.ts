@@ -5,7 +5,7 @@ import {
 } from '@shared/lib/toastMessages';
 import { buildOrdersIoHeaders } from '@shared/constants/excelSchemas';
 import { logError, logger } from '@shared/lib/logger';
-import { orderService } from '@services/orderService';
+import { orderService, type ReplaceMonthDataMeta } from '@services/orderService';
 import type { App, DailyData, Employee } from '@modules/orders/types';
 import { ordersImportHeadersMatch } from '@modules/orders/utils/importHelpers';
 import { dateStr, monthLabel, monthYear } from '@modules/orders/utils/dateMonth';
@@ -356,8 +356,9 @@ export async function saveSpreadsheetMonth(params: {
   setSaving: (v: boolean) => void;
   employees: Employee[];
   apps: App[];
+  saveMeta?: ReplaceMonthDataMeta;
 }): Promise<boolean> {
-  const { isMonthLocked, year, month, days, data, setSaving, employees, apps } = params;
+  const { isMonthLocked, year, month, days, data, setSaving, employees, apps, saveMeta } = params;
   if (isMonthLocked) {
     toast.error('الشهر مقفل', {
       description: 'لا يمكن حفظ التغييرات في شهر مقفل'
@@ -418,7 +419,7 @@ export async function saveSpreadsheetMonth(params: {
   }
   
   try {
-    const { saved, failed } = await orderService.replaceMonthData(monthKey, rows);
+    const { saved, failed } = await orderService.replaceMonthData(monthKey, rows, 200, saveMeta);
     
     if (failed.length > 0) {
       logger.error('فشل حفظ بعض السجلات', { meta: { failed: failed.slice(0, 10) } });
