@@ -96,7 +96,7 @@ export function Dashboard() {
                   </div>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-right">
+                  <table dir="rtl" className="w-full text-sm text-right">
                     <thead>
                       <tr className="border-b border-gray-200 text-slate-500">
                         <th className="pb-3 font-medium px-4">السائق</th>
@@ -176,7 +176,7 @@ function DriverRow({ name, orders, rating, status }: { name: string; orders: str
       <td className="py-4 px-4">
         <div className="flex items-center text-slate-900 font-medium">
           {rating}
-          <Star size={14} className="text-slate-300 fill-slate-300 mr-1.5" />
+          <Star size={14} className="text-slate-300 fill-slate-300 ml-1.5" />
         </div>
       </td>
       <td className="py-4 px-4">

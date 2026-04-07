@@ -199,7 +199,7 @@ export function Dashboard() {
                         <span className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold border border-slate-200/50 shadow-sm">
                           {activity.platform}
                         </span>
-                        <div className="text-base font-bold text-slate-900 min-w-[80px] text-left">
+                        <div className="text-base font-bold text-slate-900 min-w-[80px] text-end">
                           {activity.amount} ر.س
                         </div>
                       </div>
@@ -241,7 +241,7 @@ export function Dashboard() {
                             </div>
                           </div>
                         </div>
-                        <div className="text-left">
+                        <div className="text-end">
                           <span className="font-bold text-slate-900 block">{driver.orders}</span>
                           <span className="text-[10px] text-slate-400 font-light">طلب</span>
                         </div>

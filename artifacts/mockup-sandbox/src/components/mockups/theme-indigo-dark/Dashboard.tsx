@@ -191,7 +191,7 @@ export function Dashboard() {
                         : 'bg-[#ef4444]/10 text-[#ef4444] border-[#ef4444]/20 shadow-[0_0_10px_rgba(239,68,68,0.1)]'
                     }`}>
                       {stat.isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingUp className="w-3 h-3 rotate-180" />}
-                      <span dir="ltr">{stat.trend}</span>
+                      <span>{stat.trend}</span>
                     </span>
                   </div>
                   
@@ -307,7 +307,7 @@ export function Dashboard() {
               </div>
               
               <div className="overflow-x-auto">
-                <table className="w-full text-sm text-right">
+                <table dir="rtl" className="w-full text-sm text-right">
                   <thead>
                     <tr className="text-slate-400 border-b border-white/10 bg-white/5">
                       <th className="font-medium py-4 px-6 uppercase text-xs tracking-wider">رقم الطلب</th>
