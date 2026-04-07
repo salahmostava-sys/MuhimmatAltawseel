@@ -17,6 +17,7 @@ import { useMonthlyActiveEmployeeIds } from '@shared/hooks/useMonthlyActiveEmplo
 import { filterVisibleEmployeesInMonth } from '@shared/lib/employeeVisibility';
 import { defaultQueryRetry } from '@shared/lib/query';
 import { auditService } from '@services/auditService';
+import { logger } from '@shared/lib/logger';
 import {
   platformAccountService,
   type PlatformAccountWritePayload,
@@ -308,7 +309,7 @@ export const usePlatformAccountsPage = () => {
           },
         });
       } catch (auditError: unknown) {
-        console.error('Audit failed for platform account assignment (create)', auditError);
+        logger.error('Audit failed for platform account assignment (create)', auditError);
       }
 
       toast.success(TOAST_SUCCESS_ACTION);
@@ -339,7 +340,7 @@ export const usePlatformAccountsPage = () => {
           meta: { count: Array.isArray(data) ? data.length : 0 },
         });
       } catch (auditError: unknown) {
-        console.error('Audit failed for platform account assignment (view_history)', auditError);
+        logger.error('Audit failed for platform account assignment (view_history)', auditError);
       }
 
       // التاريخ يجب أن يعرض أسماء الموظفين من القائمة الكاملة،

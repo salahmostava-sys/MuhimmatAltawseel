@@ -12,8 +12,10 @@
  * The iframe is sandboxed and uses `srcdoc` for security.
  */
 export function previewSlipInIframe(container: HTMLElement, html: string): void {
-  // Clear previous content
-  container.innerHTML = '';
+  // Clear previous content safely
+  while (container.firstChild) {
+    container.removeChild(container.firstChild);
+  }
 
   const iframe = document.createElement('iframe');
   iframe.style.width = '100%';

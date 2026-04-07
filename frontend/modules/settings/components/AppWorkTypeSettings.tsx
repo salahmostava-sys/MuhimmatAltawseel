@@ -8,6 +8,7 @@ import { Button } from '@shared/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { toast } from '@shared/components/ui/sonner';
 import { hybridRuleService } from '@services/hybridRuleService';
+import { logger } from '@shared/lib/logger';
 import type { WorkType, AppHybridRule } from '@shared/types/shifts';
 
 type Props = {
@@ -35,7 +36,7 @@ export function AppWorkTypeSettings({ appId, appName, currentWorkType, onWorkTyp
         setHybridRule(rule);
       }
     } catch (error) {
-      console.error('Failed to load hybrid rule:', error);
+      logger.error('Failed to load hybrid rule', error);
     } finally {
       setLoading(false);
     }

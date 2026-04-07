@@ -74,8 +74,8 @@ export function NameMappingDialog({ open, unmatched, onConfirm, onCancel }: Prop
 
         <ScrollArea className="max-h-[400px] pr-4">
           <div className="space-y-4">
-            {unmatched.map((item, idx) => (
-              <div key={idx} className="border rounded-lg p-4 space-y-3">
+            {unmatched.map((item) => (
+              <div key={item.name} className="border rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium">الاسم في الملف:</p>

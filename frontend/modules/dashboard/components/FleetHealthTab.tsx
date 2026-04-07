@@ -26,7 +26,7 @@ export const FleetHealthTab = () => {
   if (isLoading || !data) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-pulse">
-        {[1, 2, 3].map((i) => <div key={i} className="h-28 bg-muted/40 rounded-2xl" />)}
+        {['skeleton-1', 'skeleton-2', 'skeleton-3'].map((key) => <div key={key} className="h-28 bg-muted/40 rounded-2xl" />)}
       </div>
     );
   }

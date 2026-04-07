@@ -36,7 +36,7 @@ const MAINT_TYPES = [
 
 type VehicleOpt = { id: string; plate_number: string; brand?: string | null };
 
-type PartRow = { part_id: string; quantity_used: string; cost_at_time: string };
+type PartRow = { id: string; part_id: string; quantity_used: string; cost_at_time: string };
 
 type Props = Readonly<{
   open: boolean;
@@ -91,7 +91,7 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
   }, [spareParts]);
 
   const addRow = () => {
-    setRows((r) => [...r, { part_id: '', quantity_used: '1', cost_at_time: '' }]);
+    setRows((r) => [...r, { id: crypto.randomUUID(), part_id: '', quantity_used: '1', cost_at_time: '' }]);
   };
 
   const updateRow = (i: number, patch: Partial<PartRow>) => {
@@ -249,10 +249,11 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
                 <Plus size={14} /> إضافة قطعة
               </Button>
             </div>
-            {rows.map((row, i) => {
+            {rows.map((row) => {
               const warn = stockWarning(row);
+              const i = rows.indexOf(row);
               return (
-                <div key={i} className="grid grid-cols-12 gap-2 items-end border-b border-border/40 pb-2">
+                <div key={row.id} className="grid grid-cols-12 gap-2 items-end border-b border-border/40 pb-2">
                   <div className="col-span-12 sm:col-span-5 space-y-1">
                     <Select
                       value={row.part_id || undefined}

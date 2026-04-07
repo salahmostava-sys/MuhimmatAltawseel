@@ -4,7 +4,7 @@ import {
   TOAST_SUCCESS_OPERATION,
 } from '@shared/lib/toastMessages';
 import { buildOrdersIoHeaders } from '@shared/constants/excelSchemas';
-import { logError } from '@shared/lib/logger';
+import { logError, logger } from '@shared/lib/logger';
 import { orderService } from '@services/orderService';
 import type { App, DailyData, Employee } from '@modules/orders/types';
 import { ordersImportHeadersMatch } from '@modules/orders/utils/importHelpers';
@@ -403,7 +403,7 @@ export async function saveSpreadsheetMonth(params: {
   });
   
   if (invalidRows.length > 0) {
-    console.warn('تم تجاهل بيانات غير صحيحة:', invalidRows);
+    logger.warn('تم تجاهل بيانات غير صحيحة', { meta: { invalidRows } });
     toast.warning('تم تجاهل بعض البيانات قبل الحفظ', {
       description: summarizeMessages(invalidRows)
     });
@@ -421,7 +421,7 @@ export async function saveSpreadsheetMonth(params: {
     const { saved, failed } = await orderService.replaceMonthData(monthKey, rows);
     
     if (failed.length > 0) {
-      console.error('فشل حفظ بعض السجلات:', failed.slice(0, 10));
+      logger.error('فشل حفظ بعض السجلات', { meta: { failed: failed.slice(0, 10) } });
       const failedMessages = failed.map((failure) => (
         `${buildOrderIdentityLabel(failure.row, employeeNames, appNames)}: ${failure.error}`
       ));

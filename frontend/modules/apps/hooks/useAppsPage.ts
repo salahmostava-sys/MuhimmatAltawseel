@@ -13,6 +13,7 @@ import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGat
 import { useQueryErrorToast } from '@shared/hooks/useQueryErrorToast';
 import { appService } from '@services/appService';
 import { getErrorMessage } from '@services/serviceError';
+import { logger } from '@shared/lib/logger';
 import { appsPageService } from '@modules/apps/services/appsPageService';
 import { appsRootQueryKey, appsOverviewQueryKey, appEmployeesQueryKey } from '@modules/apps/queryKeys';
 import { toAppUpsertPayload } from '@modules/apps/lib/appsModel';
@@ -142,7 +143,7 @@ export const useAppsPage = () => {
       const deps = await appService.getAppDependencies(app.id);
       setAppDependencies(deps);
     } catch (error) {
-      console.error('Failed to fetch dependencies:', error);
+      logger.error('Failed to fetch dependencies', error);
       setAppDependencies(null);
     }
   };
