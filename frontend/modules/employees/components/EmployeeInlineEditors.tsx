@@ -18,18 +18,18 @@ const InlineEditTrigger = forwardRef<HTMLButtonElement, Readonly<{
       ref={ref}
       type="button"
       title={title}
-      className="group inline-flex min-h-7 max-w-full items-center justify-center gap-1 rounded-md px-1.5 py-1 transition-colors hover:bg-muted/40"
+      className="group flex h-full w-full min-h-[32px] items-center justify-center gap-1.5 rounded-sm px-2 py-1 transition-colors hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-text"
       onClick={(event) => {
         event.stopPropagation();
         onClick?.(event);
       }}
       {...(rest as any)}
     >
-      <span className="min-w-0">{children}</span>
+      <div className="min-w-0 flex-1 flex items-center justify-center pointer-events-none">{children}</div>
       {saving ? (
-        <Loader2 size={11} className="animate-spin text-muted-foreground" />
+        <Loader2 size={12} className="animate-spin text-muted-foreground shrink-0" />
       ) : (
-        <Pencil size={10} className="shrink-0 text-muted-foreground/0 transition-opacity group-hover:text-muted-foreground/60" />
+        <Pencil size={12} className="shrink-0 text-muted-foreground/0 transition-opacity group-hover:text-muted-foreground/60" />
       )}
     </button>
   );
@@ -65,9 +65,7 @@ export function InlineSelectEditor({
   return (
     <Popover modal={false} open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <div onClick={(event) => event.stopPropagation()}>
-          <InlineEditTrigger saving={saving}>{renderDisplay()}</InlineEditTrigger>
-        </div>
+        <InlineEditTrigger saving={saving}>{renderDisplay()}</InlineEditTrigger>
       </PopoverTrigger>
       <PopoverContent
         className="w-56 p-2"
@@ -136,9 +134,7 @@ export function InlineInputEditor({
   return (
     <Popover modal={false} open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <div onClick={(event) => event.stopPropagation()}>
-          <InlineEditTrigger saving={saving}>{renderDisplay()}</InlineEditTrigger>
-        </div>
+        <InlineEditTrigger saving={saving}>{renderDisplay()}</InlineEditTrigger>
       </PopoverTrigger>
       <PopoverContent
         className="w-64 p-3"
@@ -249,9 +245,7 @@ export function InlineMultiSelectEditor({
   return (
     <Popover modal={false} open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <div onClick={(event) => event.stopPropagation()}>
-          <InlineEditTrigger saving={saving}>{renderDisplay()}</InlineEditTrigger>
-        </div>
+        <InlineEditTrigger saving={saving}>{renderDisplay()}</InlineEditTrigger>
       </PopoverTrigger>
       <PopoverContent
         className="w-64 p-3"
