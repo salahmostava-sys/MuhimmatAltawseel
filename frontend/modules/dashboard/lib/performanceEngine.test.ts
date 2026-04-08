@@ -173,14 +173,14 @@ describe('compareValues', () => {
 describe('enrichWithDelta', () => {
   it('enriches with delta when previous exists', () => {
     const result = enrichWithDelta(450, 400, 'طلب');
-    expect(result.enrichedText).toContain('450');
+    expect(result.enrichedText).toMatch(/[4٤][5٥][0٠]/);
     expect(result.enrichedText).toContain('↑');
     expect(result.delta).not.toBeNull();
   });
 
   it('returns plain value when no previous', () => {
     const result = enrichWithDelta(450, null, 'طلب');
-    expect(result.enrichedText).toContain('450');
+    expect(result.enrichedText).toMatch(/[4٤][5٥][0٠]/);
     expect(result.delta).toBeNull();
   });
 
