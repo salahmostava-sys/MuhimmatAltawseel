@@ -42,3 +42,5 @@ jobs:
           args: >
             -Dsonar.organization=salahmostava-sys
             -Dsonar.projectKey=salahmostava-sys_muhimmat
+            -Dsonar.verbose=true
+            -Dsonar.userHome=C:\.sonar\cache
