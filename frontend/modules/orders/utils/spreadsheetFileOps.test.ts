@@ -1,25 +1,31 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const toastMocks = vi.hoisted(() => ({
-  error: vi.fn(),
-  warning: vi.fn(),
-  success: vi.fn(),
-}));
-
-const replaceMonthDataMock = vi.hoisted(() => vi.fn());
-
 vi.mock('@shared/components/ui/sonner', () => ({
-  toast: toastMocks,
-}));
-
-vi.mock('@services/orderService', () => ({
-  orderService: {
-    replaceMonthData: replaceMonthDataMock,
+  toast: {
+    error: vi.fn(),
+    warning: vi.fn(),
+    success: vi.fn(),
+    dismiss: vi.fn(),
   },
 }));
 
+const toastMocks = (await import('@shared/components/ui/sonner')).toast as any;
+
+vi.mock('@services/orderService', () => ({
+  orderService: {
+    replaceMonthData: vi.fn(),
+  },
+}));
+
+const { orderService } = await import('@services/orderService');
+const replaceMonthDataMock = orderService.replaceMonthData as any;
+
 vi.mock('@shared/lib/logger', () => ({
   logError: vi.fn(),
+  logger: {
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
 }));
 
 import { saveSpreadsheetMonth } from './spreadsheetFileOps';
