@@ -525,7 +525,7 @@ export const salaryService = {
   getEmployees: async () => {
     const { data, error } = await supabase
       .from('employees')
-      .select('id, name, salary_type, status, sponsorship_status')
+      .select('id, name, salary_type, work_type, status, sponsorship_status')
       .eq('status', 'active')
       .order('name');
     if (error) handleSupabaseError(error, 'salaryService.getEmployees');

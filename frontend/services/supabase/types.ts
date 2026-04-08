@@ -641,6 +641,7 @@ export type Database = {
             | Database["public"]["Enums"]["sponsorship_status_enum"]
             | null
           status: Database["public"]["Enums"]["employee_status"]
+          work_type: "orders" | "attendance" | "hybrid" | null
           updated_at: string
         }
         Insert: {
@@ -684,6 +685,7 @@ export type Database = {
             | Database["public"]["Enums"]["sponsorship_status_enum"]
             | null
           status?: Database["public"]["Enums"]["employee_status"]
+          work_type?: "orders" | "attendance" | "hybrid" | null
           updated_at?: string
         }
         Update: {
@@ -727,6 +729,7 @@ export type Database = {
             | Database["public"]["Enums"]["sponsorship_status_enum"]
             | null
           status?: Database["public"]["Enums"]["employee_status"]
+          work_type?: "orders" | "attendance" | "hybrid" | null
           updated_at?: string
         }
         Relationships: [

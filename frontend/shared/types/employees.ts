@@ -30,6 +30,7 @@ export type PositionRow = Database['public']['Tables']['positions']['Row'];
 
 export type EmployeeStatus = Database['public']['Enums']['employee_status'];
 export type SalaryType = Database['public']['Enums']['salary_type'];
+export type EmployeeWorkType = 'orders' | 'attendance' | 'hybrid';
 export type CityEnum = Database['public']['Enums']['city_enum'];
 export type AttendanceStatus = Database['public']['Enums']['attendance_status'];
 export type SponsorshipStatus = Database['public']['Enums']['sponsorship_status_enum'];
