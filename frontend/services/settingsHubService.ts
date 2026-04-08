@@ -139,6 +139,7 @@ export const settingsHubService = {
       default_language: string;
       logo_url: string | null;
       iqama_alert_days: number;
+      advanced_config?: unknown;
     },
   ) => {
     if (settingsId) {

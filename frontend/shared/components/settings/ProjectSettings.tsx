@@ -18,6 +18,12 @@ import { settingsHubService } from '@services/settingsHubService';
 import { brandLogoSrc } from '@shared/lib/brandLogo';
 import { getErrorMessage } from '@shared/lib/query';
 import { logError } from '@shared/lib/logger';
+import DecisionSystemSettings from '@shared/components/settings/DecisionSystemSettings';
+import {
+  DEFAULT_SYSTEM_ADVANCED_CONFIG,
+  toAdvancedConfigJson,
+  type SystemAdvancedConfig,
+} from '@shared/lib/systemAdvancedConfig';
 
 export default function ProjectSettings() {
   const { isRTL } = useLanguage();
@@ -33,6 +39,9 @@ export default function ProjectSettings() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [removeLogo, setRemoveLogo] = useState(false);
   const [iqamaAlertDays, setIqamaAlertDays] = useState(90);
+  const [advancedConfig, setAdvancedConfig] = useState<SystemAdvancedConfig>(
+    DEFAULT_SYSTEM_ADVANCED_CONFIG,
+  );
   const [saving, setSaving] = useState(false);
   const [backupLoading, setBackupLoading] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -46,6 +55,7 @@ export default function ProjectSettings() {
       setLogoPreview(brandLogoSrc(settings.logo_url, settings.updated_at) ?? settings.logo_url);
       setRemoveLogo(false);
       setIqamaAlertDays(settings.iqama_alert_days ?? 90);
+      setAdvancedConfig(settings.advancedConfig ?? DEFAULT_SYSTEM_ADVANCED_CONFIG);
     }
   }, [settings]);
 
@@ -117,6 +127,7 @@ export default function ProjectSettings() {
         default_language: defaultLang,
         logo_url,
         iqama_alert_days: iqamaAlertDays,
+        advanced_config: toAdvancedConfigJson(advancedConfig),
       };
 
       await settingsHubService.saveSystemSettings(settings?.id, payload);
@@ -212,7 +223,7 @@ export default function ProjectSettings() {
   );
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-6xl space-y-6">
       {/* Project Name */}
       <div className="bg-card rounded-xl border border-border/50 p-5 shadow-sm">
         <SectionHeader icon={<Building2 size={14} />} title={isRTL ? 'اسم المشروع' : 'Project Name'} />
@@ -363,6 +374,12 @@ export default function ProjectSettings() {
       </div>
 
       {/* ── Backup Section (Admin only) ── */}
+      <DecisionSystemSettings
+        value={advancedConfig}
+        onChange={setAdvancedConfig}
+        isRTL={isRTL}
+      />
+
       {isAdmin && (
         <div className="bg-card rounded-xl border border-border/50 p-5 shadow-sm">
           <SectionHeader icon={<Database size={14} />} title={isRTL ? 'النسخ الاحتياطي' : 'Backup'} />

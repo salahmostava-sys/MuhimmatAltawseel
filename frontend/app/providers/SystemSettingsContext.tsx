@@ -1,22 +1,15 @@
-import { createContext, useContext, useEffect, ReactNode, useMemo } from 'react';
+import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
+
 import { useAuth } from '@app/providers/AuthContext';
 import { logError } from '@shared/lib/logger';
+import {
+  normalizeSystemSettings,
+  type NormalizedSystemSettings,
+} from '@shared/lib/systemAdvancedConfig';
 import { settingsHubService } from '@services/settingsHubService';
 
-interface SystemSettings {
-  id: string;
-  project_name_ar: string;
-  project_name_en: string;
-  project_subtitle_ar: string;
-  project_subtitle_en: string;
-  logo_url: string | null;
-  default_language: string;
-  theme: string;
-  iqama_alert_days?: number;
-  /** لتحديث صورة الشعار في الواجهة دون كاش قديم */
-  updated_at?: string | null;
-}
+export type SystemSettings = NormalizedSystemSettings;
 
 interface SystemSettingsContextType {
   settings: SystemSettings | null;
@@ -26,17 +19,7 @@ interface SystemSettingsContextType {
   refresh: () => Promise<void>;
 }
 
-const defaults: SystemSettings = {
-  id: '',
-  project_name_ar: 'مهمة التوصيل',
-  project_name_en: 'Muhimmat alTawseel',
-  project_subtitle_ar: 'إدارة المناديب',
-  project_subtitle_en: 'Rider Management',
-  logo_url: null,
-  default_language: 'ar',
-  theme: 'light',
-  iqama_alert_days: 90,
-};
+const defaults: SystemSettings = normalizeSystemSettings(null);
 
 const SystemSettingsContext = createContext<SystemSettingsContextType>({
   settings: defaults,
@@ -49,6 +32,7 @@ const SystemSettingsContext = createContext<SystemSettingsContextType>({
 export const SystemSettingsProvider = ({ children }: { children: ReactNode }) => {
   const { user, session, authLoading } = useAuth();
   const enabled = !!session && !!user && !authLoading;
+
   const query = useQuery({
     queryKey: ['system-settings', user?.id ?? '__guest__'] as const,
     enabled,
@@ -56,7 +40,7 @@ export const SystemSettingsProvider = ({ children }: { children: ReactNode }) =>
     queryFn: async () => {
       try {
         const data = await settingsHubService.getSystemSettings();
-        return (data as SystemSettings | null) ?? defaults;
+        return normalizeSystemSettings(data as SystemSettings | null);
       } catch (error) {
         logError('[SystemSettingsContext] fetch settings failed', error);
         return defaults;
@@ -64,13 +48,14 @@ export const SystemSettingsProvider = ({ children }: { children: ReactNode }) =>
     },
   });
 
-  const s = query.data ?? defaults;
+  const settings = query.data ?? defaults;
   const loading = enabled ? query.isLoading : authLoading;
-  const projectName = s.project_name_ar;
-  const projectSubtitle = s.project_subtitle_ar;
+  const projectName = settings.project_name_ar;
+  const projectSubtitle = settings.project_subtitle_ar;
+
   const contextValue = useMemo<SystemSettingsContextType>(
     () => ({
-      settings: s,
+      settings,
       projectName,
       projectSubtitle,
       loading,
@@ -78,10 +63,9 @@ export const SystemSettingsProvider = ({ children }: { children: ReactNode }) =>
         await query.refetch();
       },
     }),
-    [s, projectName, projectSubtitle, loading, query]
+    [loading, projectName, projectSubtitle, query, settings],
   );
 
-  // Sync browser title
   useEffect(() => {
     document.title = projectName;
   }, [projectName]);
