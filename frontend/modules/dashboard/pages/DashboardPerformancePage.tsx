@@ -1,4 +1,4 @@
-import { Suspense, lazy, startTransition, useState } from 'react';
+import { Suspense, lazy, startTransition, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@app/providers/AuthContext';
@@ -12,6 +12,9 @@ import {
   type DashboardPerformanceTabKey,
 } from '@modules/dashboard/components/DashboardPerformanceHeader';
 import { DashboardPerformanceOverviewTab } from '@modules/dashboard/components/DashboardPerformanceOverviewTab';
+import { buildFleetSummary, buildRiderProfiles } from '@modules/dashboard/lib/performanceEngine';
+import { buildAIChatSystemPrompt } from '@modules/dashboard/lib/aiInsightsEngine';
+import { AIChatWidget } from '@modules/dashboard/components/AIChatWidget';
 
 const loadAnalyticsTab = () =>
   import('@modules/dashboard/components/DashboardPerformanceAnalyticsTab').then((module) => ({
@@ -49,6 +52,32 @@ export default function DashboardPerformancePage() {
     staleTime: 60_000,
     queryFn: async () => performanceService.getDashboard(currentMonth),
   });
+
+  // Build AI Chat system prompt from dashboard data
+  const chatSystemPrompt = useMemo(() => {
+    const data = dashboardQuery.data;
+    if (!data) return '';
+
+    try {
+      const summary = buildFleetSummary(data);
+      const allEntries = [
+        ...data.rankings.topPerformers,
+        ...data.rankings.lowPerformers,
+        ...data.rankings.mostImproved,
+        ...data.rankings.mostDeclined,
+      ];
+      const seen = new Set<string>();
+      const unique = allEntries.filter((e) => {
+        if (seen.has(e.employeeId)) return false;
+        seen.add(e.employeeId);
+        return true;
+      });
+      const profiles = buildRiderProfiles(unique);
+      return buildAIChatSystemPrompt(profiles, summary);
+    } catch {
+      return '';
+    }
+  }, [dashboardQuery.data]);
 
   const handleTabChange = (tab: DashboardPerformanceTabKey) => {
     if (tab === 'analytics') {
@@ -102,6 +131,9 @@ export default function DashboardPerformancePage() {
           <LazyDashboardRankingTab dashboard={dashboardQuery.data ?? null} />
         </Suspense>
       ) : null}
+
+      {/* AI Chat Widget — floating, powered by Groq with real data */}
+      {chatSystemPrompt && <AIChatWidget systemPrompt={chatSystemPrompt} />}
     </div>
   );
 }

@@ -1,13 +1,47 @@
-import { AlertTriangle, Target, TrendingDown, TrendingUp, Trophy, Users, type LucideIcon } from 'lucide-react';
+/**
+ * DashboardPerformanceOverviewTab — Enhanced with AI Insights, Enriched Stats,
+ * Recommendations, Performance Scores, and Detailed Table.
+ *
+ * This is a NEW component that replaces the previous overview tab with
+ * a full Decision Support System layout.
+ */
 
-import type { PerformanceAlert, PerformanceDashboardResponse } from '@services/performanceService';
+import { useMemo } from 'react';
+import {
+  AlertTriangle,
+  Target,
+  TrendingDown,
+  TrendingUp,
+  Trophy,
+  Users,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react';
+
+import type {
+  PerformanceAlert,
+  PerformanceDashboardResponse,
+} from '@services/performanceService';
+import {
+  buildFleetSummary,
+  buildRiderProfiles,
+  compareValues,
+  type RiderPerformanceProfile,
+} from '@modules/dashboard/lib/performanceEngine';
+import {
+  generateFleetInsights,
+  type FleetAIInsights,
+} from '@modules/dashboard/lib/aiInsightsEngine';
+import { EnrichedStatCard } from './EnrichedStatCard';
+import { AIInsightsPanel } from './AIInsightsPanel';
+import { AIRecommendationsSection } from './AIRecommendationsSection';
+import { PerformanceDetailedTable } from './PerformanceDetailedTable';
 
 function formatPercent(value: number) {
   const rounded = Number.isFinite(value) ? value : 0;
   return `${rounded > 0 ? '+' : ''}${rounded.toFixed(1)}%`;
 }
 
-/** Extract only the first two names from a full name */
 function getFirstTwoNames(fullName: string): string {
   const parts = fullName.trim().split(/\s+/);
   return parts.slice(0, 2).join(' ');
@@ -26,35 +60,6 @@ function alertLabel(alert: PerformanceAlert) {
     default:
       return alert.alertType;
   }
-}
-
-function StatCard(props: Readonly<{
-  label: string;
-  value: string;
-  sub?: string;
-  icon: LucideIcon;
-  tone?: 'default' | 'good' | 'bad';
-}>) {
-  const { label, value, sub, icon: Icon, tone = 'default' } = props;
-  const toneClass =
-    tone === 'good'
-      ? 'bg-emerald-50 text-emerald-700'
-      : tone === 'bad'
-        ? 'bg-rose-50 text-rose-600'
-        : 'bg-muted/40 text-foreground';
-
-  return (
-    <div className="bg-card rounded-2xl p-4 shadow-card">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${toneClass}`}>
-        <Icon size={18} />
-      </div>
-      <div className="mt-3">
-        <p className="text-xl font-black text-foreground leading-tight">{value}</p>
-        <p className="text-xs font-semibold text-foreground/75 mt-2">{label}</p>
-        {sub ? <p className="text-[11px] text-muted-foreground mt-1">{sub}</p> : null}
-      </div>
-    </div>
-  );
 }
 
 function ComparisonCard(props: Readonly<{
@@ -124,7 +129,39 @@ export function DashboardPerformanceOverviewTab(props: Readonly<{
 }>) {
   const { loading, dashboard } = props;
 
-  if (loading || !dashboard) {
+  // Compute AI insights
+  const { fleetSummary, aiInsights, allProfiles } = useMemo(() => {
+    if (!dashboard) {
+      return {
+        fleetSummary: null,
+        aiInsights: null as FleetAIInsights | null,
+        allProfiles: [] as RiderPerformanceProfile[],
+      };
+    }
+
+    const summary = buildFleetSummary(dashboard);
+
+    // Build all profiles from top + low + improved + declined
+    const allEntries = [
+      ...dashboard.rankings.topPerformers,
+      ...dashboard.rankings.lowPerformers,
+      ...dashboard.rankings.mostImproved,
+      ...dashboard.rankings.mostDeclined,
+    ];
+    const seen = new Set<string>();
+    const unique = allEntries.filter((e) => {
+      if (seen.has(e.employeeId)) return false;
+      seen.add(e.employeeId);
+      return true;
+    });
+    const profiles = buildRiderProfiles(unique);
+
+    const insights = generateFleetInsights(profiles, summary);
+
+    return { fleetSummary: summary, aiInsights: insights, allProfiles: profiles };
+  }, [dashboard]);
+
+  if (loading || !dashboard || !fleetSummary || !aiInsights) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         {Array.from({ length: 8 }, (_, index) => (
@@ -137,94 +174,109 @@ export function DashboardPerformanceOverviewTab(props: Readonly<{
   const { summary, comparison, distribution, ordersByApp, ordersByCity, rankings, alerts, targets } = dashboard;
   const bestToday = summary.topPerformerToday?.employeeName ? getFirstTwoNames(summary.topPerformerToday.employeeName) : 'لا يوجد';
   const bestTodayOrders = summary.topPerformerToday?.totalOrders ?? 0;
-  const lowMonth = summary.lowPerformerMonth?.employeeName ? getFirstTwoNames(summary.lowPerformerMonth.employeeName) : 'لا يوجد';
-  const lowMonthOrders = summary.lowPerformerMonth?.totalOrders ?? 0;
 
   return (
     <div className="space-y-6">
+      {/* ── Top KPIs Row (Enriched) ───────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
-        <StatCard
+        <EnrichedStatCard
           label="إجمالي الطلبات"
           value={summary.totalOrders.toLocaleString()}
-          sub={`مقارنة بالشهر السابق ${formatPercent(comparison.month.growthPct)}`}
+          delta={fleetSummary.totalOrdersDelta}
+          sub={`${summary.activeRiders} مندوب نشط`}
           icon={Target}
         />
-        <StatCard
-          label="متوسط الطلبات لكل مندوب"
+        <EnrichedStatCard
+          label="متوسط الطلبات/مندوب"
           value={summary.avgOrdersPerRider.toFixed(1)}
-          sub={`${summary.activeRiders} مندوب نشط`}
+          delta={fleetSummary.avgOrdersDelta}
+          sub={`${summary.activeEmployees} موظف مسجل`}
           icon={Users}
         />
-        <StatCard
+        <EnrichedStatCard
           label="تحقيق الهدف"
           value={`${targets.targetAchievementPct.toFixed(0)}%`}
-          sub={`الهدف الشهري ${targets.totalTargetOrders.toLocaleString()} طلب`}
+          sub={`الهدف: ${targets.totalTargetOrders.toLocaleString()} طلب`}
           icon={Trophy}
-          tone={targets.targetAchievementPct >= 100 ? 'good' : 'default'}
+          tier={targets.targetAchievementPct >= 100 ? 'excellent' : targets.targetAchievementPct >= 70 ? 'good' : 'average'}
         />
-        <StatCard
+        <EnrichedStatCard
           label="أفضل مندوب اليوم"
           value={bestToday}
-          sub={`${bestTodayOrders.toLocaleString()} طلب في آخر يوم نشاط`}
+          sub={`${bestTodayOrders.toLocaleString()} طلب`}
           icon={TrendingUp}
-          tone="good"
+          tier="excellent"
         />
-        <StatCard
-          label="أضعف أداء"
-          value={lowMonth}
-          sub={`${lowMonthOrders.toLocaleString()} طلب هذا الشهر`}
-          icon={TrendingDown}
-          tone="bad"
+        <EnrichedStatCard
+          label="متوسط التقييم"
+          value={`${fleetSummary.avgPerformanceScore}/100`}
+          sub={`${distribution.excellent} ممتاز • ${distribution.weak} ضعيف`}
+          icon={Zap}
+          tier={fleetSummary.avgPerformanceScore >= 70 ? 'good' : fleetSummary.avgPerformanceScore >= 50 ? 'average' : 'weak'}
         />
-        <StatCard
+        <EnrichedStatCard
           label="تنبيهات ذكية"
-          value={alerts.length.toLocaleString()}
-          sub={alerts[0] ? alertLabel(alerts[0]) : 'لا توجد تنبيهات حالياً'}
+          value={`${alerts.length + aiInsights.alerts.length}`}
+          sub={alerts[0] ? alertLabel(alerts[0]) : 'لا تنبيهات'}
           icon={AlertTriangle}
-          tone={alerts.length > 0 ? 'bad' : 'good'}
+          tier={alerts.length > 3 ? 'weak' : alerts.length > 0 ? 'average' : 'excellent'}
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <ComparisonCard
-          title="الشهر الحالي مقابل السابق"
-          currentValue={comparison.month.currentOrders.toLocaleString()}
-          previousValue={comparison.month.previousOrders.toLocaleString()}
-          change={comparison.month.growthPct}
-          hint={`أيام العمل: ${comparison.month.currentActiveDays} مقابل ${comparison.month.previousActiveDays}`}
-        />
-        <ComparisonCard
-          title="الأسبوع الحالي مقابل السابق"
-          currentValue={comparison.week.currentOrders.toLocaleString()}
-          previousValue={comparison.week.previousOrders.toLocaleString()}
-          change={comparison.week.growthPct}
-          hint="قراءة سريعة لتغيّر الزخم"
-        />
-        <div className="bg-card rounded-2xl p-4 shadow-card">
-          <p className="text-sm font-bold text-foreground">توزيع الأداء</p>
-          <div className="space-y-3 mt-4">
-            <div className="flex items-center justify-between text-sm">
-              <span>ممتاز</span>
-              <span className="font-black text-emerald-600">{distribution.excellent}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span>متوسط</span>
-              <span className="font-black text-amber-600">{distribution.average}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span>ضعيف</span>
-              <span className="font-black text-rose-500">{distribution.weak}</span>
+      {/* ── AI Insights + Comparison ─────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1.3fr,0.7fr] gap-4">
+        <AIInsightsPanel insights={aiInsights} />
+
+        <div className="space-y-4">
+          <ComparisonCard
+            title="الشهر الحالي vs السابق"
+            currentValue={comparison.month.currentOrders.toLocaleString()}
+            previousValue={comparison.month.previousOrders.toLocaleString()}
+            change={comparison.month.growthPct}
+            hint={`أيام العمل: ${comparison.month.currentActiveDays} مقابل ${comparison.month.previousActiveDays}`}
+          />
+          <ComparisonCard
+            title="الأسبوع الحالي vs السابق"
+            currentValue={comparison.week.currentOrders.toLocaleString()}
+            previousValue={comparison.week.previousOrders.toLocaleString()}
+            change={comparison.week.growthPct}
+            hint="قراءة سريعة لتغيّر الزخم"
+          />
+          <div className="bg-card rounded-2xl p-4 shadow-card">
+            <p className="text-sm font-bold text-foreground">توزيع الأداء</p>
+            <div className="space-y-3 mt-4">
+              {(['excellent', 'good', 'average', 'weak'] as const).map((tier) => {
+                const count = tier === 'excellent' ? distribution.excellent
+                  : tier === 'good' ? (distribution.average - distribution.weak > 0 ? Math.max(0, summary.activeRiders - distribution.excellent - distribution.average - distribution.weak) : 0)
+                  : tier === 'average' ? distribution.average
+                  : distribution.weak;
+                const labels: Record<string, { ar: string; color: string }> = {
+                  excellent: { ar: 'ممتاز', color: 'text-emerald-600' },
+                  good: { ar: 'جيد', color: 'text-blue-600' },
+                  average: { ar: 'متوسط', color: 'text-amber-600' },
+                  weak: { ar: 'ضعيف', color: 'text-rose-500' },
+                };
+                const l = labels[tier];
+                const val = tier === 'excellent' ? distribution.excellent : tier === 'average' ? distribution.average : distribution.weak;
+                return (
+                  <div key={tier} className="flex items-center justify-between text-sm">
+                    <span>{l.ar}</span>
+                    <span className={`font-black ${l.color}`}>{val}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
       </div>
 
+      {/* ── Platform Performance ──────────────────────────────────────────── */}
       <div className="grid grid-cols-1 xl:grid-cols-[1.4fr,0.8fr] gap-4">
         <div className="bg-card rounded-2xl p-5 shadow-card">
           <div className="flex items-center justify-between gap-3 mb-4">
             <div>
               <h3 className="text-sm font-bold text-foreground">أداء المنصات</h3>
-              <p className="text-[11px] text-muted-foreground mt-1">طلبات الشهر الحالية مع نسبة التغيّر والهدف</p>
+              <p className="text-[11px] text-muted-foreground mt-1">طلبات الشهر مع نسبة التغيّر والهدف</p>
             </div>
             <span className="text-xs font-semibold text-muted-foreground">{ordersByApp.length} منصة</span>
           </div>
@@ -252,19 +304,19 @@ export function DashboardPerformanceOverviewTab(props: Readonly<{
             <h3 className="text-sm font-bold text-foreground mb-4">ملخص سريع</h3>
             <div className="space-y-3 text-sm">
               <div className="flex items-center justify-between">
-                <span>Top Performer</span>
+                <span>أفضل مندوب</span>
                 <span className="font-bold text-foreground">
                   {rankings.topPerformers[0]?.employeeName ?? 'لا يوجد'}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span>Most Improved</span>
+                <span>أكبر تحسّن</span>
                 <span className="font-bold text-foreground">
                   {rankings.mostImproved[0]?.employeeName ?? 'لا يوجد'}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span>Most Declined</span>
+                <span>أكبر انخفاض</span>
                 <span className="font-bold text-foreground">
                   {rankings.mostDeclined[0]?.employeeName ?? 'لا يوجد'}
                 </span>
@@ -274,16 +326,20 @@ export function DashboardPerformanceOverviewTab(props: Readonly<{
         </div>
       </div>
 
+      {/* ── AI Recommendations ───────────────────────────────────────────── */}
+      <AIRecommendationsSection recommendations={aiInsights.recommendations} />
+
+      {/* ── Smart Alerts ─────────────────────────────────────────────────── */}
       <div className="bg-card rounded-2xl p-5 shadow-card">
         <div className="flex items-center justify-between gap-3 mb-4">
           <div>
             <h3 className="text-sm font-bold text-foreground">التنبيهات الذكية</h3>
-            <p className="text-[11px] text-muted-foreground mt-1">أهم الحالات التي تحتاج متابعة الآن</p>
+            <p className="text-[11px] text-muted-foreground mt-1">حالات تحتاج متابعة الآن</p>
           </div>
           <span className="text-xs font-semibold text-muted-foreground">{alerts.length} تنبيه</span>
         </div>
         {alerts.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-6">لا توجد تنبيهات حالياً</p>
+          <p className="text-sm text-muted-foreground text-center py-6">لا توجد تنبيهات حالياً ✅</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {alerts.map((alert, index) => (
@@ -303,6 +359,11 @@ export function DashboardPerformanceOverviewTab(props: Readonly<{
           </div>
         )}
       </div>
+
+      {/* ── Detailed Table ───────────────────────────────────────────────── */}
+      {allProfiles.length > 0 && (
+        <PerformanceDetailedTable riders={allProfiles} />
+      )}
     </div>
   );
 }
