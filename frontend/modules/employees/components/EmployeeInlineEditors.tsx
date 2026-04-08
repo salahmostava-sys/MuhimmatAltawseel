@@ -62,6 +62,14 @@ export function InlineSelectEditor({
     }
   };
 
+  if (!open) {
+    return (
+      <InlineEditTrigger saving={saving} onClick={() => setOpen(true)}>
+        {renderDisplay()}
+      </InlineEditTrigger>
+    );
+  }
+
   return (
     <Popover modal={false} open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -130,6 +138,14 @@ export function InlineInputEditor({
       setSaving(false);
     }
   };
+
+  if (!open) {
+    return (
+      <InlineEditTrigger saving={saving} onClick={() => setOpen(true)}>
+        {renderDisplay()}
+      </InlineEditTrigger>
+    );
+  }
 
   return (
     <Popover modal={false} open={open} onOpenChange={setOpen}>
@@ -241,6 +257,14 @@ export function InlineMultiSelectEditor({
       setSaving(false);
     }
   };
+
+  if (!open) {
+    return (
+      <InlineEditTrigger saving={saving} onClick={() => setOpen(true)}>
+        {renderDisplay()}
+      </InlineEditTrigger>
+    );
+  }
 
   return (
     <Popover modal={false} open={open} onOpenChange={setOpen}>
