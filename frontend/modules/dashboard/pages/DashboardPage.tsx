@@ -218,6 +218,7 @@ function DashboardAnalyticsFallback() {
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const Dashboard = () => {
   const { user } = useAuth();
   const { enabled, userId } = useAuthQueryGate();
@@ -311,4 +312,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export { default } from './DashboardPerformancePage';
