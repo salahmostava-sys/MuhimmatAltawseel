@@ -1,3 +1,0 @@
-ALTER TABLE public.system_settings
-ADD COLUMN IF NOT EXISTS iqama_alert_days INTEGER NOT NULL DEFAULT 90,
-ADD COLUMN IF NOT EXISTS advanced_config JSONB NOT NULL DEFAULT '{}'::jsonb;

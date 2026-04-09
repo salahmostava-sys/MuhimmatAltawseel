@@ -13,13 +13,6 @@ import { employeeService } from '@services/employeeService';
 import { getEmployeeCities } from '@modules/employees/model/employeeUtils';
 import { cityLabel } from '@modules/employees/model/employeeCity';
 import { EMPTY_DATA_PLACEHOLDER } from '@modules/employees/types/employee.types';
-import type { EmployeeWorkType } from '@shared/types/employees';
-import {
-  getEmployeeWorkTypeLabel,
-  isAttendanceCapableEmployeeWorkType,
-  isOrdersCapableEmployeeWorkType,
-  normalizeEmployeeWorkType,
-} from '@shared/lib/employeeWorkType';
 import {
   employeeProfileService,
   type EmployeeProfileAdvance,
@@ -59,7 +52,6 @@ interface Employee {
   personal_photo_url?: string | null;
   status: string;
   salary_type: string;
-  work_type?: EmployeeWorkType | null;
   base_salary: number;
 }
 
@@ -109,11 +101,8 @@ const installmentStatusStyle: Record<string, string> = {
 const installmentStatusLabel: Record<string, string> = {
   deducted: 'مخصوم', pending: 'معلّق', deferred: 'مؤجل',
 };
-const workTypeBadgeClass = (workType: EmployeeWorkType) => {
-  if (workType === 'attendance') return 'badge-success';
-  if (workType === 'hybrid') return 'badge-warning';
-  return 'badge-info';
-};
+const salaryTypeBadgeClass = (salaryType: string) => (salaryType === 'orders' ? 'badge-info' : 'badge-success');
+const salaryTypeLabel = (salaryType: string) => (salaryType === 'orders' ? 'طلبات' : 'دوام');
 
 function residencyHeaderUrgencyClass(days: number): string {
   if (days < 30) return 'text-destructive';
@@ -255,7 +244,6 @@ const EmployeeProfile = ({ employee, onBack }: Props) => {
   const uid = authQueryUserId(userId);
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const employeeWorkType = normalizeEmployeeWorkType(employee.work_type, employee.salary_type);
   const [activeTab, setActiveTab] = useState('basic');
   const [expandedAdv, setExpandedAdv] = useState<string | null>(null);
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
@@ -318,8 +306,8 @@ const EmployeeProfile = ({ employee, onBack }: Props) => {
             <div className="flex items-center gap-3 flex-wrap">
               <h2 className="text-xl font-bold text-foreground">{employee.name}</h2>
               <span className={statusStyles[employee.status] || 'badge-info'}>{statusLabels[employee.status] || employee.status}</span>
-              <span className={workTypeBadgeClass(employeeWorkType)}>
-                {getEmployeeWorkTypeLabel(employeeWorkType)}
+              <span className={salaryTypeBadgeClass(employee.salary_type)}>
+                {salaryTypeLabel(employee.salary_type)}
               </span>
             </div>
             <div className="flex gap-4 mt-2 flex-wrap text-sm text-muted-foreground">
@@ -353,13 +341,9 @@ const EmployeeProfile = ({ employee, onBack }: Props) => {
           <TabsTrigger value="salary" className="gap-1.5"><Wallet size={14} /> الراتب</TabsTrigger>
           <TabsTrigger value="apps" className="gap-1.5"><Package size={14} /> التطبيقات</TabsTrigger>
           <TabsTrigger value="advances" className="gap-1.5"><CreditCard size={14} /> السلف</TabsTrigger>
+          <TabsTrigger value="attendance" className="gap-1.5"><Clock size={14} /> الحضور</TabsTrigger>
           <TabsTrigger value="salaries" className="gap-1.5"><DollarSign size={14} /> الرواتب الشهرية</TabsTrigger>
-          {isAttendanceCapableEmployeeWorkType(employeeWorkType) ? (
-            <TabsTrigger value="attendance" className="gap-1.5"><Clock size={14} /> الحضور</TabsTrigger>
-          ) : null}
-          {isOrdersCapableEmployeeWorkType(employeeWorkType) ? (
-            <TabsTrigger value="orders" className="gap-1.5"><TrendingUp size={14} /> الطلبات الشهرية</TabsTrigger>
-          ) : null}
+          <TabsTrigger value="orders" className="gap-1.5"><TrendingUp size={14} /> الطلبات الشهرية</TabsTrigger>
           <TabsTrigger value="performance" className="gap-1.5"><TrendingUp size={14} /> الأداء</TabsTrigger>
         </TabsList>
 
@@ -529,8 +513,8 @@ const EmployeeProfile = ({ employee, onBack }: Props) => {
           <div className="bg-card rounded-xl border border-border/50 shadow-sm p-6">
             <h3 className="font-semibold text-foreground mb-5">الراتب</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <InfoField label="نوع العمل" value={getEmployeeWorkTypeLabel(employeeWorkType)} />
-              {employeeWorkType !== 'orders' && (
+              <InfoField label="نوع الراتب" value={employee.salary_type === 'orders' ? 'طلبات (Orders)' : 'دوام ثابت (Shift)'} />
+              {employee.salary_type === 'shift' && (
                 <InfoField label="الراتب الشهري" value={`${employee.base_salary?.toLocaleString()} ر.س`} />
               )}
             </div>

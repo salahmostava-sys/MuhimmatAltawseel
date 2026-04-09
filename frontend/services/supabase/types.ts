@@ -641,7 +641,6 @@ export type Database = {
             | Database["public"]["Enums"]["sponsorship_status_enum"]
             | null
           status: Database["public"]["Enums"]["employee_status"]
-          work_type: "orders" | "attendance" | "hybrid" | null
           updated_at: string
         }
         Insert: {
@@ -685,7 +684,6 @@ export type Database = {
             | Database["public"]["Enums"]["sponsorship_status_enum"]
             | null
           status?: Database["public"]["Enums"]["employee_status"]
-          work_type?: "orders" | "attendance" | "hybrid" | null
           updated_at?: string
         }
         Update: {
@@ -729,7 +727,6 @@ export type Database = {
             | Database["public"]["Enums"]["sponsorship_status_enum"]
             | null
           status?: Database["public"]["Enums"]["employee_status"]
-          work_type?: "orders" | "attendance" | "hybrid" | null
           updated_at?: string
         }
         Relationships: [
@@ -1253,11 +1250,9 @@ export type Database = {
       }
       system_settings: {
         Row: {
-          advanced_config: Json
           created_at: string
           default_language: string
           id: string
-          iqama_alert_days: number
           logo_url: string | null
           project_name_ar: string
           project_name_en: string
@@ -1267,11 +1262,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          advanced_config?: Json
           created_at?: string
           default_language?: string
           id?: string
-          iqama_alert_days?: number
           logo_url?: string | null
           project_name_ar?: string
           project_name_en?: string
@@ -1281,11 +1274,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          advanced_config?: Json
           created_at?: string
           default_language?: string
           id?: string
-          iqama_alert_days?: number
           logo_url?: string | null
           project_name_ar?: string
           project_name_en?: string

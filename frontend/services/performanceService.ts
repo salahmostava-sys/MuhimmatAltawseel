@@ -1,12 +1,5 @@
 import { supabase } from '@services/supabase/client';
 import { toServiceError } from '@services/serviceError';
-import { employeePerformanceService } from '@services/employeePerformanceService';
-
-export type {
-  DashboardEmployeePerformanceRow,
-  EmployeePerformanceData,
-  EmployeePerformanceProfileResponse,
-} from '@services/employeePerformanceService';
 
 export type PerformanceTrendCode = 'up' | 'down' | 'stable';
 export type PerformanceAlertType =
@@ -225,24 +218,8 @@ export interface OrderImportBatch {
   completed_at: string | null;
 }
 
-type LooseQueryResult = {
-  data: unknown;
-  error: unknown;
-  count?: number | null;
-};
-
-type LooseQueryBuilder = PromiseLike<LooseQueryResult> & {
-  select: (...args: unknown[]) => LooseQueryBuilder;
-  order: (...args: unknown[]) => LooseQueryBuilder;
-  limit: (...args: unknown[]) => LooseQueryBuilder;
-  eq: (...args: unknown[]) => LooseQueryBuilder;
-  delete: (...args: unknown[]) => LooseQueryBuilder;
-  upsert: (...args: unknown[]) => LooseQueryBuilder;
-  single: (...args: unknown[]) => LooseQueryBuilder;
-};
-
 type GenericTableClient = {
-  from: (table: string) => LooseQueryBuilder;
+  from: (table: string) => any;
 };
 
 const sb = supabase as unknown as GenericTableClient & typeof supabase;
@@ -352,6 +329,4 @@ export const performanceService = {
 
     return data;
   },
-
-  ...employeePerformanceService,
 };

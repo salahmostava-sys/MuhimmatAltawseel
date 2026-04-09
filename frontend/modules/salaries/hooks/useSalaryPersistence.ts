@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { sendWhatsAppMessage } from '@shared/lib/whatsapp';
 import { isEmployeeIdUuid, isValidSalaryMonthYear } from '@shared/lib/salaryValidation';
 import { salaryDataService } from '@services/salaryDataService';
 import { driverService } from '@services/driverService';
@@ -216,7 +217,15 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
       setApprovingRowId(null);
       toast.success('✅ تم اعتماد الراتب');
 
-
+      if (row.phone) {
+        const monthLabel = months.find((m) => m.v === selectedMonth)?.l || selectedMonth;
+        sendWhatsAppMessage(
+          row.phone,
+          `مرحباً ${row.employeeName} 👋\n\nتم اعتماد راتبك لشهر ${monthLabel}\nصافي الراتب: ${netSalary.toLocaleString()} ر.س\n\nللاستفسار تواصل مع الإدارة.`,
+        ).then((ok) => {
+          if (!ok) toast.error('تعذّر إرسال إشعار واتساب');
+        });
+      }
     },
     [rows, selectedMonth, toast, user, run, computeServerSalaryForPayment, updateRow, refreshMonthSnapshot],
   );
@@ -280,7 +289,15 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
           });
           toast.success('✅ تم الصرف وحفظ سجل الراتب');
 
-
+          if (row.phone) {
+            const monthLabel = months.find((m) => m.v === selectedMonth)?.l || selectedMonth;
+            sendWhatsAppMessage(
+              row.phone,
+              `مرحباً ${row.employeeName} 👋\n\n✅ تم صرف راتبك لشهر ${monthLabel}\nالمبلغ: ${netSalary.toLocaleString()} ر.س\n\nشكراً لجهودك.`,
+            ).then((ok) => {
+              if (!ok) toast.error('تعذّر إرسال إشعار واتساب');
+            });
+          }
         },
         { errorTitle: 'خطأ أثناء الصرف' },
       );

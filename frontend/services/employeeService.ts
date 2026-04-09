@@ -178,7 +178,7 @@ export const employeeService = {
     const { data, error } = await supabase
       .from('employees')
       .select(
-        'id, name, job_title, national_id, salary_type, work_type, base_salary, iban, city, preferred_language, phone, sponsorship_status, probation_end_date, status'
+        'id, name, job_title, national_id, salary_type, base_salary, iban, city, preferred_language, phone, sponsorship_status, probation_end_date, status'
       )
       .order('name');
     if (error) throw toServiceError(error, 'employeeService.getActiveForSalaryContext');

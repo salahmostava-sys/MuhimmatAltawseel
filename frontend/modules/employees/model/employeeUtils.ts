@@ -1,6 +1,5 @@
 import { differenceInDays, parseISO } from 'date-fns';
 import type { BranchKey } from '@shared/components/table/GlobalTableFilters';
-import type { EmployeeWorkType } from '@shared/types/employees';
 import {
   normalizeEmployeeCities,
   normalizeEmployeeCityValue,
@@ -32,7 +31,6 @@ export type Employee = {
   personal_photo_url?: string | null;
   status: string;
   salary_type: string;
-  work_type?: EmployeeWorkType | null;
   base_salary: number;
   nationality?: string | null;
   preferred_language?: string | null;

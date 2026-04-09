@@ -17,11 +17,6 @@ import { getErrorMessage } from '@shared/lib/query';
 import { cn } from '@shared/lib/utils';
 import { logError } from '@shared/lib/logger';
 import { useCommercialRecords } from '@shared/hooks/useCommercialRecords';
-import type { EmployeeWorkType } from '@shared/types/employees';
-import {
-  getEmployeeWorkTypeLabel,
-  normalizeEmployeeWorkType,
-} from '@shared/lib/employeeWorkType';
 import {
   DEFAULT_EMPLOYEE_CITY_OPTIONS,
   cityLabel,
@@ -64,7 +59,6 @@ interface EmployeeData {
   personal_photo_url?: string | null;
   status: string;
   salary_type: string;
-  work_type?: EmployeeWorkType | null;
   base_salary: number;
   preferred_language?: string | null;
   nationality?: string | null;
@@ -250,7 +244,6 @@ const employeeFormSchema = z
     license_status: z.enum(['has_license', 'no_license', 'applied']),
     sponsorship_status: z.enum(['sponsored', 'not_sponsored', 'absconded', 'terminated']),
     status: z.enum(['active', 'inactive', 'ended']).default('active'),
-    work_type: z.enum(['orders', 'attendance', 'hybrid']).default('orders'),
     preferred_language: z.enum(['ar', 'en']).default('ar'),
   });
 
@@ -287,7 +280,6 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
       license_status: (editEmployee?.license_status as EmployeeFormValues['license_status']) || 'no_license',
       sponsorship_status: (editEmployee?.sponsorship_status as EmployeeFormValues['sponsorship_status']) || 'not_sponsored',
       status: (editEmployee?.status as EmployeeFormValues['status']) || 'active',
-      work_type: normalizeEmployeeWorkType(editEmployee?.work_type, editEmployee?.salary_type),
       preferred_language: (editEmployee?.preferred_language as EmployeeFormValues['preferred_language']) || 'ar',
     },
     mode: 'onBlur',
@@ -389,8 +381,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
     license_status: v.license_status,
     sponsorship_status: v.sponsorship_status,
     status: v.status,
-    salary_type: v.work_type === 'orders' ? 'orders' : 'shift',
-    work_type: v.work_type,
+    salary_type: editEmployee?.salary_type || 'orders',
     base_salary: editEmployee?.base_salary || 0,
     preferred_language: v.preferred_language,
   });
@@ -560,26 +551,6 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
               </F>
               <F label="المسمى الوظيفي">
                 <Input value={form.job_title} onChange={e => setField('job_title', e.target.value)} />
-              </F>
-              <F label="نوع العمل">
-                <Select
-                  value={form.work_type}
-                  onValueChange={(value) => setField('work_type', value as EmployeeFormValues['work_type'])}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر نوع العمل" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(['orders', 'attendance', 'hybrid'] as const).map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {getEmployeeWorkTypeLabel(value)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  يحدد هل تقييم الموظف يعتمد على الطلبات أو الحضور أو الاثنين معًا.
-                </p>
               </F>
               <F label="رقم الهاتف" required error={errors.phone?.message}>
                 <Input

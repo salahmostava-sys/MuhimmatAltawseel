@@ -20,11 +20,7 @@ export function isLikelyStaleChunkError(message: string): boolean {
     m.includes('chunkloaderror') ||
     m.includes('loading chunk') ||
     m.includes('importing a module script failed') ||
-    m.includes('error loading dynamically imported module') ||
-    m.includes('minified react error #306') ||
-    m.includes('invariant=306') ||
-    m.includes('lazy: expected the result of a dynamic import() call') ||
-    (m.includes('received a promise that resolves to') && m.includes('lazy'))
+    m.includes('error loading dynamically imported module')
   );
 }
 

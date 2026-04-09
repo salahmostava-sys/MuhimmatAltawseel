@@ -2,15 +2,14 @@ import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useTemporalContext } from '@app/providers/TemporalContext';
-import { RiderProfilePerformanceCard } from '@modules/dashboard/components/RiderProfilePerformanceCard';
+import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { performanceService } from '@services/performanceService';
-import { getErrorMessage } from '@services/serviceError';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
-import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
-import { usePermissions } from '@shared/hooks/usePermissions';
 import { useToast } from '@shared/hooks/use-toast';
-import { isOrdersCapableEmployeeWorkType } from '@shared/lib/employeeWorkType';
+import { usePermissions } from '@shared/hooks/usePermissions';
+import { getErrorMessage } from '@services/serviceError';
+import { RiderProfilePerformanceCard } from '@modules/dashboard/components/RiderProfilePerformanceCard';
 
 export function EmployeePerformanceTab(props: Readonly<{ employeeId: string }>) {
   const { employeeId } = props;
@@ -28,7 +27,7 @@ export function EmployeePerformanceTab(props: Readonly<{ employeeId: string }>) 
     queryKey: ['employee-performance', uid, employeeId, selectedMonth] as const,
     enabled,
     staleTime: 60_000,
-    queryFn: async () => performanceService.getEmployeePerformanceProfile(employeeId, selectedMonth),
+    queryFn: async () => performanceService.getRiderProfile(employeeId, selectedMonth),
   });
 
   useEffect(() => {
@@ -48,7 +47,7 @@ export function EmployeePerformanceTab(props: Readonly<{ employeeId: string }>) 
       });
       await queryClient.invalidateQueries({ queryKey: ['employee-performance', uid, employeeId, selectedMonth] });
       await queryClient.invalidateQueries({ queryKey: ['performance-dashboard', uid, selectedMonth] });
-      toast({ title: 'تم حفظ الهدف', description: 'تم تحديث أهداف الموظف لهذا الشهر' });
+      toast({ title: 'تم حفظ الهدف', description: 'تم تحديث أهداف المندوب لهذا الشهر' });
     } catch (error) {
       toast({
         title: 'تعذر حفظ الهدف',
@@ -72,46 +71,40 @@ export function EmployeePerformanceTab(props: Readonly<{ employeeId: string }>) 
     );
   }
 
-  const canManageTargets = isOrdersCapableEmployeeWorkType(performanceQuery.data.summary.workType);
-
   return (
     <div className="space-y-4">
+      {/* ── New Unified Rider Profile Performance Card ── */}
       <RiderProfilePerformanceCard data={performanceQuery.data} />
 
-      {canManageTargets ? (
-        <div className="bg-card rounded-2xl p-5 shadow-card md:max-w-md">
-          <h3 className="mb-4 text-sm font-bold text-foreground">إعدادات الأهداف</h3>
-          <div className="space-y-3">
-            <div>
-              <label className="text-[11px] text-muted-foreground">الهدف الشهري (عدد الطلبات)</label>
-              <Input
-                value={monthlyTargetOrders}
-                onChange={(event) => setMonthlyTargetOrders(event.target.value)}
-                inputMode="numeric"
-                disabled={!permissions.can_edit || savingTargets}
-              />
-            </div>
-            <div>
-              <label className="text-[11px] text-muted-foreground">الهدف اليومي</label>
-              <Input
-                value={dailyTargetOrders}
-                onChange={(event) => setDailyTargetOrders(event.target.value)}
-                inputMode="numeric"
-                disabled={!permissions.can_edit || savingTargets}
-              />
-            </div>
-            {permissions.can_edit ? (
-              <Button className="mt-2 w-full" onClick={() => void handleSaveTargets()} disabled={savingTargets}>
-                {savingTargets ? 'جارٍ الحفظ...' : 'حفظ الأهداف'}
-              </Button>
-            ) : null}
+      {/* ── Targets Form ── */}
+      <div className="bg-card rounded-2xl p-5 shadow-card md:max-w-md">
+        <h3 className="text-sm font-bold text-foreground mb-4">إعدادات الأهداف</h3>
+        <div className="space-y-3">
+          <div>
+            <label className="text-[11px] text-muted-foreground">الهدف الشهري (عدد الطلبات)</label>
+            <Input
+              value={monthlyTargetOrders}
+              onChange={(event) => setMonthlyTargetOrders(event.target.value)}
+              inputMode="numeric"
+              disabled={!permissions.can_edit || savingTargets}
+            />
           </div>
+          <div>
+            <label className="text-[11px] text-muted-foreground">الهدف اليومي (المنطقي)</label>
+            <Input
+              value={dailyTargetOrders}
+              onChange={(event) => setDailyTargetOrders(event.target.value)}
+              inputMode="numeric"
+              disabled={!permissions.can_edit || savingTargets}
+            />
+          </div>
+          {permissions.can_edit ? (
+            <Button className="w-full mt-2" onClick={() => void handleSaveTargets()} disabled={savingTargets}>
+              {savingTargets ? 'جارٍ الحفظ...' : 'حفظ الأهداف'}
+            </Button>
+          ) : null}
         </div>
-      ) : (
-        <div className="bg-card rounded-2xl border border-border/60 p-5 text-sm text-muted-foreground shadow-card">
-          هذا الموظف يعتمد على الحضور فقط، لذلك لا يتم استخدام أهداف الطلبات له في هذا التبويب.
-        </div>
-      )}
+      </div>
     </div>
   );
 }
