@@ -1,1 +1,0 @@
-ALTER TABLE public.apps ADD COLUMN IF NOT EXISTS scheme_id UUID REFERENCES public.salary_schemes(id) ON DELETE SET NULL;

@@ -1,1 +1,0 @@
-ALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS has_fuel_chip boolean NOT NULL DEFAULT false;
