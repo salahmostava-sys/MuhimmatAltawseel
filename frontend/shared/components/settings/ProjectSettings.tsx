@@ -2,12 +2,13 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLanguage } from '@app/providers/LanguageContext';
 import { useTheme } from '@app/providers/ThemeContext';
 import { useSystemSettings } from '@app/providers/SystemSettingsContext';
+import { automationReportService, type AutomationReportKind } from '@services/automationReportService';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { Label } from '@shared/components/ui/label';
 import { toast } from '@shared/components/ui/sonner';
 import { TOAST_ERROR_GENERIC, TOAST_SUCCESS_ACTION, TOAST_SUCCESS_EDIT } from '@shared/lib/toastMessages';
-import { Loader2, Save, Globe, Building2, Upload, X, Download, Database, Bell } from 'lucide-react';
+import { Loader2, Save, Globe, Building2, Upload, X, Download, Database, Bell, Send } from 'lucide-react';
 import { cn } from '@shared/lib/utils';
 import * as XLSX from '@e965/xlsx';
 import { format } from 'date-fns';
@@ -44,6 +45,8 @@ export default function ProjectSettings() {
   );
   const [saving, setSaving] = useState(false);
   const [backupLoading, setBackupLoading] = useState(false);
+  const [reportMonth, setReportMonth] = useState(format(new Date(), 'yyyy-MM'));
+  const [automationAction, setAutomationAction] = useState<AutomationReportKind | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const logoObjectUrlRef = useRef<string | null>(null);
 
@@ -146,6 +149,31 @@ export default function ProjectSettings() {
     setSaving(false);
   };
 
+  const handleAutomationAction = async (kind: AutomationReportKind) => {
+    setAutomationAction(kind);
+    try {
+      const settingsInput = {
+        projectName: nameAr || nameEn || settings?.project_name_ar,
+        advancedConfig,
+      };
+
+      const result = kind === 'test'
+        ? await automationReportService.sendTestMessage(settingsInput)
+        : await automationReportService.sendReport(kind, reportMonth, settingsInput);
+
+      toast.success(TOAST_SUCCESS_ACTION, {
+        description: isRTL
+          ? `تم إرسال ${result.title} إلى تيليجرام (${result.rowCount} موظف).`
+          : `${result.title} was sent to Telegram (${result.rowCount} employees).`,
+      });
+    } catch (err: unknown) {
+      logError('[ProjectSettings] automation action failed', err, { meta: { kind, reportMonth } });
+      toast.error(TOAST_ERROR_GENERIC, { description: getErrorMessage(err) });
+    } finally {
+      setAutomationAction(null);
+    }
+  };
+
   // ── Backup Handler ──
   const handleBackup = async () => {
     setBackupLoading(true);
@@ -221,6 +249,23 @@ export default function ProjectSettings() {
       <h3 className="text-sm font-semibold text-foreground">{title}</h3>
     </div>
   );
+
+  const testAvailability = automationReportService.getAvailability('test', {
+    projectName: nameAr,
+    advancedConfig,
+  });
+  const dailyAvailability = automationReportService.getAvailability('daily', {
+    projectName: nameAr,
+    advancedConfig,
+  });
+  const weeklyAvailability = automationReportService.getAvailability('weekly', {
+    projectName: nameAr,
+    advancedConfig,
+  });
+  const alertsAvailability = automationReportService.getAvailability('alerts', {
+    projectName: nameAr,
+    advancedConfig,
+  });
 
   return (
     <div className="max-w-6xl space-y-6">
@@ -379,6 +424,120 @@ export default function ProjectSettings() {
         onChange={setAdvancedConfig}
         isRTL={isRTL}
       />
+
+      <div className="bg-card rounded-xl border border-border/50 p-5 shadow-sm">
+        <SectionHeader icon={<Send size={14} />} title={isRTL ? 'تشغيل تيليجرام يدويًا' : 'Telegram Manual Runner'} />
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-[220px,1fr] gap-4 items-end">
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground">
+                {isRTL ? 'شهر التقارير' : 'Report Month'}
+              </Label>
+              <Input
+                type="month"
+                value={reportMonth}
+                onChange={(e) => setReportMonth(e.target.value)}
+                dir="ltr"
+              />
+            </div>
+            <div className="rounded-xl border border-dashed border-border/70 px-4 py-3 text-sm text-muted-foreground">
+              {isRTL
+                ? 'نفس الـ service هنا جاهز لاحقًا للجدولة اليومية/الأسبوعية. حاليًا تقدر تختبر الإرسال وتبعث التقارير فورًا إلى Admin Chat ID.'
+                : 'This uses the same service that can later be scheduled automatically. For now you can test Telegram and send reports immediately to the admin chat.'}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+            <div className="rounded-xl border border-border/60 p-4 space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-foreground">{isRTL ? 'رسالة اختبار' : 'Test Message'}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {isRTL ? 'يتأكد أن الاتصال مع Telegram Bot شغال.' : 'Confirms Telegram bot delivery is working.'}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2"
+                disabled={!testAvailability.enabled || automationAction !== null}
+                onClick={() => void handleAutomationAction('test')}
+              >
+                {automationAction === 'test' ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                {isRTL ? 'إرسال اختبار' : 'Send Test'}
+              </Button>
+              <p className="text-[11px] text-muted-foreground min-h-8">
+                {testAvailability.reason ?? (isRTL ? 'جاهز للإرسال.' : 'Ready to send.')}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-border/60 p-4 space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-foreground">{isRTL ? 'التقرير اليومي' : 'Daily Report'}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {isRTL ? 'ملخص تشغيلي مع أفضل العناصر والحالات الحرجة.' : 'Ops digest with top performers and urgent follow-up.'}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2"
+                disabled={!dailyAvailability.enabled || automationAction !== null}
+                onClick={() => void handleAutomationAction('daily')}
+              >
+                {automationAction === 'daily' ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                {isRTL ? 'إرسال اليومي' : 'Send Daily'}
+              </Button>
+              <p className="text-[11px] text-muted-foreground min-h-8">
+                {dailyAvailability.reason ?? (isRTL ? 'سيُرسل إلى Admin Chat ID.' : 'Will be sent to the admin chat ID.')}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-border/60 p-4 space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-foreground">{isRTL ? 'التقرير الأسبوعي' : 'Weekly Report'}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {isRTL ? 'تحليل الجوائز والتحسن وأفضل يوم أسبوعي.' : 'Awards, improvement trend, and best weekday analysis.'}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2"
+                disabled={!weeklyAvailability.enabled || automationAction !== null}
+                onClick={() => void handleAutomationAction('weekly')}
+              >
+                {automationAction === 'weekly' ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                {isRTL ? 'إرسال الأسبوعي' : 'Send Weekly'}
+              </Button>
+              <p className="text-[11px] text-muted-foreground min-h-8">
+                {weeklyAvailability.reason ?? (isRTL ? 'يستخدم نفس قناة تيليجرام الإدارية.' : 'Uses the same admin Telegram channel.')}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-border/60 p-4 space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-foreground">{isRTL ? 'ملخص التنبيهات' : 'Alerts Digest'}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {isRTL ? 'يركز على منخفضي الأداء ومخاطر الغياب.' : 'Focuses on low performance and absence risk.'}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2"
+                disabled={!alertsAvailability.enabled || automationAction !== null}
+                onClick={() => void handleAutomationAction('alerts')}
+              >
+                {automationAction === 'alerts' ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                {isRTL ? 'إرسال التنبيهات' : 'Send Alerts'}
+              </Button>
+              <p className="text-[11px] text-muted-foreground min-h-8">
+                {alertsAvailability.reason ?? (isRTL ? 'يُرسل أهم الحالات فقط.' : 'Only the most urgent cases will be sent.')}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {isAdmin && (
         <div className="bg-card rounded-xl border border-border/50 p-5 shadow-sm">
