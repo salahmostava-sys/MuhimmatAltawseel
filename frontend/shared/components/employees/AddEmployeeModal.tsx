@@ -594,43 +594,41 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                   </SelectContent>
                 </Select>
               </F>
-              <F label="رقم الحساب البنكي">
-                <div className="space-y-5">
-                  <F label="السجل التجاري">
-                    <div className="space-y-2">
-                      <Input
-                        list="employee-commercial-records"
-                        value={form.commercial_record}
-                        onChange={e => setField('commercial_record', e.target.value)}
-                        placeholder="أدخل أو اختر السجل التجاري"
-                      />
-                      <datalist id="employee-commercial-records">
-                        {commercialRecordNames.map((name) => (
-                          <option key={name} value={name} />
-                        ))}
-                      </datalist>
-                      {commercialRecordNames.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {commercialRecordNames.slice(0, 8).map((name) => (
-                            <button
-                              key={name}
-                              type="button"
-                              onClick={() => setField('commercial_record', name)}
-                              className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
-                                form.commercial_record === name
-                                  ? 'border-primary bg-primary/10 text-primary'
-                                  : 'border-border bg-muted/40 text-muted-foreground hover:border-primary/40'
-                              }`}
-                            >
-                              {name}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+              <F label="السجل التجاري">
+                <div className="space-y-2">
+                  <Input
+                    list="employee-commercial-records"
+                    value={form.commercial_record}
+                    onChange={e => setField('commercial_record', e.target.value)}
+                    placeholder="أدخل أو اختر السجل التجاري"
+                  />
+                  <datalist id="employee-commercial-records">
+                    {commercialRecordNames.map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
+                  {commercialRecordNames.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {commercialRecordNames.slice(0, 8).map((name) => (
+                        <button
+                          key={name}
+                          type="button"
+                          onClick={() => setField('commercial_record', name)}
+                          className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
+                            form.commercial_record === name
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-border bg-muted/40 text-muted-foreground hover:border-primary/40'
+                          }`}
+                        >
+                          {name}
+                        </button>
+                      ))}
                     </div>
-                  </F>
-                  <Input value={form.bank_account_number} onChange={e => setField('bank_account_number', e.target.value)} dir="ltr" />
+                  )}
                 </div>
+              </F>
+              <F label="رقم الحساب البنكي">
+                <Input value={form.bank_account_number} onChange={e => setField('bank_account_number', e.target.value)} dir="ltr" />
               </F>
               <F label="المدن">
                 <div className="space-y-3">

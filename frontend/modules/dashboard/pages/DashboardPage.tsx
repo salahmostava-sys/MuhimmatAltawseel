@@ -311,4 +311,4 @@ const Dashboard = () => {
   );
 };
 
-export { default } from './DashboardPerformancePage';
+export default Dashboard;

@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { AlertsWidget } from '@modules/dashboard/components/AlertsWidget';
 import { DashboardSupervisorTargetsCard } from '@modules/dashboard/components/DashboardSupervisorTargetsCard';
 import { OrdersChart } from '@modules/dashboard/components/OrdersChart';
+import { PlatformBreakdownSection } from '@modules/dashboard/components/PlatformBreakdownSection';
 import { StatsCards } from '@modules/dashboard/components/StatsCards';
 import { TopEmployees } from '@modules/dashboard/components/TopEmployees';
 import type { AtRiskRider } from '@modules/dashboard/hooks/useDashboard';
@@ -155,6 +156,13 @@ export function DashboardOverviewTab({
       <StatsCards loading={loading} kpis={kpis} orderGrowth={orderGrowth} />
 
       <DashboardSupervisorTargetsCard loading={loading} rows={supervisorPerformance} />
+
+      <PlatformBreakdownSection
+        loading={loading}
+        ordersByApp={ordersByApp}
+        topRidersPerApp={topRidersPerApp}
+        bottomRidersPerApp={bottomRidersPerApp}
+      />
 
       <OrdersChart
         loading={loading}
