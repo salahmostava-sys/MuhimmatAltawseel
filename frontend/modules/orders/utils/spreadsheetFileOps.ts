@@ -1,0 +1,448 @@
+import { toast } from '@shared/components/ui/sonner';
+import {
+  TOAST_SUCCESS_ACTION,
+  TOAST_SUCCESS_OPERATION,
+} from '@shared/lib/toastMessages';
+import { buildOrdersIoHeaders } from '@shared/constants/excelSchemas';
+import { logError, logger } from '@shared/lib/logger';
+import { orderService, type ReplaceMonthDataMeta } from '@services/orderService';
+import type { App, DailyData, Employee } from '@modules/orders/types';
+import { ordersImportHeadersMatch } from '@modules/orders/utils/importHelpers';
+import { dateStr, monthLabel, monthYear } from '@modules/orders/utils/dateMonth';
+import {
+  mergeImportedOrdersFromMatrixWithMapping,
+  type AppEmployeeIdsMap,
+} from '@modules/orders/utils/spreadsheetImportModel';
+import { loadXlsx } from '@modules/orders/utils/xlsx';
+import { matchEmployeeNames, type UnmatchedEmployeeName } from '@shared/lib/nameMatching';
+
+function summarizeMessages(messages: string[], limit = 3): string {
+  if (messages.length === 0) return '';
+  const preview = messages.slice(0, limit).join('، ');
+  return messages.length > limit ? `${preview}، و${messages.length - limit} أخرى` : preview;
+}
+
+function buildOrderIdentityLabel(
+  row: { employee_id: string; app_id: string; date: string },
+  employeeNames: Map<string, string>,
+  appNames: Map<string, string>,
+): string {
+  const employeeName = employeeNames.get(row.employee_id) ?? row.employee_id;
+  const appName = appNames.get(row.app_id) ?? row.app_id;
+  return `${employeeName} - ${appName} - ${row.date}`;
+}
+
+export type SpreadsheetImportResult = {
+  appliedData: DailyData | null;
+  imported: number;
+  skipped: number;
+  errors: string[];
+};
+
+export async function exportSpreadsheetExcel(params: {
+  year: number;
+  month: number;
+  dayArr: number[];
+  filteredEmployees: Employee[];
+  empDayTotal: (empId: string, day: number) => number;
+  empMonthTotal: (empId: string) => number;
+}): Promise<void> {
+  const XLSX = await loadXlsx();
+  const { year, month, dayArr, filteredEmployees, empDayTotal, empMonthTotal } = params;
+  const headers = buildOrdersIoHeaders(dayArr);
+  const rows = filteredEmployees.map((emp) => {
+    const values: Array<string | number> = [emp.name];
+    dayArr.forEach((d) => values.push(empDayTotal(emp.id, d) || ''));
+    values.push(empMonthTotal(emp.id));
+    return values;
+  });
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'الطلبات');
+  XLSX.writeFile(wb, `طلبات_${month}_${year}.xlsx`);
+  toast.success(TOAST_SUCCESS_ACTION);
+}
+
+export async function runSpreadsheetImport(params: {
+  file: File;
+  dayArr: number[];
+  employees: Employee[];
+  apps: App[];
+  appEmployeeIds: AppEmployeeIdsMap;
+  data: DailyData;
+  onApplyData: (next: DailyData) => void;
+  targetAppId?: string;
+  onShowNameMapping?: (unmatched: UnmatchedEmployeeName[], onConfirm: (mapping: Map<string, string>) => void) => void;
+}): Promise<SpreadsheetImportResult | null> {
+  const { file, dayArr, employees, apps, appEmployeeIds, data, onApplyData, targetAppId, onShowNameMapping } = params;
+  try {
+    // التحقق من نوع الملف
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+      toast.error('نوع الملف غير صحيح', {
+        description: 'يرجى رفع ملف Excel بصيغة .xlsx أو .xls فقط'
+      });
+      return null;
+    }
+
+    const XLSX = await loadXlsx();
+    const arrayBuffer = await file.arrayBuffer();
+    const wb = XLSX.read(arrayBuffer, { type: 'array' });
+    
+    // التحقق من وجود ورقة عمل
+    if (!wb.SheetNames || wb.SheetNames.length === 0) {
+      toast.error('ملف فارغ', {
+        description: 'الملف لا يحتوي على أي ورقة عمل'
+      });
+      return null;
+    }
+
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const matrix = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: '' });
+    
+    if (matrix.length < 2) {
+      toast.error('ملف فارغ', {
+        description: 'الملف لا يحتوي على بيانات. يجب أن يحتوي على صف العناوين وصف واحد على الأقل من البيانات'
+      });
+      return null;
+    }
+
+    const expectedHeaders = buildOrdersIoHeaders(dayArr);
+    const actualHeaders = (matrix[0] || []).map((h) => String(h ?? '').trim());
+    
+    if (!ordersImportHeadersMatch(actualHeaders, expectedHeaders)) {
+      toast.error('هيكل الملف غير صحيح', {
+        description: `عدد الأعمدة المتوقع: ${expectedHeaders.length}، عدد الأعمدة الموجود: ${actualHeaders.length}. تأكد من استخدام القالب الصحيح للشهر الحالي`
+      });
+      return null;
+    }
+
+    // استخراج الأسماء من الملف
+    const importedNames = matrix.slice(1).map((row, idx) => {
+      const line = Array.isArray(row) ? row : [];
+      const name = String(line[0] ?? '').trim();
+      return { name, rowIndex: idx + 2 }; // +2 لأن الصف الأول هو العناوين والـ index يبدأ من 0
+    }).filter(item => item.name);
+
+    if (importedNames.length === 0) {
+      toast.error('لا توجد بيانات للاستيراد', {
+        description: 'الملف لا يحتوي على أسماء موظفين في العمود الأول'
+      });
+      return null;
+    }
+
+    // مطابقة الأسماء
+    const rowsByImportedName = new Map<string, number[]>();
+    importedNames.forEach(({ name, rowIndex }) => {
+      rowsByImportedName.set(name, [...(rowsByImportedName.get(name) ?? []), rowIndex]);
+    });
+
+    const { matched, unmatched } = matchEmployeeNames(
+      importedNames.map(item => item.name),
+      employees,
+    );
+    const unmatchedWithRows: UnmatchedEmployeeName[] = unmatched.map((item) => ({
+      ...item,
+      rowIndexes: rowsByImportedName.get(item.name) ?? [],
+    }));
+
+    // إذا كان هناك أسماء غير مطابقة وتم توفير callback
+    if (unmatchedWithRows.length > 0 && onShowNameMapping) {
+      return new Promise((resolve) => {
+        onShowNameMapping(unmatchedWithRows, (nameMapping) => {
+          // دمج المطابقات التلقائية مع المطابقات اليدوية
+          const finalMapping = new Map<string, string>();
+          matched.forEach((match, name) => finalMapping.set(name, match.id));
+          nameMapping.forEach((id, name) => finalMapping.set(name, id));
+
+          // استيراد البيانات مع المطابقات
+          const { newData, imported, skipped, errors } = mergeImportedOrdersFromMatrixWithMapping({
+            matrixRows: matrix.slice(1),
+            dayArr,
+            apps,
+            prev: data,
+            targetAppId,
+            nameMapping: finalMapping,
+            appEmployeeIds,
+          });
+          onApplyData(newData);
+          const appName = targetAppId
+            ? apps.find((a) => a.id === targetAppId)?.name
+            : 'التوزيع الذكي حسب تعيين الموظف';
+          
+          if (errors.length > 0) {
+            toast.warning(`تم الاستيراد مع تحذيرات`, {
+              description: `تم استيراد ${imported} إدخال، تم تجاهل ${skipped} صف. ${errors.slice(0, 3).join('، ')}`
+            });
+          } else {
+            toast.success(TOAST_SUCCESS_ACTION, { 
+              description: `تم استيراد ${imported} إدخال إلى ${appName}` 
+            });
+          }
+          resolve({ appliedData: newData, imported, skipped, errors });
+        });
+      });
+    }
+
+    // إذا كانت كل الأسماء مطابقة
+    const finalMapping = new Map<string, string>();
+    matched.forEach((match, name) => finalMapping.set(name, match.id));
+
+    const { newData, imported, skipped, errors } = mergeImportedOrdersFromMatrixWithMapping({
+      matrixRows: matrix.slice(1),
+      dayArr,
+      apps,
+      prev: data,
+      targetAppId,
+      nameMapping: finalMapping,
+      appEmployeeIds,
+    });
+    onApplyData(newData);
+    const appName = targetAppId
+      ? apps.find((a) => a.id === targetAppId)?.name
+      : 'التوزيع الذكي حسب تعيين الموظف';
+    
+    if (errors.length > 0) {
+      toast.warning(`تم الاستيراد مع تحذيرات`, {
+        description: `تم استيراد ${imported} إدخال، تم تجاهل ${skipped} صف. الأخطاء: ${errors.slice(0, 3).join('، ')}`
+      });
+    } else if (file.name === '__never__') {
+      toast.success(TOAST_SUCCESS_OPERATION, {
+        description: `ØªÙ… Ù…Ø³Ø­ Ø¬Ù…ÙŠØ¹ Ø·Ù„Ø¨Ø§Øª Ø§Ù„Ø´Ù‡Ø± â€” ${monthLabel(year, month)}`
+      });
+    } else {
+      toast.success(TOAST_SUCCESS_ACTION, { 
+        description: `تم استيراد ${imported} إدخال إلى ${appName}` 
+      });
+    }
+    return { appliedData: newData, imported, skipped, errors };
+  } catch (err) {
+    logError('[Orders] import spreadsheet failed', err);
+    const errorMsg = err instanceof Error ? err.message : 'خطأ غير معروف';
+    toast.error('فشل استيراد الملف', {
+      description: `حدث خطأ أثناء قراءة الملف: ${errorMsg}`
+    });
+    return null;
+  }
+}
+
+export function mergeImportedOrdersFromMatrixWithMappingLegacy(
+  matrixRows: unknown[],
+  dayArr: number[],
+  employees: Employee[],
+  apps: App[],
+  prev: DailyData,
+  targetAppId: string | undefined,
+  nameMapping: Map<string, string>
+): { newData: DailyData; imported: number; skipped: number; errors: string[] } {
+  let imported = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+  const newData = { ...prev };
+  const targetApps = targetAppId ? apps.filter((a) => a.id === targetAppId) : apps;
+  
+  if (targetApps.length === 0) {
+    errors.push('لا توجد منصات نشطة');
+    return { newData, imported, skipped, errors };
+  }
+
+  for (let rowIdx = 0; rowIdx < matrixRows.length; rowIdx++) {
+    const row = matrixRows[rowIdx];
+    const line = Array.isArray(row) ? row : [];
+    const empName = String(line[0] ?? '').trim();
+    
+    if (!empName) {
+      skipped++;
+      continue;
+    }
+
+    const empId = nameMapping.get(empName);
+    if (!empId) {
+      skipped++;
+      errors.push(`صف ${rowIdx + 2}: الموظف "${empName}" غير موجود`);
+      continue;
+    }
+    
+    let hasValidData = false;
+    for (let idx = 0; idx < dayArr.length; idx++) {
+      const d = dayArr[idx];
+      const cellValue = line[idx + 1];
+      const val = Number(cellValue);
+      
+      if (Number.isNaN(val)) {
+        if (cellValue !== '' && cellValue !== null && cellValue !== undefined) {
+          errors.push(`صف ${rowIdx + 2}, يوم ${d}: قيمة غير صحيحة "${cellValue}"`);
+        }
+        continue;
+      }
+      
+      if (val <= 0) continue;
+      
+      if (val > 10000) {
+        errors.push(`صف ${rowIdx + 2}, يوم ${d}: عدد الطلبات ${val} كبير جداً`);
+        continue;
+      }
+      
+      hasValidData = true;
+      for (const app of targetApps) {
+        newData[`${empId}::${app.id}::${d}`] = val;
+        imported++;
+      }
+    }
+    
+    if (!hasValidData) {
+      skipped++;
+    }
+  }
+  
+  return { newData, imported, skipped, errors };
+}
+
+export async function downloadSpreadsheetTemplate(dayArr: number[]): Promise<void> {
+  const XLSX = await loadXlsx();
+  const ws = XLSX.utils.aoa_to_sheet([buildOrdersIoHeaders(dayArr)]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'قالب الطلبات');
+  XLSX.writeFile(wb, 'template_orders.xlsx');
+}
+
+export function printSpreadsheetTable(params: {
+  tableEl: HTMLTableElement | null;
+  year: number;
+  month: number;
+  filteredEmployeeCount: number;
+}): void {
+  const { tableEl, year, month, filteredEmployeeCount } = params;
+  if (!tableEl) return;
+  const printWindow = globalThis.open('', '_blank');
+  if (!printWindow) return;
+  const doc = printWindow.document;
+  const html = doc.documentElement;
+  const head = doc.head;
+  const body = doc.body;
+  if (!html || !head || !body) return;
+  html.setAttribute('dir', 'rtl');
+  html.setAttribute('lang', 'ar');
+  const metaCharset = doc.createElement('meta');
+  metaCharset.setAttribute('charset', 'UTF-8');
+  head.appendChild(metaCharset);
+  const docTitle = doc.createElement('title');
+  docTitle.textContent = `طلبات ${month}/${year}`;
+  head.appendChild(docTitle);
+  const styleEl = doc.createElement('style');
+  styleEl.textContent =
+    '*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:10px;direction:rtl;color:#111;background:#fff}h2{text-align:center;margin-bottom:8px;font-size:14px}p.sub{text-align:center;color:#666;font-size:10px;margin-bottom:10px}table{width:100%;border-collapse:collapse}th{background:#1e3a5f;color:#fff;padding:5px 6px;text-align:right;font-size:9px;white-space:nowrap}td{padding:4px 6px;border-bottom:1px solid #e0e0e0;text-align:right;white-space:nowrap}tr:nth-child(even) td{background:#f9f9f9}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}';
+  head.appendChild(styleEl);
+  const title = doc.createElement('h2');
+  title.textContent = `طلبات شهر ${month}/${year}`;
+  const subtitle = doc.createElement('p');
+  subtitle.className = 'sub';
+  subtitle.textContent = `المجموع: ${filteredEmployeeCount} مندوب — ${new Date().toLocaleDateString('ar-SA')}`;
+  while (body.firstChild) body.removeChild(body.firstChild);
+  body.appendChild(title);
+  body.appendChild(subtitle);
+  body.appendChild(tableEl.cloneNode(true));
+  printWindow.onload = () => {
+    printWindow.print();
+    printWindow.onafterprint = () => printWindow.close();
+  };
+}
+
+export async function saveSpreadsheetMonth(params: {
+  isMonthLocked: boolean;
+  year: number;
+  month: number;
+  days: number;
+  data: DailyData;
+  setSaving: (v: boolean) => void;
+  employees: Employee[];
+  apps: App[];
+  saveMeta?: ReplaceMonthDataMeta;
+}): Promise<boolean> {
+  const { isMonthLocked, year, month, days, data, setSaving, employees, apps, saveMeta } = params;
+  if (isMonthLocked) {
+    toast.error('الشهر مقفل', {
+      description: 'لا يمكن حفظ التغييرات في شهر مقفل'
+    });
+    return false;
+  }
+  
+  setSaving(true);
+  const employeeNames = new Map(employees.map((employee) => [employee.id, employee.name]));
+  const appNames = new Map(apps.map((app) => [app.id, app.name]));
+  const rows: { employee_id: string; app_id: string; date: string; orders_count: number }[] = [];
+  const invalidRows: string[] = [];
+  const monthKey = monthYear(year, month);
+  const isClearingMonth = Object.keys(data).length === 0;
+  
+  Object.entries(data).forEach(([key, count]) => {
+    const [empId, appId, dayStr] = key.split('::');
+    const day = Number.parseInt(dayStr, 10);
+    
+    if (!empId || !appId || !dayStr) {
+      invalidRows.push(`مفتاح غير صحيح: ${key}`);
+      return;
+    }
+
+    const rowIdentity = `${employeeNames.get(empId) ?? empId} - ${appNames.get(appId) ?? appId}`;
+    
+    if (Number.isNaN(day) || day < 1 || day > days) {
+      invalidRows.push(`${rowIdentity}: يوم غير صحيح (${dayStr})`);
+      return;
+    }
+    
+    if (count <= 0 || count > 10000) {
+      invalidRows.push(`${rowIdentity} - ${dateStr(year, month, day)}: عدد طلبات غير صحيح (${count})`);
+      return;
+    }
+    
+    rows.push({
+      employee_id: empId,
+      app_id: appId,
+      date: dateStr(year, month, day),
+      orders_count: count,
+    });
+  });
+  
+  if (invalidRows.length > 0) {
+    logger.warn('تم تجاهل بيانات غير صحيحة', { meta: { invalidRows } });
+    toast.warning('تم تجاهل بعض البيانات قبل الحفظ', {
+      description: summarizeMessages(invalidRows)
+    });
+  }
+  
+  if (rows.length === 0 && !isClearingMonth) {
+    toast.error('لا توجد بيانات للحفظ', {
+      description: 'لم يتم العثور على أي طلبات صحيحة للحفظ'
+    });
+    setSaving(false);
+    return false;
+  }
+  
+  try {
+    const { saved, failed } = await orderService.replaceMonthData(monthKey, rows, 200, saveMeta);
+    
+    if (failed.length > 0) {
+      logger.error('فشل حفظ بعض السجلات', { meta: { failed: failed.slice(0, 10) } });
+      const failedMessages = failed.map((failure) => (
+        `${buildOrderIdentityLabel(failure.row, employeeNames, appNames)}: ${failure.error}`
+      ));
+      toast.error('حفظ جزئي', {
+        description: `تم حفظ ${saved} إدخال بنجاح، وتعذر حفظ ${failed.length} إدخال. ${summarizeMessages(failedMessages)}`
+      });
+    } else {
+      toast.success(TOAST_SUCCESS_OPERATION, {
+        description: `تم حفظ ${saved} إدخال — ${monthLabel(year, month)}`
+      });
+    }
+    return isClearingMonth || saved > 0;
+  } catch (e: unknown) {
+    const errorMsg = e instanceof Error ? e.message : 'خطأ غير معروف';
+    toast.error('فشل عملية الحفظ', {
+      description: `حدث خطأ: ${errorMsg}`
+    });
+    logError('Orders.handleSave', e);
+    return false;
+  } finally {
+    setSaving(false);
+  }
+}

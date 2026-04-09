@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "paths": {
+      "@app/*": [
+        "./app/*"
+      ],
+      "@services/*": [
+        "./services/*"
+      ],
+      "@modules/*": [
+        "./modules/*"
+      ],
+      "@shared/*": [
+        "./shared/*"
+      ]
+    },
+    "skipLibCheck": true,
+    "strictNullChecks": true
+  },
+  "files": [],
+  "references": [
+    {
+      "path": "./tsconfig.app.json"
+    },
+    {
+      "path": "./tsconfig.node.json"
+    }
+  ]
+}

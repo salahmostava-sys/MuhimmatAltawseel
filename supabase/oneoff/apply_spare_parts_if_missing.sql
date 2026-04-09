@@ -1,0 +1,56 @@
+-- تشغيل مرة واحدة في Supabase → SQL Editor إذا ظهرت رسالة:
+-- "Could not find the table 'public.spare_parts' in the schema cache"
+-- آمن للتكرار: يستخدم IF NOT EXISTS / DROP IF EXISTS حيث يلزم.
+-- للجداول الكاملة (maintenance_logs، maintenance_parts، المحفزات) شغّل أيضاً
+-- الترحيلات 20260328221000 و 20260328222000 أو: npx supabase link && npx supabase db push
+
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS public.spare_parts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name_ar TEXT NOT NULL,
+  part_number TEXT,
+  stock_quantity NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  min_stock_alert NUMERIC(10, 2) DEFAULT 5,
+  unit TEXT DEFAULT 'قطعة',
+  unit_cost NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  supplier TEXT,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.spare_parts ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Active users can view spare_parts" ON public.spare_parts;
+CREATE POLICY "Active users can view spare_parts"
+  ON public.spare_parts FOR SELECT
+  TO authenticated
+  USING (is_active_user(auth.uid()));
+
+DROP POLICY IF EXISTS "Admin/operations can manage spare_parts" ON public.spare_parts;
+CREATE POLICY "Admin/operations can manage spare_parts"
+  ON public.spare_parts FOR ALL
+  TO authenticated
+  USING (
+    is_active_user(auth.uid()) AND (
+      has_role(auth.uid(), 'admin'::app_role) OR
+      has_role(auth.uid(), 'operations'::app_role)
+    )
+  )
+  WITH CHECK (
+    is_active_user(auth.uid()) AND (
+      has_role(auth.uid(), 'admin'::app_role) OR
+      has_role(auth.uid(), 'operations'::app_role)
+    )
+  );
+
+DROP TRIGGER IF EXISTS update_spare_parts_updated_at ON public.spare_parts;
+CREATE TRIGGER update_spare_parts_updated_at
+  BEFORE UPDATE ON public.spare_parts
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+COMMIT;
+
+-- إعادة تحميل كاش مخطط PostgREST (مضمون في معظم مشاريع Supabase)
+NOTIFY pgrst, 'reload schema';
