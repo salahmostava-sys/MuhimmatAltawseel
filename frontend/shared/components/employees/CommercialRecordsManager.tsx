@@ -31,10 +31,7 @@ export function CommercialRecordsManager({
     [records],
   );
 
-  const legacyRecords = useMemo(
-    () => records.filter((record) => record.source === 'legacy'),
-    [records],
-  );
+
 
   const refreshRecords = async () => {
     await Promise.all([

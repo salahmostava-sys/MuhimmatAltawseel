@@ -14,8 +14,8 @@ import {
   type FleetPerformanceSummary,
   type PerformanceTier,
   tierLabel,
+  tierLabel,
   classifyPerformance,
-  computeGrowthRate,
 } from './performanceEngine';
 
 // ─── Types ───────────────────────────────────────────────────────────────────

@@ -4,7 +4,7 @@ import { salaryDataService } from '@services/salaryDataService';
 import { driverService } from '@services/driverService';
 import { salaryDraftService } from '@services/salaryDraftService';
 import { buildSalaryRowSnapshot, getManualDeductionTotal } from '@modules/salaries/lib/salaryDomain';
-import { months } from '@modules/salaries/lib/salaryMonths';
+
 import type { SalaryRow } from '@modules/salaries/types/salary.types';
 import { getDisplayedBaseSalary } from '@modules/salaries/model/salaryUtils';
 import { useSafeAction } from '@shared/hooks/useSafeAction';

@@ -5,9 +5,6 @@
 
 import { useMemo } from 'react';
 import {
-  TrendingUp,
-  TrendingDown,
-  Minus,
   Target,
   Calendar,
   Award,
@@ -18,13 +15,10 @@ import {
 import type { RiderProfilePerformanceResponse } from '@services/performanceService';
 import {
   buildRiderDetailProfile,
-  compareValues,
   enrichWithDelta,
-  type RiderPerformanceProfile,
 } from '@modules/dashboard/lib/performanceEngine';
 import {
   analyzeRider,
-  type RiderAIAnalysis,
 } from '@modules/dashboard/lib/aiInsightsEngine';
 import { PerformanceScoreBadge } from './PerformanceScoreBadge';
 
@@ -32,11 +26,7 @@ interface RiderProfilePerformanceCardProps {
   data: RiderProfilePerformanceResponse;
 }
 
-function TrendIcon({ trend }: { trend: 'up' | 'down' | 'stable' }) {
-  if (trend === 'up') return <TrendingUp size={14} className="text-emerald-600" />;
-  if (trend === 'down') return <TrendingDown size={14} className="text-rose-500" />;
-  return <Minus size={14} className="text-muted-foreground" />;
-}
+
 
 function ProfileStatRow({
   label,

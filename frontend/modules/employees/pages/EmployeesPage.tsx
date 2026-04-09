@@ -44,7 +44,7 @@ const InlineLoader = ({ minHeightClassName = 'min-h-[260px]' }: Readonly<{ minHe
 const Employees = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { settings } = useSystemSettings();
+  useSystemSettings();
   const { permissions } = usePermissions('employees');
   const [data, setData] = useState<Employee[]>([]);
   const {

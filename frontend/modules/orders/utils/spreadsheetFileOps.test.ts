@@ -9,6 +9,7 @@ vi.mock('@shared/components/ui/sonner', () => ({
   },
 }));
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toastMocks = (await import('@shared/components/ui/sonner')).toast as any;
 
 vi.mock('@services/orderService', () => ({
@@ -18,6 +19,7 @@ vi.mock('@services/orderService', () => ({
 }));
 
 const { orderService } = await import('@services/orderService');
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const replaceMonthDataMock = orderService.replaceMonthData as any;
 
 vi.mock('@shared/lib/logger', () => ({

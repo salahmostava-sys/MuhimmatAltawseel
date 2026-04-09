@@ -15,7 +15,6 @@ import {
   Trophy,
   Users,
   Zap,
-  type LucideIcon,
 } from 'lucide-react';
 
 import type {
@@ -25,7 +24,6 @@ import type {
 import {
   buildFleetSummary,
   buildRiderProfiles,
-  compareValues,
   type RiderPerformanceProfile,
 } from '@modules/dashboard/lib/performanceEngine';
 import {
@@ -246,10 +244,6 @@ export function DashboardPerformanceOverviewTab(props: Readonly<{
             <p className="text-sm font-bold text-foreground">توزيع الأداء</p>
             <div className="space-y-3 mt-4">
               {(['excellent', 'good', 'average', 'weak'] as const).map((tier) => {
-                const count = tier === 'excellent' ? distribution.excellent
-                  : tier === 'good' ? (distribution.average - distribution.weak > 0 ? Math.max(0, summary.activeRiders - distribution.excellent - distribution.average - distribution.weak) : 0)
-                  : tier === 'average' ? distribution.average
-                  : distribution.weak;
                 const labels: Record<string, { ar: string; color: string }> = {
                   excellent: { ar: 'ممتاز', color: 'text-emerald-600' },
                   good: { ar: 'جيد', color: 'text-blue-600' },

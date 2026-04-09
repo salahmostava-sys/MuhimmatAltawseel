@@ -4,13 +4,10 @@
  */
 
 import { useState, useMemo } from 'react';
-import { Search, Filter, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import {
   type RiderPerformanceProfile,
   type PerformanceTier,
-  tierLabel,
-  tierColorClass,
-  tierBgClass,
 } from '@modules/dashboard/lib/performanceEngine';
 import { ScoreRing } from './PerformanceScoreBadge';
 
