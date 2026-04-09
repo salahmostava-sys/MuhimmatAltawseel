@@ -690,7 +690,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
           {step === 1 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div className="sm:col-span-2"><SectionTitle title="── الإقامة والوثائق ──" /></div>
-              <div className="sm:col-span-2">
+              <div>
                 <F label="تاريخ انتهاء الإقامة" required error={errors.residency_expiry?.message}>
                   <Input type="date" value={form.residency_expiry} onChange={e => setField('residency_expiry', e.target.value)} />
                 </F>
