@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@shared/components/ui/sonner';
 import { useAuthQueryGate, authQueryUserId } from '@shared/hooks/useAuthQueryGate';
@@ -6,6 +6,7 @@ import { usePermissions } from '@shared/hooks/usePermissions';
 import { useTemporalContext } from '@app/providers/TemporalContext';
 import { shiftService } from '@services/shiftService';
 import { orderService } from '@services/orderService';
+import { isShiftCapableApp } from '@shared/lib/workType';
 import { ShiftsTab, type ShiftRow } from '@modules/orders/components/ShiftsTab';
 import { shiftMonth } from '@modules/orders/utils/dateMonth';
 

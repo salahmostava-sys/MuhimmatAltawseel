@@ -38,7 +38,7 @@ export const routesManifest: AppRouteManifestItem[] = [
   { id: 'attendance', titleAr: 'الحضور والانصراف', group: 'hr', path: '/attendance', permission: routePermission('attendance'), sidebar: true },
   { id: 'alerts', titleAr: 'التنبيهات', group: 'hr', path: '/alerts', permission: routePermission('alerts'), sidebar: true },
   { id: 'apps', titleAr: 'التطبيقات', group: 'hr', path: '/apps', permission: routePermission('apps'), sidebar: true },
-  { id: 'apps_settings', titleAr: 'إعدادات المنصات', group: 'hr', path: '/apps/settings', permission: routePermission('apps'), sidebar: true },
+  { id: 'apps_settings', titleAr: 'إعدادات المنصات', group: 'hr', path: '/apps/settings', permission: routePermission('apps'), sidebar: false },
 
   /** إدخال يومي وتشغيل */
   { id: 'orders', titleAr: 'الطلبات', group: 'operations', path: '/orders', permission: routePermission('orders'), sidebar: true },

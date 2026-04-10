@@ -14,6 +14,7 @@ import { useQueryErrorToast } from '@shared/hooks/useQueryErrorToast';
 import { appService } from '@services/appService';
 import { getErrorMessage } from '@services/serviceError';
 import { logger } from '@shared/lib/logger';
+import type { WorkType } from '@shared/types/shifts';
 import { appsPageService } from '@modules/apps/services/appsPageService';
 import { appsRootQueryKey, appsOverviewQueryKey, appEmployeesQueryKey } from '@modules/apps/queryKeys';
 import { toAppUpsertPayload } from '@modules/apps/lib/appsModel';
@@ -148,6 +149,17 @@ export const useAppsPage = () => {
     }
   };
 
+  const handleWorkTypeChange = async (app: AppData, workType: WorkType) => {
+    try {
+      await appService.update(app.id, { ...app, work_type: workType });
+      await queryClient.invalidateQueries({ queryKey: ['apps'] });
+      toast.success('تم تحديث نوع العمل');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'تعذر تحديث نوع العمل';
+      toast.error(message);
+    }
+  };
+
   return {
     permissions,
     monthYear,
@@ -193,5 +205,6 @@ export const useAppsPage = () => {
       }
     },
     closeSelectedApp: () => setSelectedAppId(null),
+    handleWorkTypeChange,
   };
 };

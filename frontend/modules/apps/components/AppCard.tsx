@@ -1,6 +1,14 @@
 import { Edit2, Plus, Power, PowerOff, Trash2 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@shared/components/ui/select';
 import type { AppData } from '@modules/apps/types';
 import { getWorkTypeLabel } from '@shared/lib/workType';
+import type { WorkType } from '@shared/types/shifts';
 
 interface AppCardProps {
   app: AppData;
@@ -10,6 +18,7 @@ interface AppCardProps {
   onEdit: (app: AppData) => void;
   onToggleActive: (app: AppData, event: React.MouseEvent) => void;
   onDelete: (app: AppData, event: React.MouseEvent) => void;
+  onWorkTypeChange?: (app: AppData, workType: WorkType) => void;
 }
 
 export const AppCard = ({
@@ -20,6 +29,7 @@ export const AppCard = ({
   onEdit,
   onToggleActive,
   onDelete,
+  onWorkTypeChange,
 }: AppCardProps) => {
   const isActiveInMonth = app.is_active_this_month;
 
@@ -80,13 +90,32 @@ export const AppCard = ({
         <h3 className="truncate text-sm font-bold" style={{ color: app.text_color }}>
           {app.name}
         </h3>
-        <div className="mt-1 flex justify-center">
-          <span
-            className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
-            style={{ backgroundColor: 'rgba(255,255,255,0.18)', color: app.text_color }}
-          >
-            {getWorkTypeLabel(app.work_type)}
-          </span>
+        <div className="mt-1 flex justify-center" onClick={(e) => e.stopPropagation()}>
+          {canEdit && onWorkTypeChange ? (
+            <Select
+              value={app.work_type || 'orders'}
+              onValueChange={(v) => onWorkTypeChange(app, v as WorkType)}
+            >
+              <SelectTrigger
+                className="h-6 w-auto min-w-[80px] border-0 bg-white/20 text-[10px] font-semibold px-2 py-0 gap-1 rounded-full hover:bg-white/30 focus:ring-0 focus:ring-offset-0"
+                style={{ color: app.text_color }}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="orders">📦 طلبات</SelectItem>
+                <SelectItem value="shift">⏰ دوام</SelectItem>
+                <SelectItem value="hybrid">🔄 مختلط</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <span
+              className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+              style={{ backgroundColor: 'rgba(255,255,255,0.18)', color: app.text_color }}
+            >
+              {getWorkTypeLabel(app.work_type)}
+            </span>
+          )}
         </div>
 
         <div className="mt-3 space-y-1">

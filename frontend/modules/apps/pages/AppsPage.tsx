@@ -47,6 +47,7 @@ const AppsPage = () => {
     toggleMonthlyActive,
     confirmDelete,
     closeSelectedApp,
+    handleWorkTypeChange,
   } = useAppsPage();
 
   if (appsError && !appsLoading) {
@@ -103,6 +104,7 @@ const AppsPage = () => {
                   event.stopPropagation();
                   setDeleteApp(item);
                 }}
+                onWorkTypeChange={handleWorkTypeChange}
               />
             ))}
 
