@@ -68,8 +68,18 @@ const matchesText = (source: string | null | undefined, filterValue: string): bo
 const matchesExact = (source: string | null | undefined, filterValue: string): boolean =>
   (source || '') === filterValue;
 
-const matchesDate = (source: string | null | undefined, filterValue: string): boolean =>
-  (source || '').slice(0, 10) === filterValue;
+/** Supports exact date or range "from..to" (either side optional). */
+const matchesDate = (source: string | null | undefined, filterValue: string): boolean => {
+  const dateStr = (source || '').slice(0, 10);
+  if (!dateStr) return false;
+  if (filterValue.includes('..')) {
+    const [from, to] = filterValue.split('..');
+    if (from && dateStr < from) return false;
+    if (to && dateStr > to) return false;
+    return true;
+  }
+  return dateStr === filterValue;
+};
 
 function matchesResidencyFilter(employee: Employee, filterValue: string): boolean {
   const res = calcResidency(employee.residency_expiry);

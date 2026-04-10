@@ -366,18 +366,38 @@ export function EmployeeDetailedTable({
                       </div>
                     );
                   }
-                  if (dateFilterKeys.has(col.key))
+                  if (dateFilterKeys.has(col.key)) {
+                    // Range filter: "from..to" stored as single string
+                    const rangeVal = colFilters[col.key] || "";
+                    const [rangeFrom = "", rangeTo = ""] = rangeVal.includes("..") ? rangeVal.split("..") : [rangeVal, ""];
+                    const updateRange = (from: string, to: string) => {
+                      if (!from && !to) setColFilter(col.key, "");
+                      else if (!to) setColFilter(col.key, from);
+                      else setColFilter(col.key, `${from}..${to}`);
+                    };
                     return (
-                      <Input
-                        type="date"
-                        className="h-8 text-xs px-2"
-                        value={colFilters[col.key] || ""}
-                        onChange={(event) =>
-                          setColFilter(col.key, event.target.value)
-                        }
-                        onClick={(event) => event.stopPropagation()}
-                      />
+                      <div className="space-y-1.5" onClick={(event) => event.stopPropagation()}>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-muted-foreground w-6">من</span>
+                          <Input
+                            type="date"
+                            className="h-7 text-xs px-1.5 flex-1"
+                            value={rangeFrom}
+                            onChange={(event) => updateRange(event.target.value, rangeTo)}
+                          />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-muted-foreground w-6">إلى</span>
+                          <Input
+                            type="date"
+                            className="h-7 text-xs px-1.5 flex-1"
+                            value={rangeTo}
+                            onChange={(event) => updateRange(rangeFrom, event.target.value)}
+                          />
+                        </div>
+                      </div>
                     );
+                  }
                   if (col.key === "license_status")
                     return (
                       <Select
