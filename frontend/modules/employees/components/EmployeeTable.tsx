@@ -1130,16 +1130,7 @@ export function EmployeeDetailedTable({
                               className="px-3 py-2.5 text-center whitespace-nowrap"
                               dir="ltr"
                             >
-                              {renderEditableTextCell(
-                                emp.id,
-                                "bank_account_number",
-                                emp.bank_account_number,
-                                {
-                                  dir: "ltr",
-                                  className: "tabular-nums",
-                                  placeholder: "رقم الحساب البنكي",
-                                },
-                              )}
+                              {renderTextValue(emp.bank_account_number, { dir: "ltr", className: "tabular-nums" })}
                             </td>
                           );
 
@@ -1150,23 +1141,10 @@ export function EmployeeDetailedTable({
                               className="px-3 py-2.5 text-center whitespace-nowrap"
                               dir="ltr"
                             >
-                              {permissions.can_edit ? (
-                                <InlineInputEditor
-                                  value={emp.email || ""}
-                                  inputType="email"
-                                  dir="ltr"
-                                  placeholder="البريد الإلكتروني"
-                                  onSave={(nextValue) =>
-                                    saveField(emp.id, "email", nextValue)
-                                  }
-                                  renderDisplay={() =>
-                                    renderTextValue(emp.email, { dir: "ltr" })
-                                  }
-                                />
-                              ) : emp.email ? (
+                              {emp.email ? (
                                 <a
                                   href={`mailto:${emp.email}`}
-                                  className="text-primary hover:underline"
+                                  className="text-primary hover:underline text-sm"
                                 >
                                   {emp.email}
                                 </a>
