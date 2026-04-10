@@ -99,6 +99,12 @@ type EmployeeDetailedTableProps = {
   setColFilter: (key: string, value: string) => void;
   tableRef: React.RefObject<HTMLTableElement | null>;
   refetchEmployees: () => void;
+  /** Real-time: map of rowId → user currently editing that row */
+  presenceActiveRows?: Map<string, { userId: string; name: string; color: string }>;
+  /** Called when user starts inline-editing a row */
+  onRowEditStart?: (rowId: string) => void;
+  /** Called when user finishes editing */
+  onRowEditEnd?: () => void;
 };
 
 export function EmployeeDetailedTable({
@@ -128,6 +134,9 @@ export function EmployeeDetailedTable({
   setColFilter,
   tableRef,
   refetchEmployees,
+  presenceActiveRows,
+  onRowEditStart,
+  onRowEditEnd,
 }: EmployeeDetailedTableProps) {
   const { data: availableApps = [] } = useActiveApps();
   const { recordNames: commercialRecordNames = [] } = useCommercialRecords();
@@ -543,11 +552,30 @@ export function EmployeeDetailedTable({
                 const res = calcResidency(emp.residency_expiry);
                 const daysColor = dayColorByThreshold(res.days);
                 const globalIdx = (page - 1) * pageSize + idx + 1;
+                const presenceUser = presenceActiveRows?.get(emp.id);
                 return (
                   <tr
                     key={emp.id}
-                    className="border-b border-border/30 hover:bg-muted/20 transition-colors"
+                    className={`border-b border-border/30 hover:bg-muted/20 transition-colors relative ${presenceUser ? 'ring-1 ring-inset' : ''}`}
+                    style={presenceUser ? { '--ring-color': presenceUser.color, ringColor: presenceUser.color } as React.CSSProperties : undefined}
+                    onFocusCapture={() => onRowEditStart?.(emp.id)}
+                    onBlurCapture={(e) => {
+                      // Only fire onRowEditEnd if focus left the row entirely
+                      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                        onRowEditEnd?.();
+                      }
+                    }}
                   >
+                    {presenceUser && (
+                      <td className="absolute -top-2.5 start-2 z-10 px-0 py-0 border-0" style={{ width: 0, height: 0, overflow: 'visible' }}>
+                        <span
+                          className="rounded px-1.5 py-0 text-[8px] font-medium text-white whitespace-nowrap shadow-sm"
+                          style={{ backgroundColor: presenceUser.color }}
+                        >
+                          {presenceUser.name}
+                        </span>
+                      </td>
+                    )}
                     {activeCols.map((col) => {
                       // NOSONAR
                       switch (col.key) {

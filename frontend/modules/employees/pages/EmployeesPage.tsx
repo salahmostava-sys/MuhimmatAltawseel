@@ -13,6 +13,8 @@ import { useToast } from '@shared/hooks/use-toast';
 import { todayISO } from '@shared/lib/formatters';
 import { useSystemSettings } from '@app/providers/SystemSettingsContext';
 import { usePermissions } from '@shared/hooks/usePermissions';
+import { usePagePresence } from '@shared/hooks/usePagePresence';
+import { PresenceAvatars } from '@shared/components/PresenceAvatars';
 import { useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { QueryErrorRetry } from '@shared/components/QueryErrorRetry';
 import { isEmployeeVisibleInMonth } from '@shared/lib/employeeVisibility';
@@ -52,6 +54,7 @@ const Employees = () => {
   const { toast } = useToast();
   useSystemSettings();
   const { permissions } = usePermissions('employees');
+  const presence = usePagePresence('employees');
   const [data, setData] = useState<Employee[]>([]);
   const {
     employees: employeesData,
@@ -225,6 +228,14 @@ const Employees = () => {
 
   return (
     <div className="space-y-4">
+      {/* Real-time presence — who else is on this page */}
+      {presence.onlineUsers.length > 0 && (
+        <div className="flex items-center justify-end gap-2">
+          <span className="text-[10px] text-muted-foreground">متصل الآن:</span>
+          <PresenceAvatars users={presence.onlineUsers} />
+        </div>
+      )}
+
       <EmployeeActionsBar
         actionLoading={actionLoading}
         permissions={permissions}
@@ -277,6 +288,9 @@ const Employees = () => {
         setColFilter={setColFilter}
         tableRef={tableRef}
         refetchEmployees={refetchEmployees}
+        presenceActiveRows={presence.activeRows}
+        onRowEditStart={(rowId) => void presence.trackRow(rowId)}
+        onRowEditEnd={() => void presence.trackRow(null)}
       />
 
       {/* Modals */}
