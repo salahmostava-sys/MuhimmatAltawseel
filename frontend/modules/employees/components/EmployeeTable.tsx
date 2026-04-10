@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { Eye, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@shared/components/ui/button";
 import { Checkbox } from "@shared/components/ui/checkbox";
@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@shared/components/ui/dropdown-menu";
-import { differenceInDays, parseISO } from "date-fns";
+import { differenceInDays, parseISO, format } from "date-fns";
 import { todayISO } from "@shared/lib/formatters";
 import {
   CityBadges,
@@ -232,7 +232,7 @@ export function EmployeeDetailedTable({
     <div className="ta-table-wrap">
       <div className="overflow-x-auto">
         <table className="w-full text-center align-middle" ref={tableRef}>
-          <thead className="bg-primary/90 dark:bg-primary/80">
+          <thead className="bg-yellow-400">
             <tr className="ta-thead">
               {activeCols.map((col) => {
                 const isFilterable = !["seq", "actions"].includes(col.key);
@@ -465,7 +465,7 @@ export function EmployeeDetailedTable({
                 return (
                   <th
                     key={col.key}
-                    className={`ta-th select-none whitespace-nowrap text-center text-primary-foreground ${col.key === "seq" ? "w-10 px-2" : ""} ${col.sortable ? "cursor-pointer hover:text-primary-foreground/80" : ""}`}
+                    className={`ta-th select-none whitespace-nowrap text-center text-black ${col.key === "seq" ? "w-10 px-2" : ""} ${col.sortable ? "cursor-pointer hover:text-gray-800" : ""}`}
                     onClick={
                       col.sortable ? () => handleSort(col.key) : undefined
                     }
