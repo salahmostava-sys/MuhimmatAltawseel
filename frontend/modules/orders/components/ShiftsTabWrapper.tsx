@@ -35,6 +35,31 @@ export function ShiftsTabWrapper() {
     enabled,
   });
 
+  // Fetch employee ↔ app assignments
+  const { data: employeeApps = [] } = useQuery({
+    queryKey: ['employee-apps', uid],
+    queryFn: () => orderService.getEmployeeAppAssignments(),
+    enabled,
+  });
+
+  // Only show employees assigned to shift-capable apps
+  const shiftAppIds = useMemo(
+    () => new Set(apps.filter(isShiftCapableApp).map((a) => a.id)),
+    [apps],
+  );
+  const shiftEmployeeIds = useMemo(() => {
+    const ids = new Set<string>();
+    employeeApps.forEach((ea) => {
+      if (shiftAppIds.has(ea.app_id)) ids.add(ea.employee_id);
+    });
+    return ids;
+  }, [employeeApps, shiftAppIds]);
+
+  const shiftEmployees = useMemo(
+    () => employees.filter((e) => shiftEmployeeIds.has(e.id)),
+    [employees, shiftEmployeeIds],
+  );
+
   // Fetch shifts for current month
   const { data: shifts = [], isLoading } = useQuery({
     queryKey: ['shifts', 'month', globalMonth, uid],
@@ -90,7 +115,7 @@ export function ShiftsTabWrapper() {
           date: String(raw.shift_date ?? raw.date ?? ''),
         };
       }) as ShiftRow[]}
-      employees={employees}
+      employees={shiftEmployees}
       apps={apps}
       loading={isLoading}
       onPrevMonth={handlePrevMonth}

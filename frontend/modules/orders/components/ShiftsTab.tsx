@@ -87,17 +87,25 @@ export function ShiftsTab({
   const shiftApps = useMemo(() => apps.filter(isShiftCapableApp), [apps]);
   const shiftAppId = shiftApps[0]?.id ?? '';
 
-  // Employees assigned to shift apps (or with shift data)
-  const shiftEmployeeIds = useMemo(() => {
-    const ids = new Set<string>();
-    shifts.forEach((s) => ids.add(s.employee_id));
-    return ids;
-  }, [shifts]);
-
-  const shiftEmployees = useMemo(
-    () => employees.filter((e) => shiftEmployeeIds.has(e.id) || e.salary_type === 'shift'),
-    [employees, shiftEmployeeIds],
-  );
+  // All employees passed from parent (already filtered to shift-app assignments)
+  // plus any extra employees that have shift data in this month but weren't in the list
+  const allShiftEmployees = useMemo(() => {
+    const empIds = new Set(employees.map((e) => e.id));
+    const extras: typeof employees = [];
+    shifts.forEach((s) => {
+      if (!empIds.has(s.employee_id)) {
+        empIds.add(s.employee_id);
+        extras.push({
+          id: s.employee_id,
+          name: s.employee?.name ?? s.employee_id,
+          salary_type: 'shift',
+          status: 'active',
+          sponsorship_status: null,
+        });
+      }
+    });
+    return [...employees, ...extras];
+  }, [employees, shifts]);
 
   const [grid, setGrid] = useState<ShiftGrid>(() => buildGridFromShifts(shifts));
   const [saving, setSaving] = useState(false);
@@ -121,8 +129,8 @@ export function ShiftsTab({
   const dayArr = useMemo(() => Array.from({ length: days }, (_, i) => i + 1), [days]);
 
   const filteredEmployees = useMemo(
-    () => (search ? shiftEmployees.filter((e) => e.name.includes(search)) : shiftEmployees),
-    [shiftEmployees, search],
+    () => (search ? allShiftEmployees.filter((e) => e.name.includes(search)) : allShiftEmployees),
+    [allShiftEmployees, search],
   );
 
   const getVal = useCallback(
