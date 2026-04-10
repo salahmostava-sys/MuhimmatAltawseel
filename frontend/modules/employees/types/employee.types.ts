@@ -71,23 +71,35 @@ export const processBulkImportRows = async (
   let successfulRows = 0;
   const processingErrors: Array<{ rowIndex: number; issue: string }> = [];
   const totalToProcess = Math.max(validRows.length, 1);
+  const BATCH_SIZE = 10;
   onLiveStats({ processedNames: 0, totalNames: validRows.length, currentName: '' });
 
-  for (let i = 0; i < validRows.length; i++) {
-    const item = validRows[i];
-    const currentName = String(item.row.name ?? '').trim() || `سطر ${item.rowIndex}`;
-    onLiveStats({ processedNames: i, totalNames: validRows.length, currentName });
-    const { processed, failures } = await upsertEmployeeArabicRows([item.row]);
-    if (processed > 0) successfulRows++;
+  for (let batchStart = 0; batchStart < validRows.length; batchStart += BATCH_SIZE) {
+    const batch = validRows.slice(batchStart, batchStart + BATCH_SIZE);
+    const lastItem = batch[batch.length - 1];
+    const currentName = String(lastItem.row.name ?? '').trim() || `سطر ${lastItem.rowIndex}`;
+    onLiveStats({ processedNames: batchStart, totalNames: validRows.length, currentName });
+
+    const { processed, failures } = await upsertEmployeeArabicRows(batch.map((item) => item.row));
+    successfulRows += processed;
+
     if (failures.length > 0) {
-      processingErrors.push({
-        rowIndex: item.rowIndex,
-        issue: failures[0]?.error || 'تعذر حفظ السطر',
-      });
+      for (const failure of failures) {
+        // Map failure back to original row index when possible
+        const failedItem = batch.find(
+          (item) => String(item.row.name ?? '').trim() === (failure.name ?? '').trim(),
+        );
+        processingErrors.push({
+          rowIndex: failedItem?.rowIndex ?? batch[0].rowIndex,
+          issue: failure.error || 'تعذر حفظ السطر',
+        });
+      }
     }
-    const progress = 25 + Math.round(((i + 1) / totalToProcess) * 70);
+
+    const batchEnd = Math.min(batchStart + BATCH_SIZE, validRows.length);
+    const progress = 25 + Math.round((batchEnd / totalToProcess) * 70);
     onProgress(Math.min(progress, 95));
-    onLiveStats({ processedNames: i + 1, totalNames: validRows.length, currentName });
+    onLiveStats({ processedNames: batchEnd, totalNames: validRows.length, currentName });
   }
 
   const report: UploadReport = {

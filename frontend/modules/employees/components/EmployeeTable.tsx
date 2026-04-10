@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Eye, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@shared/components/ui/button";
 import { Checkbox } from "@shared/components/ui/checkbox";
