@@ -1,6 +1,5 @@
 ﻿import { useState } from 'react';
-import { ChevronDown, ChevronUp, ChevronsUpDown, Check, Loader2, Pencil, X, ChevronDown as FilterIcon } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select';
+import { ChevronDown, ChevronUp, ChevronsUpDown, X, ChevronDown as FilterIcon } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { Input } from '@shared/components/ui/input';
@@ -62,57 +61,6 @@ export const StatusBadge = ({ status }: { status?: string | null }) => {
   if (status === 'ended')
     return <span className="bg-muted text-muted-foreground text-xs font-medium px-2.5 py-0.5 rounded-full">منتهي</span>;
   return <span className="text-muted-foreground/40">{status || '•'}</span>;
-};
-
-export interface InlineSelectProps {
-  value: string;
-  options: { value: string; label: string }[];
-  onSave: (v: string) => Promise<void>;
-  renderDisplay: () => React.ReactNode;
-}
-
-export const InlineSelect = ({ value, options, onSave, renderDisplay }: InlineSelectProps) => {
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  const handleChange = async (v: string) => {
-    setSaving(true);
-    await onSave(v);
-    setSaving(false);
-    setSaved(true);
-    setEditing(false);
-    setTimeout(() => setSaved(false), 1500);
-  };
-
-  if (saved) return <span className="text-success text-xs flex items-center gap-1"><Check size={12} /> تم</span>;
-  if (saving) return <span className="text-muted-foreground text-xs flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> ...</span>;
-
-  if (editing) {
-    return (
-      <div className="relative" onClick={(e) => e.stopPropagation()}>
-        <Select value={value} onValueChange={handleChange} open onOpenChange={(o) => !o && setEditing(false)}>
-          <SelectTrigger className="h-7 text-xs w-36 bg-card border-primary/50 shadow-md">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {options.map((o) => (
-              <SelectItem key={o.value} value={o.value}>
-                {o.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    );
-  }
-
-  return (
-    <div className="group flex cursor-pointer items-center justify-center gap-1" onClick={() => setEditing(true)} title="اضغط للتعديل">
-      {renderDisplay()}
-      <Pencil size={10} className="text-muted-foreground/0 group-hover:text-muted-foreground/60 transition-opacity flex-shrink-0" />
-    </div>
-  );
 };
 
 export const EmployeeAvatar = ({ path, name }: { path?: string | null; name: string }) => {

@@ -9,8 +9,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@shared/components/ui/alert-dialog';
-import { format } from 'date-fns';
 import { useToast } from '@shared/hooks/use-toast';
+import { todayISO } from '@shared/lib/formatters';
 import { useSystemSettings } from '@app/providers/SystemSettingsContext';
 import { usePermissions } from '@shared/hooks/usePermissions';
 import { useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
@@ -38,6 +38,9 @@ const EmployeeFormModal = lazy(() =>
     default: module.EmployeeFormModal,
   })),
 );
+
+/** Minimum time (ms) the page must be hidden before triggering a background refetch. */
+const VISIBILITY_REFETCH_DELAY_MS = 90_000;
 
 const InlineLoader = ({ minHeightClassName = 'min-h-[260px]' }: Readonly<{ minHeightClassName?: string }>) => (
   <Loading minHeightClassName={minHeightClassName} />
@@ -82,7 +85,7 @@ const Employees = () => {
   const [statusDateDialog, setStatusDateDialog] = useState<{
     emp: Employee; newStatus: string; label: string;
   } | null>(null);
-  const [statusDate, setStatusDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [statusDate, setStatusDate] = useState<string>(todayISO());
   const [statusDateSaving, setStatusDateSaving] = useState(false);
   const tableRef = useRef<HTMLTableElement>(null);
 
@@ -118,7 +121,7 @@ const Employees = () => {
 
   useEffect(() => {
     let hiddenAt: number | null = null;
-    const minAwayMs = 90_000;
+    const minAwayMs = VISIBILITY_REFETCH_DELAY_MS;
     const onVis = () => {
       if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
       if (document.visibilityState !== 'visible' || hiddenAt === null) return;
@@ -337,7 +340,7 @@ const Employees = () => {
                 type="date"
                 value={statusDate}
                 onChange={e => setStatusDate(e.target.value)}
-                max={format(new Date(), 'yyyy-MM-dd')}
+                max={todayISO()}
               />
             </div>
           </div>

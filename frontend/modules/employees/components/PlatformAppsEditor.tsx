@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Check, Loader2 } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
@@ -33,6 +33,13 @@ export function PlatformAppsEditor({
     new Set(currentApps.map(app => app.id))
   );
   const [saving, setSaving] = useState(false);
+
+  // Sync selectedAppIds with currentApps when popover opens or currentApps change
+  useEffect(() => {
+    if (!open) {
+      setSelectedAppIds(new Set(currentApps.map(app => app.id)));
+    }
+  }, [open, currentApps]);
 
   const handleToggleApp = (appId: string) => {
     setSelectedAppIds(prev => {

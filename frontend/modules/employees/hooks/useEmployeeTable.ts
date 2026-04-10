@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
-import { format } from 'date-fns';
 import { driverService } from '@services/driverService';
+import { todayISO } from '@shared/lib/formatters';
 import { employeeService, EMPLOYEE_DELETE_BLOCKED_MESSAGE } from '@services/employeeService';
 import { getErrorMessage } from '@services/serviceError';
 import { auditService } from '@services/auditService';
@@ -72,7 +72,7 @@ export function useEmployeeActions(params: {
 
   const saveField = useCallback(async (id: string, field: string, value: string, extraFields?: Record<string, unknown>) => {
     const prev = data.find(e => e.id === id);
-    const updatePatch = { [field]: value, ...(extraFields ?? undefined) };
+    const updatePatch = { [field]: value, ...(extraFields ?? {}) };
     setData(d => d.map(e => e.id === id ? { ...e, ...updatePatch } : e));
     try {
       await driverService.update(id, updatePatch);
@@ -163,7 +163,7 @@ export function useEmployeeActions(params: {
     const ws = XLSX.utils.aoa_to_sheet([headerRow, ...aoaRows]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'بيانات الموظفين');
-    XLSX.writeFile(wb, `بيانات_المناديب_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    XLSX.writeFile(wb, `بيانات_المناديب_${todayISO()}.xlsx`);
   };
 
   const handleFastExport = async () => {
@@ -209,7 +209,7 @@ export function useEmployeeActions(params: {
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Employees');
-    XLSX.writeFile(wb, `employees_fast_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    XLSX.writeFile(wb, `employees_fast_${todayISO()}.xlsx`);
 
     await auditService.logAdminAction({
       action: 'employees.export',

@@ -29,6 +29,19 @@ export function formatCurrency(amount: number | null | undefined, currencySymbol
 }
 
 /**
+ * Get today's date in YYYY-MM-DD format (local timezone).
+ * Drop-in replacement for the common `format(new Date(), 'yyyy-MM-dd')` pattern
+ * that avoids importing date-fns just for this.
+ */
+export function todayISO(): string {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+/**
  * Format a number with commas as thousands separators.
  * @param num - The number to format.
  * @returns Formatted number string.

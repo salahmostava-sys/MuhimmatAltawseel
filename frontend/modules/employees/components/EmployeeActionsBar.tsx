@@ -156,7 +156,7 @@ export function EmployeeActionsBar({
       </div>
 
       {(isUploading || uploadReport) && (
-        <div className="fixed bottom-4 left-4 z-50 w-[min(92vw,420px)] rounded-xl border border-border/70 bg-card shadow-2xl p-3 space-y-2">
+        <div className="fixed bottom-4 start-4 z-50 w-[min(92vw,420px)] rounded-xl border border-border/70 bg-card shadow-2xl p-3 space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-foreground">حالة رفع القالب</p>
             {uploadReport && (
