@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@app/providers/AuthContext';
 import { useTheme } from '@app/providers/ThemeContext';
 import { Input } from '@shared/components/ui/input';
@@ -206,9 +206,7 @@ const Login = () => {
                   className="h-5 w-5 rounded-md"
                 />
               </div>
-              <Link to="/forgot-password" className="text-sm text-primary hover:underline">
-                نسيت كلمة المرور؟
-              </Link>
+
             </div>
 
             {loginError && (

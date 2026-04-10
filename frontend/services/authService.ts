@@ -104,13 +104,6 @@ export const authService = {
     throwIfError(error, "authService.updatePassword");
   },
 
-  sendPasswordReset: async (email: string): Promise<void> => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${globalThis.location.origin}/reset-password`,
-    });
-    throwIfError(error, "authService.sendPasswordReset");
-  },
-
   refreshSession: async (): Promise<{ session: Session | null; user: User | null }> => {
     const { data, error } = await supabase.auth.refreshSession();
     throwIfError(error, "authService.refreshSession");

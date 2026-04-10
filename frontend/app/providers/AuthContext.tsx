@@ -58,7 +58,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const redirectLockRef = useRef(false);
   const redirectCooldownUntilRef = useRef(0);
   const isPublicAuthRoute = useCallback((pathname: string) => (
-    pathname === '/login' || pathname === '/forgot-password' || pathname === '/reset-password'
+    pathname === '/login'
   ), []);
   const redirectToLoginIfNeeded = useCallback(() => {
     if (redirectLockRef.current) return;

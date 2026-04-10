@@ -20,8 +20,7 @@ import { Navigate, RouterProvider, createBrowserRouter, Outlet, useLocation } fr
 import { emitAuthFailure, isStrictUnauthenticatedError } from "@shared/lib/auth/authFailureBus";
 
 const Login = lazy(() => import("@modules/pages/Login"));
-const ForgotPassword = lazy(() => import("@modules/pages/ForgotPassword"));
-const ResetPassword = lazy(() => import("@modules/pages/ResetPassword"));
+
 const Dashboard = lazy(() => import("@modules/pages/Dashboard"));
 const Employees = lazy(() => import("@modules/employees/pages/EmployeesPage"));
 const Attendance = lazy(() => import("@modules/pages/Attendance"));
@@ -108,27 +107,6 @@ const router = createBrowserRouter([
           </PublicLayout>
         ),
       },
-      {
-        path: "forgot-password",
-        element: (
-          <PublicLayout>
-            <ForgotPassword />
-          </PublicLayout>
-        ),
-      },
-      {
-        path: "reset-password",
-        element: (
-          <PublicLayout>
-            <ResetPassword />
-          </PublicLayout>
-        ),
-      },
-      { path: "forgot", element: <Navigate to="/forgot-password" replace /> },
-      { path: "forget-password", element: <Navigate to="/forgot-password" replace /> },
-      { path: "reset", element: <Navigate to="/reset-password" replace /> },
-      { path: "resetpass", element: <Navigate to="/reset-password" replace /> },
-
       {
         path: "/",
         element: (
