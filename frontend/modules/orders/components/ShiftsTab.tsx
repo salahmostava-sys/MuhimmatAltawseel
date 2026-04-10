@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { Loader2, Save, Clock } from 'lucide-react';
+import { Loader2, Save, Clock, Download, Printer } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
+import { loadXlsx } from '@modules/orders/utils/xlsx';
 import { OrdersMonthNavigator } from '@shared/components/orders/OrdersMonthNavigator';
 import { isShiftCapableApp } from '@shared/lib/workType';
 import { monthLabel } from '@modules/orders/utils/dateMonth';
@@ -181,6 +182,37 @@ export function ShiftsTab({
     }
   };
 
+  const tableRef = useRef<HTMLTableElement>(null);
+
+  const exportExcel = async () => {
+    const XLSX = await loadXlsx();
+    const headers = ['الموظف', ...dayArr.map((d) => String(d)), 'المجموع'];
+    const rows = filteredEmployees.map((emp) => {
+      const values: Array<string | number> = [emp.name];
+      dayArr.forEach((d) => values.push(getVal(emp.id, d) || ''));
+      values.push(empMonthTotal(emp.id));
+      return values;
+    });
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'الدوام');
+    XLSX.writeFile(wb, `دوام_${month}_${year}.xlsx`);
+  };
+
+  const handlePrint = () => {
+    const table = tableRef.current;
+    if (!table) return;
+    const win = globalThis.open('', '_blank');
+    if (!win) return;
+    const doc = win.document;
+    doc.documentElement.setAttribute('dir', 'rtl');
+    doc.documentElement.setAttribute('lang', 'ar');
+    doc.head.innerHTML = `<meta charset="UTF-8"><title>دوام ${month}/${year}</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:10px;direction:rtl}h2{text-align:center;margin:8px 0}table{width:100%;border-collapse:collapse}th{background:#1e3a5f;color:#fff;padding:4px;text-align:center;font-size:9px}td{padding:3px;border:1px solid #ddd;text-align:center}@media print{body{print-color-adjust:exact}}</style>`;
+    doc.body.innerHTML = `<h2>دوام شهر ${month}/${year} — ${filteredEmployees.length} موظف</h2>`;
+    doc.body.appendChild(table.cloneNode(true));
+    win.onload = () => { win.print(); win.onafterprint = () => win.close(); };
+  };
+
   const now = new Date();
   const today = now.getFullYear() === year && now.getMonth() + 1 === month ? now.getDate() : -1;
 
@@ -222,12 +254,20 @@ export function ShiftsTab({
           </span>
         </div>
 
-        {canEdit && (
-          <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5">
-            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-            حفظ
+        <div className="flex items-center gap-1.5">
+          <Button size="sm" variant="outline" onClick={() => void exportExcel()} className="gap-1.5 h-8 text-xs">
+            <Download size={13} /> تصدير
           </Button>
-        )}
+          <Button size="sm" variant="outline" onClick={handlePrint} className="gap-1.5 h-8 text-xs">
+            <Printer size={13} /> طباعة
+          </Button>
+          {canEdit && (
+            <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5">
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              حفظ
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Grid */}
@@ -237,7 +277,7 @@ export function ShiftsTab({
             <Loader2 size={20} className="animate-spin" /> جاري التحميل...
           </div>
         ) : (
-          <table className="border-collapse text-[11px] leading-tight w-full" style={{ minWidth: `${36 + 132 + days * 40 + 64}px` }}>
+          <table ref={tableRef} className="border-collapse text-[11px] leading-tight w-full" style={{ minWidth: `${36 + 132 + days * 40 + 64}px` }}>
             <thead className="sticky top-0 z-20">
               <tr className="bg-muted border-b-2 border-border">
                 <th className="sticky right-0 z-[32] bg-muted text-center px-0.5 py-1.5 font-semibold text-muted-foreground border-l border-border" style={{ minWidth: 36, width: 36 }}>
