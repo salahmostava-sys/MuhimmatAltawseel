@@ -1,15 +1,7 @@
-import { useEffect, useState, useMemo } from 'react';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { Loader2, Save, Clock } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@shared/components/ui/table';
 import {
   Select,
   SelectContent,
@@ -33,6 +25,9 @@ export type ShiftRow = {
   app?: { name: string };
 };
 
+/** key = `${empId}::${day}` → hours */
+type ShiftGrid = Record<string, number>;
+
 type Props = {
   year: number;
   month: number;
@@ -46,6 +41,44 @@ type Props = {
   canEdit: boolean;
 };
 
+function getDaysInMonth(year: number, month: number) {
+  return new Date(year, month, 0).getDate();
+}
+
+function buildGridFromShifts(shifts: ShiftRow[]): ShiftGrid {
+  const grid: ShiftGrid = {};
+  for (const s of shifts) {
+    if (!s.date || !s.employee_id) continue;
+    const day = parseInt(s.date.slice(8, 10), 10);
+    if (isNaN(day)) continue;
+    const key = `${s.employee_id}::${day}`;
+    grid[key] = (grid[key] ?? 0) + s.hours_worked;
+  }
+  return grid;
+}
+
+function gridToShiftRows(
+  grid: ShiftGrid,
+  year: number,
+  month: number,
+  shiftAppId: string,
+): ShiftRow[] {
+  const rows: ShiftRow[] = [];
+  for (const [key, hours] of Object.entries(grid)) {
+    if (hours <= 0) continue;
+    const [empId, dayStr] = key.split('::');
+    const day = parseInt(dayStr, 10);
+    if (!empId || isNaN(day)) continue;
+    rows.push({
+      employee_id: empId,
+      app_id: shiftAppId,
+      date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+      hours_worked: hours,
+    });
+  }
+  return rows;
+}
+
 export function ShiftsTab({
   year,
   month,
@@ -58,57 +91,116 @@ export function ShiftsTab({
   onSave,
   canEdit,
 }: Props) {
-  const [localShifts, setLocalShifts] = useState<ShiftRow[]>(shifts);
-  const [saving, setSaving] = useState(false);
-
-  // Sync local state when shifts prop changes (e.g. month navigation, refetch)
-  useEffect(() => {
-    setLocalShifts(shifts);
-  }, [shifts]);
-  const [employeeFilter, setEmployeeFilter] = useState<string>('all');
-  const [appFilter, setAppFilter] = useState<string>('all');
-
   const shiftApps = useMemo(() => apps.filter(isShiftCapableApp), [apps]);
+  const shiftAppId = shiftApps[0]?.id ?? '';
 
-  const filteredShifts = useMemo(() => {
-    return localShifts.filter((s) => {
-      if (employeeFilter !== 'all' && s.employee_id !== employeeFilter) return false;
-      if (appFilter !== 'all' && s.app_id !== appFilter) return false;
-      return true;
+  // Employees assigned to shift apps (or with shift data)
+  const shiftEmployeeIds = useMemo(() => {
+    const ids = new Set<string>();
+    shifts.forEach((s) => ids.add(s.employee_id));
+    return ids;
+  }, [shifts]);
+
+  const shiftEmployees = useMemo(
+    () => employees.filter((e) => shiftEmployeeIds.has(e.id) || e.salary_type === 'shift'),
+    [employees, shiftEmployeeIds],
+  );
+
+  const [grid, setGrid] = useState<ShiftGrid>(() => buildGridFromShifts(shifts));
+  const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
+  const [editingCell, setEditingCell] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setGrid(buildGridFromShifts(shifts));
+  }, [shifts]);
+
+  useEffect(() => {
+    if (editingCell && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editingCell]);
+
+  const days = getDaysInMonth(year, month);
+  const dayArr = useMemo(() => Array.from({ length: days }, (_, i) => i + 1), [days]);
+
+  const filteredEmployees = useMemo(
+    () => (search ? shiftEmployees.filter((e) => e.name.includes(search)) : shiftEmployees),
+    [shiftEmployees, search],
+  );
+
+  const getVal = useCallback(
+    (empId: string, day: number) => grid[`${empId}::${day}`] ?? 0,
+    [grid],
+  );
+
+  const empMonthTotal = useCallback(
+    (empId: string) => dayArr.reduce((s, d) => s + getVal(empId, d), 0),
+    [dayArr, getVal],
+  );
+
+  const handleCellClick = (empId: string, day: number) => {
+    if (!canEdit) return;
+    const key = `${empId}::${day}`;
+    setEditingCell(key);
+    setEditValue(String(getVal(empId, day) || ''));
+  };
+
+  const commitEdit = () => {
+    if (!editingCell) return;
+    const val = parseFloat(editValue) || 0;
+    setGrid((prev) => {
+      const next = { ...prev };
+      if (val > 0) next[editingCell] = Math.min(val, 24);
+      else delete next[editingCell];
+      return next;
     });
-  }, [localShifts, employeeFilter, appFilter]);
-
-  const handleAddRow = () => {
-    const newRow: ShiftRow = {
-      employee_id: employees[0]?.id || '',
-      app_id: shiftApps[0]?.id || '',
-      date: `${year}-${String(month).padStart(2, '0')}-01`,
-      hours_worked: 0,
-    };
-    setLocalShifts([...localShifts, newRow]);
+    setEditingCell(null);
   };
 
-  const handleUpdateRow = (index: number, field: keyof ShiftRow, value: string | number) => {
-    const updated = [...localShifts];
-    updated[index] = { ...updated[index], [field]: value };
-    setLocalShifts(updated);
-  };
-
-  const handleDeleteRow = (index: number) => {
-    setLocalShifts(localShifts.filter((_, i) => i !== index));
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      commitEdit();
+    } else if (e.key === 'Escape') {
+      setEditingCell(null);
+    }
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await onSave(localShifts);
+      const rows = gridToShiftRows(grid, year, month, shiftAppId);
+      await onSave(rows);
     } finally {
       setSaving(false);
     }
   };
 
+  const now = new Date();
+  const today = now.getFullYear() === year && now.getMonth() + 1 === month ? now.getDate() : -1;
+
+  const grandTotal = useMemo(
+    () => filteredEmployees.reduce((s, e) => s + empMonthTotal(e.id), 0),
+    [filteredEmployees, empMonthTotal],
+  );
+
+  if (shiftApps.length === 0) {
+    return (
+      <div className="text-center py-16 text-muted-foreground">
+        <Clock size={36} className="mx-auto mb-3 text-muted-foreground/30" />
+        <p className="font-medium">لا توجد منصات دوام</p>
+        <p className="text-xs mt-1">أضف منصة بنوع "دوام" أو "مختلط" من إعدادات التطبيقات</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
+      {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3 justify-between">
         <OrdersMonthNavigator
           compact
@@ -118,160 +210,189 @@ export function ShiftsTab({
         />
 
         <div className="flex items-center gap-2">
-          <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="كل الموظفين" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">كل الموظفين</SelectItem>
-              {employees.map((emp) => (
-                <SelectItem key={emp.id} value={emp.id}>
-                  {emp.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={appFilter} onValueChange={setAppFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="كل المنصات" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">كل المنصات</SelectItem>
-              {shiftApps.map((app) => (
-                <SelectItem key={app.id} value={app.id}>
-                  {app.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Input
+            placeholder="بحث عن موظف..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8 w-48 text-xs"
+          />
+          <span className="text-xs text-muted-foreground">
+            {filteredEmployees.length} موظف
+          </span>
         </div>
 
         {canEdit && (
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={handleAddRow}>
-              <Plus size={14} className="me-1" />
-              إضافة سطر
-            </Button>
-            <Button size="sm" onClick={handleSave} disabled={saving}>
-              {saving && <Loader2 size={14} className="animate-spin me-1" />}
-              حفظ
-            </Button>
-          </div>
+          <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5">
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            حفظ
+          </Button>
         )}
       </div>
 
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-right">#</TableHead>
-              <TableHead className="text-right">الموظف</TableHead>
-              <TableHead className="text-right">المنصة</TableHead>
-              <TableHead className="text-right">التاريخ</TableHead>
-              <TableHead className="text-right">ساعات العمل</TableHead>
-              {canEdit && <TableHead className="text-right">إجراءات</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={canEdit ? 6 : 5} className="text-center py-8">
-                  <Loader2 className="animate-spin size-6 mx-auto text-muted-foreground" />
-                </TableCell>
-              </TableRow>
-            ) : filteredShifts.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={canEdit ? 6 : 5} className="text-center py-8 text-muted-foreground">
-                  لا توجد بيانات دوام
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredShifts.map((shift, idx) => (
-                <TableRow key={shift.id || idx}>
-                  <TableCell>{idx + 1}</TableCell>
-                  <TableCell>
-                    {canEdit ? (
-                      <Select
-                        value={shift.employee_id}
-                        onValueChange={(v) => handleUpdateRow(idx, 'employee_id', v)}
+      {/* Grid */}
+      <div className="bg-card rounded-xl shadow-card overflow-x-auto w-full">
+        {loading ? (
+          <div className="flex items-center justify-center py-20 gap-2 text-muted-foreground">
+            <Loader2 size={20} className="animate-spin" /> جاري التحميل...
+          </div>
+        ) : (
+          <table className="border-collapse text-[11px] leading-tight w-full" style={{ minWidth: `${36 + 132 + days * 40 + 64}px` }}>
+            <thead className="sticky top-0 z-20">
+              <tr className="bg-muted border-b-2 border-border">
+                <th className="sticky right-0 z-[32] bg-muted text-center px-0.5 py-1.5 font-semibold text-muted-foreground border-l border-border" style={{ minWidth: 36, width: 36 }}>
+                  #
+                </th>
+                <th className="sticky z-[31] bg-muted text-right px-1.5 py-1.5 font-semibold text-foreground border-l-2 border-border" style={{ right: 36, minWidth: 132 }}>
+                  الموظف
+                </th>
+                {dayArr.map((d) => {
+                  const dow = new Date(year, month - 1, d).getDay();
+                  const isWeekend = dow === 5 || dow === 6;
+                  const isToday = d === today;
+                  return (
+                    <th
+                      key={d}
+                      className={`text-center px-0.5 py-1.5 font-medium border-l border-border/50
+                        ${isToday ? 'bg-primary/20 text-primary font-bold' : isWeekend ? 'text-muted-foreground/50 bg-muted/40' : 'text-muted-foreground'}`}
+                      style={{ minWidth: 40 }}
+                    >
+                      {d}
+                    </th>
+                  );
+                })}
+                <th className="sticky left-0 z-30 text-center py-1.5 font-bold text-primary bg-muted border-r-2 border-border" style={{ minWidth: 64 }}>
+                  المجموع
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {filteredEmployees.length === 0 ? (
+                <tr>
+                  <td colSpan={days + 3} className="text-center py-12 text-muted-foreground">
+                    لا يوجد موظفين دوام
+                  </td>
+                </tr>
+              ) : (
+                filteredEmployees.map((emp, idx) => {
+                  const total = empMonthTotal(emp.id);
+                  const rowBg = idx % 2 === 0 ? 'hsl(var(--card))' : 'hsl(var(--muted))';
+
+                  return (
+                    <tr key={emp.id} className="border-b border-border/40">
+                      <td
+                        className="sticky right-0 z-[12] text-center px-0.5 py-1 border-l border-border tabular-nums text-muted-foreground font-medium"
+                        style={{ backgroundColor: rowBg, minWidth: 36, width: 36 }}
                       >
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {employees.map((emp) => (
-                            <SelectItem key={emp.id} value={emp.id}>
-                              {emp.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      shift.employee?.name || '-'
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {canEdit ? (
-                      <Select value={shift.app_id} onValueChange={(v) => handleUpdateRow(idx, 'app_id', v)}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {shiftApps.map((app) => (
-                            <SelectItem key={app.id} value={app.id}>
-                              {app.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      shift.app?.name || '-'
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {canEdit ? (
-                      <Input
-                        type="date"
-                        value={shift.date}
-                        onChange={(e) => handleUpdateRow(idx, 'date', e.target.value)}
-                      />
-                    ) : (
-                      shift.date
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {canEdit ? (
-                      <Input
-                        type="number"
-                        step="0.5"
-                        min="0"
-                        max="24"
-                        value={shift.hours_worked}
-                        onChange={(e) => handleUpdateRow(idx, 'hours_worked', parseFloat(e.target.value))}
-                        className="w-24"
-                      />
-                    ) : (
-                      shift.hours_worked
-                    )}
-                  </TableCell>
-                  {canEdit && (
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleDeleteRow(idx)}
-                        className="text-destructive hover:text-destructive"
+                        {idx + 1}
+                      </td>
+                      <td
+                        className="sticky z-[11] px-1.5 py-1 border-l-2 border-border"
+                        style={{ backgroundColor: rowBg, right: 36, minWidth: 132 }}
                       >
-                        <Trash2 size={14} />
-                      </Button>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+                        <span className="font-medium text-foreground truncate max-w-[7.5rem] block" title={emp.name}>
+                          {emp.name}
+                        </span>
+                      </td>
+
+                      {dayArr.map((d) => {
+                        const val = getVal(emp.id, d);
+                        const cellKey = `${emp.id}::${d}`;
+                        const isEditing = editingCell === cellKey;
+                        const dow = new Date(year, month - 1, d).getDay();
+                        const isWeekend = dow === 5 || dow === 6;
+                        const isToday = d === today;
+
+                        return (
+                          <td
+                            key={d}
+                            className={`text-center p-0 border-l border-border/30 transition-colors
+                              ${isToday ? 'bg-primary/10' : isWeekend ? 'bg-muted/20' : ''}
+                              ${isEditing ? 'ring-2 ring-inset ring-primary' : ''}
+                              ${canEdit && !isEditing ? 'cursor-pointer hover:bg-primary/5' : ''}`}
+                            style={{ minWidth: 40 }}
+                            onClick={() => !isEditing && handleCellClick(emp.id, d)}
+                          >
+                            {isEditing ? (
+                              <Input
+                                ref={inputRef}
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                max="24"
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onBlur={commitEdit}
+                                onKeyDown={handleKeyDown}
+                                className="h-7 w-full text-center text-[11px] border-0 bg-transparent p-0 focus-visible:ring-0"
+                              />
+                            ) : (
+                              <div className="h-7 flex items-center justify-center">
+                                {val > 0 ? (
+                                  <span className={`font-semibold leading-none ${val >= 8 ? 'text-success' : val >= 4 ? 'text-warning' : 'text-foreground'}`}>
+                                    {val}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground/20">·</span>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })}
+
+                      <td
+                        className="sticky left-0 z-10 text-center px-1 py-1 font-bold border-r-2 border-border bg-muted"
+                        style={{ minWidth: 64 }}
+                      >
+                        {total > 0 ? (
+                          <span className="text-primary">{total}</span>
+                        ) : (
+                          <span className="text-muted-foreground/30">0</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+
+              {/* Totals row */}
+              {filteredEmployees.length > 0 && (
+                <tr className="border-t-2 border-border font-semibold">
+                  <td className="sticky right-0 z-[12] text-center px-0.5 py-1.5 border-l border-border text-muted-foreground bg-muted" style={{ minWidth: 36, width: 36 }}>
+                    —
+                  </td>
+                  <td className="sticky z-[11] px-1.5 py-1.5 text-xs font-bold border-l-2 border-border text-foreground bg-muted" style={{ right: 36, minWidth: 132 }}>
+                    الإجمالي
+                  </td>
+                  {dayArr.map((d) => {
+                    const dayTotal = filteredEmployees.reduce((s, e) => s + getVal(e.id, d), 0);
+                    const isToday = d === today;
+                    return (
+                      <td
+                        key={d}
+                        className={`text-center px-0.5 py-1.5 font-bold border-l border-border/40 ${isToday ? 'bg-primary/10 text-primary' : 'text-foreground'}`}
+                        style={{ minWidth: 40, backgroundColor: isToday ? undefined : 'hsl(var(--muted) / 0.4)' }}
+                      >
+                        {dayTotal > 0 ? dayTotal : <span className="text-muted-foreground/30">—</span>}
+                      </td>
+                    );
+                  })}
+                  <td className="sticky left-0 z-10 text-center px-1.5 py-1.5 font-bold text-xs text-primary border-r-2 border-border bg-muted" style={{ minWidth: 64 }}>
+                    {grandTotal}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-4 text-[10px] text-muted-foreground px-1">
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-success inline-block" /> ≥ 8 ساعات (دوام كامل)</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-warning inline-block" /> 4-7 ساعات (دوام جزئي)</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-foreground inline-block" /> &lt; 4 ساعات</span>
       </div>
     </div>
   );
