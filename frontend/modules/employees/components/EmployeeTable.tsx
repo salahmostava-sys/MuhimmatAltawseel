@@ -566,26 +566,24 @@ export function EmployeeDetailedTable({
                       }
                     }}
                   >
-                    {presenceUser && (
-                      <td className="absolute -top-2.5 start-2 z-10 px-0 py-0 border-0" style={{ width: 0, height: 0, overflow: 'visible' }}>
-                        <span
-                          className="rounded px-1.5 py-0 text-[8px] font-medium text-white whitespace-nowrap shadow-sm"
-                          style={{ backgroundColor: presenceUser.color }}
-                        >
-                          {presenceUser.name}
-                        </span>
-                      </td>
-                    )}
-                    {activeCols.map((col) => {
+                    {activeCols.map((col, colIdx) => {
                       // NOSONAR
                       switch (col.key) {
                         case "seq":
                           return (
                             <td
                               key="seq"
-                              className="px-2 py-2 text-[11px] text-muted-foreground text-center tabular-nums"
+                              className="relative px-2 py-2 text-[11px] text-muted-foreground text-center tabular-nums"
                             >
                               {globalIdx}
+                              {colIdx === 0 && presenceUser && (
+                                <span
+                                  className="absolute -top-2.5 start-1 z-10 rounded px-1.5 py-0 text-[8px] font-medium text-white whitespace-nowrap shadow-sm"
+                                  style={{ backgroundColor: presenceUser.color }}
+                                >
+                                  {presenceUser.name}
+                                </span>
+                              )}
                             </td>
                           );
 

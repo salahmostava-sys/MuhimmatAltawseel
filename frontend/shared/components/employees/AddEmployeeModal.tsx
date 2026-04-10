@@ -294,6 +294,8 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
   const [files, setFiles] = useState<{ personal: File | null; id: File | null; iqama: File | null; license: File | null }>({
     personal: null, id: null, iqama: null, license: null,
   });
+  /** Tracks which existing documents the user wants to remove (storage path + db field). */
+  const [removedDocs, setRemovedDocs] = useState<Array<{ storagePath: string; field: string }>>([]);
   const [uploadState, setUploadState] = useState<{
     personal: { status: UploadStatus; error: string | null };
     id: { status: UploadStatus; error: string | null };
@@ -461,6 +463,19 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
       const empId = await upsertEmployeeAndAudit(payload);
       if (!isEdit) createdEmployeeId = empId;
       uploadedDocumentPaths = await uploadEmployeeFiles(empId);
+
+      // Delete documents that the user explicitly removed
+      if (removedDocs.length > 0 && isEdit) {
+        const pathsToDelete = removedDocs.map((d) => d.storagePath);
+        const fieldsToNull: Record<string, null> = {};
+        removedDocs.forEach((d) => { fieldsToNull[d.field] = null; });
+        await employeeService.deleteEmployeeDocuments(pathsToDelete).catch((e) => {
+          logError('[AddEmployeeModal] failed to delete removed documents from storage', e, { level: 'warn' });
+        });
+        await employeeService.updateEmployeeDocumentPaths(empId, fieldsToNull as unknown as Record<string, string>).catch((e) => {
+          logError('[AddEmployeeModal] failed to clear removed document paths', e, { level: 'warn' });
+        });
+      }
 
       toast({
         title: isEdit ? 'تم تحديث بيانات المندوب' : 'تم إضافة المندوب بنجاح',
@@ -763,7 +778,11 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                   label="الصورة الشخصية" icon="📷"
                   file={files.personal} existingStoragePath={editEmployee?.personal_photo_url}
                   onFile={f => { setFiles(p => ({ ...p, personal: f })); setUploadState((s) => ({ ...s, personal: { status: 'selected', error: null } })); }}
-                  onRemove={() => { setFiles(p => ({ ...p, personal: null })); setUploadState((s) => ({ ...s, personal: { status: 'idle', error: null } })); }}
+                  onRemove={() => {
+                    setFiles(p => ({ ...p, personal: null }));
+                    setUploadState((s) => ({ ...s, personal: { status: 'idle', error: null } }));
+                    if (editEmployee?.personal_photo_url) setRemovedDocs(prev => [...prev, { storagePath: editEmployee.personal_photo_url!, field: 'personal_photo_url' }]);
+                  }}
                   status={uploadState.personal.status}
                   errorText={uploadState.personal.error}
                 />
@@ -771,7 +790,11 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                   label="صورة الهوية" icon="🪪"
                   file={files.id} existingStoragePath={editEmployee?.id_photo_url}
                   onFile={f => { setFiles(p => ({ ...p, id: f })); setUploadState((s) => ({ ...s, id: { status: 'selected', error: null } })); }}
-                  onRemove={() => { setFiles(p => ({ ...p, id: null })); setUploadState((s) => ({ ...s, id: { status: 'idle', error: null } })); }}
+                  onRemove={() => {
+                    setFiles(p => ({ ...p, id: null }));
+                    setUploadState((s) => ({ ...s, id: { status: 'idle', error: null } }));
+                    if (editEmployee?.id_photo_url) setRemovedDocs(prev => [...prev, { storagePath: editEmployee.id_photo_url!, field: 'id_photo_url' }]);
+                  }}
                   status={uploadState.id.status}
                   errorText={uploadState.id.error}
                 />
@@ -779,7 +802,11 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                   label="صورة الإقامة" icon="📄"
                   file={files.iqama} existingStoragePath={editEmployee?.iqama_photo_url}
                   onFile={f => { setFiles(p => ({ ...p, iqama: f })); setUploadState((s) => ({ ...s, iqama: { status: 'selected', error: null } })); }}
-                  onRemove={() => { setFiles(p => ({ ...p, iqama: null })); setUploadState((s) => ({ ...s, iqama: { status: 'idle', error: null } })); }}
+                  onRemove={() => {
+                    setFiles(p => ({ ...p, iqama: null }));
+                    setUploadState((s) => ({ ...s, iqama: { status: 'idle', error: null } }));
+                    if (editEmployee?.iqama_photo_url) setRemovedDocs(prev => [...prev, { storagePath: editEmployee.iqama_photo_url!, field: 'iqama_photo_url' }]);
+                  }}
                   status={uploadState.iqama.status}
                   errorText={uploadState.iqama.error}
                 />
@@ -787,7 +814,11 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                   label="صورة الرخصة" icon="🚗"
                   file={files.license} existingStoragePath={editEmployee?.license_photo_url}
                   onFile={f => { setFiles(p => ({ ...p, license: f })); setUploadState((s) => ({ ...s, license: { status: 'selected', error: null } })); }}
-                  onRemove={() => { setFiles(p => ({ ...p, license: null })); setUploadState((s) => ({ ...s, license: { status: 'idle', error: null } })); }}
+                  onRemove={() => {
+                    setFiles(p => ({ ...p, license: null }));
+                    setUploadState((s) => ({ ...s, license: { status: 'idle', error: null } }));
+                    if (editEmployee?.license_photo_url) setRemovedDocs(prev => [...prev, { storagePath: editEmployee.license_photo_url!, field: 'license_photo_url' }]);
+                  }}
                   status={uploadState.license.status}
                   errorText={uploadState.license.error}
                 />
