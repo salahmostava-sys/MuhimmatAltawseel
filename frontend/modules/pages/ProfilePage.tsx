@@ -4,7 +4,7 @@ import ProfileSettingsContent from '@modules/pages/settings-hub/ProfileSettingsC
 /** صفحة مستقلة: أي مستخدم مسجّل (له دور) يصل إليها دون صلاحية «الإعدادات». */
 const ProfilePage = () => {
   return (
-    <div className="flex flex-col gap-4 animate-fade-in">
+    <div className="flex flex-col gap-4 animate-fade-in" dir="rtl">
       <div className="flex-shrink-0">
         <nav className="page-breadcrumb">
           <span>الرئيسية</span>

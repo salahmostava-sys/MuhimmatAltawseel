@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { Camera, Eye, EyeOff, Check, AlertCircle, User } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Camera, Eye, EyeOff, Check, AlertCircle, User, Loader2 } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { Label } from '@shared/components/ui/label';
@@ -9,6 +9,8 @@ import { useLanguage } from '@app/providers/LanguageContext';
 import { cn } from '@shared/lib/utils';
 import { settingsHubService } from '@services/settingsHubService';
 import { validateUploadFile } from '@shared/lib/validation';
+import { useQuery } from '@tanstack/react-query';
+import { QueryErrorRetry } from '@shared/components/QueryErrorRetry';
 
 const getStrength = (pw: string) => {
   if (!pw) return 0;
@@ -75,7 +77,15 @@ export default function ProfileSettingsContent({ omitPageHeading = false }: Read
   const { isRTL } = useLanguage();
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const { data: profileData, isLoading: profileLoading, error: profileError, refetch: refetchProfile } = useQuery({
+    queryKey: ['settings', 'profile', user?.id],
+    queryFn: () => settingsHubService.getProfileByUserId(user!.id),
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+
   const [profile, setProfile] = useState({ name: '', avatar_url: '' });
+  const [profileSynced, setProfileSynced] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -93,24 +103,11 @@ export default function ProfileSettingsContent({ omitPageHeading = false }: Read
 
   const passwordsMatch = pw.next === pw.confirm;
 
-  useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-    settingsHubService.getProfileByUserId(user.id).then((data) => {
-      if (cancelled) return;
-      if (data) setProfile({ name: data.name || '', avatar_url: data.avatar_url || '' });
-    }).catch((e: unknown) => {
-      if (cancelled) return;
-      toast({
-        title: 'تعذر تحميل الملف',
-        description: e instanceof Error ? e.message : String(e),
-        variant: 'destructive',
-      });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [toast, user]);
+  // Sync form from query (once)
+  if (profileData && !profileSynced) {
+    setProfile({ name: profileData.name || '', avatar_url: profileData.avatar_url || '' });
+    setProfileSynced(true);
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -175,6 +172,20 @@ export default function ProfileSettingsContent({ omitPageHeading = false }: Read
 
   const avatarSrc = previewUrl || profile.avatar_url || null;
   const initial = (profile.name || user?.email || 'U').charAt(0).toUpperCase();
+
+  if (profileLoading) return (
+    <div className="flex items-center justify-center py-20">
+      <Loader2 size={28} className="animate-spin text-primary" />
+    </div>
+  );
+
+  if (profileError) return (
+    <QueryErrorRetry
+      error={profileError}
+      onRetry={() => void refetchProfile()}
+      title="تعذر تحميل الملف الشخصي"
+    />
+  );
 
   return (
     <div className="space-y-8 max-w-xl" dir={isRTL ? 'rtl' : 'ltr'}>

@@ -101,7 +101,7 @@ export function AppSettingsPage() {
 
   if (selectedApp) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4" dir="rtl">
         <Button
           variant="ghost"
           size="sm"
@@ -122,7 +122,7 @@ export function AppSettingsPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" dir="rtl">
       <div>
         <h2 className="text-2xl font-bold">إعدادات المنصات</h2>
         <p className="text-sm text-muted-foreground">

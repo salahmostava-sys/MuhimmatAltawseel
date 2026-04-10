@@ -8,6 +8,8 @@ import { useLanguage } from '@app/providers/LanguageContext';
 import { settingsHubService } from '@services/settingsHubService';
 import { getErrorMessage } from '@shared/lib/query';
 import { logError } from '@shared/lib/logger';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { QueryErrorRetry } from '@shared/components/QueryErrorRetry';
 
 const SectionHeader = ({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle?: string }) => (
   <div className="flex items-center gap-3 pb-4 mb-5" style={{ borderBottom: '1px solid var(--ds-surface-container)' }}>
@@ -25,6 +27,13 @@ const SectionHeader = ({ icon, title, subtitle }: { icon: React.ReactNode; title
 export default function CompanySettingsContent() {
   const { isRTL } = useLanguage();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: tradeRegister, isLoading: loading, error, refetch } = useQuery({
+    queryKey: ['settings', 'trade-register'],
+    queryFn: () => settingsHubService.getTradeRegister(),
+    staleTime: 60_000,
+  });
 
   const [recordId, setRecordId] = useState<string | null>(null);
   const [nameAr, setNameAr] = useState('');
@@ -32,27 +41,16 @@ export default function CompanySettingsContent() {
   const [crNumber, setCrNumber] = useState('');
   const [taxNumber, setTaxNumber] = useState('');
   const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
 
+  // Sync form state from query data
   useEffect(() => {
-    settingsHubService.getTradeRegister()
-      .then((data) => {
-        if (data) {
-          setRecordId(data.id);
-          setNameAr(data.name || '');
-          setNameEn(data.name_en || '');
-          setCrNumber(data.cr_number || '');
-          setTaxNumber(data.notes || '');
-        }
-      })
-      .catch((err) => {
-        logError('[CompanySettings] failed to load trade register', err);
-        toast({ title: 'تعذر تحميل البيانات', description: getErrorMessage(err), variant: 'destructive' });
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [toast]);
+    if (!tradeRegister) return;
+    setRecordId(tradeRegister.id);
+    setNameAr(tradeRegister.name || '');
+    setNameEn(tradeRegister.name_en || '');
+    setCrNumber(tradeRegister.cr_number || '');
+    setTaxNumber(tradeRegister.notes || '');
+  }, [tradeRegister]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -69,6 +67,7 @@ export default function CompanySettingsContent() {
         const data = await settingsHubService.createTradeRegister(payload);
         if (data) setRecordId((data as { id: string }).id);
       }
+      await queryClient.invalidateQueries({ queryKey: ['settings', 'trade-register'] });
       toast({ title: 'تم الحفظ ✓', description: 'تم تحديث بيانات المنشأة' });
     } catch (err: unknown) {
       logError('[CompanySettings] save trade register failed', err);
@@ -81,6 +80,14 @@ export default function CompanySettingsContent() {
     <div className="flex items-center justify-center py-20">
       <Loader2 size={28} className="animate-spin text-primary" />
     </div>
+  );
+
+  if (error) return (
+    <QueryErrorRetry
+      error={error}
+      onRetry={() => void refetch()}
+      title="تعذر تحميل بيانات المنشأة"
+    />
   );
 
   return (

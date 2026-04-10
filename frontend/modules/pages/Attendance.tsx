@@ -7,7 +7,8 @@ import DailyAttendance from '@shared/components/attendance/DailyAttendance';
 import MonthlyRecord from '@shared/components/attendance/MonthlyRecord';
 import { useLanguage } from '@app/providers/LanguageContext';
 import { useTranslation } from 'react-i18next';
-import * as XLSX from '@e965/xlsx';
+let _xlsxCache: Promise<typeof import('@e965/xlsx')> | null = null;
+const loadXlsx = () => { if (!_xlsxCache) _xlsxCache = import('@e965/xlsx'); return _xlsxCache; };
 import { printHtmlTable } from '@shared/lib/printTable';
 import attendanceService from '@services/attendanceService';
 import { useToast } from '@shared/hooks/use-toast';
@@ -81,6 +82,7 @@ const Attendance = () => {
         'ملاحظات': r.notes || '',
       }));
 
+      const XLSX = await loadXlsx();
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'الحضور');
@@ -91,7 +93,8 @@ const Attendance = () => {
     }
   };
 
-  const handleAttendanceTemplate = () => {
+  const handleAttendanceTemplate = async () => {
+    const XLSX = await loadXlsx();
     const headers = [['اسم الموظف', 'التاريخ (YYYY-MM-DD)', 'الحالة (present/absent/leave/sick/late)', 'ملاحظات']];
     const ws = XLSX.utils.aoa_to_sheet(headers);
     const wb = XLSX.utils.book_new();
@@ -106,6 +109,7 @@ const Attendance = () => {
     setImporting(true);
     try {
       const data = await file.arrayBuffer();
+      const XLSX = await loadXlsx();
       const workbook = XLSX.read(data, { type: 'array' });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as string[][];

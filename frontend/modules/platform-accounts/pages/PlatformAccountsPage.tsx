@@ -6,12 +6,15 @@ import { PlatformAccountsTable } from '@modules/platform-accounts/components/Pla
 import { PlatformAssignDialog } from '@modules/platform-accounts/components/PlatformAssignDialog';
 import { PlatformHistoryDialog } from '@modules/platform-accounts/components/PlatformHistoryDialog';
 import { usePlatformAccountsPage } from '@modules/platform-accounts/hooks/usePlatformAccountsPage';
+import { QueryErrorRetry } from '@shared/components/QueryErrorRetry';
 import { memo } from 'react';
 
 const PlatformAccounts = () => {
   const {
     perms,
     loading,
+    pageError,
+    refetchPage,
     alertDays,
     accounts,
     apps,
@@ -60,8 +63,20 @@ const PlatformAccounts = () => {
     clearFilters,
   } = usePlatformAccountsPage();
 
+  if (pageError && !loading) {
+    return (
+      <div className="space-y-4" dir="rtl">
+        <QueryErrorRetry
+          error={pageError}
+          onRetry={() => void refetchPage()}
+          title="تعذر تحميل حسابات المنصات"
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" dir="rtl">
       <PlatformAccountsHeader
         loading={loading}
         accountsCount={accounts.length}

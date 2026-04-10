@@ -7,6 +7,7 @@ import { Card, CardContent } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
 import { useAlerts } from '@shared/hooks/useAlerts';
 import { usePermissions } from '@shared/hooks/usePermissions';
+import { useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { alertsService } from '@services/alertsService';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@shared/components/ui/sonner';
@@ -75,6 +76,7 @@ function formatDaysLeftShort(daysLeft: number): string {
 }
 
 export default function AlertsPage() {
+  useAuthQueryGate();
   const { data: alertsData = [], isLoading, error, refetch } = useAlerts();
   const { permissions: perms } = usePermissions('alerts');
   const queryClient = useQueryClient();

@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@shared/components/ui/dropdown-menu';
 import { Badge } from '@shared/components/ui/badge';
 import { Skeleton } from '@shared/components/ui/skeleton';
-import * as XLSX from '@e965/xlsx';
+let _xlsxCache: Promise<typeof import('@e965/xlsx')> | null = null;
+const loadXlsx = () => { if (!_xlsxCache) _xlsxCache = import('@e965/xlsx'); return _xlsxCache; };
 import { format } from 'date-fns';
 import { settingsHubService } from '@services/settingsHubService';
 import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
@@ -185,6 +186,7 @@ export default function ActivityLogContent() {
       'معرف المستخدم': l.user_id || '',
       'معرف السجل': l.record_id || '',
     }));
+    const XLSX = await loadXlsx();
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Activity Log');

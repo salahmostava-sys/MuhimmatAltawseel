@@ -18,6 +18,7 @@ import { AppEmployeesPanel } from '@modules/apps/components/AppEmployeesPanel';
 import { AppModal } from '@modules/apps/components/AppModal';
 import { AppsPageHeader } from '@modules/apps/components/AppsPageHeader';
 import { useAppsPage } from '@modules/apps/hooks/useAppsPage';
+import { QueryErrorRetry } from '@shared/components/QueryErrorRetry';
 
 const AppsPage = () => {
   const {
@@ -25,6 +26,8 @@ const AppsPage = () => {
     monthYear,
     apps,
     appsLoading,
+    appsError,
+    refetchApps,
     selectedApp,
     appEmployees,
     loadingEmployees,
@@ -45,6 +48,19 @@ const AppsPage = () => {
     confirmDelete,
     closeSelectedApp,
   } = useAppsPage();
+
+  if (appsError && !appsLoading) {
+    return (
+      <div className="space-y-4" dir="rtl">
+        <AppsPageHeader canEdit={permissions.can_edit} onAdd={openingCreateModal} />
+        <QueryErrorRetry
+          error={appsError}
+          onRetry={() => void refetchApps()}
+          title="تعذر تحميل المنصات"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4" dir="rtl">

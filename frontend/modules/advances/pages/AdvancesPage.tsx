@@ -8,6 +8,7 @@ import { useToast } from '@shared/hooks/use-toast';
 import { usePermissions } from '@shared/hooks/usePermissions';
 import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { defaultQueryRetry } from '@shared/lib/query';
+import { QueryErrorRetry } from '@shared/components/QueryErrorRetry';
 import { useAdvancedFilter } from '@shared/hooks/useAdvancedFilter';
 import { ADVANCES_FILTERS } from '@shared/config/filterConfigs';
 import type { Advance } from '@modules/advances/types/advance.types';
@@ -123,6 +124,20 @@ const Advances = () => {
         : 'تعذر تحميل بيانات السلف';
     toast({ title: 'خطأ في التحميل', description: message, variant: 'destructive' });
   }, [advancesPageError, toast]);
+
+  if (advancesPageError && !loading) {
+    return (
+      <div className="space-y-4" dir="rtl">
+        <QueryErrorRetry
+          error={advancesPageError}
+          onRetry={() => void refetchAdvancesData()}
+          title="تعذر تحميل بيانات السلف"
+          hint="تحقق من الاتصال وصلاحياتك ثم أعد المحاولة."
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4" dir="rtl">
       <div className="flex items-center justify-between flex-wrap gap-3">

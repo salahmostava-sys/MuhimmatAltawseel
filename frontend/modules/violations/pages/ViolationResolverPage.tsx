@@ -6,9 +6,22 @@ import ViolationFilters from '@modules/violations/components/ViolationFilters';
 import ViolationTable from '@modules/violations/components/ViolationTable';
 import ResolveViolationModal from '@modules/violations/components/ResolveViolationModal';
 import { savedViolationsCountLabel } from '@modules/violations/lib/violationUtils';
+import { QueryErrorRetry } from '@shared/components/QueryErrorRetry';
 
 const ViolationResolverPage = () => {
   const v = useViolationTable();
+
+  if (v.violationsError && !v.violationsLoading) {
+    return (
+      <div className="space-y-5" dir="rtl">
+        <QueryErrorRetry
+          error={v.violationsError}
+          onRetry={() => void v.refetchViolations()}
+          title="تعذر تحميل بيانات المخالفات"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5" dir="rtl">

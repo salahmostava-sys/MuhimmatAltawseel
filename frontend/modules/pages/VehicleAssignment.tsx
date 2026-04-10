@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@shared/components/ui/dropdown-menu';
 import { vehicleService, VEHICLES_QUERY_MAX_ROWS } from '@services/vehicleService';
 import { useToast } from '@shared/hooks/use-toast';
-import * as XLSX from '@e965/xlsx';
+let _xlsxCache: Promise<typeof import('@e965/xlsx')> | null = null;
+const loadXlsx = () => { if (!_xlsxCache) _xlsxCache = import('@e965/xlsx'); return _xlsxCache; };
 import { format } from 'date-fns';
 import { usePermissions } from '@shared/hooks/usePermissions';
 import { Skeleton } from '@shared/components/ui/skeleton';
@@ -331,7 +332,8 @@ const VehicleAssignment = () => {
     printWindow.document.close();
   };
 
-  const handleTemplate = () => {
+  const handleTemplate = async () => {
+    const XLSX = await loadXlsx();
     const headers = [['رقم اللوحة', 'نوع المركبة', 'اسم المندوب', 'تاريخ الاستلام', 'تاريخ الإعادة', 'السبب', 'ملاحظات']];
     const ws = XLSX.utils.aoa_to_sheet(headers);
     const wb = XLSX.utils.book_new();
@@ -362,7 +364,7 @@ const VehicleAssignment = () => {
               <Button variant="outline" size="sm" className="gap-1.5 h-9"><FolderOpen size={14} /> ملفات</Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => {
+              <DropdownMenuItem onClick={async () => {
                 const rows = filtered.map(a => ({
                   'المركبة': a.vehicles?.plate_number || '',
                   'النوع': a.vehicles?.type === 'motorcycle' ? 'موتوسيكل' : 'سيارة',
@@ -373,6 +375,7 @@ const VehicleAssignment = () => {
                   'السبب': a.reason || '',
                   'ملاحظات': a.notes || '',
                 }));
+                const XLSX = await loadXlsx();
                 const ws = XLSX.utils.json_to_sheet(rows);
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, 'سجل تسليم المركبات');

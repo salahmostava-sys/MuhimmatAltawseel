@@ -382,5 +382,7 @@ export function useFuelPage() { // NOSONAR: page data layer with many independen
     permissions,
     refetchMonthly,
     monthOrdersMap,
+    error: fuelBaseError || monthlyError || dailyError,
+    refetch: async () => { await refetchMonthly(); await refetchDaily(); },
   };
 }

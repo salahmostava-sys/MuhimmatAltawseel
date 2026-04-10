@@ -125,7 +125,7 @@ export default function SettingsHubOptimized() {
   const ActiveContent = tabComponents[active];
 
   return (
-    <div className="flex flex-col gap-0 animate-fade-in">
+    <div className="flex flex-col gap-0 animate-fade-in" dir="rtl">
       <div className="mb-5">
         <div className="flex items-center gap-1 text-xs mb-1" style={{ color: 'var(--ds-on-surface-variant)' }}>
           <span>{isRTL ? 'الإعدادات' : 'Settings'}</span>

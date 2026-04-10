@@ -13,6 +13,8 @@ import { format } from 'date-fns';
 import { useToast } from '@shared/hooks/use-toast';
 import { useSystemSettings } from '@app/providers/SystemSettingsContext';
 import { usePermissions } from '@shared/hooks/usePermissions';
+import { useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
+import { QueryErrorRetry } from '@shared/components/QueryErrorRetry';
 import { isEmployeeVisibleInMonth } from '@shared/lib/employeeVisibility';
 import { getEmployeeCities } from '@modules/employees/model/employeeUtils';
 import { useEmployeesData } from '@modules/employees/hooks/useEmployees';
@@ -42,6 +44,7 @@ const InlineLoader = ({ minHeightClassName = 'min-h-[260px]' }: Readonly<{ minHe
 );
 
 const Employees = () => {
+  useAuthQueryGate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   useSystemSettings();
@@ -192,6 +195,19 @@ const Employees = () => {
       }
       setSelectedEmployee(null);
     }
+  }
+
+  if (employeesError && !loading) {
+    return (
+      <div className="space-y-4" dir="rtl">
+        <QueryErrorRetry
+          error={employeesError}
+          onRetry={() => void refetchEmployees()}
+          title="تعذر تحميل بيانات الموظفين"
+          hint="تحقق من الاتصال وصلاحياتك ثم أعد المحاولة."
+        />
+      </div>
+    );
   }
 
   return (

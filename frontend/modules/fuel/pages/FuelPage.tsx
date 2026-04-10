@@ -7,6 +7,7 @@ import {
 } from '@modules/fuel/components/FuelTable';
 import { ImportModal } from '@modules/fuel/components/FuelImportModal';
 import { useFuelPage } from '@modules/fuel/hooks/useFuelPage';
+import { QueryErrorRetry } from '@shared/components/QueryErrorRetry';
 
 const FuelPage = () => { // NOSONAR: UI container with many independent handlers
   const {
@@ -56,6 +57,8 @@ const FuelPage = () => { // NOSONAR: UI container with many independent handlers
     permissions,
     refetchMonthly,
     monthOrdersMap,
+    error: fuelError,
+    refetch: refetchAll,
   } = useFuelPage();
 
   const fuelToolbarEnd = (
@@ -70,6 +73,18 @@ const FuelPage = () => { // NOSONAR: UI container with many independent handlers
       />
     </>
   );
+
+  if (fuelError && !loading) {
+    return (
+      <div className="space-y-6" dir="rtl">
+        <QueryErrorRetry
+          error={fuelError}
+          onRetry={() => void refetchAll()}
+          title="تعذر تحميل بيانات الوقود"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6" dir="rtl">

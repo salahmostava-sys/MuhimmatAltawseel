@@ -432,6 +432,8 @@ export const usePlatformAccountsPage = () => {
   return {
     perms,
     loading,
+    pageError: pageDataError,
+    refetchPage: refetchPageData,
     alertDays,
     accounts,
     apps,

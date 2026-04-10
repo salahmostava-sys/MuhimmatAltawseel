@@ -153,6 +153,8 @@ export const useAppsPage = () => {
     monthYear,
     apps: apps ?? [],
     appsLoading: appsQuery.isLoading,
+    appsError: appsQuery.error,
+    refetchApps: appsQuery.refetch,
     selectedApp,
     appEmployees: employeesQuery.data ?? [],
     loadingEmployees: employeesQuery.isLoading || employeesQuery.isFetching,

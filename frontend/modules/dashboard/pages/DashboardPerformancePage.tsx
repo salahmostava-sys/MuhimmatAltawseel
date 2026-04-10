@@ -93,7 +93,7 @@ export default function DashboardPerformancePage() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" dir="rtl">
       <DashboardPerformanceHeader
         activeTab={activeTab}
         onTabChange={handleTabChange}
