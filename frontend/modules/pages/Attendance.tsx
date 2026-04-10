@@ -1,4 +1,4 @@
-import { useRef, useCallback, useMemo } from 'react';
+import { useRef, useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@shared/components/ui/button';
 import { ClipboardCheck, CalendarDays, FolderOpen } from 'lucide-react';
@@ -9,6 +9,9 @@ import { useLanguage } from '@app/providers/LanguageContext';
 import { useTranslation } from 'react-i18next';
 import * as XLSX from '@e965/xlsx';
 import { printHtmlTable } from '@shared/lib/printTable';
+import attendanceService from '@services/attendanceService';
+import { useToast } from '@shared/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
 
 const MONTHS_AR = [
   'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
@@ -28,7 +31,11 @@ const Attendance = () => {
   const { selectedMonth: globalMonth } = useTemporalContext();
   const MONTHS = MONTHS_AR;
   const importRef = useRef<HTMLInputElement>(null);
+  const dailyTableRef = useRef<HTMLDivElement>(null);
+  const monthlyTableRef = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const { toast } = useToast();
+  const [importing, setImporting] = useState(false);
 
   // Selected date is now derived from Global Temporal Context (YYYY-MM)
   const [yearStr, monthStr] = globalMonth.split('-');
@@ -56,11 +63,32 @@ const Attendance = () => {
     [setSearchParams],
   );
 
-  const handleExportAttendance = () => {
-    const ws = XLSX.utils.json_to_sheet([{ 'Note': `Attendance — ${MONTHS[Number(selectedMonth)]} ${selectedYear}` }]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'الحضور');
-    XLSX.writeFile(wb, `attendance_${selectedYear}-${String(Number(selectedMonth) + 1).padStart(2, '0')}.xlsx`);
+  const handleExportAttendance = async () => {
+    try {
+      toast({ title: 'جاري التحميل...' });
+      const year = Number(selectedYear);
+      const month = Number(selectedMonth);
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+      const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+
+      const records = await attendanceService.getAttendanceByDateRange(startDate, endDate);
+
+      const data = records.map((r: { employee_name?: string; date: string; status: string; notes?: string }) => ({
+        'الموظف': r.employee_name || '—',
+        'التاريخ': r.date,
+        'الحالة': r.status,
+        'ملاحظات': r.notes || '',
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'الحضور');
+      XLSX.writeFile(wb, `attendance_${selectedYear}-${String(month + 1).padStart(2, '0')}.xlsx`);
+      toast({ title: 'تم التصدير بنجاح' });
+    } catch (e) {
+      toast({ title: 'فشل التصدير', description: 'تعذر تحميل بيانات الحضور', variant: 'destructive' });
+    }
   };
 
   const handleAttendanceTemplate = () => {
@@ -69,6 +97,65 @@ const Attendance = () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'قالب');
     XLSX.writeFile(wb, 'template_attendance.xlsx');
+  };
+
+  const handleImportAttendance = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as string[][];
+
+      // Skip header row and process data
+      const rows = json.slice(1).filter((row: string[]) => row[0] && row[1]);
+      let imported = 0;
+      let failed = 0;
+
+      for (const row of rows) {
+        const [employeeName, date, status, notes] = row;
+        if (!employeeName || !date || !status) {
+          failed++;
+          continue;
+        }
+        try {
+          // Find employee by name or use generic endpoint
+          await attendanceService.saveAttendance({
+            employee_id: employeeName, // Service should resolve name to ID
+            date,
+            status: status.toLowerCase(),
+            notes: notes || '',
+          });
+          imported++;
+        } catch {
+          failed++;
+        }
+      }
+
+      toast({
+        title: 'تم الاستيراد',
+        description: `${imported} سجل ناجح، ${failed} فاشل`,
+        variant: failed > 0 ? 'destructive' : 'default',
+      });
+    } catch (e) {
+      toast({ title: 'فشل الاستيراد', description: 'تعذر قراءة الملف', variant: 'destructive' });
+    } finally {
+      setImporting(false);
+      e.target.value = ''; // Reset input
+    }
+  };
+
+  const handlePrintTable = () => {
+    const tableRef = tab === 'daily' ? dailyTableRef : monthlyTableRef;
+    const table = tableRef.current?.querySelector('table');
+    if (!table) {
+      toast({ title: 'لا يوجد جدول للطباعة' });
+      return;
+    }
+    printHtmlTable(table, { title: tab === 'daily' ? 'سجل الحضور اليومي' : 'السجل الشهري' });
   };
 
   return (
@@ -112,7 +199,7 @@ const Attendance = () => {
             </Button>
           </div>
 
-          <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden" />
+          <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportAttendance} disabled={importing} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="gap-1.5 h-8">
@@ -127,13 +214,11 @@ const Attendance = () => {
               <DropdownMenuItem onClick={handleAttendanceTemplate}>
                 📋 تحميل قالب الاستيراد
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => importRef.current?.click()}>⬆️ استيراد Excel</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => importRef.current?.click()} disabled={importing}>
+                {importing ? <Loader2 size={14} className="animate-spin ml-1" /> : '⬆️'} استيراد Excel
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => {
-                const table = document.querySelector('table');
-                if (!(table instanceof HTMLTableElement)) return;
-                printHtmlTable(table, { title: 'سجل الحضور' });
-              }}>🖨️ طباعة الجدول</DropdownMenuItem>
+              <DropdownMenuItem onClick={handlePrintTable}>🖨️ طباعة الجدول</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -141,9 +226,13 @@ const Attendance = () => {
 
       <div className="space-y-2">
         {tab === 'daily' ? (
-          <DailyAttendance selectedMonth={Number(selectedMonth)} selectedYear={Number(selectedYear)} />
+          <div ref={dailyTableRef}>
+            <DailyAttendance selectedMonth={Number(selectedMonth)} selectedYear={Number(selectedYear)} />
+          </div>
         ) : (
-          <MonthlyRecord selectedMonth={Number(selectedMonth)} selectedYear={Number(selectedYear)} />
+          <div ref={monthlyTableRef}>
+            <MonthlyRecord selectedMonth={Number(selectedMonth)} selectedYear={Number(selectedYear)} />
+          </div>
         )}
       </div>
     </div>

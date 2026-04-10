@@ -2,6 +2,7 @@ import { supabase } from '@services/supabase/client';
 import { handleSupabaseError } from '@services/serviceError';
 import { createPagedResult } from '@shared/types/pagination';
 import { filterOperationallyVisibleEmployees } from '@shared/lib/employeeVisibility';
+import type { TablesInsert } from '@services/supabase/types';
 
 export interface MileageDailyPayload {
   employee_id: string;
@@ -230,7 +231,7 @@ export const fuelService = {
     }
     const { error } = await supabase
       .from('vehicle_mileage')
-      .insert(rows as Record<string, unknown>[], { ignoreDuplicates: true });
+      .insert(rows as unknown as TablesInsert<'vehicle_mileage'>[], { ignoreDuplicates: true });
     if (error) handleSupabaseError(error, 'fuelService.saveMonthlyMileageImport.insert');
   },
 };

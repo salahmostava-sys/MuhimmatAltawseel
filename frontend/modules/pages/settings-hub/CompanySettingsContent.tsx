@@ -44,9 +44,15 @@ export default function CompanySettingsContent() {
           setCrNumber(data.cr_number || '');
           setTaxNumber(data.notes || '');
         }
+      })
+      .catch((err) => {
+        logError('[CompanySettings] failed to load trade register', err);
+        toast({ title: 'تعذر تحميل البيانات', description: getErrorMessage(err), variant: 'destructive' });
+      })
+      .finally(() => {
         setLoading(false);
       });
-  }, []);
+  }, [toast]);
 
   const handleSave = async () => {
     setSaving(true);

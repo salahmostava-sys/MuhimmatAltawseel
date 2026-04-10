@@ -433,10 +433,12 @@ export const salaryService = {
       .eq('month_year', monthYear);
 
     if (error && String(error.message || '').includes('sheet_snapshot')) {
-      ({ data, error } = await supabase
+      const fallback = await supabase
         .from('salary_records')
         .select('employee_id, is_approved, base_salary, allowances, advance_deduction, net_salary, manual_deduction, attendance_deduction, external_deduction, payment_method')
-        .eq('month_year', monthYear));
+        .eq('month_year', monthYear);
+      data = (fallback.data ?? []).map(r => ({ ...r, sheet_snapshot: null })) as typeof data;
+      error = fallback.error;
     }
 
     if (error) handleSupabaseError(error, 'salaryService.getMonthRecordsForSalaryContext');

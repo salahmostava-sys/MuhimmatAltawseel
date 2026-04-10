@@ -127,6 +127,7 @@ export type Database = {
           is_written_off: boolean
           monthly_amount: number
           note: string | null
+          remaining_amount: number | null
           status: Database["public"]["Enums"]["advance_status"]
           total_installments: number
           updated_at: string
@@ -144,6 +145,7 @@ export type Database = {
           is_written_off?: boolean
           monthly_amount: number
           note?: string | null
+          remaining_amount?: number | null
           status?: Database["public"]["Enums"]["advance_status"]
           total_installments?: number
           updated_at?: string
@@ -161,6 +163,7 @@ export type Database = {
           is_written_off?: boolean
           monthly_amount?: number
           note?: string | null
+          remaining_amount?: number | null
           status?: Database["public"]["Enums"]["advance_status"]
           total_installments?: number
           updated_at?: string
@@ -185,7 +188,9 @@ export type Database = {
           entity_type: string | null
           id: string
           is_resolved: boolean
+          message: string | null
           resolved_by: string | null
+          severity: string | null
           type: string
         }
         Insert: {
@@ -195,7 +200,9 @@ export type Database = {
           entity_type?: string | null
           id?: string
           is_resolved?: boolean
+          message?: string | null
           resolved_by?: string | null
+          severity?: string | null
           type: string
         }
         Update: {
@@ -205,7 +212,9 @@ export type Database = {
           entity_type?: string | null
           id?: string
           is_resolved?: boolean
+          message?: string | null
           resolved_by?: string | null
+          severity?: string | null
           type?: string
         }
         Relationships: []
@@ -257,6 +266,7 @@ export type Database = {
           name_en: string | null
           scheme_id: string | null
           text_color: string
+          work_type: string | null
         }
         Insert: {
           brand_color?: string
@@ -269,6 +279,7 @@ export type Database = {
           name_en?: string | null
           scheme_id?: string | null
           text_color?: string
+          work_type?: string | null
         }
         Update: {
           brand_color?: string
@@ -281,6 +292,7 @@ export type Database = {
           name_en?: string | null
           scheme_id?: string | null
           text_color?: string
+          work_type?: string | null
         }
         Relationships: [
           {
@@ -641,6 +653,7 @@ export type Database = {
             | Database["public"]["Enums"]["sponsorship_status_enum"]
             | null
           status: Database["public"]["Enums"]["employee_status"]
+          tier_id: string | null
           updated_at: string
         }
         Insert: {
@@ -684,6 +697,7 @@ export type Database = {
             | Database["public"]["Enums"]["sponsorship_status_enum"]
             | null
           status?: Database["public"]["Enums"]["employee_status"]
+          tier_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -727,6 +741,7 @@ export type Database = {
             | Database["public"]["Enums"]["sponsorship_status_enum"]
             | null
           status?: Database["public"]["Enums"]["employee_status"]
+          tier_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1498,6 +1513,510 @@ export type Database = {
           },
         ]
       }
+      pricing_rules: {
+        Row: {
+          app_id: string
+          created_at: string
+          id: string
+          max_orders: number | null
+          min_orders: number | null
+          rate: number
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          app_id: string
+          created_at?: string
+          id?: string
+          max_orders?: number | null
+          min_orders?: number | null
+          rate: number
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          app_id?: string
+          created_at?: string
+          id?: string
+          max_orders?: number | null
+          min_orders?: number | null
+          rate?: number
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pricing_rules_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_shifts: {
+        Row: {
+          app_id: string
+          created_at: string
+          employee_id: string
+          hours_worked: number
+          id: string
+          notes: string | null
+          shift_date: string
+          updated_at: string
+        }
+        Insert: {
+          app_id: string
+          created_at?: string
+          employee_id: string
+          hours_worked: number
+          id?: string
+          notes?: string | null
+          shift_date: string
+          updated_at?: string
+        }
+        Update: {
+          app_id?: string
+          created_at?: string
+          employee_id?: string
+          hours_worked?: number
+          id?: string
+          notes?: string | null
+          shift_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_shifts_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_shifts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_hybrid_rules: {
+        Row: {
+          app_id: string
+          created_at: string
+          fixed_amount: number | null
+          id: string
+          max_orders: number | null
+          min_orders: number | null
+          rate_per_order: number | null
+          rule_type: string
+          updated_at: string
+        }
+        Insert: {
+          app_id: string
+          created_at?: string
+          fixed_amount?: number | null
+          id?: string
+          max_orders?: number | null
+          min_orders?: number | null
+          rate_per_order?: number | null
+          rule_type: string
+          updated_at?: string
+        }
+        Update: {
+          app_id?: string
+          created_at?: string
+          fixed_amount?: number | null
+          id?: string
+          max_orders?: number | null
+          min_orders?: number | null
+          rate_per_order?: number | null
+          rule_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_hybrid_rules_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fuel_records: {
+        Row: {
+          cost: number
+          created_at: string
+          date: string
+          driver_id: string | null
+          id: string
+          liters: number
+          notes: string | null
+          odometer_reading: number | null
+          vehicle_id: string
+        }
+        Insert: {
+          cost: number
+          created_at?: string
+          date: string
+          driver_id?: string | null
+          id?: string
+          liters: number
+          notes?: string | null
+          odometer_reading?: number | null
+          vehicle_id: string
+        }
+        Update: {
+          cost?: number
+          created_at?: string
+          date?: string
+          driver_id?: string | null
+          id?: string
+          liters?: number
+          notes?: string | null
+          odometer_reading?: number | null
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fuel_records_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maintenance_records: {
+        Row: {
+          cost: number | null
+          created_at: string
+          created_by: string | null
+          date: string
+          description: string | null
+          id: string
+          paid_by: string | null
+          status: string | null
+          type: Database["public"]["Enums"]["maintenance_type"]
+          vehicle_id: string
+        }
+        Insert: {
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          paid_by?: string | null
+          status?: string | null
+          type?: Database["public"]["Enums"]["maintenance_type"]
+          vehicle_id: string
+        }
+        Update: {
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          paid_by?: string | null
+          status?: string | null
+          type?: Database["public"]["Enums"]["maintenance_type"]
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_records_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      violations: {
+        Row: {
+          amount: number
+          apply_month: string
+          approval_status: Database["public"]["Enums"]["approval_status"]
+          approved_by: string | null
+          created_at: string
+          employee_id: string
+          id: string
+          incident_date: string | null
+          linked_advance_id: string | null
+          note: string | null
+          source_app_id: string | null
+          type: Database["public"]["Enums"]["deduction_type"]
+        }
+        Insert: {
+          amount: number
+          apply_month: string
+          approval_status?: Database["public"]["Enums"]["approval_status"]
+          approved_by?: string | null
+          created_at?: string
+          employee_id: string
+          id?: string
+          incident_date?: string | null
+          linked_advance_id?: string | null
+          note?: string | null
+          source_app_id?: string | null
+          type?: Database["public"]["Enums"]["deduction_type"]
+        }
+        Update: {
+          amount?: number
+          apply_month?: string
+          approval_status?: Database["public"]["Enums"]["approval_status"]
+          approved_by?: string | null
+          created_at?: string
+          employee_id?: string
+          id?: string
+          incident_date?: string | null
+          linked_advance_id?: string | null
+          note?: string | null
+          source_app_id?: string | null
+          type?: Database["public"]["Enums"]["deduction_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "violations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tiers: {
+        Row: {
+          bonus: number | null
+          created_at: string
+          id: string
+          max_orders: number | null
+          min_orders: number | null
+          name: string
+        }
+        Insert: {
+          bonus?: number | null
+          created_at?: string
+          id?: string
+          max_orders?: number | null
+          min_orders?: number | null
+          name: string
+        }
+        Update: {
+          bonus?: number | null
+          created_at?: string
+          id?: string
+          max_orders?: number | null
+          min_orders?: number | null
+          name?: string
+        }
+        Relationships: []
+      }
+      spare_parts_inventory: {
+        Row: {
+          created_at: string
+          id: string
+          min_quantity: number | null
+          name_ar: string
+          quantity: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          min_quantity?: number | null
+          name_ar: string
+          quantity?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          min_quantity?: number | null
+          name_ar?: string
+          quantity?: number
+        }
+        Relationships: []
+      }
+      spare_parts: {
+        Row: {
+          created_at: string
+          id: string
+          min_stock_alert: number | null
+          name_ar: string
+          stock_quantity: number
+          unit: string | null
+          unit_cost: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          min_stock_alert?: number | null
+          name_ar: string
+          stock_quantity?: number
+          unit?: string | null
+          unit_cost?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          min_stock_alert?: number | null
+          name_ar?: string
+          stock_quantity?: number
+          unit?: string | null
+          unit_cost?: number | null
+        }
+        Relationships: []
+      }
+      maintenance_parts: {
+        Row: {
+          cost_at_time: number | null
+          created_at: string
+          id: string
+          maintenance_log_id: string
+          part_id: string
+          quantity_used: number
+        }
+        Insert: {
+          cost_at_time?: number | null
+          created_at?: string
+          id?: string
+          maintenance_log_id: string
+          part_id: string
+          quantity_used?: number
+        }
+        Update: {
+          cost_at_time?: number | null
+          created_at?: string
+          id?: string
+          maintenance_log_id?: string
+          part_id?: string
+          quantity_used?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_parts_maintenance_log_id_fkey"
+            columns: ["maintenance_log_id"]
+            isOneToOne: false
+            referencedRelation: "maintenance_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_parts_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "spare_parts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salary_drafts: {
+        Row: {
+          created_at: string
+          draft_data: Json | null
+          employee_id: string
+          id: string
+          month_year: string
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          draft_data?: Json | null
+          employee_id: string
+          id?: string
+          month_year: string
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          draft_data?: Json | null
+          employee_id?: string
+          id?: string
+          month_year?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_drafts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salary_slip_templates: {
+        Row: {
+          created_at: string
+          footer_html: string | null
+          header_html: string | null
+          id: string
+          is_default: boolean
+          name: string
+          selected_columns: Json | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          footer_html?: string | null
+          header_html?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          selected_columns?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          footer_html?: string | null
+          header_html?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          selected_columns?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      admin_action_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          record_id: string | null
+          table_name: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          record_id?: string | null
+          table_name: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          record_id?: string | null
+          table_name?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       vehicles: {
         Row: {
           authorization_expiry: string | null
@@ -1575,6 +2094,26 @@ export type Database = {
         Returns: boolean
       }
       is_active_user: { Args: { _user_id: string }; Returns: boolean }
+      replace_daily_orders_month_rpc: {
+        Args: { p_month: string; p_rows: Json }
+        Returns: void
+      }
+      performance_dashboard_rpc: {
+        Args: { p_month: string }
+        Returns: Json
+      }
+      rider_profile_performance_rpc: {
+        Args: { p_employee_id: string; p_month: string }
+        Returns: Json
+      }
+      capture_salary_month_snapshot: {
+        Args: { p_month: string }
+        Returns: Json
+      }
+      get_employee_count_by_city: {
+        Args: Record<string, never>
+        Returns: Json
+      }
     }
     Enums: {
       advance_status: "active" | "completed" | "paused"

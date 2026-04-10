@@ -1,5 +1,6 @@
 import { supabase } from '@services/supabase/client';
 import { toServiceError } from '@services/serviceError';
+import type { TablesInsert } from '@services/supabase/types';
 
 export const violationService = {
   getViolations: async () => {
@@ -54,7 +55,7 @@ export const violationService = {
   },
 
   createFineDeduction: async (payload: Record<string, unknown>) => {
-    const { data, error } = await supabase.from('external_deductions').insert(payload).select('id').single();
+    const { data, error } = await supabase.from('external_deductions').insert(payload as unknown as TablesInsert<'external_deductions'>).select('id').single();
     if (error) throw toServiceError(error, 'violationService.createFineDeduction');
     return data as { id: string };
   },
@@ -84,13 +85,13 @@ export const violationService = {
   },
 
   createAdvanceFromFine: async (payload: Record<string, unknown>) => {
-    const { data, error } = await supabase.from('advances').insert(payload).select('id').single();
+    const { data, error } = await supabase.from('advances').insert(payload as unknown as TablesInsert<'advances'>).select('id').single();
     if (error) throw toServiceError(error, 'violationService.createAdvanceFromFine');
     return data as { id: string };
   },
 
   createSingleInstallment: async (payload: Record<string, unknown>) => {
-    const { error } = await supabase.from('advance_installments').insert(payload);
+    const { error } = await supabase.from('advance_installments').insert(payload as unknown as TablesInsert<'advance_installments'>);
     if (error) throw toServiceError(error, 'violationService.createSingleInstallment');
   },
 };

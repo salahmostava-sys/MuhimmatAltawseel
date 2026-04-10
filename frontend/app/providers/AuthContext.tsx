@@ -150,7 +150,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // loading is turned off by getSession().finally() below,
             // AFTER session/user/role are set — avoids redirect race.
           }
-          if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESH_FAILED') {
+          if (event === 'SIGNED_OUT' || (event as string) === 'TOKEN_REFRESH_FAILED') {
             await handleUnauthenticatedState(event.toLowerCase());
           }
           if (nextSession?.user) {

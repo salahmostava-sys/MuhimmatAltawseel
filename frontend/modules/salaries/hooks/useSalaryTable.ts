@@ -62,7 +62,7 @@ export function useSalaryFilteredRows(
           return row.status;
         default:
           if (platforms.includes(sortField)) return row.platformOrders[sortField] || 0;
-          return toComparableSortValue((row as Record<string, unknown>)[sortField]);
+          return toComparableSortValue((row as unknown as Record<string, unknown>)[sortField]);
       }
     };
 

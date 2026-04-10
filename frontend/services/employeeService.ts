@@ -2,6 +2,7 @@ import { supabase } from '@services/supabase/client';
 import { ServiceError, toServiceError } from '@services/serviceError';
 import { createPagedResult } from '@shared/types/pagination';
 import { sanitizeStoragePath } from '@shared/lib/storagePath';
+import type { TablesInsert } from '@services/supabase/types';
 
 export type EmployeeAppOption = {
   id: string;
@@ -220,7 +221,7 @@ export const employeeService = {
   async createEmployee(payload: Record<string, unknown>) {
     const { data, error } = await supabase
       .from('employees')
-      .insert(payload)
+      .insert(payload as unknown as TablesInsert<'employees'>)
       .select()
       .single();
     if (error) throw toServiceError(error, 'employeeService.createEmployee');
@@ -230,7 +231,7 @@ export const employeeService = {
   async updateEmployee(employeeId: string, payload: Record<string, unknown>) {
     const { error } = await supabase
       .from('employees')
-      .update(payload)
+      .update(payload as unknown as TablesInsert<'employees'>)
       .eq('id', employeeId);
     if (error) throw toServiceError(error, 'employeeService.updateEmployee');
   },

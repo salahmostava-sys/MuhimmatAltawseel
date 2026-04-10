@@ -190,7 +190,7 @@ const ResetPassword = () => {
     }
   };
 
-  if (invalidLink && !isRecovery) {
+  if (invalidLink) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
         <div className="w-full max-w-sm bg-card border border-border rounded-2xl p-8 shadow-2xl text-center space-y-4" dir="rtl">

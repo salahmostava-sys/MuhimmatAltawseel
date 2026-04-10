@@ -1,6 +1,7 @@
 import { supabase } from '@services/supabase/client';
 import { handleSupabaseError } from '@services/serviceError';
 import { filterOperationallyVisibleEmployees } from '@shared/lib/employeeVisibility';
+import type { TablesInsert } from '@services/supabase/types';
 
 export interface AdvancePayload {
   employee_id: string;
@@ -47,7 +48,7 @@ export const advanceService = {
   create: async (payload: AdvancePayload) => {
     const { data, error } = await supabase
       .from('advances')
-      .insert(payload as Record<string, unknown>)
+      .insert(payload as unknown as TablesInsert<'advances'>)
       .select()
       .single();
     if (error) handleSupabaseError(error, 'advanceService.create');
@@ -57,7 +58,7 @@ export const advanceService = {
   insertMany: async (rows: AdvancePayload[]) => {
     const { error } = await supabase
       .from('advances')
-      .insert(rows as unknown[]);
+      .insert(rows as unknown as TablesInsert<'advances'>[]);
     if (error) handleSupabaseError(error, 'advanceService.insertMany');
   },
 
@@ -126,7 +127,7 @@ export const advanceService = {
   },
 
   createInstallments: async (installments: Record<string, unknown>[]) => {
-    const { error } = await supabase.from('advance_installments').insert(installments as unknown[]);
+    const { error } = await supabase.from('advance_installments').insert(installments as unknown as TablesInsert<'advance_installments'>[]);
     if (error) handleSupabaseError(error, 'advanceService.createInstallments');
   },
 

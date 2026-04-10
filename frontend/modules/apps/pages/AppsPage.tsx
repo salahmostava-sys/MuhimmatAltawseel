@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { Package } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,6 +12,7 @@ import {
   AlertDialogTitle,
 } from '@shared/components/ui/alert-dialog';
 import { PageSection } from '@shared/components/layout/PageScaffold';
+import { Card, CardContent } from '@shared/components/ui/card';
 import { AppCard, AddAppCard } from '@modules/apps/components/AppCard';
 import { AppEmployeesPanel } from '@modules/apps/components/AppEmployeesPanel';
 import { AppModal } from '@modules/apps/components/AppModal';
@@ -55,6 +57,18 @@ const AppsPage = () => {
               <div key={item} className="h-40 animate-pulse rounded-2xl bg-muted/40" />
             ))}
           </div>
+        ) : apps.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+              <Package size={48} className="text-muted-foreground/50 mb-4" />
+              <h3 className="text-lg font-medium">لا توجد منصات</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                {permissions.can_edit
+                  ? 'أضف منصة جديدة للبدء'
+                  : 'لا توجد منصات متاحة حالياً'}
+              </p>
+            </CardContent>
+          </Card>
         ) : (
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
             {apps.map((app) => (

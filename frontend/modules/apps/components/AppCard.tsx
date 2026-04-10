@@ -36,7 +36,7 @@ export const AppCard = ({
       <div className="h-full p-5">
         {canEdit && (
           <div
-            className="absolute left-2 top-2 z-10 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100"
+            className="absolute left-2 top-2 z-10 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity"
             onClick={(event) => event.stopPropagation()}
           >
             <button

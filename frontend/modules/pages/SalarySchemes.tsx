@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select';
 import { Switch } from '@shared/components/ui/switch';
 import { useToast } from '@shared/hooks/use-toast';
+import { usePermissions } from '@shared/hooks/usePermissions';
 import { format } from 'date-fns';
 import { appService } from '@services/appService';
 import { salarySchemeService } from '@services/salarySchemeService';
@@ -111,6 +112,7 @@ interface SalarySchemesProps {
 const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
   const { toast } = useToast();
   const { enabled, userId } = useAuthQueryGate();
+  const { permissions: perms } = usePermissions('salary_schemes');
   const uid = authQueryUserId(userId);
   const queryClient = useQueryClient();
   const [schemes, setSchemes] = useState<Scheme[]>([]);
@@ -446,17 +448,32 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
             <p className="text-xs text-muted-foreground mt-1">إدارة الشرائح وربطها بالمنصات</p>
           </div>
         )}
-        <Button className="gap-2" onClick={openAdd}><Plus size={16} /> إضافة سكيمة</Button>
+        {perms.can_edit && (
+          <Button className="gap-2" onClick={openAdd}><Plus size={16} /> إضافة سكيمة</Button>
+        )}
       </div>
 
       {loading ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {[1,2,3,4].map(i => <div key={`scheme-card-skeleton-${i}`} className="bg-card rounded-xl border border-border/50 p-5 h-48 animate-pulse" />)}
         </div>
+      ) : schemeDataError ? (
+        <div className="bg-card rounded-xl border border-destructive/30 p-8 text-center">
+          <Settings size={40} className="mx-auto text-destructive mb-3" />
+          <p className="text-destructive font-medium">تعذر تحميل البيانات</p>
+          <p className="text-muted-foreground text-sm mt-1">
+            {schemeDataError instanceof Error ? schemeDataError.message : 'حدث خطأ أثناء تحميل السكيمات'}
+          </p>
+          <Button variant="outline" className="mt-4" onClick={() => refetchSchemeData()}>
+            إعادة المحاولة
+          </Button>
+        </div>
       ) : schemes.length === 0 ? (
         <div className="bg-card rounded-xl border border-dashed border-border p-16 text-center">
           <Settings size={40} className="mx-auto text-muted-foreground mb-3" />
-          <p className="text-muted-foreground">لا توجد سكيمات بعد — أضف سكيمة جديدة</p>
+          <p className="text-muted-foreground">
+            {perms.can_edit ? 'لا توجد سكيمات بعد — أضف سكيمة جديدة' : 'لا توجد سكيمات متاحة'}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

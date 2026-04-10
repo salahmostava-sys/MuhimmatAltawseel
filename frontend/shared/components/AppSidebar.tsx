@@ -117,7 +117,7 @@ function setHoverStylesIf(
 
 type SidebarNavItemData = {
   label: string;
-  icon: ComponentType<{ size?: number; className?: string }>;
+  icon: ComponentType<{ size?: string | number; className?: string }>;
   path: string;
 };
 

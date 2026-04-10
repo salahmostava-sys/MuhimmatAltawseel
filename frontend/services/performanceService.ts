@@ -72,6 +72,7 @@ export interface PerformanceDashboardResponse {
   };
   distribution: {
     excellent: number;
+    good: number;
     average: number;
     weak: number;
   };

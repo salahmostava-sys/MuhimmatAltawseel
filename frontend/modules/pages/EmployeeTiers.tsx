@@ -228,8 +228,15 @@ const EmployeeTiers = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // Absconded alert
-  const [abscondedAlert, setAbscondedAlert] = useState<{ name: string; simNumber: string; vehiclePlate: string } | null>(null);
+  const [abscondedAlert, setAbscondedAlert] = useState<{
+    name: string;
+    simNumber: string;
+    vehiclePlate: string;
+    tierIds: string[];
+    employeeId: string;
+  } | null>(null);
   const processedAbscondedRef = useRef<Set<string>>(new Set());
+  const [updatingAbsconded, setUpdatingAbsconded] = useState(false);
 
   /* ── Fetch ── */
   useEffect(() => {
@@ -245,7 +252,7 @@ const EmployeeTiers = () => {
     toast({ title: 'خطأ', description: message, variant: 'destructive' });
   }, [tiersError, toast]);
 
-  /* ── Watch for absconded employees and trigger alert ── */
+  /* ── Watch for absconded employees and show confirmation alert ── */
   useEffect(() => {
     const checkAbsconded = async () => {
       const abscondedEmpIds = employees
@@ -262,32 +269,33 @@ const EmployeeTiers = () => {
 
       if (affectedTiers.length === 0) return;
 
-      for (const tier of affectedTiers) {
-        // Auto-update status to not_delivered
-        await employeeTierService.updateTier(tier.id, { delivery_status: STATUS_NOT_DELIVERED });
+      // Show alert for the first newly absconded employee only
+      const firstAffected = affectedTiers[0];
+      if (firstAffected && newlyAbsconded.includes(firstAffected.employee_id)) {
+        const emp = employees.find(e => e.id === firstAffected.employee_id);
+        const assignments = await employeeTierService.getActiveAssignmentWithVehicleByEmployee(firstAffected.employee_id);
 
-        // Show alert dialog only once per employee per session
-        if (newlyAbsconded.includes(tier.employee_id)) {
-          const emp = employees.find(e => e.id === tier.employee_id);
-          const assignments = await employeeTierService.getActiveAssignmentWithVehicleByEmployee(tier.employee_id);
+        const firstAssignment = assignments?.[0] as { vehicles?: { plate_number?: string | null } } | undefined;
+        const plate = firstAssignment?.vehicles?.plate_number || 'غير مسجلة';
 
-          const firstAssignment = assignments?.[0] as { vehicles?: { plate_number?: string | null } } | undefined;
-          const plate = firstAssignment?.vehicles?.plate_number || 'غير مسجلة';
-          setAbscondedAlert({
-            name: emp?.name || '—',
-            simNumber: tier.sim_number || '—',
-            vehiclePlate: plate,
-          });
-          processedAbscondedRef.current.add(tier.employee_id);
-        }
+        // Collect all tier IDs for this employee that need updating
+        const employeeAffectedTierIds = affectedTiers
+          .filter(t => t.employee_id === firstAffected.employee_id)
+          .map(t => t.id);
+
+        setAbscondedAlert({
+          name: emp?.name || '—',
+          simNumber: firstAffected.sim_number || '—',
+          vehiclePlate: plate,
+          tierIds: employeeAffectedTierIds,
+          employeeId: firstAffected.employee_id,
+        });
+        processedAbscondedRef.current.add(firstAffected.employee_id);
       }
-
-      void refetchTiersData();
     };
 
     if (employees.length > 0 && tiers.length > 0) checkAbsconded();
-   
-  }, [employees, refetchTiersData, tiers]);
+  }, [employees, tiers]);
 
   /* ── Inline edit helpers ── */
   const getRow = (tier: TierRow) => editRows[tier.id] ? { ...tier, ...editRows[tier.id] } : tier;
@@ -354,6 +362,32 @@ const EmployeeTiers = () => {
     }
     setSavingNew(false);
     void refetchTiersData();
+  };
+
+  /* ── Absconded confirmation ── */
+  const handleConfirmAbsconded = async () => {
+    if (!abscondedAlert) return;
+    if (!perms.can_edit) {
+      toast({ title: 'صلاحية غير كافية', description: 'ليس لديك صلاحية التعديل', variant: 'destructive' });
+      setAbscondedAlert(null);
+      return;
+    }
+
+    setUpdatingAbsconded(true);
+    try {
+      // Update all affected tiers for this employee
+      for (const tierId of abscondedAlert.tierIds) {
+        await employeeTierService.updateTier(tierId, { delivery_status: STATUS_NOT_DELIVERED });
+      }
+      toast({ title: 'تم التحديث', description: `تم تغيير حالة ${abscondedAlert.tierIds.length} شريحة إلى "غير مسلّمة"` });
+      void refetchTiersData();
+    } catch (e) {
+      logError('[EmployeeTiers] failed to update absconded tiers', e);
+      toast({ title: 'خطأ', description: 'فشل تحديث حالة الشرائح', variant: 'destructive' });
+    } finally {
+      setUpdatingAbsconded(false);
+      setAbscondedAlert(null);
+    }
   };
 
   /* ── Delete ── */
@@ -885,11 +919,19 @@ const EmployeeTiers = () => {
                 <p>🔢 رقم الشريحة: <span className="font-mono font-semibold">{abscondedAlert?.simNumber}</span></p>
                 <p>🚗 رقم المركبة الأخيرة: <span className="font-semibold">{abscondedAlert?.vehiclePlate}</span></p>
               </div>
-              <p className="text-muted-foreground text-xs mt-2">تم تغيير حالة الشريحة تلقائياً إلى <strong>غير مسلّمة</strong>.</p>
+              <p className="text-muted-foreground text-xs mt-2">هل تريد تغيير حالة الشرائح المرتبطة إلى <strong>غير مسلّمة</strong>؟</p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setAbscondedAlert(null)}>حسناً، تم الاطلاع</AlertDialogAction>
+            <AlertDialogCancel onClick={() => setAbscondedAlert(null)}>لاحقاً</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmAbsconded}
+              disabled={!perms.can_edit || updatingAbsconded}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+            >
+              {updatingAbsconded ? <Loader2 size={14} className="animate-spin ml-1" /> : null}
+              تأكيد التغيير
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

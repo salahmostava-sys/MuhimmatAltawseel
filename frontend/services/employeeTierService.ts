@@ -1,5 +1,6 @@
 import { supabase } from '@services/supabase/client';
 import { throwIfError } from '@services/serviceError';
+import type { TablesInsert } from '@services/supabase/types';
 
 export const employeeTierService = {
   getTiers: async () => {
@@ -23,7 +24,7 @@ export const employeeTierService = {
     return data ?? [];
   },
   createTier: async (payload: Record<string, unknown>) => {
-    const { data, error } = await supabase.from('employee_tiers').insert(payload);
+    const { data, error } = await supabase.from('employee_tiers').insert(payload as unknown as TablesInsert<'employee_tiers'>);
     throwIfError(error, 'employeeTierService.createTier');
     return data ?? [];
   },
