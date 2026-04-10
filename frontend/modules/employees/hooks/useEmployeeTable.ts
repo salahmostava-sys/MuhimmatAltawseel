@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { driverService } from '@services/driverService';
 import { todayISO } from '@shared/lib/formatters';
+import { cycleSortState } from '@shared/lib/sortTableIndicators';
 import { employeeService, EMPLOYEE_DELETE_BLOCKED_MESSAGE } from '@services/employeeService';
 import { getErrorMessage } from '@services/serviceError';
 import { auditService } from '@services/auditService';
@@ -60,14 +61,9 @@ export function useEmployeeActions(params: {
   } = params;
 
   const handleSort = (field: string) => {
-    if (sortField === field) {
-      if (sortDir === 'asc') setSortDir('desc');
-      else if (sortDir === 'desc') { setSortField(null); setSortDir(null); }
-      else setSortDir('asc');
-    } else {
-      setSortField(field);
-      setSortDir('asc');
-    }
+    const next = cycleSortState(sortField, sortDir, field);
+    setSortField(next.sortField);
+    setSortDir(next.sortDir);
   };
 
   const saveField = useCallback(async (id: string, field: string, value: string, extraFields?: Record<string, unknown>) => {

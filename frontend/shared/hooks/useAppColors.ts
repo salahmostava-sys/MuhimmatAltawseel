@@ -20,27 +20,8 @@ const FALLBACK_COLORS = ['#2563eb', '#16a34a', '#9333ea', '#ea580c', '#0891b2', 
 
 export const appColorsQueryKey = (userId: string) => ['apps', userId, 'colors'] as const;
 
-const normalizeCustomColumns = (value: unknown): CustomColumn[] => {
-  if (!Array.isArray(value)) return [];
-
-  return value.flatMap((item) => {
-    if (
-      item &&
-      typeof item === 'object' &&
-      typeof (item as { key?: unknown }).key === 'string' &&
-      typeof (item as { label?: unknown }).label === 'string'
-    ) {
-      return [
-        {
-          key: (item as { key: string }).key,
-          label: (item as { label: string }).label,
-        },
-      ];
-    }
-
-    return [];
-  });
-};
+// Re-use the canonical parser from appsModel to avoid duplication
+import { normalizeCustomColumns } from '@modules/apps/lib/appsModel';
 
 export const getAppColor = (apps: AppColorData[], appName: string) => {
   const idx = Math.max(0, apps.findIndex((app) => app.name === appName));

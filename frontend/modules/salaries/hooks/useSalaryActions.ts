@@ -15,6 +15,7 @@ import type JSZip from 'jszip';
 import { toast as sonnerToast } from '@shared/components/ui/sonner';
 import { salaryService, type PricingRule, type SalarySchemeTier } from '@services/salaryService';
 import type { SalaryRow, SchemeData, SortDir } from '@modules/salaries/types/salary.types';
+import { cycleSortState } from '@shared/lib/sortTableIndicators';
 import { computeSalaryRow } from '@modules/salaries/hooks/useSalaryTable';
 import { getPrimaryPlatformActivityCount } from '@modules/salaries/model/salaryUtils';
 import { useSalaryIO } from '@modules/salaries/hooks/useSalaryIO';
@@ -101,14 +102,9 @@ export function useSalaryActions(params: UseSalaryActionsParams) {
   // ── Local helpers (too small to warrant their own hook) ────────────────────
 
   const handleSort = (field: string) => {
-    if (sortField === field) {
-      if (sortDir === 'asc') setSortDir('desc');
-      else if (sortDir === 'desc') { setSortField(null); setSortDir(null); }
-      else setSortDir('asc');
-    } else {
-      setSortField(field);
-      setSortDir('asc');
-    }
+    const next = cycleSortState(sortField, sortDir, field);
+    setSortField(next.sortField);
+    setSortDir(next.sortDir);
   };
 
   const updatePlatformOrders = (id: string, platform: string, value: number) => {
