@@ -135,112 +135,48 @@ const AppsPage = () => {
       <AlertDialog open={!!deleteApp} onOpenChange={(open) => { if (!open) { setDeleteApp(null); setDeleteMode('soft'); } }}>
         <AlertDialogContent dir="rtl" className="max-w-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {deleteMode === 'soft' ? 'أرشفة المنصة' : '⚠️ حذف المنصة نهائياً'}
-            </AlertDialogTitle>
+            <AlertDialogTitle>إزالة المنصة — {deleteApp?.name}</AlertDialogTitle>
             <AlertDialogDescription className="space-y-4">
-              {deleteMode === 'soft' ? (
-                <>
-                  <p>
-                    هل أنت متأكد من أرشفة <strong>"{deleteApp?.name}"</strong>؟
-                  </p>
-                  <p className="text-sm">
-                    لن تظهر المنصة في الأشهر القادمة، لكنها ستبقى محفوظة في أرشيف الأشهر الماضية للحفاظ على دقة الرواتب والتقارير.
-                  </p>
-                  
-                  {appDependencies && appDependencies.hasAnyDependencies && (
-                    <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 space-y-2">
-                      <p className="font-semibold text-warning">⚠️ تنبيه: المنصة مرتبطة ببيانات</p>
-                      <ul className="text-sm space-y-1 ms-4">
-                        {appDependencies.employeeAppsCount > 0 && (
-                          <li>• {appDependencies.employeeAppsCount} موظف مرتبط</li>
-                        )}
-                        {appDependencies.dailyOrdersCount > 0 && (
-                          <li>• {appDependencies.dailyOrdersCount} سجل طلبات</li>
-                        )}
-                        {appDependencies.appTargetsCount > 0 && (
-                          <li>• {appDependencies.appTargetsCount} هدف شهري</li>
-                        )}
-                        {appDependencies.pricingRulesCount > 0 && (
-                          <li>• {appDependencies.pricingRulesCount} قاعدة تسعير</li>
-                        )}
-                      </ul>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        الأرشفة ستخفي المنصة فقط. للحذف الكامل، اضغط "حذف نهائي" أدناه.
-                      </p>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 space-y-3">
-                    <p className="font-bold text-destructive">⚠️ تحذير: هذا الإجراء لا يمكن التراجع عنه!</p>
-                    <p>
-                      سيتم حذف <strong>"{deleteApp?.name}"</strong> نهائياً من النظام بالكامل.
-                    </p>
-                  </div>
+              <p>اختر طريقة الإزالة:</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 space-y-1">
+                  <p className="font-semibold text-sm">📦 أرشفة</p>
+                  <p className="text-xs text-muted-foreground">تختفي من الأشهر القادمة لكن تبقى في التقارير التاريخية</p>
+                </div>
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-1">
+                  <p className="font-semibold text-sm">🗑️ حذف نهائي</p>
+                  <p className="text-xs text-muted-foreground">تُحذف بالكامل مع كل البيانات المرتبطة — لا يمكن التراجع</p>
+                </div>
+              </div>
 
-                  {appDependencies && (
-                    <div className="bg-muted rounded-lg p-4 space-y-2">
-                      <p className="font-semibold">📊 البيانات المرتبطة التي سيتم حذفها:</p>
-                      <ul className="text-sm space-y-1 ms-4">
-                        <li>• {appDependencies.employeeAppsCount} ربط موظف</li>
-                        <li>• {appDependencies.dailyOrdersCount} سجل طلبات يومي</li>
-                        <li>• {appDependencies.appTargetsCount} هدف شهري</li>
-                        <li>• {appDependencies.pricingRulesCount} قاعدة تسعير</li>
-                      </ul>
-                      <p className="text-sm text-destructive font-semibold mt-3">
-                        ⚠️ سيؤثر هذا على حسابات الرواتب والتقارير التاريخية!
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                    <p className="text-sm text-amber-900">
-                      💡 <strong>نصيحة:</strong> إذا كنت تريد فقط إخفاء المنصة، استخدم "الأرشفة" بدلاً من الحذف النهائي.
-                    </p>
-                  </div>
-                </>
+              {appDependencies && appDependencies.hasAnyDependencies && (
+                <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+                  <p className="text-xs font-semibold text-foreground">البيانات المرتبطة:</p>
+                  <ul className="text-xs text-muted-foreground space-y-0.5 ms-3">
+                    {appDependencies.employeeAppsCount > 0 && <li>• {appDependencies.employeeAppsCount} موظف</li>}
+                    {appDependencies.dailyOrdersCount > 0 && <li>• {appDependencies.dailyOrdersCount} سجل طلبات</li>}
+                    {appDependencies.appTargetsCount > 0 && <li>• {appDependencies.appTargetsCount} هدف شهري</li>}
+                    {appDependencies.pricingRulesCount > 0 && <li>• {appDependencies.pricingRulesCount} قاعدة تسعير</li>}
+                  </ul>
+                </div>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 flex-col sm:flex-row">
             <AlertDialogCancel disabled={deleting}>إلغاء</AlertDialogCancel>
-            
-            {deleteMode === 'soft' && appDependencies?.hasAnyDependencies && (
-              <button
-                type="button"
-                onClick={() => setDeleteMode('hard')}
-                disabled={deleting}
-                className="px-4 py-2 text-sm font-semibold text-destructive hover:bg-destructive/10 rounded-md transition-colors"
-              >
-                حذف نهائي بدلاً من ذلك
-              </button>
-            )}
-            
-            {deleteMode === 'hard' && (
-              <button
-                type="button"
-                onClick={() => setDeleteMode('soft')}
-                disabled={deleting}
-                className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-muted rounded-md transition-colors"
-              >
-                رجوع للأرشفة
-              </button>
-            )}
-            
             <AlertDialogAction
-              onClick={() => void confirmDelete()}
+              onClick={() => { setDeleteMode('soft'); void confirmDelete(); }}
               disabled={deleting}
-              className={deleteMode === 'hard' 
-                ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' 
-                : 'bg-warning text-warning-foreground hover:bg-warning/90'
-              }
+              className="bg-warning text-warning-foreground hover:bg-warning/90"
             >
-              {deleting 
-                ? (deleteMode === 'hard' ? 'جاري الحذف النهائي...' : 'جاري الأرشفة...') 
-                : (deleteMode === 'hard' ? '🗑️ تأكيد الحذف النهائي' : 'تأكيد الأرشفة')
-              }
+              {deleting && deleteMode === 'soft' ? 'جاري الأرشفة...' : '📦 أرشفة'}
+            </AlertDialogAction>
+            <AlertDialogAction
+              onClick={() => { setDeleteMode('hard'); void confirmDelete(); }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting && deleteMode === 'hard' ? 'جاري الحذف...' : '🗑️ حذف نهائي'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
