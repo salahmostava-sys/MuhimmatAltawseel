@@ -152,7 +152,7 @@ export default function SettingsHubOptimized() {
       >
         <aside
           className={cn(
-            'flex-shrink-0 w-[220px] flex flex-col py-4 px-3',
+            'flex-shrink-0 hidden sm:flex w-[180px] md:w-[220px] flex-col py-4 px-3',
             isRTL ? 'border-l' : 'border-r',
           )}
           style={{

@@ -238,7 +238,9 @@ const EmployeeTiers = () => {
   const processedAbscondedRef = useRef<Set<string>>(new Set());
   const [updatingAbsconded, setUpdatingAbsconded] = useState(false);
 
-  /* ── Fetch ── */
+  /* ── Fetch — local state mirrors React Query data.
+     Kept intentionally because inline editing (editRows, patchRow) and absconded checks
+     rely on mutable local arrays. Optimistic updates modify local state directly. ── */
   useEffect(() => {
     if (!tiersData) return;
     setEmployees(tiersData.employees);
@@ -397,10 +399,15 @@ const EmployeeTiers = () => {
       return;
     }
     if (!deleteId) return;
-    await employeeTierService.deleteTier(deleteId);
-    toast({ title: 'تم الحذف' });
-    setDeleteId(null);
-    void refetchTiersData();
+    try {
+      await employeeTierService.deleteTier(deleteId);
+      toast({ title: 'تم الحذف' });
+      setDeleteId(null);
+      void refetchTiersData();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'تعذر حذف الشريحة';
+      toast({ title: 'خطأ في الحذف', description: message, variant: 'destructive' });
+    }
   };
 
   /* ── Sort ── */
@@ -522,6 +529,9 @@ const EmployeeTiers = () => {
       }
       let success = 0;
       const rowErrors: string[] = [];
+
+      // Pre-validate rows and build payloads, then execute in parallel
+      const validatedRows: Array<{ rowIndex: number; payload: Parameters<typeof employeeTierService.createTier>[0] }> = [];
       for (let i = 1; i < matrix.length; i++) {
         const line = matrix[i];
         const values = Array.isArray(line) ? line : [];
@@ -550,8 +560,9 @@ const EmployeeTiers = () => {
           simRaw !== undefined && simRaw !== null && String(simRaw).trim() !== ''
             ? String(simRaw).trim()
             : null;
-        try {
-          await employeeTierService.createTier({
+        validatedRows.push({
+          rowIndex: i,
+          payload: {
             sim_number: simStr,
             employee_id: empId,
             package_type: packageType,
@@ -559,13 +570,23 @@ const EmployeeTiers = () => {
             delivery_status: delivery,
             app_ids: appIds,
             start_date: new Date().toISOString().slice(0, 10),
-          });
-          success++;
-        } catch (err) {
-          logError('[EmployeeTiers] import row failed', err, { level: 'warn' });
-          rowErrors.push(`سطر ${i + 1}: ${err instanceof Error ? err.message : 'فشل الحفظ'}`);
-        }
+          },
+        });
       }
+
+      // Execute all tier creations in parallel
+      const results = await Promise.allSettled(
+        validatedRows.map(({ payload }) => employeeTierService.createTier(payload))
+      );
+      results.forEach((result, idx) => {
+        if (result.status === 'fulfilled') {
+          success++;
+        } else {
+          const { rowIndex } = validatedRows[idx];
+          logError('[EmployeeTiers] import row failed', result.reason, { level: 'warn' });
+          rowErrors.push(`سطر ${rowIndex + 1}: ${result.reason instanceof Error ? result.reason.message : 'فشل الحفظ'}`);
+        }
+      });
       await queryClient.invalidateQueries({ queryKey: ['employee-tiers', uid, 'page-data'] });
       toast({
         title: `تم استيراد ${success} شريحة`,

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@app/providers/AuthContext';
 import { useTheme } from '@app/providers/ThemeContext';
 import { Input } from '@shared/components/ui/input';
@@ -44,6 +44,8 @@ const Login = () => {
         logo_url: data.logo_url ?? null,
         updated_at: (data as { updated_at?: string | null }).updated_at ?? null,
       });
+    }).catch((err) => {
+      logError('[Login] getSystemSettings failed', err);
     });
   }, []);
 
@@ -189,19 +191,24 @@ const Login = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5 justify-start pt-0.5">
-              <label
-                htmlFor="remember-me"
-                className="text-base text-foreground cursor-pointer select-none leading-snug"
-              >
-                تذكرني على هذا الجهاز
-              </label>
-              <Checkbox
-                id="remember-me"
-                checked={rememberMe}
-                onCheckedChange={v => setRememberMe(v === true)}
-                className="h-5 w-5 rounded-md"
-              />
+            <div className="flex items-center justify-between pt-0.5">
+              <div className="flex items-center gap-2.5">
+                <label
+                  htmlFor="remember-me"
+                  className="text-base text-foreground cursor-pointer select-none leading-snug"
+                >
+                  تذكرني على هذا الجهاز
+                </label>
+                <Checkbox
+                  id="remember-me"
+                  checked={rememberMe}
+                  onCheckedChange={v => setRememberMe(v === true)}
+                  className="h-5 w-5 rounded-md"
+                />
+              </div>
+              <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+                نسيت كلمة المرور؟
+              </Link>
             </div>
 
             {loginError && (

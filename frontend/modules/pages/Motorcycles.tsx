@@ -1,9 +1,10 @@
-import { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState, useCallback } from 'react';
 import { Search, Plus, FolderOpen, Edit, Trash2, Bike } from 'lucide-react';
 import { Input } from '@shared/components/ui/input';
 import { Button } from '@shared/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@shared/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@shared/components/ui/alert-dialog';
 import { vehicleService, VEHICLES_QUERY_MAX_ROWS } from '@services/vehicleService';
 import { useToast } from '@shared/hooks/use-toast';
 import { format, differenceInDays, parseISO } from 'date-fns';
@@ -261,6 +262,8 @@ const Motorcycles = () => {
   const [showForm, setShowForm] = useState(false);
   const [editVehicle, setEditVehicle] = useState<Vehicle | null>(null);
   const [fileIoHint, setFileIoHint] = useState<{ kind: 'ok' | 'err'; message: string } | null>(null);
+  const [deleteVehicle, setDeleteVehicle] = useState<Vehicle | null>(null);
+  const [deletingVehicle, setDeletingVehicle] = useState(false);
 
   const importRef = useRef<HTMLInputElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
@@ -319,15 +322,22 @@ const Motorcycles = () => {
         });
         let success = 0;
         let skipped = 0;
+        // Pre-validate and build payloads, then execute in parallel
+        const validPayloads: ReturnType<typeof mapRowToVehiclePayload>[] = [];
         for (const row of rows) {
           const validation = validateMotorcycleRow(row);
           if (!validation.isValid || !validation.plate) {
             skipped++;
             continue;
           }
-          const payload = mapRowToVehiclePayload(row, validation.plate);
-          await vehicleService.upsert(payload);
-          success++;
+          validPayloads.push(mapRowToVehiclePayload(row, validation.plate));
+        }
+        const results = await Promise.allSettled(
+          validPayloads.map((payload) => vehicleService.upsert(payload))
+        );
+        for (const result of results) {
+          if (result.status === 'fulfilled') success++;
+          else skipped++;
         }
         const okMsg =
           success > 0
@@ -354,6 +364,8 @@ const Motorcycles = () => {
     XLSX.writeFile(wb, 'template_vehicles.xlsx');
   };
 
+  // Local state mirrors React Query — kept because filtered/stats derive from `data` and
+  // removing it would require restructuring the component to use vehiclesData directly.
   useEffect(() => {
     setData(vehiclesData as Vehicle[]);
   }, [vehiclesData]);
@@ -422,18 +434,22 @@ const Motorcycles = () => {
     });
   };
 
-  const handleDelete = async (v: Vehicle) => {
-    if (!confirm(`هل تريد حذف المركبة ${v.plate_number}؟`)) return;
+  const confirmDeleteVehicle = useCallback(async () => {
+    if (!deleteVehicle) return;
+    setDeletingVehicle(true);
     try {
-      await vehicleService.delete(v.id);
+      await vehicleService.delete(deleteVehicle.id);
       toast({ title: 'تم حذف المركبة' });
       void refetchVehicles();
     } catch (e) {
-      logError('[Motorcycles] import failed', e);
+      logError('[Motorcycles] delete failed', e);
       const message = e instanceof Error ? e.message : 'حدث خطأ غير متوقع';
       toast({ title: 'خطأ في الحذف', description: message, variant: 'destructive' });
+    } finally {
+      setDeletingVehicle(false);
+      setDeleteVehicle(null);
     }
-  };
+  }, [deleteVehicle, toast, refetchVehicles]);
 
   return (
     <div className="space-y-4" dir="rtl">
@@ -690,7 +706,7 @@ const Motorcycles = () => {
                         )}
                         {permissions.can_delete && (
                           <button
-                            onClick={() => handleDelete(v)}
+                            onClick={() => setDeleteVehicle(v)}
                             className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive"
                             title="حذف"
                           >
@@ -717,6 +733,28 @@ const Motorcycles = () => {
           />
         </Suspense>
       )}
+
+      <AlertDialog open={!!deleteVehicle} onOpenChange={(open) => { if (!open) setDeleteVehicle(null); }}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من حذف المركبة <span className="font-semibold text-foreground font-mono">{deleteVehicle?.plate_number}</span>؟
+              {' '}لا يمكن التراجع عن هذا الإجراء.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteVehicle}
+              disabled={deletingVehicle}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingVehicle ? '⏳ جاري الحذف...' : 'حذف'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

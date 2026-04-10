@@ -14,6 +14,7 @@ import { usePermissions } from '@shared/hooks/usePermissions';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { useVehicleAssignmentData } from '@shared/hooks/useVehicleAssignmentData';
 import { logError } from '@shared/lib/logger';
+import { printHtmlTable } from '@shared/lib/printTable';
 
 type Vehicle = {
   id: string;
@@ -274,6 +275,8 @@ const VehicleAssignment = () => {
   const [returnAssignment, setReturnAssignment] = useState<Assignment | null>(null);
   const tableRef = useRef<HTMLTableElement>(null);
 
+  // Local state mirrors React Query data — kept because freeVehicles, stats, and filtered
+  // derive from these arrays, and the assignment/return modals use them for display.
   useEffect(() => {
     if (!assignmentData) return;
     setAssignments(assignmentData.assignments as Assignment[]);
@@ -322,14 +325,12 @@ const VehicleAssignment = () => {
   const handlePrint = () => {
     const table = tableRef.current;
     if (!table) return;
-    const printWindow = globalThis.open('', '_blank');
-    if (!printWindow) return;
-    printWindow.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"/><title>سجل تسليم المركبات</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;direction:rtl;color:#111;background:#fff}h2{text-align:center;margin-bottom:8px;font-size:15px}p.sub{text-align:center;color:#666;font-size:11px;margin-bottom:12px}table{width:100%;border-collapse:collapse}th{background:#1e3a5f;color:#fff;padding:6px 8px;text-align:right;font-size:10px;white-space:nowrap}td{padding:5px 8px;border-bottom:1px solid #e0e0e0;text-align:right;white-space:nowrap}tr:nth-child(even) td{background:#f9f9f9}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><h2>سجل تسليم المركبات</h2><p class="sub">المجموع: ${filtered.length} سجل — ${new Date().toLocaleDateString('ar-SA')}</p>`);
-    if (!printWindow.document.body) return;
-    // Append the live DOM table node to avoid string-interpolating table HTML.
-    printWindow.document.body.appendChild(table.cloneNode(true));
-    printWindow.document.write(`<script>globalThis.onload=()=>{globalThis.print();globalThis.onafterprint=()=>globalThis.close()}</script></body></html>`);
-    printWindow.document.close();
+    // Use printHtmlTable utility for safe printing instead of writing raw HTML to a new window
+    // This avoids XSS potential from string-interpolating data into document.write
+    printHtmlTable(table, {
+      title: 'سجل تسليم المركبات',
+      subtitle: `المجموع: ${filtered.length} سجل — ${new Date().toLocaleDateString('ar-SA')}`,
+    });
   };
 
   const handleTemplate = async () => {

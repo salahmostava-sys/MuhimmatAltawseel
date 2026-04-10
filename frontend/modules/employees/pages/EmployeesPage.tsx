@@ -100,6 +100,8 @@ const Employees = () => {
     await queryClient.refetchQueries({ predicate, type: 'active' });
   }, [queryClient]);
 
+  // Local state mirrors React Query data — kept intentionally because useEmployeeActions
+  // receives data/setData for optimistic inline edits (saveField, handleDelete, etc.)
   useEffect(() => {
     const rows = (employeesData as Employee[]) ?? [];
     setData(rows);
@@ -178,23 +180,31 @@ const Employees = () => {
   const isTableLoading = loading;
   const hasNoPaginatedRows = paginated.length === 0;
 
-  // ── profile view ──
-  if (selectedEmployee) {
-    const emp = (employeesData as Employee[]).find(e => e.id === selectedEmployee) ?? data.find(e => e.id === selectedEmployee);
-    if (emp) {
-      const isVisibleInMonth = isEmployeeVisibleInMonth(emp, activeEmployeeIdsInMonth);
-      if (isVisibleInMonth) {
-        return (
-          <Suspense fallback={<InlineLoader minHeightClassName="min-h-[420px]" />}>
-            <EmployeeProfile
-              employee={emp as EmployeeProfileProps['employee']}
-              onBack={() => setSelectedEmployee(null)}
-            />
-          </Suspense>
-        );
-      }
+  // ── Clear selectedEmployee if no longer visible in current month ──
+  // (moved out of render body into an effect to avoid setState during render)
+  const selectedEmp = selectedEmployee
+    ? ((employeesData as Employee[]).find(e => e.id === selectedEmployee) ?? data.find(e => e.id === selectedEmployee))
+    : undefined;
+  const selectedEmpVisible = selectedEmp
+    ? isEmployeeVisibleInMonth(selectedEmp, activeEmployeeIdsInMonth)
+    : false;
+
+  useEffect(() => {
+    if (selectedEmployee && selectedEmp && !selectedEmpVisible) {
       setSelectedEmployee(null);
     }
+  }, [selectedEmployee, selectedEmp, selectedEmpVisible]);
+
+  // ── profile view ──
+  if (selectedEmployee && selectedEmp && selectedEmpVisible) {
+    return (
+      <Suspense fallback={<InlineLoader minHeightClassName="min-h-[420px]" />}>
+        <EmployeeProfile
+          employee={selectedEmp as EmployeeProfileProps['employee']}
+          onBack={() => setSelectedEmployee(null)}
+        />
+      </Suspense>
+    );
   }
 
   if (employeesError && !loading) {

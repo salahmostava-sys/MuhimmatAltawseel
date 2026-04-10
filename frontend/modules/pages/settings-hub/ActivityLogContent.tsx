@@ -18,6 +18,7 @@ import { settingsHubService } from '@services/settingsHubService';
 import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { defaultQueryRetry } from '@shared/lib/query';
 import { logError } from '@shared/lib/logger';
+import { usePermissions } from '@shared/hooks/usePermissions';
 
 interface AuditLog {
   id: string;
@@ -118,6 +119,7 @@ export default function ActivityLogContent() {
   const { isRTL } = useLanguage();
   const { enabled, userId } = useAuthQueryGate();
   const uid = authQueryUserId(userId);
+  const { permissions } = usePermissions('settings');
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(0);
@@ -169,6 +171,8 @@ export default function ActivityLogContent() {
     staleTime: 15_000,
   });
 
+  // Local state mirrors React Query — used for totalCount-driven pagination.
+  // Could use logsData directly, but keeping for consistency with existing patterns.
   useEffect(() => {
     setLogs(logsData?.rows || []);
     setTotalCount(logsData?.total || 0);
@@ -177,20 +181,24 @@ export default function ActivityLogContent() {
   useEffect(() => { setExpandedId(null); }, [page]);
 
   const handleExport = async () => {
-    const data = await settingsHubService.getAuditLogsForExport();
-    if (!data.length) return;
-    const rows = data.map(l => ({
-      'التاريخ': format(new Date(l.created_at), 'yyyy-MM-dd HH:mm:ss'),
-      'الجدول': l.table_name,
-      'العملية': l.action,
-      'معرف المستخدم': l.user_id || '',
-      'معرف السجل': l.record_id || '',
-    }));
-    const XLSX = await loadXlsx();
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Activity Log');
-    XLSX.writeFile(wb, `activity_log_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    try {
+      const data = await settingsHubService.getAuditLogsForExport();
+      if (!data.length) return;
+      const rows = data.map(l => ({
+        'التاريخ': format(new Date(l.created_at), 'yyyy-MM-dd HH:mm:ss'),
+        'الجدول': l.table_name,
+        'العملية': l.action,
+        'معرف المستخدم': l.user_id || '',
+        'معرف السجل': l.record_id || '',
+      }));
+      const XLSX = await loadXlsx();
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Activity Log');
+      XLSX.writeFile(wb, `activity_log_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    } catch (err) {
+      logError('[ActivityLog] export failed', err);
+    }
   };
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);

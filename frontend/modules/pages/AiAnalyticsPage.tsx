@@ -50,11 +50,10 @@ const AiAnalyticsPage = () => {
     enabled,
     retry: defaultQueryRetry,
     queryFn: async () => {
-      const totals: number[] = [];
-      for (const my of monthKeys) {
-        const c = await dashboardService.getMonthOrdersCount(my);
-        totals.push(c);
-      }
+      // Fetch all months in parallel instead of sequentially
+      const totals = await Promise.all(
+        monthKeys.map((my) => dashboardService.getMonthOrdersCount(my))
+      );
       return { totals, monthKeys };
     },
   });

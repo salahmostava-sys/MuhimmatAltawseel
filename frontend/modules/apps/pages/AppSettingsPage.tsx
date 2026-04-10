@@ -16,6 +16,7 @@ export function AppSettingsPage() {
   const queryClient = useQueryClient();
   const { permissions: { can_edit } = {} } = usePermissions('apps');
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
+  const [workTypeLoading, setWorkTypeLoading] = useState(false);
 
   const { data: apps = [], isLoading, error } = useQuery({
     queryKey: ['apps', 'all', uid],
@@ -32,12 +33,19 @@ export function AppSettingsPage() {
       return;
     }
 
-    await appService.update(selectedApp.id, {
-      ...selectedApp,
-      work_type: workType,
-    });
-
-    await queryClient.invalidateQueries({ queryKey: ['apps'] });
+    setWorkTypeLoading(true);
+    try {
+      await appService.update(selectedApp.id, {
+        ...selectedApp,
+        work_type: workType,
+      });
+      await queryClient.invalidateQueries({ queryKey: ['apps'] });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'تعذر تحديث نوع العمل';
+      toast.error(message);
+    } finally {
+      setWorkTypeLoading(false);
+    }
   };
 
   if (isLoading) {

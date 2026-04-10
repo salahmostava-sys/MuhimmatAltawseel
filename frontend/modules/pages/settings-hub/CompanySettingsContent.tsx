@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Building2, Save, Loader2 } from 'lucide-react';
+import { Building2, Save, Loader2, ShieldAlert } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { Label } from '@shared/components/ui/label';
@@ -10,6 +10,8 @@ import { getErrorMessage } from '@shared/lib/query';
 import { logError } from '@shared/lib/logger';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { QueryErrorRetry } from '@shared/components/QueryErrorRetry';
+import { useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
+import { usePermissions } from '@shared/hooks/usePermissions';
 
 const SectionHeader = ({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle?: string }) => (
   <div className="flex items-center gap-3 pb-4 mb-5" style={{ borderBottom: '1px solid var(--ds-surface-container)' }}>
@@ -28,10 +30,13 @@ export default function CompanySettingsContent() {
   const { isRTL } = useLanguage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { enabled } = useAuthQueryGate();
+  const { permissions, loading: permsLoading } = usePermissions('settings');
 
   const { data: tradeRegister, isLoading: loading, error, refetch } = useQuery({
     queryKey: ['settings', 'trade-register'],
     queryFn: () => settingsHubService.getTradeRegister(),
+    enabled,
     staleTime: 60_000,
   });
 
@@ -76,9 +81,17 @@ export default function CompanySettingsContent() {
     setSaving(false);
   };
 
-  if (loading) return (
+  if (loading || permsLoading) return (
     <div className="flex items-center justify-center py-20">
       <Loader2 size={28} className="animate-spin text-primary" />
+    </div>
+  );
+
+  if (!permissions.can_view) return (
+    <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
+      <ShieldAlert size={40} className="text-destructive" />
+      <p className="text-lg font-semibold">غير مصرح بالوصول</p>
+      <p className="text-sm text-muted-foreground">ليس لديك صلاحية تعديل بيانات المنشأة</p>
     </div>
   );
 

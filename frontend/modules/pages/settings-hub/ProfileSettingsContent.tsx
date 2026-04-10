@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Camera, Eye, EyeOff, Check, AlertCircle, User, Loader2 } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
@@ -103,11 +103,20 @@ export default function ProfileSettingsContent({ omitPageHeading = false }: Read
 
   const passwordsMatch = pw.next === pw.confirm;
 
-  // Sync form from query (once)
-  if (profileData && !profileSynced) {
-    setProfile({ name: profileData.name || '', avatar_url: profileData.avatar_url || '' });
-    setProfileSynced(true);
-  }
+  // Sync form from query (once) — moved to useEffect to avoid setState during render
+  useEffect(() => {
+    if (profileData && !profileSynced) {
+      setProfile({ name: profileData.name || '', avatar_url: profileData.avatar_url || '' });
+      setProfileSynced(true);
+    }
+  }, [profileData, profileSynced]);
+
+  // Revoke preview ObjectURL on cleanup to prevent memory leak
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

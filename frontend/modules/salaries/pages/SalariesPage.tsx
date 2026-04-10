@@ -117,6 +117,7 @@ const Salaries = () => {
   const salaryToolbarImportRef = useRef<HTMLInputElement>(null);
   const skipNextDraftSaveRef = useRef(true);
   const lastDraftSignatureRef = useRef<string | null>(null);
+  const batchAbortRef = useRef(false);
   const salariesDraftKey = useMemo(
     () => `salaries:draft:${user?.id || 'anon'}:${selectedMonth}`,
     [user?.id, selectedMonth]
@@ -149,10 +150,10 @@ const Salaries = () => {
   const platforms = platformMeta.platforms;
   const platformColors = platformMeta.platformColors;
   const appCustomColumns = platformMeta.appCustomColumns;
-  useEffect(() => {
-    Object.keys(PLATFORM_COLORS).forEach((k) => delete PLATFORM_COLORS[k]);
-    Object.assign(PLATFORM_COLORS, platformColors);
-  }, [platformColors]);
+  // NOTE: Previously mutated shared PLATFORM_COLORS in-place — now we only use the local
+  // `platformColors` derived via useMemo above. Components that still import PLATFORM_COLORS
+  // from salaryConstants receive the original defaults; within Salaries we always pass
+  // `platformColors` (from platformMeta) as a prop, so the shared object stays untouched.
 
   const salaryBaseContextQueryKey = useMemo(
     () => ['salaries', uid, 'base-context', selectedMonth] as const,
@@ -274,11 +275,21 @@ const Salaries = () => {
     toast,
   ]);
 
+  // ── Draft syncing flow ──────────────────────────────────────────
+  // When selectedMonth or user changes, reset draft tracking refs so that the first
+  // render with new data doesn't trigger a premature server sync.
   useEffect(() => {
     skipNextDraftSaveRef.current = true;
     lastDraftSignatureRef.current = null;
   }, [selectedMonth, user?.id]);
 
+  // Draft auto-save effect:
+  // 1. Build a draft patch from dirty rows → serialize to JSON.
+  // 2. Mirror to localStorage for offline persistence.
+  // 3. On first data load (skipNextDraftSaveRef), capture the signature but don't sync
+  //    to the server — avoids writing back the same data we just loaded.
+  // 4. On subsequent changes, compare serialized draft with lastDraftSignatureRef.
+  //    If different, debounce 2s then sync to server via salaryDraftService.
   useEffect(() => {
     if (loadingData) return;
 
@@ -337,11 +348,15 @@ const Salaries = () => {
   const pendingCount = filtered.filter((r) => r.status === 'pending' || r.isDirty).length;
 
   // ── Batch ZIP export: generate HTML-based PDFs sequentially ────
+  // Uses batchAbortRef to cancel work on unmount and clearTimeout for cleanup.
   useEffect(() => {
+    batchAbortRef.current = false;
+
     if (batchQueue.length === 0 || !batchZip) return;
     if (batchIndex >= batchQueue.length) {
       const [y, m] = selectedMonth.split('-');
       batchZip.generateAsync({ type: 'blob' }).then(blob => {
+        if (batchAbortRef.current) return;
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -357,6 +372,7 @@ const Salaries = () => {
     }
 
     const timer = setTimeout(async () => {
+      if (batchAbortRef.current) return;
       try {
         const row = batchQueue[batchIndex];
         const { buildBatchSlipHTML } = await import('@modules/salaries/lib/buildBatchSlipHTML');
@@ -379,6 +395,10 @@ const Salaries = () => {
 
         // Wait for render, then capture
         await new Promise(resolve => setTimeout(resolve, 200));
+        if (batchAbortRef.current) {
+          try { document.body.removeChild(iframe); } catch { /* ignore */ }
+          return;
+        }
         const container = iDoc?.querySelector('.slip-container') as HTMLElement | null;
         if (container) {
           await pdf.html(container, {
@@ -391,16 +411,20 @@ const Salaries = () => {
 
         try { document.body.removeChild(iframe); } catch { /* ignore */ }
 
+        if (batchAbortRef.current) return;
         const pdfBlob = pdf.output('blob');
         const safeName = row.employeeName.replace(/\s+/g, '_');
         const [y, m] = selectedMonth.split('-');
         batchZip.file(`كشف_راتب_${safeName}_${m}_${y}.pdf`, pdfBlob);
         setBatchIndex(i => i + 1);
       } catch {
-        setBatchIndex(i => i + 1);
+        if (!batchAbortRef.current) setBatchIndex(i => i + 1);
       }
     }, 150);
-    return () => clearTimeout(timer);
+    return () => {
+      batchAbortRef.current = true;
+      clearTimeout(timer);
+    };
   }, [batchIndex, batchQueue, batchZip, selectedMonth, toast, projectName]);
 
   const monthLabel = months.find(m => m.v === selectedMonth)?.l || selectedMonth;

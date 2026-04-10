@@ -187,6 +187,9 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
   const [assignAppId, setAssignAppId] = useState('');
   const [assigning, setAssigning] = useState(false);
 
+  // Local state mirrors React Query data — kept intentionally because handleArchive,
+  // handleSnapshot, handleUnpinSnapshot, and handleUnassignApp perform optimistic local
+  // updates (e.g., setSchemes, setSnapshots) before the server round-trip completes.
   useEffect(() => {
     if (!schemeData) return;
     setSchemes(schemeData.schemes);
@@ -352,11 +355,13 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
     try {
       const schemeTiers = tiers[schemeId] || [];
       const months = monthsToPin && monthsToPin.length > 0 ? monthsToPin : [currentMonth];
+      // Convert tiers to a JSON-safe structure to avoid unsafe `as unknown as Json` double cast
+      const tiersJson = JSON.parse(JSON.stringify(schemeTiers));
       for (const m of months) {
         await salarySchemeService.upsertSnapshot(
           schemeId,
           m,
-          schemeTiers as unknown as import('@services/supabase/types').Json
+          tiersJson
         );
       }
       toast({ title: '📌 تم التثبيت', description: `تم تثبيت السكيمة لعدد ${months.length} شهر` });

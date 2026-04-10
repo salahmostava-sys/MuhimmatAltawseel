@@ -1,4 +1,4 @@
-import { useRef, useCallback, useMemo, useState } from 'react';
+import { useRef, useCallback, useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@shared/components/ui/button';
 import { ClipboardCheck, CalendarDays, FolderOpen } from 'lucide-react';
@@ -12,6 +12,7 @@ const loadXlsx = () => { if (!_xlsxCache) _xlsxCache = import('@e965/xlsx'); ret
 import { printHtmlTable } from '@shared/lib/printTable';
 import attendanceService from '@services/attendanceService';
 import { useToast } from '@shared/hooks/use-toast';
+import { useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { Loader2 } from 'lucide-react';
 
 const MONTHS_AR = [
@@ -27,6 +28,7 @@ const isAttTab = (v: string | null): v is AttTab =>
   v !== null && ATT_TABS.includes(v as AttTab);
 
 const Attendance = () => {
+  useAuthQueryGate();
   const { isRTL } = useLanguage();
   const { t } = useTranslation();
   const { selectedMonth: globalMonth } = useTemporalContext();
@@ -119,26 +121,31 @@ const Attendance = () => {
       let imported = 0;
       let failed = 0;
 
-      for (const row of rows) {
-        const [employeeName, date, status, notes] = row;
-        if (!employeeName || !date || !status) {
-          failed++;
-          continue;
-        }
-        try {
-          // Find employee by name or use generic endpoint
+      // TODO: employeeName is passed as employee_id — this is a known limitation.
+      // The backend service should resolve employee name to ID, or we should look up
+      // the employee ID from an employees list. For now, we send the name and rely
+      // on backend resolution, with graceful error handling per row.
+      // Use Promise.allSettled for parallel execution instead of sequential await
+      const results = await Promise.allSettled(
+        rows.map(async (row) => {
+          const [employeeName, date, status, notes] = row;
+          if (!employeeName || !date || !status) {
+            throw new Error('missing-fields');
+          }
           await attendanceService.upsertDailyAttendance({
-            employee_id: employeeName, // Service should resolve name to ID
+            employee_id: employeeName, // TODO: Known limitation — should be resolved to actual ID
             date,
             status: status.toLowerCase() as 'present' | 'absent' | 'leave' | 'sick' | 'late',
             check_in: '',
             check_out: '',
             note: notes || '',
           });
-          imported++;
-        } catch {
-          failed++;
-        }
+        })
+      );
+
+      for (const result of results) {
+        if (result.status === 'fulfilled') imported++;
+        else failed++;
       }
 
       toast({

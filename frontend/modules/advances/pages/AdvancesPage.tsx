@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { CreditCard, FolderOpen, UserPlus, AlertTriangle } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@shared/components/ui/dropdown-menu';
@@ -110,14 +110,25 @@ const Advances = () => {
     setDeletingEmployeeAdvances
   );
 
+  // Local state mirrors React Query data — kept intentionally because useAdvanceTable
+  // receives these arrays and may trigger optimistic updates via fetchAll/refetchAdvancesData.
+  // Removing local state would require refactoring useAdvanceTable to work directly with query data.
   useEffect(() => {
     if (!advancesPageData) return;
     setAdvances(advancesPageData.advances);
     setEmployees(advancesPageData.employees);
   }, [advancesPageData]);
 
+  // Track whether we already showed an error toast for this error instance
+  // to avoid re-firing on every re-render (e.g. tab switch back)
+  const lastErrorToastedRef = useRef<unknown>(null);
   useEffect(() => {
-    if (!advancesPageError) return;
+    if (!advancesPageError) {
+      lastErrorToastedRef.current = null;
+      return;
+    }
+    if (lastErrorToastedRef.current === advancesPageError) return;
+    lastErrorToastedRef.current = advancesPageError;
     const message =
       advancesPageError instanceof Error
         ? advancesPageError.message

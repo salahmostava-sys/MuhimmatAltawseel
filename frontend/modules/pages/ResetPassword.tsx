@@ -157,15 +157,20 @@ const ResetPassword = () => {
   const confirmBorderClass = getConfirmBorderClass(confirm, password);
 
   useEffect(() => {
+    let cancelled = false;
     const hash = globalThis.location.hash;
     if (hash.includes('type=recovery')) {
       setIsRecovery(true);
       authService.getSession().then((session) => {
-        if (!session) setInvalidLink(true);
+        if (!cancelled && !session) setInvalidLink(true);
+      }).catch((err) => {
+        logError('[ResetPassword] getSession failed', err);
+        if (!cancelled) setInvalidLink(true);
       });
     } else {
       setInvalidLink(true);
     }
+    return () => { cancelled = true; };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {

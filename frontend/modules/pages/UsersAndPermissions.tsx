@@ -139,6 +139,8 @@ const UsersAndPermissions = ({ embedded = false }: UsersAndPermissionsProps) => 
   const canDelete = settingsPerm.can_delete && isAdmin;
   const currentUserId = user?.id ?? null;
 
+  // Local state mirrors React Query data — kept because updateRole performs optimistic
+  // local updates on the rows array (setRows) before the server response.
   useEffect(() => {
     setRows(usersRows);
   }, [usersRows]);
@@ -217,18 +219,20 @@ const UsersAndPermissions = ({ embedded = false }: UsersAndPermissionsProps) => 
     setSavingMatrix(true);
     try {
       const roleDefaults = DEFAULT_PERMISSIONS[selectedUser.role] || DEFAULT_PERMISSIONS.viewer;
-      for (const { key } of PERMISSION_PAGE_ENTRIES) {
-        const cur = matrix[key];
-        if (!cur) continue;
-        const def = roleDefaults[key] ?? { can_view: false, can_edit: false, can_delete: false };
-        const same =
-          cur.can_view === def.can_view && cur.can_edit === def.can_edit && cur.can_delete === def.can_delete;
-        if (same) {
-          await userPermissionService.deletePermission(selectedUser.id, key);
-        } else {
-          await userPermissionService.upsertPermission(selectedUser.id, key, cur);
-        }
-      }
+      // Execute all permission updates in parallel instead of sequentially
+      await Promise.all(
+        PERMISSION_PAGE_ENTRIES.map(({ key }) => {
+          const cur = matrix[key];
+          if (!cur) return Promise.resolve();
+          const def = roleDefaults[key] ?? { can_view: false, can_edit: false, can_delete: false };
+          const same =
+            cur.can_view === def.can_view && cur.can_edit === def.can_edit && cur.can_delete === def.can_delete;
+          if (same) {
+            return userPermissionService.deletePermission(selectedUser.id, key);
+          }
+          return userPermissionService.upsertPermission(selectedUser.id, key, cur);
+        })
+      );
       toast({ title: 'تم حفظ الصلاحيات' });
       await loadMatrix(selectedUser.id, selectedUser.role);
     } catch (err: unknown) {
