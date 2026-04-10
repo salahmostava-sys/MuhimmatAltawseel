@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   Bell, AlertTriangle, Clock, Shield, CreditCard, Loader2,
-  CheckCircle2, ChevronDown, ChevronUp,
+  CheckCircle2, Bike, Package, UserX, Pill, Filter,
 } from 'lucide-react';
 import { Card, CardContent } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
@@ -13,111 +13,273 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@shared/components/ui/sonner';
 import type { Alert } from '@shared/lib/alertsBuilder';
 
-const typeLabels: Record<string, string> = {
-  residency: 'إقامة',
-  health_insurance: 'تأمين صحي',
-  probation: 'فترة اختبار',
-  driving_license: 'رخصة قيادة',
-  insurance: 'تأمين مركبة',
-  registration: 'تسجيل',
-  license: 'رخصة',
-  authorization: 'تفويض مركبة',
-  installment: 'قسط سلفة',
-  deduction: 'خصم',
-  platform_account: 'إقامة حساب منصة',
-  low_stock: 'مخزون منخفض',
-  employee_absconded: 'مندوب هروب',
+/* ─── Alert type metadata ─── */
+
+type AlertTypeConfig = {
+  label: string;
+  icon: typeof AlertTriangle;
+  /** Category for grouping */
+  category: 'employee' | 'vehicle' | 'financial' | 'operations';
+  categoryLabel: string;
+  description: string;
 };
 
-const typeIcons: Record<string, typeof AlertTriangle> = {
-  residency: AlertTriangle,
-  health_insurance: Shield,
-  probation: Clock,
-  driving_license: Clock,
-  insurance: Shield,
-  registration: Clock,
-  license: Clock,
-  authorization: Clock,
-  installment: CreditCard,
-  deduction: CreditCard,
-  platform_account: Shield,
-  low_stock: AlertTriangle,
-  employee_absconded: AlertTriangle,
+const ALERT_TYPE_CONFIG: Record<string, AlertTypeConfig> = {
+  residency: {
+    label: 'إقامة',
+    icon: AlertTriangle,
+    category: 'employee',
+    categoryLabel: '👤 شؤون الموظفين',
+    description: 'إقامة الموظف قاربت على الانتهاء أو انتهت',
+  },
+  health_insurance: {
+    label: 'تأمين صحي',
+    icon: Pill,
+    category: 'employee',
+    categoryLabel: '👤 شؤون الموظفين',
+    description: 'التأمين الصحي يحتاج تجديد',
+  },
+  probation: {
+    label: 'فترة اختبار',
+    icon: Clock,
+    category: 'employee',
+    categoryLabel: '👤 شؤون الموظفين',
+    description: 'فترة الاختبار تنتهي قريباً',
+  },
+  driving_license: {
+    label: 'رخصة قيادة',
+    icon: Clock,
+    category: 'employee',
+    categoryLabel: '👤 شؤون الموظفين',
+    description: 'رخصة القيادة تحتاج تجديد',
+  },
+  platform_account: {
+    label: 'إقامة حساب منصة',
+    icon: Shield,
+    category: 'employee',
+    categoryLabel: '👤 شؤون الموظفين',
+    description: 'إقامة مرتبطة بحساب منصة ستنتهي — قد يتوقف الحساب',
+  },
+  employee_absconded: {
+    label: 'مندوب هروب',
+    icon: UserX,
+    category: 'employee',
+    categoryLabel: '👤 شؤون الموظفين',
+    description: 'مندوب مسجّل كحالة هروب — قد يكون لديه عهدة',
+  },
+  insurance: {
+    label: 'تأمين مركبة',
+    icon: Shield,
+    category: 'vehicle',
+    categoryLabel: '🚗 المركبات',
+    description: 'تأمين المركبة يحتاج تجديد',
+  },
+  registration: {
+    label: 'تسجيل مركبة',
+    icon: Clock,
+    category: 'vehicle',
+    categoryLabel: '🚗 المركبات',
+    description: 'تسجيل المركبة ينتهي قريباً',
+  },
+  license: {
+    label: 'رخصة',
+    icon: Clock,
+    category: 'vehicle',
+    categoryLabel: '🚗 المركبات',
+    description: 'رخصة المركبة تحتاج تجديد',
+  },
+  authorization: {
+    label: 'تفويض مركبة',
+    icon: Bike,
+    category: 'vehicle',
+    categoryLabel: '🚗 المركبات',
+    description: 'تفويض المركبة ينتهي قريباً',
+  },
+  installment: {
+    label: 'قسط سلفة',
+    icon: CreditCard,
+    category: 'financial',
+    categoryLabel: '💰 المالية',
+    description: 'قسط سلفة مستحق',
+  },
+  deduction: {
+    label: 'خصم',
+    icon: CreditCard,
+    category: 'financial',
+    categoryLabel: '💰 المالية',
+    description: 'خصم مالي معلّق',
+  },
+  low_stock: {
+    label: 'مخزون منخفض',
+    icon: Package,
+    category: 'operations',
+    categoryLabel: '⚙️ العمليات',
+    description: 'قطعة غيار وصلت للحد الأدنى',
+  },
 };
 
-const severityColors: Record<string, { dot: string; badge: string; iconBg: string }> = {
+const getConfig = (type: string): AlertTypeConfig =>
+  ALERT_TYPE_CONFIG[type] ?? {
+    label: type,
+    icon: AlertTriangle,
+    category: 'operations' as const,
+    categoryLabel: '⚙️ العمليات',
+    description: '',
+  };
+
+const SEVERITY_STYLES: Record<string, { dot: string; badge: string; iconBg: string; rowBg: string }> = {
   urgent: {
     dot: 'bg-destructive',
     badge: 'bg-destructive/10 text-destructive border border-destructive/20',
     iconBg: 'bg-destructive/10 text-destructive',
+    rowBg: 'bg-destructive/[0.03] hover:bg-destructive/[0.06]',
   },
   warning: {
     dot: 'bg-warning',
     badge: 'bg-warning/10 text-warning border border-warning/20',
     iconBg: 'bg-warning/10 text-warning',
+    rowBg: 'bg-warning/[0.03] hover:bg-warning/[0.06]',
   },
   info: {
     dot: 'bg-info',
     badge: 'bg-info/10 text-info border border-info/20',
     iconBg: 'bg-info/10 text-info',
+    rowBg: 'hover:bg-muted/30',
   },
 };
 
+const SEVERITY_LABELS: Record<string, string> = {
+  urgent: 'عاجل',
+  warning: 'تحذير',
+  info: 'معلومات',
+};
+
 function formatDaysLeft(daysLeft: number): string {
+  if (daysLeft < 0) return `منتهي منذ ${Math.abs(daysLeft)} يوم`;
+  if (daysLeft === 0) return 'اليوم';
+  if (daysLeft === 1) return 'غداً';
+  return `${daysLeft} يوم`;
+}
+
+function formatDaysLeftBadge(daysLeft: number): string {
   if (daysLeft < 0) return 'منتهي';
   if (daysLeft === 0) return 'اليوم';
   return `${daysLeft} يوم`;
 }
 
-function formatDaysLeftShort(daysLeft: number): string {
-  if (daysLeft < 0) return 'منتهي';
-  if (daysLeft === 0) return 'اليوم';
-  return `${daysLeft}ي`;
-}
+/* ─── Category ordering ─── */
+const CATEGORY_ORDER: Record<string, number> = {
+  employee: 0,
+  vehicle: 1,
+  financial: 2,
+  operations: 3,
+};
 
+/* ─── The main component ─── */
 export default function AlertsPage() {
   useAuthQueryGate();
   const { data: alertsData = [], isLoading, error, refetch } = useAlerts();
   const { permissions: perms } = usePermissions('alerts');
   const queryClient = useQueryClient();
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState<string>('all');
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
 
-  const unresolvedAlerts = alertsData.filter((a: Alert) => !a.resolved);
-  const resolvedAlerts = alertsData.filter((a: Alert) => a.resolved);
+  const unresolvedAlerts = useMemo(
+    () => alertsData.filter((a: Alert) => !a.resolved),
+    [alertsData],
+  );
+  const resolvedAlerts = useMemo(
+    () => alertsData.filter((a: Alert) => a.resolved),
+    [alertsData],
+  );
 
-  const filteredAlerts = filterSeverity === 'all'
-    ? unresolvedAlerts
-    : unresolvedAlerts.filter((a: Alert) => a.severity === filterSeverity);
-
+  /* ── Counts ── */
   const urgentCount = unresolvedAlerts.filter((a: Alert) => a.severity === 'urgent').length;
   const warningCount = unresolvedAlerts.filter((a: Alert) => a.severity === 'warning').length;
   const infoCount = unresolvedAlerts.filter((a: Alert) => a.severity === 'info').length;
 
-  const handleResolve = useCallback(async (alertId: string) => {
-    setResolvingId(alertId);
-    try {
-      await alertsService.resolveAlert(alertId, null);
-      toast.success('تم حل التنبيه');
-      await queryClient.invalidateQueries({ queryKey: ['alerts'] });
-    } catch (e) {
-      toast.error('فشل حل التنبيه');
-    } finally {
-      setResolvingId(null);
+  /* ── Count by type for the type filter chips ── */
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const a of unresolvedAlerts) {
+      counts[a.type] = (counts[a.type] || 0) + 1;
     }
-  }, [queryClient]);
+    return counts;
+  }, [unresolvedAlerts]);
 
-  const toggleExpand = (id: string) => {
-    setExpandedId(prev => prev === id ? null : id);
+  const activeTypes = useMemo(
+    () =>
+      Object.entries(typeCounts)
+        .sort(([a], [b]) => {
+          const ca = getConfig(a).category;
+          const cb = getConfig(b).category;
+          return (CATEGORY_ORDER[ca] ?? 9) - (CATEGORY_ORDER[cb] ?? 9);
+        })
+        .map(([type, count]) => ({ type, count, config: getConfig(type) })),
+    [typeCounts],
+  );
+
+  /* ── Filtered alerts ── */
+  const filteredAlerts = useMemo(() => {
+    let list = unresolvedAlerts;
+    if (filterSeverity !== 'all') {
+      list = list.filter((a: Alert) => a.severity === filterSeverity);
+    }
+    if (filterType !== 'all') {
+      list = list.filter((a: Alert) => a.type === filterType);
+    }
+    return list;
+  }, [unresolvedAlerts, filterSeverity, filterType]);
+
+  /* ── Group by category for display ── */
+  const groupedAlerts = useMemo(() => {
+    const groups: Record<string, { categoryLabel: string; alerts: Alert[] }> = {};
+    for (const alert of filteredAlerts) {
+      const cfg = getConfig(alert.type);
+      const cat = cfg.category;
+      if (!groups[cat]) {
+        groups[cat] = { categoryLabel: cfg.categoryLabel, alerts: [] };
+      }
+      groups[cat].alerts.push(alert);
+    }
+    // Sort categories
+    return Object.entries(groups)
+      .sort(([a], [b]) => (CATEGORY_ORDER[a] ?? 9) - (CATEGORY_ORDER[b] ?? 9))
+      .map(([key, val]) => ({ category: key, ...val }));
+  }, [filteredAlerts]);
+
+  const handleResolve = useCallback(
+    async (alertId: string) => {
+      setResolvingId(alertId);
+      try {
+        await alertsService.resolveAlert(alertId, null);
+        toast.success('تم حل التنبيه');
+        await queryClient.invalidateQueries({ queryKey: ['alerts'] });
+      } catch {
+        toast.error('فشل حل التنبيه');
+      } finally {
+        setResolvingId(null);
+      }
+    },
+    [queryClient],
+  );
+
+  const clearFilters = () => {
+    setFilterSeverity('all');
+    setFilterType('all');
   };
+  const hasFilters = filterSeverity !== 'all' || filterType !== 'all';
 
+  /* ─── Loading / Error states ─── */
   if (isLoading) {
     return (
       <div className="space-y-6" dir="rtl">
         <div>
-          <h1 className="text-2xl font-bold">التنبيهات</h1>
-          <p className="text-muted-foreground">إدارة التنبيهات والإشعارات</p>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Bell size={24} /> التنبيهات
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">إدارة التنبيهات والإشعارات</p>
         </div>
         <div className="flex items-center justify-center py-20">
           <Loader2 className="animate-spin size-8 text-muted-foreground" />
@@ -130,8 +292,10 @@ export default function AlertsPage() {
     return (
       <div className="space-y-6" dir="rtl">
         <div>
-          <h1 className="text-2xl font-bold">التنبيهات</h1>
-          <p className="text-muted-foreground">إدارة التنبيهات والإشعارات</p>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Bell size={24} /> التنبيهات
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">إدارة التنبيهات والإشعارات</p>
         </div>
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
@@ -149,17 +313,24 @@ export default function AlertsPage() {
     );
   }
 
+  /* ─── Main render ─── */
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-5" dir="rtl">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Bell size={24} /> التنبيهات
+            {unresolvedAlerts.length > 0 && (
+              <span className="w-6 h-6 rounded-full bg-destructive text-white text-xs font-bold flex items-center justify-center">
+                {unresolvedAlerts.length}
+              </span>
+            )}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             {unresolvedAlerts.length === 0
-              ? 'لا توجد تنبيهات عاجلة'
-              : `${unresolvedAlerts.length} تنبيه غير محلول`}
+              ? 'لا توجد تنبيهات عاجلة — كل شيء على ما يرام ✅'
+              : `${unresolvedAlerts.length} تنبيه يحتاج انتباهك`}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()}>
@@ -167,32 +338,86 @@ export default function AlertsPage() {
         </Button>
       </div>
 
-      {/* Summary cards */}
+      {/* ── Severity summary cards ── */}
       <div className="grid grid-cols-3 gap-3">
         <button
           onClick={() => setFilterSeverity(filterSeverity === 'urgent' ? 'all' : 'urgent')}
-          className={`rounded-xl border p-4 text-center transition-colors ${filterSeverity === 'urgent' ? 'border-destructive bg-destructive/5' : 'border-border hover:bg-muted/50'}`}
+          className={`rounded-xl border p-4 text-center transition-all ${
+            filterSeverity === 'urgent'
+              ? 'border-destructive bg-destructive/5 ring-1 ring-destructive/30'
+              : 'border-border hover:bg-muted/50'
+          }`}
         >
           <p className="text-2xl font-bold text-destructive">{urgentCount}</p>
-          <p className="text-xs text-muted-foreground">عاجل</p>
+          <p className="text-xs text-muted-foreground mt-0.5">🔴 عاجل</p>
         </button>
         <button
           onClick={() => setFilterSeverity(filterSeverity === 'warning' ? 'all' : 'warning')}
-          className={`rounded-xl border p-4 text-center transition-colors ${filterSeverity === 'warning' ? 'border-warning bg-warning/5' : 'border-border hover:bg-muted/50'}`}
+          className={`rounded-xl border p-4 text-center transition-all ${
+            filterSeverity === 'warning'
+              ? 'border-warning bg-warning/5 ring-1 ring-warning/30'
+              : 'border-border hover:bg-muted/50'
+          }`}
         >
           <p className="text-2xl font-bold text-warning">{warningCount}</p>
-          <p className="text-xs text-muted-foreground">تحذير</p>
+          <p className="text-xs text-muted-foreground mt-0.5">🟡 تحذير</p>
         </button>
         <button
           onClick={() => setFilterSeverity(filterSeverity === 'info' ? 'all' : 'info')}
-          className={`rounded-xl border p-4 text-center transition-colors ${filterSeverity === 'info' ? 'border-info bg-info/5' : 'border-border hover:bg-muted/50'}`}
+          className={`rounded-xl border p-4 text-center transition-all ${
+            filterSeverity === 'info'
+              ? 'border-info bg-info/5 ring-1 ring-info/30'
+              : 'border-border hover:bg-muted/50'
+          }`}
         >
           <p className="text-2xl font-bold text-info">{infoCount}</p>
-          <p className="text-xs text-muted-foreground">معلومات</p>
+          <p className="text-xs text-muted-foreground mt-0.5">🔵 معلومات</p>
         </button>
       </div>
 
-      {/* Alert cards */}
+      {/* ── Type filter chips ── */}
+      {activeTypes.length > 1 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Filter size={14} className="text-muted-foreground flex-shrink-0" />
+          <button
+            onClick={() => setFilterType('all')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              filterType === 'all'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted text-muted-foreground hover:bg-accent'
+            }`}
+          >
+            الكل ({unresolvedAlerts.length})
+          </button>
+          {activeTypes.map(({ type, count, config }) => {
+            const TypeIcon = config.icon;
+            return (
+              <button
+                key={type}
+                onClick={() => setFilterType(filterType === type ? 'all' : type)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                  filterType === type
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-accent'
+                }`}
+              >
+                <TypeIcon size={12} />
+                {config.label} ({count})
+              </button>
+            );
+          })}
+          {hasFilters && (
+            <button
+              onClick={clearFilters}
+              className="text-xs text-muted-foreground hover:text-destructive underline-offset-2 hover:underline ms-1"
+            >
+              مسح الفلاتر
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── Grouped alerts ── */}
       {filteredAlerts.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
@@ -200,97 +425,130 @@ export default function AlertsPage() {
               <Shield size={24} className="text-success" />
             </div>
             <h3 className="text-lg font-medium">
-              {filterSeverity !== 'all' ? 'لا توجد تنبيهات بهذه الأولوية' : 'لا توجد تنبيهات عاجلة'}
+              {hasFilters ? 'لا توجد تنبيهات بهذا الفلتر' : 'لا توجد تنبيهات عاجلة'}
             </h3>
             <p className="text-sm text-muted-foreground mt-1">كل شيء على ما يرام ✅</p>
+            {hasFilters && (
+              <Button variant="outline" size="sm" className="mt-3" onClick={clearFilters}>
+                مسح الفلاتر
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {filteredAlerts.map((alert: Alert) => {
-            const Icon = typeIcons[alert.type] || AlertTriangle;
-            const colors = severityColors[alert.severity] || severityColors.info;
-            const isExpanded = expandedId === alert.id;
+        <div className="space-y-4">
+          {groupedAlerts.map(({ category, categoryLabel, alerts: groupAlerts }) => (
+            <div key={category}>
+              {/* Category header */}
+              <div className="flex items-center gap-2 mb-2">
+                <h2 className="text-sm font-bold text-foreground">{categoryLabel}</h2>
+                <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full font-medium">
+                  {groupAlerts.length}
+                </span>
+              </div>
 
-            return (
-              <Card key={alert.id} className="overflow-hidden">
-                <div
-                  className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors"
-                  onClick={() => toggleExpand(alert.id)}
-                >
-                  <div className={`icon-box-sm flex-shrink-0 ${colors.iconBg}`}>
-                    <Icon size={14} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{alert.entityName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {typeLabels[alert.type] || alert.type} — {alert.dueDate}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className={`w-1.5 h-1.5 rounded-full ${colors.dot}`} />
-                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${colors.badge}`}>
-                      {formatDaysLeftShort(alert.daysLeft)}
-                    </span>
-                    {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  </div>
-                </div>
+              {/* Alert rows — flat, no expand needed */}
+              <div className="bg-card border border-border/50 rounded-xl overflow-hidden divide-y divide-border/40">
+                {groupAlerts.map((alert: Alert) => {
+                  const cfg = getConfig(alert.type);
+                  const Icon = cfg.icon;
+                  const styles = SEVERITY_STYLES[alert.severity] || SEVERITY_STYLES.info;
 
-                {isExpanded && (
-                  <div className="px-4 pb-3 pt-1 border-t border-border/40 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">
-                        الأولوية: <span className="font-medium">
-                          {alert.severity === 'urgent' ? 'عاجل' : alert.severity === 'warning' ? 'تحذير' : 'معلومات'}
-                        </span>
-                      </span>
-                      <span className="text-muted-foreground">
-                        المتبقي: <span className="font-medium">{formatDaysLeft(alert.daysLeft)}</span>
-                      </span>
-                    </div>
-                    {perms.can_edit && (
-                      <div className="flex justify-end">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="gap-1.5 text-xs h-7"
-                          onClick={(e) => { e.stopPropagation(); handleResolve(alert.id); }}
-                          disabled={resolvingId === alert.id}
-                        >
-                          {resolvingId === alert.id
-                            ? <Loader2 size={12} className="animate-spin" />
-                            : <CheckCircle2 size={12} />}
-                          حل التنبيه
-                        </Button>
+                  return (
+                    <div
+                      key={alert.id}
+                      className={`flex items-center gap-3 px-4 py-3 transition-colors ${styles.rowBg}`}
+                    >
+                      {/* Icon */}
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${styles.iconBg}`}>
+                        <Icon size={16} />
                       </div>
-                    )}
-                  </div>
-                )}
-              </Card>
-            );
-          })}
+
+                      {/* Content — always visible */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          {/* Type badge */}
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-muted text-muted-foreground flex-shrink-0">
+                            {cfg.label}
+                          </span>
+                          {/* Severity */}
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${styles.badge}`}>
+                            {SEVERITY_LABELS[alert.severity] || alert.severity}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium text-foreground leading-snug">{alert.entityName}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          تاريخ الاستحقاق: {alert.dueDate}
+                        </p>
+                      </div>
+
+                      {/* Days left + resolve */}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="text-end">
+                          <span className={`w-1.5 h-1.5 rounded-full inline-block me-1.5 ${styles.dot}`} />
+                          <span className={`text-xs font-bold ${
+                            alert.daysLeft < 0
+                              ? 'text-destructive'
+                              : alert.daysLeft <= 7
+                                ? 'text-destructive'
+                                : alert.daysLeft <= 30
+                                  ? 'text-warning'
+                                  : 'text-muted-foreground'
+                          }`}>
+                            {formatDaysLeftBadge(alert.daysLeft)}
+                          </span>
+                        </div>
+                        {perms.can_edit && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-success"
+                            onClick={() => handleResolve(alert.id)}
+                            disabled={resolvingId === alert.id}
+                            title="حل التنبيه"
+                          >
+                            {resolvingId === alert.id ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <CheckCircle2 size={14} />
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Resolved alerts */}
+      {/* ── Resolved alerts (collapsed by default) ── */}
       {resolvedAlerts.length > 0 && (
         <details className="group">
-          <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors py-2">
+          <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors py-2 flex items-center gap-2">
+            <CheckCircle2 size={14} className="text-success" />
             التنبيهات المحلولة ({resolvedAlerts.length})
           </summary>
-          <div className="space-y-2 mt-2 opacity-60">
+          <div className="bg-card border border-border/50 rounded-xl overflow-hidden divide-y divide-border/40 mt-2 opacity-60">
             {resolvedAlerts.slice(0, 20).map((alert: Alert) => {
-              const Icon = typeIcons[alert.type] || AlertTriangle;
+              const cfg = getConfig(alert.type);
               return (
-                <div key={alert.id} className="flex items-center gap-3 px-4 py-2 rounded-lg bg-muted/30">
-                  <div className="icon-box-sm flex-shrink-0 bg-success/10 text-success">
+                <div key={alert.id} className="flex items-center gap-3 px-4 py-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-success/10 text-success flex items-center justify-center flex-shrink-0">
                     <CheckCircle2 size={14} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate line-through opacity-70">{alert.entityName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {typeLabels[alert.type] || alert.type} — {alert.dueDate}
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                        {cfg.label}
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium text-foreground truncate line-through opacity-70">
+                      {alert.entityName}
                     </p>
+                    <p className="text-xs text-muted-foreground">{alert.dueDate}</p>
                   </div>
                 </div>
               );
