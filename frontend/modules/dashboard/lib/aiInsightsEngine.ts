@@ -1,12 +1,10 @@
 /**
- * AI Insights Engine — Generates insights, alerts, recommendations, and
- * per-rider AI analysis from performance data.
+ * محرك التحليلات الذكية — ينتج رؤى وتوصيات وتحليلات أداء المناديب
+ * من بيانات الأداء الفعلية.
  *
- * This is the "AI Generated" layer in the Data Strategy:
- *   Raw → Calculated → Derived → **AI Generated** (this file)
+ * طبقة البيانات: خام → محسوب → مشتق → تحليلات (هذا الملف)
  *
- * All functions are pure and stateless. They consume output from
- * performanceEngine.ts and produce human-readable Arabic text.
+ * جميع الدوال صافية (pure) وبلا حالة (stateless).
  */
 
 import {

@@ -1,5 +1,5 @@
 /**
- * AIChatWidget — Floating AI chat powered by Groq, backed by real performance data.
+ * AIChatWidget — ويدجت المحادثة الذكية مع بيانات أداء حقيقية.
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';

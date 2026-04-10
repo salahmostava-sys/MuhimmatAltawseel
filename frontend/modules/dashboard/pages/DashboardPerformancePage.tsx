@@ -132,7 +132,7 @@ export default function DashboardPerformancePage() {
         </Suspense>
       ) : null}
 
-      {/* AI Chat Widget — floating, powered by Groq with real data */}
+      {/* المساعد الذكي */}
       {chatSystemPrompt && <AIChatWidget systemPrompt={chatSystemPrompt} />}
     </div>
   );

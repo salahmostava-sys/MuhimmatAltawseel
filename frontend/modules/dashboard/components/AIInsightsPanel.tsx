@@ -1,5 +1,5 @@
 /**
- * AIInsightsPanel — Smart card that displays AI-generated insights about fleet performance.
+ * AIInsightsPanel — بطاقة تحليلات ذكية لأداء الأسطول.
  */
 
 import { Brain, ChevronDown, ChevronUp } from 'lucide-react';

@@ -1,9 +1,6 @@
 /**
- * DashboardPerformanceOverviewTab — Enhanced with AI Insights, Enriched Stats,
- * Recommendations, Performance Scores, and Detailed Table.
- *
- * This is a NEW component that replaces the previous overview tab with
- * a full Decision Support System layout.
+ * DashboardPerformanceOverviewTab — نظرة عامة على الأداء مع تحليلات ذكية
+ * وتوصيات ودرجات أداء وجدول تفصيلي.
  */
 
 import { useMemo } from 'react';
