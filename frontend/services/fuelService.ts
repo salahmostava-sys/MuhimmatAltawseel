@@ -231,7 +231,7 @@ export const fuelService = {
     }
     const { error } = await supabase
       .from('vehicle_mileage')
-      .insert(rows as unknown as TablesInsert<'vehicle_mileage'>[], { ignoreDuplicates: true });
+      .upsert(rows as any, { onConflict: 'employee_id,month_year', ignoreDuplicates: true });
     if (error) handleSupabaseError(error, 'fuelService.saveMonthlyMileageImport.insert');
   },
 };

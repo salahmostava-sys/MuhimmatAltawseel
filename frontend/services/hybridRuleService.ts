@@ -26,7 +26,7 @@ export const hybridRuleService = {
   upsert: async (rule: Omit<AppHybridRule, 'id' | 'created_at' | 'updated_at'>) => {
     const { data, error } = await supabase
       .from('app_hybrid_rules')
-      .upsert(rule as unknown as TablesInsert<'app_hybrid_rules'>, { onConflict: 'app_id' })
+      .upsert(rule as any, { onConflict: 'app_id' })
       .select()
       .single();
     if (error) throw toServiceError(error, 'hybridRuleService.upsert');

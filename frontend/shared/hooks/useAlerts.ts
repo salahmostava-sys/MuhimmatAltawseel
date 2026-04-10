@@ -36,12 +36,12 @@ export const useAlerts = () => {
         ),
       };
       return buildAlertsFromResponses(
-        employeesVisibleRes,
-        vehiclesRes as { data: import('@shared/lib/alertsBuilder').VehicleExpiryRow[] },
-        platformAccountsRes,
-        dbAlertsRes,
-        sparePartsRes,
-        abscondedRes,
+        employeesVisibleRes as any,
+        vehiclesRes as any,
+        platformAccountsRes as any,
+        dbAlertsRes as any,
+        sparePartsRes as any,
+        abscondedRes as any,
         expiryHorizon,
         today
       );

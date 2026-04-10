@@ -40,8 +40,7 @@ export const salaryDraftService = {
     const userId = await getAuthenticatedUserId('salaryDraftService.getDraftsForMonth', false);
     if (!userId) return {};
 
-    const { data, error } = await supabase
-      .from('salary_drafts')
+    const { data, error } = await (supabase.from('salary_drafts') as any)
       .select('employee_id, draft_data')
       .eq('month_year', monthYear)
       .eq('user_id', userId);
@@ -127,8 +126,8 @@ export const salaryDraftService = {
       await salaryDraftService.saveDraftsBatch(monthYear, drafts);
     }
 
-    const { data, error } = await supabase
-      .from('salary_drafts')
+    // @ts-expect-error -- deep instantiation workaround
+    const { data, error } = await supabase.from('salary_drafts')
       .select('employee_id')
       .eq('month_year', monthYear)
       .eq('user_id', userId);
@@ -142,8 +141,7 @@ export const salaryDraftService = {
 
     if (staleEmployeeIds.length === 0) return;
 
-    const { error: deleteError } = await supabase
-      .from('salary_drafts')
+    const { error: deleteError } = await (supabase.from('salary_drafts') as any)
       .delete()
       .eq('month_year', monthYear)
       .eq('user_id', userId)

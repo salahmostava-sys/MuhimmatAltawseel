@@ -1,4 +1,5 @@
 import { supabase } from '@services/supabase/client';
+import type { Database } from '@services/supabase/types';
 import { handleSupabaseError, toServiceError } from '@services/serviceError';
 
 export interface SparePart {
@@ -195,10 +196,9 @@ export async function createMaintenanceLog(
     .from('maintenance_logs')
     .insert({
       vehicle_id: data.vehicle_id,
-      maintenance_date: data.maintenance_date,
-      type: data.type,
-      odometer_reading: data.odometer_reading ?? null,
-      notes: data.notes ?? null,
+      date: data.maintenance_date ?? new Date().toISOString().split('T')[0],
+      type: data.type as Database['public']['Enums']['maintenance_type'],
+      description: data.notes ?? null,
       created_by: uid,
     })
     .select('id')

@@ -106,7 +106,7 @@ export function PayslipModal({ row, onClose, onApprove, selectedMonth, companyNa
     fields,
     platforms,
     projectName: companyName,
-    template: template || undefined,
+    template: template ? { ...template, selected_columns: (template.selected_columns ?? []) as string[] } : undefined,
     analysis: analysis || undefined,
   });
 

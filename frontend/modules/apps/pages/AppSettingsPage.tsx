@@ -14,7 +14,7 @@ export function AppSettingsPage() {
   const { enabled, userId } = useAuthQueryGate();
   const uid = authQueryUserId(userId);
   const queryClient = useQueryClient();
-  const { can_edit } = usePermissions('apps');
+  const { permissions: { can_edit } = {} } = usePermissions('apps');
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
 
   const { data: apps = [], isLoading, error } = useQuery({
@@ -114,7 +114,7 @@ export function AppSettingsPage() {
         <AppWorkTypeSettings
           appId={selectedApp.id}
           appName={selectedApp.name}
-          currentWorkType={selectedApp.work_type || 'orders'}
+          currentWorkType={(selectedApp.work_type || 'orders') as WorkType}
           onWorkTypeChange={handleWorkTypeChange}
         />
       </div>

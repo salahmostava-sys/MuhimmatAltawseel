@@ -100,7 +100,7 @@ describe('DEFAULT_PERMISSIONS role matrix', () => {
       .filter((route) => route.permission)
       .map((route) => route.permission!.replace(/^view_/, ''));
 
-    const roles = Object.keys(DEFAULT_PERMISSIONS) as AppRole[];
+    const roles = Object.keys(DEFAULT_PERMISSIONS) as Array<'admin' | 'hr' | 'finance' | 'operations' | 'viewer'>;
     for (const role of roles) {
       for (const pageKey of pageKeys) {
         expect(DEFAULT_PERMISSIONS[role]).toHaveProperty(pageKey);

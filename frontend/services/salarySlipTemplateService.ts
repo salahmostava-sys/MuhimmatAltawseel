@@ -5,7 +5,7 @@ export interface SalarySlipTemplate {
   name: string;
   header_html: string;
   footer_html: string;
-  selected_columns: import('./supabase/types').Json;
+  selected_columns: string[];
   is_default: boolean;
   created_at?: string;
   updated_at?: string;
@@ -20,7 +20,7 @@ export const salarySlipTemplateService = {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as unknown as SalarySlipTemplate[];
   },
 
   /** Get the default template. */
@@ -32,7 +32,7 @@ export const salarySlipTemplateService = {
       .maybeSingle();
 
     if (error) throw error;
-    return data;
+    return data as unknown as SalarySlipTemplate | null;
   },
 
   /** Create a new template. */
@@ -52,7 +52,7 @@ export const salarySlipTemplateService = {
       .single();
 
     if (error) throw error;
-    return data;
+    return data as unknown as SalarySlipTemplate;
   },
 
   /** Update an existing template. */
@@ -72,7 +72,7 @@ export const salarySlipTemplateService = {
       .single();
 
     if (error) throw error;
-    return data;
+    return data as unknown as SalarySlipTemplate;
   },
 
   /** Delete a template. */

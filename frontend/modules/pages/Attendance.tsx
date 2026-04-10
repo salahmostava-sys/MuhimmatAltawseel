@@ -72,7 +72,7 @@ const Attendance = () => {
       const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
       const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
 
-      const records = await attendanceService.getAttendanceByDateRange(startDate, endDate);
+      const records = await attendanceService.getAttendanceStatusRange(startDate, endDate);
 
       const data = records.map((r: { employee_name?: string; date: string; status: string; notes?: string }) => ({
         'الموظف': r.employee_name || '—',
@@ -123,11 +123,13 @@ const Attendance = () => {
         }
         try {
           // Find employee by name or use generic endpoint
-          await attendanceService.saveAttendance({
+          await attendanceService.upsertDailyAttendance({
             employee_id: employeeName, // Service should resolve name to ID
             date,
-            status: status.toLowerCase(),
-            notes: notes || '',
+            status: status.toLowerCase() as 'present' | 'absent' | 'leave' | 'sick' | 'late',
+            check_in: '',
+            check_out: '',
+            note: notes || '',
           });
           imported++;
         } catch {

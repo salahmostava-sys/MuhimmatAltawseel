@@ -73,7 +73,7 @@ describe('useAlerts', () => {
     const { result } = renderHook(() => useAlerts(), { wrapper: createWrapper() });
 
     await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 6000 });
-    expect((result.current.error as Error | null)?.message).toContain('timeout');
+    expect((result.current.error as unknown as Error | null)?.message).toContain('timeout');
   });
 });
 
