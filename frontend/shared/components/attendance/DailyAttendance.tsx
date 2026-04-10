@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@services/supabase/client";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { CalendarIcon, UserCheck, Save } from "lucide-react";
@@ -63,14 +64,39 @@ const DailyAttendance = ({ selectedMonth, selectedYear }: Props) => {
   const [saving, setSaving]   = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Custom statuses from localStorage
-  const [customStatuses, setCustomStatuses] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem("custom_attendance_statuses") || "[]"); }
-    catch (e) {
-      logError('[DailyAttendance] invalid custom_attendance_statuses in storage', e, { level: 'warn' });
-      return [];
-    }
+  // Custom statuses from Supabase (with localStorage fallback)
+  const queryClient = useQueryClient();
+  const { data: customStatuses = [] } = useQuery({
+    queryKey: ['attendance-status-configs'],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await (supabase.from('attendance_status_configs') as ReturnType<typeof supabase.from>)
+        .select('id, name, color')
+        .order('created_at');
+      if (error) throw error;
+      return (data ?? []).map((r: { name: string }) => r.name);
+    },
+    staleTime: 5 * 60_000,
+    placeholderData: () => {
+      try { return JSON.parse(localStorage.getItem("custom_attendance_statuses") || "[]"); }
+      catch { return []; }
+    },
   });
+
+  const addStatusMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const { error } = await (supabase.from('attendance_status_configs') as ReturnType<typeof supabase.from>)
+        .insert({ name, color: '#6366f1' });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['attendance-status-configs'] });
+    },
+    onError: (e) => {
+      logError('[DailyAttendance] failed to save custom status to server', e, { level: 'warn' });
+    },
+  });
+
   const [addingCustomFor, setAddingCustomFor] = useState<string | null>(null);
   const [customInput, setCustomInput]         = useState("");
 
@@ -175,9 +201,12 @@ const DailyAttendance = ({ selectedMonth, selectedYear }: Props) => {
     const trimmed = customInput.trim();
     if (!trimmed) return;
     if (!customStatuses.includes(trimmed)) {
-      const updated = [...customStatuses, trimmed];
-      setCustomStatuses(updated);
-      localStorage.setItem("custom_attendance_statuses", JSON.stringify(updated));
+      addStatusMutation.mutate(trimmed);
+      // Also write to localStorage as offline backup
+      try {
+        const updated = [...customStatuses, trimmed];
+        localStorage.setItem("custom_attendance_statuses", JSON.stringify(updated));
+      } catch { /* ignore */ }
     }
     updateRecord(empId, "status", trimmed);
     setAddingCustomFor(null);

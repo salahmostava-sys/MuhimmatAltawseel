@@ -182,7 +182,7 @@ const Alerts = () => {
     void fetchAlerts();
     const interval = setInterval(() => void fetchAlerts(), 60_000);
     return () => clearInterval(interval);
-  }, [iqamaAlertDays]);
+  }, [enabled, iqamaAlertDays]);
 
   const filtered = localAlerts.filter(a => {
     const matchType = typeFilter === 'all' || a.type === typeFilter;
@@ -258,6 +258,8 @@ const Alerts = () => {
   const urgentCount = filtered.filter(a => a.severity === 'urgent').length;
   const warningCount = filtered.filter(a => a.severity === 'warning').length;
   const infoCount = filtered.filter(a => a.severity === 'info').length;
+
+  if (!enabled) return null;
 
   return (
     <div className="space-y-4">
