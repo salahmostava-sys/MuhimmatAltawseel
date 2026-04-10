@@ -65,9 +65,21 @@ const Employees = () => {
   } = useEmployeesData();
   const [sortField, setSortField] = useState<string | null>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
-  const [visibleCols, setVisibleCols] = useState<Set<ColKey>>(
-    new Set(ALL_COLUMNS.map(c => c.key).filter(k => !DEFAULT_HIDDEN_COLS.has(k)))
-  );
+  const [visibleCols, setVisibleCols] = useState<Set<ColKey>>(() => {
+    try {
+      const saved = localStorage.getItem('employees_visible_cols');
+      if (saved) {
+        const parsed = JSON.parse(saved) as string[];
+        if (Array.isArray(parsed) && parsed.length > 0) return new Set(parsed as ColKey[]);
+      }
+    } catch { /* ignore */ }
+    return new Set(ALL_COLUMNS.map(c => c.key).filter(k => !DEFAULT_HIDDEN_COLS.has(k)));
+  });
+  // Persist column visibility to localStorage
+  useEffect(() => {
+    localStorage.setItem('employees_visible_cols', JSON.stringify([...visibleCols]));
+  }, [visibleCols]);
+
   const [colFilters, setColFilters] = useState<Record<string, string>>({});
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
