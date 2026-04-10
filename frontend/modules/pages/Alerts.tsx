@@ -1,656 +1,390 @@
-import { useState, useCallback, useMemo } from 'react';
-import {
-  Bell, AlertTriangle, Clock, Shield, CreditCard, Loader2,
-  CheckCircle2, Bike, Package, UserX, Pill, Filter, Download, Search, Printer,
-} from 'lucide-react';
-import { Card, CardContent } from '@shared/components/ui/card';
-import { Button } from '@shared/components/ui/button';
+import { useState, useEffect } from 'react';
+import { Bell, Search, CheckCircle, Clock, Download } from 'lucide-react';
 import { Input } from '@shared/components/ui/input';
-import { Label } from '@shared/components/ui/label';
-import { Textarea } from '@shared/components/ui/textarea';
+import { Button } from '@shared/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@shared/components/ui/dialog';
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuSeparator, DropdownMenuTrigger,
-} from '@shared/components/ui/dropdown-menu';
-import { useAlerts } from '@shared/hooks/useAlerts';
-import { usePermissions } from '@shared/hooks/usePermissions';
-import { useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
-import { alertsService } from '@services/alertsService';
-import { useQueryClient } from '@tanstack/react-query';
-import { toast } from '@shared/components/ui/sonner';
-import { todayISO } from '@shared/lib/formatters';
-import type { Alert } from '@shared/lib/alertsBuilder';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@shared/components/ui/dropdown-menu';
+import { Textarea } from '@shared/components/ui/textarea';
+import { Label } from '@shared/components/ui/label';
+import { supabase } from '@services/supabase/client';
+import { useToast } from '@shared/hooks/use-toast';
+import { useSystemSettings } from '@app/providers/SystemSettingsContext';
+import { escapeHtml } from '@shared/lib/security';
+import { format, differenceInDays, parseISO, addDays } from 'date-fns';
 
-/* ─── Alert type metadata ─── */
+const loadXlsx = () => import('@e965/xlsx');
 
-type AlertTypeConfig = {
-  label: string;
-  icon: typeof AlertTriangle;
-  /** Category for grouping */
-  category: 'employee' | 'vehicle' | 'financial' | 'operations';
-  categoryLabel: string;
-  description: string;
+export const alertTypeLabels: Record<string, string> = {
+  residency: 'إقامة',
+  insurance: 'تأمين',
+  authorization: 'تفويض',
+  probation: 'فترة التجربة',
+  platform_account: 'حساب منصة',
 };
 
-const ALERT_TYPE_CONFIG: Record<string, AlertTypeConfig> = {
-  residency: {
-    label: 'إقامة',
-    icon: AlertTriangle,
-    category: 'employee',
-    categoryLabel: '👤 شؤون الموظفين',
-    description: 'إقامة الموظف قاربت على الانتهاء أو انتهت',
-  },
-  health_insurance: {
-    label: 'تأمين صحي',
-    icon: Pill,
-    category: 'employee',
-    categoryLabel: '👤 شؤون الموظفين',
-    description: 'التأمين الصحي يحتاج تجديد',
-  },
-  probation: {
-    label: 'فترة اختبار',
-    icon: Clock,
-    category: 'employee',
-    categoryLabel: '👤 شؤون الموظفين',
-    description: 'فترة الاختبار تنتهي قريباً',
-  },
-  driving_license: {
-    label: 'رخصة قيادة',
-    icon: Clock,
-    category: 'employee',
-    categoryLabel: '👤 شؤون الموظفين',
-    description: 'رخصة القيادة تحتاج تجديد',
-  },
-  platform_account: {
-    label: 'إقامة حساب منصة',
-    icon: Shield,
-    category: 'employee',
-    categoryLabel: '👤 شؤون الموظفين',
-    description: 'إقامة مرتبطة بحساب منصة ستنتهي — قد يتوقف الحساب',
-  },
-  employee_absconded: {
-    label: 'مندوب هروب',
-    icon: UserX,
-    category: 'employee',
-    categoryLabel: '👤 شؤون الموظفين',
-    description: 'مندوب مسجّل كحالة هروب — قد يكون لديه عهدة',
-  },
-  insurance: {
-    label: 'تأمين مركبة',
-    icon: Shield,
-    category: 'vehicle',
-    categoryLabel: '🚗 المركبات',
-    description: 'تأمين المركبة يحتاج تجديد',
-  },
-  registration: {
-    label: 'تسجيل مركبة',
-    icon: Clock,
-    category: 'vehicle',
-    categoryLabel: '🚗 المركبات',
-    description: 'تسجيل المركبة ينتهي قريباً',
-  },
-  license: {
-    label: 'رخصة',
-    icon: Clock,
-    category: 'vehicle',
-    categoryLabel: '🚗 المركبات',
-    description: 'رخصة المركبة تحتاج تجديد',
-  },
-  authorization: {
-    label: 'تفويض مركبة',
-    icon: Bike,
-    category: 'vehicle',
-    categoryLabel: '🚗 المركبات',
-    description: 'تفويض المركبة ينتهي قريباً',
-  },
-  installment: {
-    label: 'قسط سلفة',
-    icon: CreditCard,
-    category: 'financial',
-    categoryLabel: '💰 المالية',
-    description: 'قسط سلفة مستحق',
-  },
-  deduction: {
-    label: 'خصم',
-    icon: CreditCard,
-    category: 'financial',
-    categoryLabel: '💰 المالية',
-    description: 'خصم مالي معلّق',
-  },
-  low_stock: {
-    label: 'مخزون منخفض',
-    icon: Package,
-    category: 'operations',
-    categoryLabel: '⚙️ العمليات',
-    description: 'قطعة غيار وصلت للحد الأدنى',
-  },
-};
-
-const getConfig = (type: string): AlertTypeConfig =>
-  ALERT_TYPE_CONFIG[type] ?? {
-    label: type,
-    icon: AlertTriangle,
-    category: 'operations' as const,
-    categoryLabel: '⚙️ العمليات',
-    description: '',
-  };
-
-const SEVERITY_STYLES: Record<string, { dot: string; badge: string; iconBg: string; rowBg: string }> = {
-  urgent: {
-    dot: 'bg-destructive',
-    badge: 'bg-destructive/10 text-destructive border border-destructive/20',
-    iconBg: 'bg-destructive/10 text-destructive',
-    rowBg: 'bg-destructive/[0.03] hover:bg-destructive/[0.06]',
-  },
-  warning: {
-    dot: 'bg-warning',
-    badge: 'bg-warning/10 text-warning border border-warning/20',
-    iconBg: 'bg-warning/10 text-warning',
-    rowBg: 'bg-warning/[0.03] hover:bg-warning/[0.06]',
-  },
-  info: {
-    dot: 'bg-info',
-    badge: 'bg-info/10 text-info border border-info/20',
-    iconBg: 'bg-info/10 text-info',
-    rowBg: 'hover:bg-muted/30',
-  },
-};
-
-const SEVERITY_LABELS: Record<string, string> = {
-  urgent: 'عاجل',
-  warning: 'تحذير',
-  info: 'معلومات',
-};
-
-function formatDaysLeftBadge(daysLeft: number): string {
-  if (daysLeft < 0) return 'منتهي';
-  if (daysLeft === 0) return 'اليوم';
-  return `${daysLeft} يوم`;
+export interface Alert {
+  id: string;
+  type: string;
+  entityName: string;
+  dueDate: string;
+  daysLeft: number;
+  severity: 'urgent' | 'warning' | 'info';
+  resolved: boolean;
 }
 
-/* ─── Category ordering ─── */
-const CATEGORY_ORDER: Record<string, number> = {
-  employee: 0,
-  vehicle: 1,
-  financial: 2,
-  operations: 3,
+const severityStyles: Record<string, string> = { urgent: 'badge-urgent', warning: 'badge-warning', info: 'badge-info' };
+const severityLabels: Record<string, string> = { urgent: '🔴 عاجل', warning: '🟠 تحذير', info: '🔵 معلومات' };
+
+const typeIcons: Record<string, string> = {
+  residency: '🪪', insurance: '🛡️', authorization: '📜', probation: '⏱️', platform_account: '📱',
 };
 
-/* ─── The main component ─── */
-export default function AlertsPage() {
-  useAuthQueryGate();
-  const { data: alertsData = [], isLoading, error, refetch } = useAlerts();
-  const { permissions: perms } = usePermissions('alerts');
-  const queryClient = useQueryClient();
-  const [resolvingId, setResolvingId] = useState<string | null>(null);
-  const [filterType, setFilterType] = useState<string>('all');
-  const [filterSeverity, setFilterSeverity] = useState<string>('all');
+const Alerts = () => {
+  const [localAlerts, setLocalAlerts] = useState<Alert[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [severityFilter, setSeverityFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [resolveDialog, setResolveDialog] = useState<Alert | null>(null);
-  const [resolveNote, setResolveNote] = useState('');
   const [deferDialog, setDeferDialog] = useState<Alert | null>(null);
   const [deferDays, setDeferDays] = useState('7');
+  const [resolveNote, setResolveNote] = useState('');
+  const { toast } = useToast();
+  const { settings } = useSystemSettings();
+  const iqamaAlertDays = settings?.iqama_alert_days ?? 90;
 
-  const unresolvedAlerts = useMemo(
-    () => alertsData.filter((a: Alert) => !a.resolved),
-    [alertsData],
-  );
-  const resolvedAlerts = useMemo(
-    () => alertsData.filter((a: Alert) => a.resolved),
-    [alertsData],
-  );
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      setLoading(true);
+      const today = new Date();
+      const endOfCurrentMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      const threshold = format(endOfCurrentMonth, 'yyyy-MM-dd');
+      const iqamaThreshold = format(addDays(today, iqamaAlertDays), 'yyyy-MM-dd');
 
-  /* ── Counts ── */
-  const urgentCount = unresolvedAlerts.filter((a: Alert) => a.severity === 'urgent').length;
-  const warningCount = unresolvedAlerts.filter((a: Alert) => a.severity === 'warning').length;
-  const infoCount = unresolvedAlerts.filter((a: Alert) => a.severity === 'info').length;
+      const [employeesRes, vehiclesRes, platformAccountsRes] = await Promise.all([
+        supabase
+          .from('employees')
+          .select('id, name, residency_expiry, probation_end_date')
+          .eq('status', 'active')
+          .or(`residency_expiry.lte.${threshold},probation_end_date.lte.${threshold}`),
+        supabase
+          .from('vehicles')
+          .select('id, plate_number, insurance_expiry, authorization_expiry')
+          .in('status', ['active', 'maintenance', 'rental'])
+          .or(`insurance_expiry.lte.${threshold},authorization_expiry.lte.${threshold}`),
+        (supabase.from('platform_accounts') as ReturnType<typeof supabase.from>)
+          .select('id, account_username, iqama_expiry_date, app_id, apps(name)')
+          .eq('status', 'active')
+          .not('iqama_expiry_date', 'is', null)
+          .lte('iqama_expiry_date', iqamaThreshold),
+      ]);
 
-  /* ── Count by type for the type filter chips ── */
-  const typeCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const a of unresolvedAlerts) {
-      counts[a.type] = (counts[a.type] || 0) + 1;
-    }
-    return counts;
-  }, [unresolvedAlerts]);
+      const generatedAlerts: Alert[] = [];
 
-  const activeTypes = useMemo(
-    () =>
-      Object.entries(typeCounts)
-        .sort(([a], [b]) => {
-          const ca = getConfig(a).category;
-          const cb = getConfig(b).category;
-          return (CATEGORY_ORDER[ca] ?? 9) - (CATEGORY_ORDER[cb] ?? 9);
-        })
-        .map(([type, count]) => ({ type, count, config: getConfig(type) })),
-    [typeCounts],
-  );
+      employeesRes.data?.forEach((emp) => {
+        const empRec = emp as Record<string, string | null>;
+        if (empRec.residency_expiry && empRec.residency_expiry <= threshold) {
+          const daysLeft = differenceInDays(parseISO(empRec.residency_expiry), today);
+          generatedAlerts.push({
+            id: `res-${empRec.id}`,
+            type: 'residency',
+            entityName: empRec.name ?? '',
+            dueDate: empRec.residency_expiry,
+            daysLeft,
+            severity: daysLeft < 0 ? 'urgent' : daysLeft <= 7 ? 'urgent' : daysLeft <= 14 ? 'warning' : 'info',
+            resolved: false,
+          });
+        }
+        if (empRec.probation_end_date && empRec.probation_end_date <= threshold) {
+          const daysLeft = differenceInDays(parseISO(empRec.probation_end_date), today);
+          generatedAlerts.push({
+            id: `prob-${empRec.id}`,
+            type: 'probation',
+            entityName: empRec.name ?? '',
+            dueDate: empRec.probation_end_date,
+            daysLeft,
+            severity: daysLeft < 0 ? 'info' : daysLeft <= 7 ? 'urgent' : 'warning',
+            resolved: false,
+          });
+        }
+      });
 
-  /* ── Filtered alerts ── */
-  const filteredAlerts = useMemo(() => {
-    let list = unresolvedAlerts;
-    if (filterSeverity !== 'all') {
-      list = list.filter((a: Alert) => a.severity === filterSeverity);
-    }
-    if (filterType !== 'all') {
-      list = list.filter((a: Alert) => a.type === filterType);
-    }
-    if (search) {
-      list = list.filter((a: Alert) => a.entityName.includes(search));
-    }
-    return list;
-  }, [unresolvedAlerts, filterSeverity, filterType, search]);
+      vehiclesRes.data?.forEach((v) => {
+        const vRec = v as Record<string, string | null>;
+        if (vRec.insurance_expiry && vRec.insurance_expiry <= threshold) {
+          const days = differenceInDays(parseISO(vRec.insurance_expiry), today);
+          generatedAlerts.push({
+            id: `ins-${vRec.id}`,
+            type: 'insurance',
+            entityName: `مركبة ${vRec.plate_number}`,
+            dueDate: vRec.insurance_expiry,
+            daysLeft: days,
+            severity: days < 0 ? 'urgent' : days <= 7 ? 'urgent' : 'warning',
+            resolved: false,
+          });
+        }
+        if (vRec.authorization_expiry && vRec.authorization_expiry <= threshold) {
+          const days = differenceInDays(parseISO(vRec.authorization_expiry), today);
+          generatedAlerts.push({
+            id: `auth-${vRec.id}`,
+            type: 'authorization',
+            entityName: `مركبة ${vRec.plate_number}`,
+            dueDate: vRec.authorization_expiry,
+            daysLeft: days,
+            severity: days < 0 ? 'urgent' : days <= 7 ? 'urgent' : 'warning',
+            resolved: false,
+          });
+        }
+      });
 
-  /* ── Group by category for display ── */
-  const groupedAlerts = useMemo(() => {
-    const groups: Record<string, { categoryLabel: string; alerts: Alert[] }> = {};
-    for (const alert of filteredAlerts) {
-      const cfg = getConfig(alert.type);
-      const cat = cfg.category;
-      if (!groups[cat]) {
-        groups[cat] = { categoryLabel: cfg.categoryLabel, alerts: [] };
-      }
-      groups[cat].alerts.push(alert);
-    }
-    // Sort categories
-    return Object.entries(groups)
-      .sort(([a], [b]) => (CATEGORY_ORDER[a] ?? 9) - (CATEGORY_ORDER[b] ?? 9))
-      .map(([key, val]) => ({ category: key, ...val }));
-  }, [filteredAlerts]);
+      ((platformAccountsRes.data ?? []) as Record<string, unknown>[]).forEach((acc) => {
+        const iqamaDate = acc.iqama_expiry_date as string | null;
+        if (!iqamaDate) return;
+        const days = differenceInDays(parseISO(iqamaDate), today);
+        const appName = (acc.apps as { name?: string } | null)?.name ?? 'منصة';
+        const expiryFormatted = format(parseISO(iqamaDate), 'dd/MM/yyyy');
+        generatedAlerts.push({
+          id: `pla-${acc.id}`,
+          type: 'platform_account',
+          entityName: `إقامة الحساب ${acc.account_username} على منصة ${appName} ستنتهي في ${expiryFormatted}، قد يتوقف الحساب.`,
+          dueDate: iqamaDate,
+          daysLeft: days,
+          severity: days < 0 ? 'urgent' : days <= 7 ? 'urgent' : days <= 14 ? 'warning' : 'info',
+          resolved: false,
+        });
+      });
 
-  const handleResolveConfirm = useCallback(
-    async () => {
-      if (!resolveDialog) return;
-      setResolvingId(resolveDialog.id);
-      try {
-        await alertsService.resolveAlert(resolveDialog.id, resolveNote || null);
-        toast.success('تم حسم التنبيه', { description: resolveDialog.entityName });
-        await queryClient.invalidateQueries({ queryKey: ['alerts'] });
-      } catch {
-        toast.error('فشل حسم التنبيه');
-      } finally {
-        setResolvingId(null);
-        setResolveDialog(null);
-        setResolveNote('');
-      }
-    },
-    [queryClient, resolveDialog, resolveNote],
-  );
+      generatedAlerts.sort((a, b) => a.daysLeft - b.daysLeft);
+      setLocalAlerts(generatedAlerts);
+      setLoading(false);
+    };
 
-  const handleDefer = useCallback(() => {
+    void fetchAlerts();
+    const interval = setInterval(() => void fetchAlerts(), 60_000);
+    return () => clearInterval(interval);
+  }, [iqamaAlertDays]);
+
+  const filtered = localAlerts.filter(a => {
+    const matchType = typeFilter === 'all' || a.type === typeFilter;
+    const matchSeverity = severityFilter === 'all' || a.severity === severityFilter;
+    const matchSearch = a.entityName.includes(search);
+    return matchType && matchSeverity && matchSearch && !a.resolved;
+  });
+
+  const resolved = localAlerts.filter(a => a.resolved);
+
+  const handleResolve = () => {
+    if (!resolveDialog) return;
+    setLocalAlerts(prev => prev.map(a => a.id === resolveDialog.id ? { ...a, resolved: true } : a));
+    toast({ title: 'تم الحسم', description: `تم حسم تنبيه: ${resolveDialog.entityName}` });
+    setResolveDialog(null);
+    setResolveNote('');
+  };
+
+  const handleDefer = () => {
     if (!deferDialog) return;
     const days = parseInt(deferDays) || 7;
-    // Defer is local-only — just hides the alert temporarily
-    toast.success(`تم تأجيل التنبيه ${days} يوم`, { description: deferDialog.entityName });
+    const newDate = new Date(deferDialog.dueDate);
+    newDate.setDate(newDate.getDate() + days);
+    setLocalAlerts(prev => prev.map(a =>
+      a.id === deferDialog.id
+        ? { ...a, daysLeft: a.daysLeft + days, dueDate: newDate.toISOString().split('T')[0] }
+        : a
+    ));
+    toast({ title: 'تم التأجيل', description: `تم تأجيل التنبيه ${days} يوم` });
     setDeferDialog(null);
     setDeferDays('7');
-  }, [deferDialog, deferDays]);
+  };
 
-  const handleExport = useCallback(async () => {
-    const { loadXlsx } = await import('@modules/orders/utils/xlsx');
+  const handlePrint = () => {
+    const severityLabels2: Record<string, string> = { urgent: 'عاجل', warning: 'تحذير', info: 'معلومة' };
+    const rows = filtered.map(a => `<tr><td>${escapeHtml(alertTypeLabels[a.type] || a.type)}</td><td>${escapeHtml(a.entityName)}</td><td>${escapeHtml(a.dueDate || '—')}</td><td style="text-align:center">${escapeHtml(String(a.daysLeft ?? '—'))}</td><td style="text-align:center;font-weight:700;color:${a.severity === 'urgent' ? '#dc2626' : a.severity === 'warning' ? '#d97706' : '#2563eb'}">${escapeHtml(severityLabels2[a.severity] || a.severity)}</td></tr>`).join('');
+    const printWindow = globalThis.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"/><title>تقرير التنبيهات</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;direction:rtl;color:#111;background:#fff}h2{text-align:center;margin-bottom:8px;font-size:15px}p.sub{text-align:center;color:#666;font-size:11px;margin-bottom:12px}table{width:100%;border-collapse:collapse}th{background:#1e3a5f;color:#fff;padding:6px 8px;text-align:right;font-size:10px}td{padding:5px 8px;border-bottom:1px solid #e0e0e0;text-align:right}tr:nth-child(even) td{background:#f9f9f9}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><h2>تقرير التنبيهات التلقائية</h2><p class="sub">المجموع: ${filtered.length} تنبيه — ${new Date().toLocaleDateString('ar-SA')}</p><table><thead><tr><th>النوع</th><th>الجهة</th><th>تاريخ الاستحقاق</th><th>المتبقي (يوم)</th><th>الأولوية</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}<\/script></body></html>`);
+    printWindow.document.close();
+  };
+
+  const handleExport = async () => {
     const XLSX = await loadXlsx();
-    const rows = filteredAlerts.map((a: Alert) => ({
-      'الأولوية': SEVERITY_LABELS[a.severity] || a.severity,
-      'النوع': getConfig(a.type).label,
-      'الجهة': a.entityName,
-      'تاريخ الاستحقاق': a.dueDate,
-      'المتبقي (يوم)': a.daysLeft,
-    }));
+    const severityOrder: Record<string, number> = { urgent: 0, warning: 1, info: 2 };
+    const rows = [...localAlerts]
+      .filter(a => !a.resolved)
+      .sort((a, b) => (severityOrder[a.severity] ?? 3) - (severityOrder[b.severity] ?? 3))
+      .map(a => ({
+        'الأولوية': severityLabels[a.severity] || a.severity,
+        'النوع': alertTypeLabels[a.type] || a.type,
+        'الجهة': a.entityName,
+        'تاريخ الاستحقاق': a.dueDate,
+        'المتبقي (يوم)': a.daysLeft,
+        'الحالة': a.resolved ? 'محسوم' : 'نشط',
+      }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'التنبيهات');
-    XLSX.writeFile(wb, `التنبيهات_${todayISO()}.xlsx`);
-  }, [filteredAlerts]);
-
-  const handlePrint = useCallback(() => {
-    const rows = filteredAlerts.map((a: Alert) =>
-      `<tr><td>${getConfig(a.type).label}</td><td>${a.entityName}</td><td>${a.dueDate}</td><td>${a.daysLeft}</td><td>${SEVERITY_LABELS[a.severity]}</td></tr>`
-    ).join('');
-    const win = globalThis.open('', '_blank');
-    if (!win) return;
-    win.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"/><title>تقرير التنبيهات</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;direction:rtl}h2{text-align:center;margin:8px 0}table{width:100%;border-collapse:collapse}th{background:#1e3a5f;color:#fff;padding:6px;text-align:right}td{padding:5px;border-bottom:1px solid #e0e0e0;text-align:right}tr:nth-child(even) td{background:#f9f9f9}@media print{body{print-color-adjust:exact}}</style></head><body><h2>تقرير التنبيهات — ${filteredAlerts.length} تنبيه</h2><table><thead><tr><th>النوع</th><th>الجهة</th><th>الاستحقاق</th><th>المتبقي</th><th>الأولوية</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}<\/script></body></html>`);
-    win.document.close();
-  }, [filteredAlerts]);
-
-  const clearFilters = () => {
-    setFilterSeverity('all');
-    setFilterType('all');
-    setSearch('');
+    XLSX.writeFile(wb, `التنبيهات_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
   };
-  const hasFilters = filterSeverity !== 'all' || filterType !== 'all' || search !== '';
 
-  /* ─── Loading / Error states ─── */
-  if (isLoading) {
-    return (
-      <div className="space-y-6" dir="rtl">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Bell size={24} /> التنبيهات
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">إدارة التنبيهات والإشعارات</p>
-        </div>
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="animate-spin size-8 text-muted-foreground" />
-        </div>
-      </div>
-    );
-  }
+  const handleDownloadTemplate = async () => {
+    const XLSX = await loadXlsx();
+    const headers = [['النوع', 'الجهة', 'تاريخ الاستحقاق', 'المتبقي (يوم)', 'الأولوية']];
+    const ws = XLSX.utils.aoa_to_sheet(headers);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'قالب');
+    XLSX.writeFile(wb, 'template_alerts.xlsx');
+  };
 
-  if (error) {
-    return (
-      <div className="space-y-6" dir="rtl">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Bell size={24} /> التنبيهات
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">إدارة التنبيهات والإشعارات</p>
-        </div>
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <AlertTriangle size={48} className="text-destructive mb-4" />
-            <h3 className="text-lg font-medium">تعذر تحميل التنبيهات</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              {error instanceof Error ? error.message : 'حدث خطأ أثناء التحميل'}
-            </p>
-            <Button variant="outline" className="mt-4" onClick={() => refetch()}>
-              إعادة المحاولة
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const typeOptions = ['all', 'residency', 'insurance', 'authorization', 'probation', 'platform_account'];
+  const urgentCount = filtered.filter(a => a.severity === 'urgent').length;
+  const warningCount = filtered.filter(a => a.severity === 'warning').length;
+  const infoCount = filtered.filter(a => a.severity === 'info').length;
 
-  /* ─── Main render ─── */
   return (
-    <div className="space-y-5" dir="rtl">
-      {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <nav className="page-breadcrumb">
-            <span>الرئيسية</span>
-            <span className="page-breadcrumb-sep">/</span>
-            <span className="text-foreground font-medium">التنبيهات</span>
-          </nav>
-          <h1 className="page-title flex items-center gap-2">
-            <Bell size={20} /> التنبيهات التلقائية
-            {unresolvedAlerts.length > 0 && (
-              <span className="w-6 h-6 rounded-full bg-destructive text-white text-xs font-bold flex items-center justify-center">
-                {unresolvedAlerts.length}
-              </span>
-            )}
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {unresolvedAlerts.length === 0
-              ? 'لا توجد تنبيهات عاجلة — كل شيء على ما يرام ✅'
-              : `${unresolvedAlerts.length} تنبيه يحتاج انتباهك — ${urgentCount} عاجل`}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+    <div className="space-y-4">
+      <div className="page-header">
+        <nav className="page-breadcrumb">
+          <span>الرئيسية</span>
+          <span className="page-breadcrumb-sep">/</span>
+          <span>التنبيهات</span>
+        </nav>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="page-title flex items-center gap-2"><Bell size={20} /> التنبيهات التلقائية</h1>
+            <p className="page-subtitle">
+              {loading ? 'جارٍ التحميل...' : `${filtered.length} تنبيه نشط — ${urgentCount} عاجل`}
+            </p>
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5 h-9"><Download size={14} /> البيانات</Button>
+              <Button variant="outline" size="sm" className="gap-1.5 h-9"><Download size={14} /> البيانات ▾</Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => void handleExport()}>📊 تصدير Excel</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => void handleExport()}>📊 تصدير Excel (مرتب حسب الأولوية)</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handlePrint}><Printer size={12} className="me-1.5" /> طباعة</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => void handleDownloadTemplate()}>📋 تحميل القالب</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handlePrint}>🖨️ طباعة الجدول</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            تحديث
-          </Button>
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input placeholder="بحث بالاسم..." className="pr-9 h-9" value={search} onChange={e => setSearch(e.target.value)} />
-      </div>
-
-      {/* ── Severity summary cards ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <button
-          onClick={() => setFilterSeverity(filterSeverity === 'urgent' ? 'all' : 'urgent')}
-          className={`rounded-xl border p-4 text-center transition-all ${
-            filterSeverity === 'urgent'
-              ? 'border-destructive bg-destructive/5 ring-1 ring-destructive/30'
-              : 'border-border hover:bg-muted/50'
-          }`}
-        >
-          <p className="text-2xl font-bold text-destructive">{urgentCount}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">🔴 عاجل</p>
-        </button>
-        <button
-          onClick={() => setFilterSeverity(filterSeverity === 'warning' ? 'all' : 'warning')}
-          className={`rounded-xl border p-4 text-center transition-all ${
-            filterSeverity === 'warning'
-              ? 'border-warning bg-warning/5 ring-1 ring-warning/30'
-              : 'border-border hover:bg-muted/50'
-          }`}
-        >
-          <p className="text-2xl font-bold text-warning">{warningCount}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">🟡 تحذير</p>
-        </button>
-        <button
-          onClick={() => setFilterSeverity(filterSeverity === 'info' ? 'all' : 'info')}
-          className={`rounded-xl border p-4 text-center transition-all ${
-            filterSeverity === 'info'
-              ? 'border-info bg-info/5 ring-1 ring-info/30'
-              : 'border-border hover:bg-muted/50'
-          }`}
-        >
-          <p className="text-2xl font-bold text-info">{infoCount}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">🔵 معلومات</p>
-        </button>
-        <div className="rounded-xl border border-border p-4 text-center">
-          <p className="text-2xl font-bold text-success">{resolvedAlerts.length}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">✅ محسوم</p>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="stat-card border-r-4 border-r-destructive cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSeverityFilter(severityFilter === 'urgent' ? 'all' : 'urgent')}>
+          <p className="text-sm text-muted-foreground">عاجل</p>
+          <p className="text-3xl font-bold text-destructive mt-1">{urgentCount}</p>
+          <p className="text-xs text-muted-foreground mt-1">يتطلب تدخل فوري</p>
+        </div>
+        <div className="stat-card border-r-4 border-r-warning cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSeverityFilter(severityFilter === 'warning' ? 'all' : 'warning')}>
+          <p className="text-sm text-muted-foreground">تحذير</p>
+          <p className="text-3xl font-bold text-warning mt-1">{warningCount}</p>
+          <p className="text-xs text-muted-foreground mt-1">خلال 30-60 يوم</p>
+        </div>
+        <div className="stat-card border-r-4 border-r-info cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSeverityFilter(severityFilter === 'info' ? 'all' : 'info')}>
+          <p className="text-sm text-muted-foreground">معلومات</p>
+          <p className="text-3xl font-bold text-info mt-1">{infoCount}</p>
+          <p className="text-xs text-muted-foreground mt-1">للاطلاع</p>
+        </div>
+        <div className="stat-card border-r-4 border-r-success">
+          <p className="text-sm text-muted-foreground">تم حسمه</p>
+          <p className="text-3xl font-bold text-success mt-1">{resolved.length}</p>
+          <p className="text-xs text-muted-foreground mt-1">تنبيهات محسومة</p>
         </div>
       </div>
 
-      {/* ── Type filter chips ── */}
-      {activeTypes.length > 1 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <Filter size={14} className="text-muted-foreground flex-shrink-0" />
-          <button
-            onClick={() => setFilterType('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              filterType === 'all'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground hover:bg-accent'
-            }`}
-          >
-            الكل ({unresolvedAlerts.length})
-          </button>
-          {activeTypes.map(({ type, count, config }) => {
-            const TypeIcon = config.icon;
-            return (
-              <button
-                key={type}
-                onClick={() => setFilterType(filterType === type ? 'all' : type)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
-                  filterType === type
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-accent'
-                }`}
-              >
-                <TypeIcon size={12} />
-                {config.label} ({count})
+      <div className="bg-card rounded-xl border border-border/50 p-3 space-y-2">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="relative flex-1 max-w-sm">
+            <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input placeholder="بحث بالاسم..." className="pr-9" value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {[{ v: 'all', l: 'الكل' }, { v: 'urgent', l: '🔴 عاجل' }, { v: 'warning', l: '🟠 تحذير' }, { v: 'info', l: '🔵 معلومات' }].map(s => (
+              <button key={s.v} onClick={() => setSeverityFilter(s.v)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${severityFilter === s.v ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}>
+                {s.l}
               </button>
-            );
-          })}
-          {hasFilters && (
-            <button
-              onClick={clearFilters}
-              className="text-xs text-muted-foreground hover:text-destructive underline-offset-2 hover:underline ms-1"
-            >
-              مسح الفلاتر
-            </button>
-          )}
+            ))}
+          </div>
         </div>
-      )}
-
-      {/* ── Grouped alerts ── */}
-      {filteredAlerts.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-success/10 flex items-center justify-center mb-4">
-              <Shield size={24} className="text-success" />
-            </div>
-            <h3 className="text-lg font-medium">
-              {hasFilters ? 'لا توجد تنبيهات بهذا الفلتر' : 'لا توجد تنبيهات عاجلة'}
-            </h3>
-            <p className="text-sm text-muted-foreground mt-1">كل شيء على ما يرام ✅</p>
-            {hasFilters && (
-              <Button variant="outline" size="sm" className="mt-3" onClick={clearFilters}>
-                مسح الفلاتر
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {groupedAlerts.map(({ category, categoryLabel, alerts: groupAlerts }) => (
-            <div key={category}>
-              {/* Category header */}
-              <div className="flex items-center gap-2 mb-2">
-                <h2 className="text-sm font-bold text-foreground">{categoryLabel}</h2>
-                <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full font-medium">
-                  {groupAlerts.length}
-                </span>
-              </div>
-
-              {/* Alert rows — flat, no expand needed */}
-              <div className="bg-card border border-border/50 rounded-xl overflow-hidden divide-y divide-border/40">
-                {groupAlerts.map((alert: Alert) => {
-                  const cfg = getConfig(alert.type);
-                  const Icon = cfg.icon;
-                  const styles = SEVERITY_STYLES[alert.severity] || SEVERITY_STYLES.info;
-
-                  return (
-                    <div
-                      key={alert.id}
-                      className={`flex items-center gap-3 px-4 py-3 transition-colors ${styles.rowBg}`}
-                    >
-                      {/* Icon */}
-                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${styles.iconBg}`}>
-                        <Icon size={16} />
-                      </div>
-
-                      {/* Content — always visible */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          {/* Type badge */}
-                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-muted text-muted-foreground flex-shrink-0">
-                            {cfg.label}
-                          </span>
-                          {/* Severity */}
-                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${styles.badge}`}>
-                            {SEVERITY_LABELS[alert.severity] || alert.severity}
-                          </span>
-                        </div>
-                        <p className="text-sm font-medium text-foreground leading-snug">{alert.entityName}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          تاريخ الاستحقاق: {alert.dueDate}
-                        </p>
-                      </div>
-
-                      {/* Days left + resolve */}
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <div className="text-end">
-                          <span className={`w-1.5 h-1.5 rounded-full inline-block me-1.5 ${styles.dot}`} />
-                          <span className={`text-xs font-bold ${
-                            alert.daysLeft < 0
-                              ? 'text-destructive'
-                              : alert.daysLeft <= 7
-                                ? 'text-destructive'
-                                : alert.daysLeft <= 30
-                                  ? 'text-warning'
-                                  : 'text-muted-foreground'
-                          }`}>
-                            {formatDaysLeftBadge(alert.daysLeft)}
-                          </span>
-                        </div>
-                        {perms.can_edit && (
-                          <div className="flex items-center gap-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
-                              onClick={() => { setDeferDialog(alert); setDeferDays('7'); }}
-                              title="تأجيل"
-                            >
-                              <Clock size={12} /> تأجيل
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 px-2 text-xs text-muted-foreground hover:text-success gap-1"
-                              onClick={() => { setResolveDialog(alert); setResolveNote(''); }}
-                              disabled={resolvingId === alert.id}
-                              title="حسم التنبيه"
-                            >
-                              {resolvingId === alert.id ? (
-                                <Loader2 size={12} className="animate-spin" />
-                              ) : (
-                                <><CheckCircle2 size={12} /> حسم</>
-                              )}
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+        <div className="flex gap-2 flex-wrap">
+          {typeOptions.map(t => (
+            <button key={t} onClick={() => setTypeFilter(t)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${typeFilter === t ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}>
+              {t === 'all' ? 'كل الأنواع' : `${typeIcons[t] || '📌'} ${alertTypeLabels[t] || t}`}
+            </button>
           ))}
         </div>
-      )}
+      </div>
 
-      {/* ── Resolved alerts (collapsed by default) ── */}
-      {resolvedAlerts.length > 0 && (
-        <details className="group">
-          <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors py-2 flex items-center gap-2">
-            <CheckCircle2 size={14} className="text-success" />
-            التنبيهات المحلولة ({resolvedAlerts.length})
-          </summary>
-          <div className="bg-card border border-border/50 rounded-xl overflow-hidden divide-y divide-border/40 mt-2 opacity-60">
-            {resolvedAlerts.slice(0, 20).map((alert: Alert) => {
-              const cfg = getConfig(alert.type);
-              return (
-                <div key={alert.id} className="flex items-center gap-3 px-4 py-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-success/10 text-success flex items-center justify-center flex-shrink-0">
-                    <CheckCircle2 size={14} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                        {cfg.label}
-                      </span>
-                    </div>
-                    <p className="text-sm font-medium text-foreground truncate line-through opacity-70">
-                      {alert.entityName}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{alert.dueDate}</p>
-                  </div>
-                </div>
-              );
-            })}
+      <div className="space-y-3">
+        {loading ? (
+          <div className="bg-card rounded-xl border border-border/50 p-12 text-center">
+            <p className="text-muted-foreground">جارٍ تحميل التنبيهات...</p>
           </div>
-        </details>
+        ) : filtered.length === 0 ? (
+          <div className="bg-card rounded-xl border border-border/50 p-12 text-center">
+            <CheckCircle size={40} className="mx-auto text-success mb-3" />
+            <p className="text-muted-foreground">لا توجد تنبيهات مطابقة</p>
+            <p className="text-xs text-muted-foreground mt-1">جميع المستندات سارية المفعول ✅</p>
+          </div>
+        ) : [...filtered].sort((a, b) => {
+          const order: Record<string, number> = { urgent: 0, warning: 1, info: 2 };
+          return (order[a.severity] ?? 3) - (order[b.severity] ?? 3);
+        }).map(a => (
+          <div key={a.id} className={`bg-card rounded-xl border shadow-card p-4 flex items-center gap-4 hover:shadow-md transition-shadow ${a.severity === 'urgent' ? 'border-destructive/30' : a.severity === 'warning' ? 'border-warning/30' : 'border-border/50'}`}>
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${a.severity === 'urgent' ? 'bg-destructive/10' : a.severity === 'warning' ? 'bg-warning/10' : 'bg-info/10'}`}>
+              {typeIcons[a.type] || '📌'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-sm font-semibold text-foreground">{alertTypeLabels[a.type] || a.type}</p>
+                <span className="text-muted-foreground text-xs">—</span>
+                <p className="text-sm text-foreground">{a.entityName}</p>
+                <span className={severityStyles[a.severity]}>{severityLabels[a.severity]}</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                تاريخ الاستحقاق: <span className="font-medium">{a.dueDate}</span>
+                <span className={`mr-3 font-bold ${a.daysLeft <= 7 ? 'text-destructive' : a.daysLeft <= 30 ? 'text-warning' : 'text-muted-foreground'}`}>
+                  {a.daysLeft < 0 ? `منتهي منذ ${Math.abs(a.daysLeft)} يوم` : `متبقي ${a.daysLeft} يوم`}
+                </span>
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Button size="sm" variant="outline" className="gap-1 text-xs h-8" onClick={() => setDeferDialog(a)}>
+                <Clock size={12} /> تأجيل
+              </Button>
+              <Button size="sm" className="gap-1 text-xs h-8 bg-success hover:bg-success/90" onClick={() => setResolveDialog(a)}>
+                <CheckCircle size={12} /> حسم
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {resolved.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground mb-3">✅ التنبيهات المحسومة ({resolved.length})</h3>
+          <div className="space-y-2">
+            {resolved.map(a => (
+              <div key={a.id} className="bg-muted/30 rounded-xl border border-border/30 p-3 flex items-center gap-3 opacity-60">
+                <span className="text-lg">{typeIcons[a.type] || '📌'}</span>
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground">{alertTypeLabels[a.type] || a.type} — {a.entityName}</p>
+                </div>
+                <CheckCircle size={16} className="text-success" />
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
-      {/* ── Resolve Dialog ── */}
       <Dialog open={!!resolveDialog} onOpenChange={() => setResolveDialog(null)}>
         <DialogContent dir="rtl" className="max-w-md">
           <DialogHeader><DialogTitle>حسم التنبيه</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-3">
-              <p className="text-sm font-medium">{resolveDialog && getConfig(resolveDialog.type).label}</p>
+              <p className="text-sm font-medium">{resolveDialog && (alertTypeLabels[resolveDialog.type] || resolveDialog.type)}</p>
               <p className="text-sm text-muted-foreground mt-1">{resolveDialog?.entityName}</p>
             </div>
             <div className="space-y-2">
@@ -660,21 +394,19 @@ export default function AlertsPage() {
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setResolveDialog(null)}>إلغاء</Button>
-            <Button className="bg-success hover:bg-success/90 gap-1.5" onClick={() => void handleResolveConfirm()} disabled={resolvingId !== null}>
-              {resolvingId ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-              تأكيد الحسم
+            <Button className="bg-success hover:bg-success/90" onClick={handleResolve}>
+              <CheckCircle size={14} className="ml-1" /> تأكيد الحسم
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ── Defer Dialog ── */}
       <Dialog open={!!deferDialog} onOpenChange={() => setDeferDialog(null)}>
         <DialogContent dir="rtl" className="max-w-md">
           <DialogHeader><DialogTitle>تأجيل التنبيه</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-3">
-              <p className="text-sm font-medium">{deferDialog && getConfig(deferDialog.type).label}</p>
+              <p className="text-sm font-medium">{deferDialog && (alertTypeLabels[deferDialog.type] || deferDialog.type)}</p>
               <p className="text-sm text-muted-foreground mt-1">{deferDialog?.entityName}</p>
             </div>
             <div className="space-y-2">
@@ -692,10 +424,12 @@ export default function AlertsPage() {
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setDeferDialog(null)}>إلغاء</Button>
-            <Button onClick={handleDefer} className="gap-1.5"><Clock size={14} /> تأجيل {deferDays} يوم</Button>
+            <Button onClick={handleDefer}><Clock size={14} className="ml-1" /> تأجيل {deferDays} يوم</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
-}
+};
+
+export default Alerts;
