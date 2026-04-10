@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
@@ -60,6 +60,11 @@ export function ShiftsTab({
 }: Props) {
   const [localShifts, setLocalShifts] = useState<ShiftRow[]>(shifts);
   const [saving, setSaving] = useState(false);
+
+  // Sync local state when shifts prop changes (e.g. month navigation, refetch)
+  useEffect(() => {
+    setLocalShifts(shifts);
+  }, [shifts]);
   const [employeeFilter, setEmployeeFilter] = useState<string>('all');
   const [appFilter, setAppFilter] = useState<string>('all');
 

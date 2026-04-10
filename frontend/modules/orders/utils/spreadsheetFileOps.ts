@@ -8,6 +8,11 @@ import { logError, logger } from '@shared/lib/logger';
 import { orderService, type ReplaceMonthDataMeta } from '@services/orderService';
 import type { App, DailyData, Employee } from '@modules/orders/types';
 import { ordersImportHeadersMatch } from '@modules/orders/utils/importHelpers';
+
+/** Maximum orders per cell — values above this are rejected during import/save. */
+const MAX_ORDERS_PER_CELL = 10_000;
+/** Chunk size for batch-saving month data to the server. */
+const SAVE_CHUNK_SIZE = 200;
 import { dateStr, monthLabel, monthYear } from '@modules/orders/utils/dateMonth';
 import {
   mergeImportedOrdersFromMatrixWithMapping,
@@ -277,7 +282,7 @@ export function mergeImportedOrdersFromMatrixWithMappingLegacy(
 
       if (val <= 0) continue;
 
-      if (val > 10000) {
+      if (val > MAX_ORDERS_PER_CELL) {
         errors.push(`صف ${rowIdx + 2}, يوم ${d}: عدد الطلبات ${val} كبير جداً`);
         continue;
       }
@@ -390,7 +395,7 @@ export async function saveSpreadsheetMonth(params: {
       return;
     }
 
-    if (count <= 0 || count > 10000) {
+    if (count <= 0 || count > MAX_ORDERS_PER_CELL) {
       invalidRows.push(`${rowIdentity} - ${dateStr(year, month, day)}: عدد طلبات غير صحيح (${count})`);
       return;
     }
@@ -419,7 +424,7 @@ export async function saveSpreadsheetMonth(params: {
   }
 
   try {
-    const { saved, failed } = await orderService.replaceMonthData(monthKey, rows, 200, saveMeta);
+    const { saved, failed } = await orderService.replaceMonthData(monthKey, rows, SAVE_CHUNK_SIZE, saveMeta);
 
     if (failed.length > 0) {
       logger.error('فشل حفظ بعض السجلات', { meta: { failed: failed.slice(0, 10) } });

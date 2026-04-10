@@ -24,7 +24,8 @@ export function collectEmployeeIdsWithOrdersOnApp(data: DailyData, appId: string
 export const buildDailyDataMap = (rows: OrderRawRow[]): DailyData => {
   const mapped: DailyData = {};
   rows.forEach((row) => {
-    const day = new Date(`${row.date}T00:00:00`).getDate();
+    // Parse day directly from ISO date string to avoid timezone issues with new Date()
+    const day = parseInt(row.date.slice(8, 10), 10);
     const key = `${row.employee_id}::${row.app_id}::${day}`;
     mapped[key] = (mapped[key] ?? 0) + (row.orders_count ?? 0);
   });
@@ -47,19 +48,23 @@ export const filterDailyDataByAppIds = (data: DailyData, appIds: ReadonlySet<str
 export const calculatePlatformTotals = (
   apps: App[],
   filteredEmployees: Employee[],
-  dayArr: number[],
+  _dayArr: number[],
   data: DailyData,
 ): Record<string, number> => {
+  // O(data keys) scan instead of O(employees × days × apps) triple loop
+  const appIds = new Set(apps.map((app) => app.id));
+  const empIds = new Set(filteredEmployees.map((emp) => emp.id));
   const totals: Record<string, number> = {};
-  apps.forEach((app) => {
-    totals[app.id] = filteredEmployees.reduce((sum, emp) => {
-      const employeeAppTotal = dayArr.reduce(
-        (daySum, d) => daySum + (data[`${emp.id}::${app.id}::${d}`] ?? 0),
-        0,
-      );
-      return sum + employeeAppTotal;
-    }, 0);
-  });
+  for (const id of appIds) totals[id] = 0;
+
+  for (const [key, val] of Object.entries(data)) {
+    const parts = key.split('::');
+    if (parts.length !== 3) continue;
+    const [empId, appId] = parts;
+    if (appIds.has(appId) && empIds.has(empId)) {
+      totals[appId] = (totals[appId] ?? 0) + val;
+    }
+  }
   return totals;
 };
 

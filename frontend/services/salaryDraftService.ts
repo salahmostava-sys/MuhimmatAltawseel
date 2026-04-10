@@ -40,7 +40,7 @@ export const salaryDraftService = {
     const userId = await getAuthenticatedUserId('salaryDraftService.getDraftsForMonth', false);
     if (!userId) return {};
 
-    const { data, error } = await (supabase.from('salary_drafts') as any)
+    const { data, error } = await (supabase.from('salary_drafts') as ReturnType<typeof supabase.from>)
       .select('employee_id, draft_data')
       .eq('month_year', monthYear)
       .eq('user_id', userId);
@@ -141,7 +141,7 @@ export const salaryDraftService = {
 
     if (staleEmployeeIds.length === 0) return;
 
-    const { error: deleteError } = await (supabase.from('salary_drafts') as any)
+    const { error: deleteError } = await (supabase.from('salary_drafts') as ReturnType<typeof supabase.from>)
       .delete()
       .eq('month_year', monthYear)
       .eq('user_id', userId)

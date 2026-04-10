@@ -158,22 +158,51 @@ export function useMonthSummaryTab() {
   const days = getDaysInMonth(year, month);
   const dayArr = Array.from({ length: days }, (_, i) => i + 1);
 
+  // Pre-compute per-employee totals in a single pass — O(keys)
+  const empTotalsMap = useMemo(() => {
+    const totals: Record<string, number> = {};
+    const appIds = new Set(apps.map((a) => a.id));
+    for (const [key, val] of Object.entries(data)) {
+      const parts = key.split('::');
+      if (parts.length !== 3) continue;
+      const [empId, appId] = parts;
+      if (appIds.has(appId)) {
+        totals[empId] = (totals[empId] ?? 0) + val;
+      }
+    }
+    return totals;
+  }, [apps, data]);
+
   const empTotal = useCallback(
-    (empId: string) =>
-      dayArr.reduce(
-        (s, d) => s + apps.reduce((ss, a) => ss + (data[`${empId}::${a.id}::${d}`] ?? 0), 0),
-        0,
-      ),
-    [dayArr, apps, data],
+    (empId: string) => empTotalsMap[empId] ?? 0,
+    [empTotalsMap],
   );
 
-  const appGrandTotal = (appId: string) =>
-    employees.reduce(
-      (s, e) => s + dayArr.reduce((ss, d) => ss + (data[`${e.id}::${appId}::${d}`] ?? 0), 0),
-      0,
-    );
+  // Pre-compute all app totals in a single pass over data keys — O(keys) instead of O(apps × employees × days)
+  const appGrandTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    const empIds = new Set(employees.map((e) => e.id));
+    const appIds = new Set(apps.map((a) => a.id));
+    for (const [key, val] of Object.entries(data)) {
+      const parts = key.split('::');
+      if (parts.length !== 3) continue;
+      const [empId, appId] = parts;
+      if (empIds.has(empId) && appIds.has(appId)) {
+        totals[appId] = (totals[appId] ?? 0) + val;
+      }
+    }
+    return totals;
+  }, [employees, apps, data]);
 
-  const grandTotal = employees.reduce((s, e) => s + empTotal(e.id), 0);
+  const appGrandTotal = useCallback(
+    (appId: string) => appGrandTotals[appId] ?? 0,
+    [appGrandTotals],
+  );
+
+  const grandTotal = useMemo(
+    () => employees.reduce((s, e) => s + empTotal(e.id), 0),
+    [employees, empTotal],
+  );
 
   const sortedEmployees = useMemo(() => {
     const sorted = [...employees].sort((a, b) => {

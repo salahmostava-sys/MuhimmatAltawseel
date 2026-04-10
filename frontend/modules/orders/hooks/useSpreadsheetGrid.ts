@@ -99,14 +99,23 @@ export function useSpreadsheetGrid() {
     return collectEmployeeIdsWithOrdersOnApp(data, platformFilter);
   }, [data, platformFilter]);
 
+  // Pre-compute set of employee IDs that have any order data — O(keys) instead of O(employees × keys)
+  const employeeIdsWithAnyOrders = useMemo(() => {
+    const ids = new Set<string>();
+    for (const key of Object.keys(data)) {
+      const sep = key.indexOf('::');
+      if (sep > 0) ids.add(key.slice(0, sep));
+    }
+    return ids;
+  }, [data]);
+
   const allEmployeesWithAssignmentsOrOrders = useMemo(
     () =>
       sq.employees.filter((employee) => {
-        const hasAssignment = Object.values(sq.appEmployeeIds).some((appSet) => appSet?.has(employee.id));
-        const hasOrders = Object.keys(data).some((key) => key.startsWith(`${employee.id}::`));
-        return hasAssignment || hasOrders;
+        if (employeeIdsWithAnyOrders.has(employee.id)) return true;
+        return Object.values(sq.appEmployeeIds).some((appSet) => appSet?.has(employee.id));
       }),
-    [sq.employees, sq.appEmployeeIds, data],
+    [sq.employees, sq.appEmployeeIds, employeeIdsWithAnyOrders],
   );
 
   const baseEmployees = useMemo(() => {
@@ -162,12 +171,23 @@ export function useSpreadsheetGrid() {
     () => filteredEmployees.reduce((s, e) => s + empMonthTotal(e.id), 0),
     [filteredEmployees, empMonthTotal],
   );
-  const allPlatformsGrandTotal = useMemo(
-    () => searchMatchedEmployees.reduce((sum, employee) => sum + dayArr.reduce((daySum, d) => {
-      return daySum + sq.apps.reduce((appSum, app) => appSum + (data[`${employee.id}::${app.id}::${d}`] ?? 0), 0);
-    }, 0), 0),
-    [searchMatchedEmployees, dayArr, sq.apps, data],
-  );
+  // O(data keys) instead of O(employees × days × apps)
+  const allPlatformsGrandTotal = useMemo(() => {
+    if (!search) {
+      // No search filter — sum all values directly from data map
+      let total = 0;
+      for (const val of Object.values(data)) total += val;
+      return total;
+    }
+    // With search — only sum matched employees
+    const matchedIds = new Set(searchMatchedEmployees.map((e) => e.id));
+    let total = 0;
+    for (const [key, val] of Object.entries(data)) {
+      const sep = key.indexOf('::');
+      if (sep > 0 && matchedIds.has(key.slice(0, sep))) total += val;
+    }
+    return total;
+  }, [data, search, searchMatchedEmployees]);
   const monthDailyAvg = days > 0 ? Math.round(monthGrandTotal / days) : 0;
   const platformOrderTotals = useMemo(
     () => calculatePlatformTotals(sq.apps, searchMatchedEmployees, dayArr, data),

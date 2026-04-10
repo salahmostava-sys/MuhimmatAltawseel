@@ -35,16 +35,14 @@ export const useAlerts = () => {
           activeEmployeeIdsInMonth
         ),
       };
+      // Supabase responses are { data, error } — buildAlertsFromResponses reads only .data
+      /* eslint-disable @typescript-eslint/no-explicit-any */
       return buildAlertsFromResponses(
-        employeesVisibleRes as any,
-        vehiclesRes as any,
-        platformAccountsRes as any,
-        dbAlertsRes as any,
-        sparePartsRes as any,
-        abscondedRes as any,
-        expiryHorizon,
-        today
+        employeesVisibleRes as any, vehiclesRes as any, platformAccountsRes as any,
+        dbAlertsRes as any, sparePartsRes as any, abscondedRes as any,
+        expiryHorizon, today,
       );
+      /* eslint-enable @typescript-eslint/no-explicit-any */
     },
     retry: defaultQueryRetry,
     // Alerts domain policy: always fresh

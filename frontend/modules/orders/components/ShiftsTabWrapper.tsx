@@ -82,7 +82,13 @@ export function ShiftsTabWrapper() {
     <ShiftsTab
       year={year}
       month={month}
-      shifts={shifts.map(s => ({ ...s, date: (s as unknown as { shift_date: string }).shift_date })) as ShiftRow[]}
+      shifts={shifts.map((s) => {
+        const raw = s as Record<string, unknown>;
+        return {
+          ...s,
+          date: String(raw.shift_date ?? raw.date ?? ''),
+        };
+      }) as ShiftRow[]}
       employees={employees}
       apps={apps}
       loading={isLoading}
