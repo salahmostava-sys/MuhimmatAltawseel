@@ -61,10 +61,10 @@ export const appService = {
   },
 
   delete: async (id: string) => {
-    // Soft delete: mark as archived
+    // Soft delete: deactivate the app (keeps historical data intact)
     const { error } = await supabase
       .from('apps')
-      .update({ is_archived: true, is_active: false })
+      .update({ is_active: false })
       .eq('id', id);
     if (error) handleSupabaseError(error, 'appService.delete');
   },

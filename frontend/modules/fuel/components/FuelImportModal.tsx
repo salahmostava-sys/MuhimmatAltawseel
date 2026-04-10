@@ -4,7 +4,7 @@ import { Button } from '@shared/components/ui/button';
 import { Label } from '@shared/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select';
 import { useToast } from '@shared/hooks/use-toast';
-import * as XLSX from '@e965/xlsx';
+const loadXlsx = () => import('@e965/xlsx');
 import { logError } from '@shared/lib/logger';
 import { getErrorMessage } from '@services/serviceError';
 import { useFuel } from '@modules/fuel/hooks/useFuel';

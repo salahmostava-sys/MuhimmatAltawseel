@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { ChevronDown } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@shared/components/ui/popover";
 import { useLanguage } from "@app/providers/LanguageContext";
 import attendanceService from "@services/attendanceService";
 import { logError } from "@shared/lib/logger";
@@ -35,7 +37,7 @@ const SKELETON_ROW_IDS = ["r1", "r2", "r3", "r4", "r5"];
 const SKELETON_CELL_IDS = ["c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8"];
 
 type Employee = { id: string; name: string; national_id: string | null; salary_type: string; base_salary: number };
-type AttendanceRow = { employee_id: string; status: string };
+type AttendanceRow = { employee_id: string; status: string; note?: string | null; date?: string | null };
 
 interface Props {
   selectedMonth: number;
@@ -83,7 +85,11 @@ const MonthlyRecord = ({ selectedMonth, selectedYear }: Props) => {
     const sickDays = rows.filter((r) => r.status === "sick").length;
     const lateDays = rows.filter((r) => r.status === "late").length;
     const totalHours = (presentDays + lateDays) * 8;
-    return { ...emp, presentDays, absentDays, leaveDays, sickDays, lateDays, totalHours };
+    const notes = rows
+      .filter((r) => r.note && r.note.trim())
+      .map((r) => ({ date: r.date ?? '', note: r.note! }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    return { ...emp, presentDays, absentDays, leaveDays, sickDays, lateDays, totalHours, notes };
   });
 
   const totals = data.reduce(
@@ -128,7 +134,7 @@ const MonthlyRecord = ({ selectedMonth, selectedYear }: Props) => {
   } else if (data.length === 0) {
     tableBodyRows = (
       <tr>
-        <td colSpan={8} className="p-10 text-center text-muted-foreground">
+        <td colSpan={9} className="p-10 text-center text-muted-foreground">
           {t.noData}
         </td>
       </tr>
@@ -151,6 +157,31 @@ const MonthlyRecord = ({ selectedMonth, selectedYear }: Props) => {
         <td className="ta-td-center text-orange-600 dark:text-orange-400">{row.lateDays}</td>
         <td className="ta-td-center text-muted-foreground">
           {row.totalHours} {t.hoursUnit}
+        </td>
+        <td className="ta-td-center">
+          {row.notes.length > 0 ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                  📝 {row.notes.length} ملاحظة
+                  <ChevronDown size={10} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 max-h-60 overflow-y-auto p-3" align="center">
+                <p className="text-xs font-semibold text-foreground mb-2">ملاحظات {row.name}</p>
+                <div className="space-y-2">
+                  {row.notes.map((n, i) => (
+                    <div key={i} className="flex gap-2 text-xs border-b border-border/30 pb-1.5 last:border-0">
+                      <span className="text-muted-foreground font-mono whitespace-nowrap">{n.date.slice(5)}</span>
+                      <span className="text-foreground">{n.note}</span>
+                    </div>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          ) : (
+            <span className="text-muted-foreground/30">—</span>
+          )}
         </td>
       </tr>
     ));
@@ -189,6 +220,7 @@ const MonthlyRecord = ({ selectedMonth, selectedYear }: Props) => {
                   </span>
                 </th>
                 <th className="ta-th-center">ساعات العمل</th>
+                <th className="ta-th-center">الملاحظات</th>
               </tr>
             </thead>
             <tbody>
@@ -209,6 +241,7 @@ const MonthlyRecord = ({ selectedMonth, selectedYear }: Props) => {
                   <td className="ta-td-center text-muted-foreground">
                     {totals.totalHours} {t.hoursUnit}
                   </td>
+                  <td className="ta-td" />
                 </tr>
               </tfoot>
             )}

@@ -125,7 +125,7 @@ export const attendanceService = {
         .order('name'),
       supabase
         .from('attendance')
-        .select('employee_id, status')
+        .select('employee_id, status, note, date')
         .gte('date', startDate)
         .lte('date', endDate),
     ]);

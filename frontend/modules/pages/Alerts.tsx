@@ -11,6 +11,20 @@ import { useToast } from '@shared/hooks/use-toast';
 import { useSystemSettings } from '@app/providers/SystemSettingsContext';
 import { escapeHtml } from '@shared/lib/security';
 import { format, differenceInDays, parseISO, addDays } from 'date-fns';
+import { cityLabel } from '@modules/employees/model/employeeCity';
+
+/** Build employee display name with branch and commercial record. */
+function empAlertName(emp: Record<string, unknown>): string {
+  const name = String(emp.name ?? '');
+  const cities = Array.isArray(emp.cities) && emp.cities.length > 0
+    ? emp.cities.map((c: unknown) => cityLabel(String(c), String(c))).join('، ')
+    : emp.city ? cityLabel(String(emp.city), String(emp.city)) : null;
+  const cr = emp.commercial_record ? String(emp.commercial_record) : null;
+  const parts = [name];
+  if (cities) parts.push(`فرع: ${cities}`);
+  if (cr) parts.push(`سجل: ${cr}`);
+  return parts.join(' — ');
+}
 
 const loadXlsx = () => import('@e965/xlsx');
 
@@ -64,7 +78,7 @@ const Alerts = () => {
       const [employeesRes, vehiclesRes, platformAccountsRes] = await Promise.all([
         supabase
           .from('employees')
-          .select('id, name, residency_expiry, probation_end_date')
+          .select('id, name, residency_expiry, probation_end_date, city, cities, commercial_record')
           .eq('status', 'active')
           .or(`residency_expiry.lte.${threshold},probation_end_date.lte.${threshold}`),
         supabase
@@ -82,26 +96,29 @@ const Alerts = () => {
       const generatedAlerts: Alert[] = [];
 
       employeesRes.data?.forEach((emp) => {
-        const empRec = emp as Record<string, string | null>;
-        if (empRec.residency_expiry && empRec.residency_expiry <= threshold) {
-          const daysLeft = differenceInDays(parseISO(empRec.residency_expiry), today);
+        const empRec = emp as Record<string, unknown>;
+        const empDisplay = empAlertName(empRec);
+        const resExpiry = empRec.residency_expiry as string | null;
+        const probEnd = empRec.probation_end_date as string | null;
+        if (resExpiry && resExpiry <= threshold) {
+          const daysLeft = differenceInDays(parseISO(resExpiry), today);
           generatedAlerts.push({
             id: `res-${empRec.id}`,
             type: 'residency',
-            entityName: empRec.name ?? '',
-            dueDate: empRec.residency_expiry,
+            entityName: empDisplay,
+            dueDate: resExpiry,
             daysLeft,
             severity: daysLeft < 0 ? 'urgent' : daysLeft <= 7 ? 'urgent' : daysLeft <= 14 ? 'warning' : 'info',
             resolved: false,
           });
         }
-        if (empRec.probation_end_date && empRec.probation_end_date <= threshold) {
-          const daysLeft = differenceInDays(parseISO(empRec.probation_end_date), today);
+        if (probEnd && probEnd <= threshold) {
+          const daysLeft = differenceInDays(parseISO(probEnd), today);
           generatedAlerts.push({
             id: `prob-${empRec.id}`,
             type: 'probation',
-            entityName: empRec.name ?? '',
-            dueDate: empRec.probation_end_date,
+            entityName: empDisplay,
+            dueDate: probEnd,
             daysLeft,
             severity: daysLeft < 0 ? 'info' : daysLeft <= 7 ? 'urgent' : 'warning',
             resolved: false,

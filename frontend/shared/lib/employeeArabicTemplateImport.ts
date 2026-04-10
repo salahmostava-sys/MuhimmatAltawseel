@@ -1,4 +1,4 @@
-﻿import * as XLSX from '@e965/xlsx';
+﻿const loadXlsx = () => import('@e965/xlsx');
 import { parseExcelDate } from '@shared/lib/excelDateParse';
 import { employeeService } from '@services/employeeService';
 import { EMPLOYEE_IMPORT_COLUMNS } from '@shared/constants/excelSchemas';
@@ -104,13 +104,13 @@ function mapHeadersToDbKeysStrict(
   headerErrors: string[]
 ): (DbKey | null)[] {
   if (headerRow.length !== EMPLOYEE_IMPORT_COLUMNS.length) {
-    headerErrors.push(`عدد الأعمدة غير صحيح: المتوقع ${EMPLOYEE_IMPORT_COLUMNS.length}، والموجود ${headerRow.length}`);
+    headerErrors.push(`??? ??????? ??? ????: ??????? ${EMPLOYEE_IMPORT_COLUMNS.length}? ???????? ${headerRow.length}`);
     return [];
   }
   return headerRow.map((h, idx) => {
     const expected = EMPLOYEE_IMPORT_COLUMNS[idx].label;
     if (h !== expected) {
-      headerErrors.push(`العمود رقم ${idx + 1} غير صحيح: المتوقع "${expected}" والموجود "${h || 'فارغ'}"`);
+      headerErrors.push(`?????? ??? ${idx + 1} ??? ????: ??????? "${expected}" ???????? "${h || '????'}"`);
       return null;
     }
     return HEADER_TO_DB[h] ?? null;
@@ -148,20 +148,20 @@ export function parseEmployeeArabicWorkbook(buffer: ArrayBuffer): {
   try {
     wb = XLSX.read(buffer, { type: 'array', cellDates: false });
   } catch {
-    return { rows: [], headerErrors: ['تعذر قراءة ملف Excel'] };
+    return { rows: [], headerErrors: ['???? ????? ??? Excel'] };
   }
   const sheetName = wb.SheetNames[0];
-  if (!sheetName) return { rows: [], headerErrors: ['الملف لا يحتوي على أوراق عمل'] };
+  if (!sheetName) return { rows: [], headerErrors: ['????? ?? ????? ??? ????? ???'] };
 
   const ws = wb.Sheets[sheetName];
   const matrix: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-  if (matrix.length < 2) return { rows: [], headerErrors: ['لا توجد صفوف بيانات'] };
+  if (matrix.length < 2) return { rows: [], headerErrors: ['?? ???? ???? ??????'] };
 
   const headerRow = matrix[0].map(normalizeHeaderCell);
   const colIndexToKey = mapHeadersToDbKeysStrict(headerRow, headerErrors);
   if (headerErrors.length > 0 || !colIndexToKey.every(Boolean)) {
-    return { rows: [], headerErrors: headerErrors.length > 0 ? headerErrors : ['هيكل الأعمدة غير مطابق للقالب'] };
+    return { rows: [], headerErrors: headerErrors.length > 0 ? headerErrors : ['???? ??????? ??? ????? ??????'] };
   }
 
   const rows: EmployeeArabicRow[] = [];
@@ -237,11 +237,11 @@ export async function upsertEmployeeArabicRows(
   let processed = 0;
 
   for (const row of rows) {
-    const nameHint = strVal(row.name) ?? strVal(row.national_id) ?? '—';
+    const nameHint = strVal(row.name) ?? strVal(row.national_id) ?? '�';
     try {
       const nm = strVal(row.name);
       if (!nm) {
-        failures.push({ name: nameHint, error: 'الاسم مطلوب' });
+        failures.push({ name: nameHint, error: '????? ?????' });
         continue;
       }
 

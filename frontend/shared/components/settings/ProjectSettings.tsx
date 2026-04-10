@@ -9,7 +9,7 @@ import { toast } from '@shared/components/ui/sonner';
 import { TOAST_ERROR_GENERIC, TOAST_SUCCESS_ACTION, TOAST_SUCCESS_EDIT } from '@shared/lib/toastMessages';
 import { Loader2, Save, Globe, Building2, Upload, X, Download, Database, Bell } from 'lucide-react';
 import { cn } from '@shared/lib/utils';
-import * as XLSX from '@e965/xlsx';
+const loadXlsx = () => import('@e965/xlsx');
 import { format } from 'date-fns';
 import { usePermissions } from '@shared/hooks/usePermissions';
 import { useAuth } from '@app/providers/AuthContext';

@@ -1,5 +1,6 @@
 import { Search, FolderOpen } from 'lucide-react';
-import * as XLSX from '@e965/xlsx';
+import type * as XLSXType from '@e965/xlsx';
+const loadXlsx = (): Promise<typeof XLSXType> => import('@e965/xlsx');
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@shared/components/ui/dropdown-menu';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
@@ -47,7 +48,8 @@ export function FuelFiltersToolbar(props: Readonly<{
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={handleExportMonthly}>📊 تصدير Excel (ملخص شهري)</DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => {
+              onClick={async () => {
+                const XLSX = await loadXlsx();
                 const headers = [['اسم المندوب', 'الكيلومترات', 'تكلفة البنزين (ر.س)', 'ملاحظات']];
                 const ws = XLSX.utils.aoa_to_sheet(headers);
                 const wb = XLSX.utils.book_new();

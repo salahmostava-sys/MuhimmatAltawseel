@@ -1,6 +1,18 @@
 import { getAppColor, type AppColorData } from '@shared/hooks/useAppColors';
 import { ColorBadge } from '@shared/components/ui/ColorBadge';
 
+/** Performance level based on daily average orders. */
+type PerfLevel = { label: string; color: string; bg: string };
+
+function getPerformanceLevel(dailyAvg: number): PerfLevel {
+  if (dailyAvg >= 35) return { label: 'ممتاز', color: 'text-success', bg: 'bg-success/10' };
+  if (dailyAvg >= 25) return { label: 'جيد جداً', color: 'text-primary', bg: 'bg-primary/10' };
+  if (dailyAvg >= 18) return { label: 'جيد', color: 'text-info', bg: 'bg-info/10' };
+  if (dailyAvg >= 10) return { label: 'متوسط', color: 'text-warning', bg: 'bg-warning/10' };
+  if (dailyAvg >= 1) return { label: 'ضعيف', color: 'text-destructive', bg: 'bg-destructive/10' };
+  return { label: '—', color: 'text-muted-foreground', bg: '' };
+}
+
 type Employee = { id: string; name: string };
 type App = { id: string; name: string };
 type DailyData = Record<string, number>;
@@ -75,13 +87,14 @@ export const OrdersSummaryTable = ({
             الإجمالي <SortIcon active={sortField === 'total'} dir={sortDir} />
           </th>
           <th className="text-center p-3 font-semibold text-muted-foreground min-w-[80px]">متوسط يومي</th>
+          <th className="text-center p-3 font-semibold text-muted-foreground min-w-[80px]">المستوى</th>
         </tr>
       </thead>
       <tbody>
         {loading ? (
           Array.from({ length: 5 }).map((_, i) => (
             <tr key={`skeleton-row-${i}`} className="border-b border-border/30">
-              {Array.from({ length: apps.length + 4 }).map((__, j) => (
+              {Array.from({ length: apps.length + 5 }).map((__, j) => (
                 <td key={`skeleton-cell-${i}-${j}`} className="p-3"><div className="h-4 bg-muted rounded animate-pulse" /></td>
               ))}
             </tr>
@@ -110,6 +123,18 @@ export const OrdersSummaryTable = ({
               })}
               <td className="p-3 text-center font-bold text-primary border-l border-border">{total > 0 ? total : 0}</td>
               <td className="p-3 text-center text-muted-foreground">{avg}</td>
+              <td className="p-3 text-center">
+                {(() => {
+                  const level = getPerformanceLevel(avg);
+                  return level.bg ? (
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${level.color} ${level.bg}`}>
+                      {level.label}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground/30">—</span>
+                  );
+                })()}
+              </td>
             </tr>
           );
         })}
@@ -130,6 +155,7 @@ export const OrdersSummaryTable = ({
               );
             })}
             <td className="p-3 text-center font-bold text-primary border-l border-border">{grandTotal}</td>
+            <td />
             <td />
           </tr>
         </tfoot>

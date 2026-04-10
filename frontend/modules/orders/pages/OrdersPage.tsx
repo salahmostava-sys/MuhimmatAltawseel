@@ -59,7 +59,7 @@ const ShiftsTabWrapper = lazy(() =>
   })),
 );
 
-const ORDER_TABS = ['grid', 'summary', 'shifts'] as const;
+const ORDER_TABS = ['grid', 'shifts', 'summary'] as const;
 type OrderTab = (typeof ORDER_TABS)[number];
 
 const isOrderTab = (v: string | null): v is OrderTab =>
@@ -130,9 +130,9 @@ const OrdersPage = () => {
             selectAriaLabel="قسم الطلبات"
             tabsListClassName="bg-muted/50 p-0.5 h-9 items-stretch"
             options={[
-              { value: 'grid', label: '📦 شبكة الطلبات', selectLabel: 'شبكة الطلبات' },
-              { value: 'summary', label: '📊 ملخص الطلبات', selectLabel: 'ملخص الطلبات' },
-              { value: 'shifts', label: '⏰ الدوام والساعات', selectLabel: 'الدوام والساعات' },
+              { value: 'grid', label: '📦 الطلبات', selectLabel: 'الطلبات' },
+              { value: 'shifts', label: '⏰ الدوام', selectLabel: 'الدوام' },
+              { value: 'summary', label: '📊 ملخص الشهر', selectLabel: 'ملخص الشهر' },
             ]}
           />
           <TabsContent value="grid" className="mt-2 outline-none">
@@ -140,14 +140,14 @@ const OrdersPage = () => {
               <SpreadsheetGridTab />
             </Suspense>
           </TabsContent>
-          <TabsContent value="summary" className="mt-2 overflow-x-auto outline-none">
-            <Suspense fallback={<TabLoader />}>
-              <MonthSummaryTab />
-            </Suspense>
-          </TabsContent>
           <TabsContent value="shifts" className="mt-2 outline-none">
             <Suspense fallback={<TabLoader />}>
               <ShiftsTabWrapper />
+            </Suspense>
+          </TabsContent>
+          <TabsContent value="summary" className="mt-2 overflow-x-auto outline-none">
+            <Suspense fallback={<TabLoader />}>
+              <MonthSummaryTab />
             </Suspense>
           </TabsContent>
         </Tabs>

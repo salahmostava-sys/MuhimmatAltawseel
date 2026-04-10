@@ -1,12 +1,10 @@
 ﻿import type { ComponentProps } from 'react';
 import { differenceInDays, parseISO } from 'date-fns';
 import EmployeeProfile from '@shared/components/employees/EmployeeProfile';
-import {
-  parseEmployeeArabicWorkbook,
-  type EmployeeArabicRow,
-  upsertEmployeeArabicRows,
-} from '@shared/lib/employeeArabicTemplateImport';
+import type { EmployeeArabicRow } from '@shared/lib/employeeArabicTemplateImport';
 import { validateImportRow } from '@modules/employees/model/employeeValidation';
+
+const loadImportModule = () => import('@shared/lib/employeeArabicTemplateImport');
 import type { Employee } from '@modules/employees/model/employeeUtils';
 import { getEmployeeCities } from '@modules/employees/model/employeeUtils';
 import { cityLabel } from '@modules/employees/model/employeeCity';
@@ -39,6 +37,7 @@ export const processBulkImportRows = async (
   onLiveStats: (stats: UploadLiveStats) => void,
 ): Promise<{ report: UploadReport; headerWarnings: number }> => {
   onProgress(10);
+  const { parseEmployeeArabicWorkbook } = await loadImportModule();
   const { rows, headerErrors } = parseEmployeeArabicWorkbook(buffer);
   if (rows.length === 0) {
     return {
@@ -80,6 +79,7 @@ export const processBulkImportRows = async (
     const currentName = String(lastItem.row.name ?? '').trim() || `سطر ${lastItem.rowIndex}`;
     onLiveStats({ processedNames: batchStart, totalNames: validRows.length, currentName });
 
+    const { upsertEmployeeArabicRows } = await loadImportModule();
     const { processed, failures } = await upsertEmployeeArabicRows(batch.map((item) => item.row));
     successfulRows += processed;
 

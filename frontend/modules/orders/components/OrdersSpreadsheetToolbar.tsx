@@ -103,57 +103,24 @@ export function OrdersSpreadsheetToolbar(props: Props) {
   } = props;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-2 flex-shrink-0">
-      <OrdersMonthNavigator compact label={monthLabelText} onPrev={onPrevMonth} onNext={onNextMonth} />
+    <div className="flex flex-col gap-2 flex-shrink-0">
+      {/* Row 1: Month nav + Search + Filters + Actions */}
+      <div className="flex flex-wrap items-center gap-2">
+        <OrdersMonthNavigator compact label={monthLabelText} onPrev={onPrevMonth} onNext={onNextMonth} />
 
-      <div className="relative flex-1 min-w-[160px] max-w-md">
-        <Search
-          size={14}
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
-        />
-        <Input
-          placeholder="بحث بالاسم..."
-          className="pr-8 h-8 text-xs"
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-        />
-      </div>
+        <div className="relative w-36">
+          <Search size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Input
+            placeholder="بحث..."
+            className="pr-7 h-8 text-xs"
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+          />
+        </div>
 
-      <div className="flex items-center gap-2 sm:gap-3 rounded-lg border border-border bg-background px-2.5 py-1.5 text-[11px] shrink-0">
-        <span className="whitespace-nowrap">
-          <span className="text-muted-foreground">إجمالي الطلبات:</span>{' '}
-          <span className="font-bold tabular-nums text-foreground">{monthGrandTotal.toLocaleString()}</span>
-          <span className="text-muted-foreground ms-0.5"> طلب</span>
-        </span>
-        <span className="hidden sm:inline h-3 w-px bg-border" aria-hidden />
-        <span className="whitespace-nowrap">
-          <span className="text-muted-foreground">شهري:</span>{' '}
-          <span className="font-semibold tabular-nums text-foreground">{monthDailyAvg.toLocaleString()}</span>
-          <span className="text-muted-foreground ms-0.5"> /يوم</span>
-        </span>
-        <span className="h-3 w-px bg-border" aria-hidden />
-        <span className="whitespace-nowrap">
-          <span className="text-muted-foreground">مناديب:</span>{' '}
-          <span className="font-semibold tabular-nums text-foreground">{filteredEmployeesCount}</span>
-        </span>
-        {platformFilter !== 'all' && apps.find((a) => a.id === platformFilter) && (
-          <>
-            <span className="h-3 w-px bg-border" aria-hidden />
-            <span className="text-primary font-medium truncate max-w-[7rem]">
-              {apps.find((a) => a.id === platformFilter)?.name}
-            </span>
-          </>
-        )}
-      </div>
-
-      {apps.length > 0 && (
-        <>
-          <span className="hidden lg:inline text-border mx-0.5 select-none">|</span>
-          <div className="flex items-center gap-1.5 flex-wrap min-w-0 max-w-full lg:max-w-[min(100%,42rem)]">
-            <span className="text-[10px] text-muted-foreground shrink-0">المنصات:</span>
-            <span className="hidden xl:inline text-[10px] text-muted-foreground shrink-0">
-              📦 طلبات · ⏰ دوام · 🔄 مختلط
-            </span>
+        {/* Platform filters inline */}
+        {apps.length > 0 && (
+          <div className="flex items-center gap-1 flex-wrap min-w-0 flex-1">
             <button
               type="button"
               onClick={() => onPlatformFilter('all')}
@@ -195,10 +162,10 @@ export function OrdersSpreadsheetToolbar(props: Props) {
               );
             })}
           </div>
-        </>
-      )}
+        )}
 
-      <div className="flex items-center gap-1.5 ms-auto shrink-0">
+        {/* Actions: files, save, lock */}
+        <div className="flex items-center gap-1.5 ms-auto shrink-0">
         <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={onImportChange} />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -268,6 +235,21 @@ export function OrdersSpreadsheetToolbar(props: Props) {
               <>قفل الشهر</>
             )}
           </Button>
+        )}
+      </div>
+
+      {/* Row 2: Stats summary */}
+      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+        <span>إجمالي: <strong className="text-foreground">{monthGrandTotal.toLocaleString()}</strong> طلب</span>
+        <span className="h-3 w-px bg-border" />
+        <span>يومي: <strong className="text-foreground">{monthDailyAvg.toLocaleString()}</strong></span>
+        <span className="h-3 w-px bg-border" />
+        <span>مناديب: <strong className="text-foreground">{filteredEmployeesCount}</strong></span>
+        {platformFilter !== 'all' && apps.find((a) => a.id === platformFilter) && (
+          <>
+            <span className="h-3 w-px bg-border" />
+            <span className="text-primary font-medium">{apps.find((a) => a.id === platformFilter)?.name}</span>
+          </>
         )}
       </div>
     </div>
