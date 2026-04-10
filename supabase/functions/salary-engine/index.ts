@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
       .from('user_roles')
       .select('role')
       .eq('user_id', callerUser.id);
-    if (roleError) throw roleError;
+    if (roleError) throw new Error(roleError.message || JSON.stringify(roleError));
 
     const roles = new Set((roleRows || []).map((row: { role: string }) => row.role));
     if (!roles.has('admin') && !roles.has('finance')) {
@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
       p_limit: 30,
       p_window_seconds: 60,
     } as Record<string, unknown>);
-    if (rateLimitError) throw rateLimitError;
+    if (rateLimitError) throw new Error(rateLimitError.message || JSON.stringify(rateLimitError));
 
     const rate = Array.isArray(rateLimitRows)
       ? (rateLimitRows[0] as { allowed?: boolean; remaining?: number; reset_at?: string } | undefined)
@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
         p_manual_deduction_note: payload.manual_deduction_note ?? null,
       } as Record<string, unknown>);
 
-      if (error) throw error;
+      if (error) throw new Error(error.message || JSON.stringify(error));
       return new Response(JSON.stringify({ data }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
         p_payment_method: payload.payment_method || 'cash',
       } as Record<string, unknown>);
 
-      if (error) throw error;
+      if (error) throw new Error(error.message || JSON.stringify(error));
       return new Response(JSON.stringify({ data }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
         p_month_year: payload.month_year,
       } as Record<string, unknown>);
 
-      if (error) throw error;
+      if (error) throw new Error(error.message || JSON.stringify(error));
       return new Response(JSON.stringify({ data }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
@@ -166,10 +166,18 @@ Deno.serve(async (req) => {
 
     throw new Error('Invalid mode. Use "employee", "month", or "month_preview"');
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
+    const message =
+      err instanceof Error
+        ? err.message
+        : typeof err === 'object' && err !== null && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : typeof err === 'string'
+            ? err
+            : JSON.stringify(err) ?? 'Unknown error';
     logError('Salary engine request failed', {
       request_id: requestId,
       error: message,
+      raw_error: typeof err === 'object' ? JSON.stringify(err) : String(err),
     });
     return new Response(JSON.stringify({ error: message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
