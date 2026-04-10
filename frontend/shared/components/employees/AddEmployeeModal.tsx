@@ -15,6 +15,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { getErrorMessage } from '@shared/lib/query';
 import { cn } from '@shared/lib/utils';
+import { normalizeArabicDigits } from '@shared/lib/formatters';
 import { logError } from '@shared/lib/logger';
 import { useCommercialRecords } from '@shared/hooks/useCommercialRecords';
 import {
@@ -680,10 +681,10 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                 </div>
               </F>
               <F label="تاريخ الانضمام">
-                <Input type="date" value={form.join_date} onChange={e => setField('join_date', e.target.value)} />
+                <Input type="date" value={form.join_date} onChange={e => setField('join_date', normalizeArabicDigits(e.target.value))} />
               </F>
               <F label="تاريخ الميلاد">
-                <Input type="date" value={form.birth_date} onChange={e => setField('birth_date', e.target.value)} />
+                <Input type="date" value={form.birth_date} onChange={e => setField('birth_date', normalizeArabicDigits(e.target.value))} />
               </F>
               <F label="لغة كشف الراتب">
                 <div className="flex gap-2 mt-1">
@@ -707,7 +708,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
               <div className="sm:col-span-2"><SectionTitle title="── الإقامة والوثائق ──" /></div>
               <div>
                 <F label="تاريخ انتهاء الإقامة" required error={errors.residency_expiry?.message}>
-                  <Input type="date" value={form.residency_expiry} onChange={e => setField('residency_expiry', e.target.value)} />
+                  <Input type="date" value={form.residency_expiry} onChange={e => setField('residency_expiry', normalizeArabicDigits(e.target.value))} />
                 </F>
                 {resStatus && (
                   <div className={`mt-2 flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg ${resStatus.valid ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
@@ -720,7 +721,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                 )}
               </div>
               <F label="تاريخ انتهاء التأمين الصحي">
-                <Input type="date" value={form.health_insurance_expiry} onChange={e => setField('health_insurance_expiry', e.target.value)} />
+                <Input type="date" value={form.health_insurance_expiry} onChange={e => setField('health_insurance_expiry', normalizeArabicDigits(e.target.value))} />
               </F>
               <F label="حالة الرخصة">
                 <Select

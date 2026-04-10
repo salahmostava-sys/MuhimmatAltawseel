@@ -1,6 +1,14 @@
 // formatters.ts - Utility functions for formatting dates, currency, and numbers
 
 /**
+ * Normalize Arabic-Indic digits (٠١٢٣٤٥٦٧٨٩) to ASCII (0123456789).
+ * Handles input from date pickers on Arabic-locale devices.
+ */
+export function normalizeArabicDigits(value: string): string {
+  return value.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+}
+
+/**
  * Format a date to YYYY-MM-DD format.
  * @param date - The date object to format.
  * @returns Formatted date string.

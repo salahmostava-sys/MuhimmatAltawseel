@@ -4,6 +4,7 @@ import { Button } from '@shared/components/ui/button';
 import { Checkbox } from '@shared/components/ui/checkbox';
 import { Input } from '@shared/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
+import { normalizeArabicDigits } from '@shared/lib/formatters';
 
 const InlineEditTrigger = forwardRef<HTMLButtonElement, Readonly<{
   children: React.ReactNode;
@@ -163,7 +164,7 @@ export function InlineInputEditor({
             value={draft}
             dir={dir}
             placeholder={placeholder}
-            onChange={(event) => setDraft(event.target.value)}
+            onChange={(event) => setDraft(inputType === 'date' ? normalizeArabicDigits(event.target.value) : event.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Enter') {
                 event.preventDefault();

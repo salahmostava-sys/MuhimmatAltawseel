@@ -10,7 +10,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@shared/components/ui/alert-dialog';
 import { useToast } from '@shared/hooks/use-toast';
-import { todayISO } from '@shared/lib/formatters';
+import { todayISO, normalizeArabicDigits } from '@shared/lib/formatters';
 import { useSystemSettings } from '@app/providers/SystemSettingsContext';
 import { usePermissions } from '@shared/hooks/usePermissions';
 import { usePagePresence } from '@shared/hooks/usePagePresence';
@@ -365,7 +365,7 @@ const Employees = () => {
               <Input
                 type="date"
                 value={statusDate}
-                onChange={e => setStatusDate(e.target.value)}
+                onChange={e => setStatusDate(normalizeArabicDigits(e.target.value))}
                 max={todayISO()}
               />
             </div>

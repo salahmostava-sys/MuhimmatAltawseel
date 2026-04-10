@@ -103,6 +103,7 @@ export function usePagePresence(pageKey: string) {
       void supabase.removeChannel(channel);
       channelRef.current = null;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- re-subscribe only when user.id or page changes, not on metadata updates
   }, [user?.id, pageKey]);
 
   /** Call when user starts editing a specific row. Pass null to clear. */

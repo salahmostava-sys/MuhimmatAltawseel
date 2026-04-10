@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@shared/components/ui/dropdown-menu";
 import { differenceInDays, parseISO, format } from "date-fns";
-import { todayISO } from "@shared/lib/formatters";
+import { todayISO, normalizeArabicDigits } from "@shared/lib/formatters";
 import {
   CityBadges,
   LicenseBadge,
@@ -392,7 +392,7 @@ export function EmployeeDetailedTable({
                             type="date"
                             className="h-7 text-xs px-1.5 flex-1"
                             value={rangeFrom}
-                            onChange={(event) => updateRange(event.target.value, rangeTo)}
+                            onChange={(event) => updateRange(normalizeArabicDigits(event.target.value), rangeTo)}
                           />
                         </div>
                         <div className="flex items-center gap-1">
@@ -401,7 +401,7 @@ export function EmployeeDetailedTable({
                             type="date"
                             className="h-7 text-xs px-1.5 flex-1"
                             value={rangeTo}
-                            onChange={(event) => updateRange(rangeFrom, event.target.value)}
+                            onChange={(event) => updateRange(rangeFrom, normalizeArabicDigits(event.target.value))}
                           />
                         </div>
                       </div>
