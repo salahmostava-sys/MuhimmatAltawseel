@@ -154,6 +154,13 @@ const SEVERITY_LABELS: Record<string, string> = {
   info: 'معلومات',
 };
 
+function formatDaysLeft(daysLeft: number): string {
+  if (daysLeft < 0) return `منتهي منذ ${Math.abs(daysLeft)} يوم`;
+  if (daysLeft === 0) return 'اليوم';
+  if (daysLeft === 1) return 'غداً';
+  return `${daysLeft} يوم`;
+}
+
 function formatDaysLeftBadge(daysLeft: number): string {
   if (daysLeft < 0) return 'منتهي';
   if (daysLeft === 0) return 'اليوم';
