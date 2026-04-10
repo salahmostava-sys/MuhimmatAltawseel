@@ -19,12 +19,11 @@ async function formatInvokeError(error: unknown): Promise<string> {
     try {
       const data = (await err.context.clone().json()) as { error?: string };
       const responseError = data.error ?? '';
-      console.error("AI Chat Edge Function Error:", data, err.context.status);
+      console.error('[aiChat] Edge function error:', data, err.context.status);
 
       if (responseError.includes('OPENAI_API_KEY') || responseError.includes('GROQ_API_KEY')) {
-        return 'المساعد غير مهيأ على الخادم (مفتاح الذكاء الاصطناعي). راجع إعدادات Supabase.';
+        return 'المساعد غير مهيأ على الخادم. راجع إعدادات المشروع.';
       }
-      // إظهار الخطأ الحقيقي اللي جاي من الـ Edge Function للفهم والتشخيص
       if (responseError) {
         return `خطأ من الخادم (${err.context.status}): ${responseError}`;
       }
@@ -37,7 +36,7 @@ async function formatInvokeError(error: unknown): Promise<string> {
   }
 
   if ((error as Error)?.message?.includes('Failed to fetch')) {
-    return 'تعذر الاتصال بالخادم. تحقق من الشبكة أو من نشر دالة ai-chat على Supabase.';
+    return 'تعذر الاتصال بالخادم. تحقق من الشبكة.';
   }
 
   return base;

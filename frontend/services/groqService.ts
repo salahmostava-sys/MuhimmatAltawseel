@@ -1,8 +1,6 @@
 /**
- * Groq AI Service — Direct client-side Groq API integration for chat/completions.
- *
- * API Key is loaded from VITE_GROQ_API_KEY environment variable.
- * Model: openai/gpt-oss-120b (or configurable via VITE_GROQ_MODEL)
+ * خدمة المساعد الذكي — تكامل مع واجهة المحادثة.
+ * المفتاح يُحمّل من متغير البيئة VITE_GROQ_API_KEY.
  */
 
 const GROQ_API_KEY = (import.meta.env.VITE_GROQ_API_KEY as string) || '';

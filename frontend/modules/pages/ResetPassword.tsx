@@ -143,7 +143,6 @@ function ResetPasswordForm(props: Readonly<ResetPasswordFormProps>) {
 
 const ResetPassword = () => {
   const navigate = useNavigate();
-  const [isRecovery, setIsRecovery] = useState(false);
   const [invalidLink, setInvalidLink] = useState(false);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -160,7 +159,6 @@ const ResetPassword = () => {
     let cancelled = false;
     const hash = globalThis.location.hash;
     if (hash.includes('type=recovery')) {
-      setIsRecovery(true);
       authService.getSession().then((session) => {
         if (!cancelled && !session) setInvalidLink(true);
       }).catch((err) => {
