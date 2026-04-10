@@ -1750,6 +1750,7 @@ export type Database = {
           linked_advance_id: string | null
           note: string | null
           source_app_id: string | null
+          status: string | null
           type: Database["public"]["Enums"]["deduction_type"]
         }
         Insert: {
@@ -1764,6 +1765,7 @@ export type Database = {
           linked_advance_id?: string | null
           note?: string | null
           source_app_id?: string | null
+          status?: string | null
           type?: Database["public"]["Enums"]["deduction_type"]
         }
         Update: {
@@ -1778,6 +1780,7 @@ export type Database = {
           linked_advance_id?: string | null
           note?: string | null
           source_app_id?: string | null
+          status?: string | null
           type?: Database["public"]["Enums"]["deduction_type"]
         }
         Relationships: [
@@ -2095,19 +2098,19 @@ export type Database = {
       }
       is_active_user: { Args: { _user_id: string }; Returns: boolean }
       replace_daily_orders_month_rpc: {
-        Args: { p_month: string; p_rows: Json }
+        Args: { p_month_year: string; p_rows: Json; p_source_type?: string; p_file_name?: string | null; p_target_app_id?: string | null }
         Returns: void
       }
       performance_dashboard_rpc: {
-        Args: { p_month: string }
+        Args: { p_month_year: string }
         Returns: Json
       }
       rider_profile_performance_rpc: {
-        Args: { p_employee_id: string; p_month: string }
+        Args: { p_employee_id: string; p_month_year: string }
         Returns: Json
       }
       capture_salary_month_snapshot: {
-        Args: { p_month: string }
+        Args: { p_month_year: string }
         Returns: Json
       }
       get_employee_count_by_city: {

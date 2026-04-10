@@ -85,7 +85,7 @@ function ensureSectionOpenForActiveRoute(
 import { useAuth } from '@app/providers/AuthContext';
 import { DEFAULT_PERMISSIONS, type AppRole } from '@shared/hooks/usePermissions';
 
-const iconByRouteId: Record<string, ComponentType<{ size?: number; className?: string }>> = {
+const iconByRouteId: Record<string, ComponentType<{ size?: string | number; className?: string }>> = {
   dashboard: LayoutDashboard,
   employees: Users,
   attendance: Clock,

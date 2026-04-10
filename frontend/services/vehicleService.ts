@@ -1,6 +1,7 @@
 import { supabase } from '@services/supabase/client';
 import { handleSupabaseError } from '@services/serviceError';
 import { filterOperationallyVisibleEmployees } from '@shared/lib/employeeVisibility';
+import type { TablesInsert } from '@services/supabase/types';
 
 /** أقصى عدد صفوف يُجلب لقوائم المركبات وسجلات التوزيع (يتوافق مع حد PostgREST الافتراضي). */
 export const VEHICLES_QUERY_MAX_ROWS = 1000;
@@ -12,7 +13,7 @@ export interface VehiclePayload {
   brand?: string;
   model?: string;
   year?: number;
-  status?: string;
+  status?: 'active' | 'inactive' | 'ended' | 'breakdown' | 'maintenance' | 'rental';
   has_fuel_chip?: boolean;
   insurance_expiry?: string | null;
   registration_expiry?: string | null;
@@ -80,9 +81,10 @@ export const vehicleService = {
   },
 
   create: async (payload: VehiclePayload) => {
+    const { assigned_employee_id: _, ...dbPayload } = payload;
     const { data, error } = await supabase
       .from('vehicles')
-      .insert(payload)
+      .insert(dbPayload as unknown as TablesInsert<'vehicles'>)
       .select()
       .single();
     if (error) handleSupabaseError(error, 'vehicleService.create');
@@ -90,9 +92,10 @@ export const vehicleService = {
   },
 
   update: async (id: string, payload: Partial<VehiclePayload>) => {
+    const { assigned_employee_id: _, ...dbPayload } = payload;
     const { data, error } = await supabase
       .from('vehicles')
-      .update(payload)
+      .update(dbPayload as unknown as TablesInsert<'vehicles'>)
       .eq('id', id)
       .select()
       .single();
@@ -101,9 +104,10 @@ export const vehicleService = {
   },
 
   upsert: async (payload: Partial<VehiclePayload> & { plate_number: string }) => {
+    const { assigned_employee_id: _, ...dbPayload } = payload;
     const { data, error } = await supabase
       .from('vehicles')
-      .upsert(payload, { onConflict: 'plate_number' })
+      .upsert(dbPayload as unknown as TablesInsert<'vehicles'>, { onConflict: 'plate_number' })
       .select()
       .single();
     if (error) handleSupabaseError(error, 'vehicleService.upsert');

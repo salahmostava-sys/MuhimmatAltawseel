@@ -1,4 +1,5 @@
 import { supabase } from '@services/supabase/client';
+import type { Database } from '@services/supabase/types';
 import { toServiceError } from '@services/serviceError';
 
 export type PagePermissionRow = {
@@ -55,6 +56,8 @@ export const userPermissionService = {
   },
 
   upsertRole: async (userId: string, role: string) => {
+    type AppRole = Database['public']['Enums']['app_role'];
+    const typedRole = role as AppRole;
     const { data: existing, error: existingError } = await supabase
       .from('user_roles')
       .select('id')
@@ -62,11 +65,11 @@ export const userPermissionService = {
       .maybeSingle();
     if (existingError) throw toServiceError(existingError, 'userPermissionService.upsertRole.select');
     if (existing?.id) {
-      const { error } = await supabase.from('user_roles').update({ role }).eq('id', existing.id);
+      const { error } = await supabase.from('user_roles').update({ role: typedRole }).eq('id', existing.id);
       if (error) throw toServiceError(error, 'userPermissionService.upsertRole.update');
       return;
     }
-    const { error } = await supabase.from('user_roles').insert({ user_id: userId, role });
+    const { error } = await supabase.from('user_roles').insert({ user_id: userId, role: typedRole });
     if (error) throw toServiceError(error, 'userPermissionService.upsertRole.insert');
   },
 };

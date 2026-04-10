@@ -21,7 +21,7 @@ vi.mock('@services/permissionsService', () => ({
   permissionsService: permissionsServiceMock,
 }));
 
-import { DEFAULT_PERMISSIONS, usePermissions, type PagePermission } from './usePermissions';
+import { DEFAULT_PERMISSIONS, usePermissions, type PagePermission, type AppRole } from './usePermissions';
 
 const createWrapper = () => {
   const queryClient = new QueryClient({

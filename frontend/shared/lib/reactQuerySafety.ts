@@ -1,6 +1,6 @@
 type ErrorLike = { status?: number } | null | undefined;
 
-export const safeRetry = (failureCount: number, error: ErrorLike): boolean => {
+export const safeRetry = (failureCount: number, error: Error & ErrorLike): boolean => {
   if (!error) return false;
   if (error.status === 401 || error.status === 403) return false;
   return failureCount < 2;

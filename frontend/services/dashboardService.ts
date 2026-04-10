@@ -58,7 +58,7 @@ export const dashboardService = {
     let lastError: unknown = null;
     for (const fnName of fnNames) {
       for (const params of attempts) {
-        const { data, error } = await supabase.rpc(fnName, params);
+        const { data, error } = await (supabase.rpc as Function)(fnName, params);
         if (!error) return data;
         lastError = error;
 
@@ -358,7 +358,7 @@ export const dashboardService = {
       supabase.from('alerts').select('id', { count: 'exact', head: true }).eq('is_resolved', false),
       supabase.from('apps').select('id, name, brand_color, text_color').eq('is_active', true),
       supabase.from('app_targets').select('app_id, target_orders').eq('month_year', currentMonth),
-      supabase.from('pricing_rules').select('app_id, rule_type, rate_per_order, fixed_salary, is_active, priority, min_orders, max_orders').eq('is_active', true),
+      (supabase.from('pricing_rules') as any).select('app_id, rule_type, rate_per_order, fixed_salary, is_active, priority, min_orders, max_orders').eq('is_active', true),
     ]);
     if (empRes.error) handleSupabaseError(empRes.error, 'dashboardService.fetchMainData.empRes');
     if (attRes.error) handleSupabaseError(attRes.error, 'dashboardService.fetchMainData.attRes');
@@ -602,7 +602,7 @@ export const dashboardService = {
       // Maintenance this month
       supabase.from('maintenance_records').select('cost, status, vehicle_id').gte('date', start).lte('date', end),
       // Violations (pending)
-      supabase.from('violations').select('amount, status, employee_id').eq('status', 'pending'),
+      (supabase.from('violations') as any).select('amount, approval_status, employee_id').eq('approval_status', 'pending'),
       // Advances (active)
       supabase.from('advances').select('amount, remaining_amount, employee_id, status').eq('status', 'active'),
       // Salaries this month

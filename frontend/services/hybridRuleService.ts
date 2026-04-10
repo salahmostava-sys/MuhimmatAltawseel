@@ -1,6 +1,7 @@
 import { supabase } from '@services/supabase/client';
 import { toServiceError } from '@services/serviceError';
 import type { AppHybridRule } from '@shared/types/shifts';
+import type { TablesInsert } from '@services/supabase/types';
 
 export const hybridRuleService = {
   getAll: async () => {
@@ -25,7 +26,7 @@ export const hybridRuleService = {
   upsert: async (rule: Omit<AppHybridRule, 'id' | 'created_at' | 'updated_at'>) => {
     const { data, error } = await supabase
       .from('app_hybrid_rules')
-      .upsert(rule, { onConflict: 'app_id' })
+      .upsert(rule as unknown as TablesInsert<'app_hybrid_rules'>, { onConflict: 'app_id' })
       .select()
       .single();
     if (error) throw toServiceError(error, 'hybridRuleService.upsert');

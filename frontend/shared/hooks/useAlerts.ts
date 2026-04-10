@@ -37,7 +37,7 @@ export const useAlerts = () => {
       };
       return buildAlertsFromResponses(
         employeesVisibleRes,
-        vehiclesRes,
+        vehiclesRes as { data: import('@shared/lib/alertsBuilder').VehicleExpiryRow[] },
         platformAccountsRes,
         dbAlertsRes,
         sparePartsRes,

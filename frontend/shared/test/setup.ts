@@ -88,7 +88,7 @@ if (!globalThis.ResizeObserver) {
     unobserve() {}
     disconnect() {}
   }
-  (globalThis as { ResizeObserver?: typeof ResizeObserverMock }).ResizeObserver = ResizeObserverMock;
+  (globalThis as unknown as { ResizeObserver?: typeof ResizeObserverMock }).ResizeObserver = ResizeObserverMock;
 }
 
 if (!globalThis.IntersectionObserver) {
@@ -103,7 +103,7 @@ if (!globalThis.IntersectionObserver) {
       return [];
     }
   }
-  (globalThis as { IntersectionObserver?: typeof IntersectionObserverMock }).IntersectionObserver = IntersectionObserverMock;
+  (globalThis as unknown as { IntersectionObserver?: typeof IntersectionObserverMock }).IntersectionObserver = IntersectionObserverMock;
 }
 
 if (!globalThis.matchMedia) {

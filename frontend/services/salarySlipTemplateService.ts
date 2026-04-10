@@ -5,7 +5,7 @@ export interface SalarySlipTemplate {
   name: string;
   header_html: string;
   footer_html: string;
-  selected_columns: string[];
+  selected_columns: import('./supabase/types').Json;
   is_default: boolean;
   created_at?: string;
   updated_at?: string;

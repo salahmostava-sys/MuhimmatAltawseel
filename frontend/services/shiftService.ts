@@ -7,7 +7,7 @@ export const shiftService = {
     const { data, error } = await supabase
       .from('daily_shifts')
       .select('*')
-      .order('date', { ascending: false });
+      .order('shift_date', { ascending: false });
     if (error) throw toServiceError(error, 'shiftService.getAll');
     return data ?? [];
   },
@@ -20,9 +20,9 @@ export const shiftService = {
     let query = supabase
       .from('daily_shifts')
       .select('*, employees(name, name_en), apps(name, name_en, brand_color)')
-      .gte('date', from)
-      .lte('date', to)
-      .order('date', { ascending: false });
+      .gte('shift_date', from)
+      .lte('shift_date', to)
+      .order('shift_date', { ascending: false });
 
     if (filters.employeeId) query = query.eq('employee_id', filters.employeeId);
     if (filters.appId) query = query.eq('app_id', filters.appId);
@@ -37,9 +37,9 @@ export const shiftService = {
     const to = new Date(year, month, 0).toISOString().split('T')[0];
     const { data, error } = await supabase
       .from('daily_shifts')
-      .select('employee_id, app_id, date, hours_worked')
-      .gte('date', from)
-      .lte('date', to);
+      .select('employee_id, app_id, shift_date, hours_worked')
+      .gte('shift_date', from)
+      .lte('shift_date', to);
     if (error) throw toServiceError(error, 'shiftService.getMonthRaw');
     return data ?? [];
   },
@@ -50,12 +50,12 @@ export const shiftService = {
       .upsert(
         { 
           employee_id: employeeId, 
-          date, 
+          shift_date: date, 
           app_id: appId, 
           hours_worked: hoursWorked,
           notes: notes || null
         },
-        { onConflict: 'employee_id,app_id,date' }
+        { onConflict: 'employee_id,app_id,shift_date' }
       )
       .select()
       .single();
@@ -70,10 +70,16 @@ export const shiftService = {
     let saved = 0;
     const failed: string[] = [];
     for (let i = 0; i < rows.length; i += chunkSize) {
-      const chunk = rows.slice(i, i + chunkSize);
+      const chunk = rows.slice(i, i + chunkSize).map(r => ({
+        employee_id: r.employee_id,
+        app_id: r.app_id,
+        shift_date: r.date,
+        hours_worked: r.hours_worked,
+        notes: r.notes || null,
+      }));
       const { error } = await supabase
         .from('daily_shifts')
-        .upsert(chunk, { onConflict: 'employee_id,app_id,date' });
+        .upsert(chunk, { onConflict: 'employee_id,app_id,shift_date' });
       if (error) throw toServiceError(error, 'shiftService.bulkUpsert');
       saved += chunk.length;
     }
@@ -94,8 +100,8 @@ export const shiftService = {
       .from('daily_shifts')
       .select('hours_worked')
       .eq('employee_id', employeeId)
-      .gte('date', from)
-      .lte('date', to);
+      .gte('shift_date', from)
+      .lte('shift_date', to);
     if (error) throw toServiceError(error, 'shiftService.getTotalHoursByEmployee');
 
     return data?.reduce((sum, row) => sum + (row.hours_worked ?? 0), 0) ?? 0;

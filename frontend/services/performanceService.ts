@@ -236,7 +236,7 @@ export const performanceService = {
       throw toServiceError(error, 'performanceService.getDashboard');
     }
 
-    return (data ?? {}) as PerformanceDashboardResponse;
+    return (data ?? {}) as unknown as PerformanceDashboardResponse;
   },
 
   getRiderProfile: async (
@@ -252,7 +252,7 @@ export const performanceService = {
       throw toServiceError(error, 'performanceService.getRiderProfile');
     }
 
-    return (data ?? {}) as RiderProfilePerformanceResponse;
+    return (data ?? {}) as unknown as RiderProfilePerformanceResponse;
   },
 
   upsertEmployeeTarget: async (params: {
