@@ -1,3 +1,10 @@
+/**
+ * Order Service — Daily orders CRUD + month-level operations.
+ *
+ * Handles: fetching raw orders, replacing a full month's data (chunked),
+ * month locking/unlocking, app targets, and employee/app base queries
+ * shared by the Orders spreadsheet grid.
+ */
 import { supabase } from '@services/supabase/client';
 import { toServiceError } from '@services/serviceError';
 import { authService } from '@services/authService';

@@ -5,6 +5,11 @@ import { filterVisibleEmployeesInMonth } from '@shared/lib/employeeVisibility';
 import { useTemporalContext } from '@app/providers/TemporalContext';
 import type { Employee } from '@modules/employees/model/employeeUtils';
 
+/**
+ * Employees data for the Employees page.
+ * Wraps `useEmployees()` and filters out absconded/terminated employees
+ * that have no activity in the currently selected month.
+ */
 export function useEmployeesData() {
   const { selectedMonth } = useTemporalContext();
   const { data: activeIdsData } = useMonthlyActiveEmployeeIds(selectedMonth);

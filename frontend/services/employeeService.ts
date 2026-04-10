@@ -1,3 +1,14 @@
+/**
+ * Employee Service — CRUD operations for the `employees` table.
+ *
+ * Key responsibilities:
+ * - List/get/create/update/delete employees
+ * - Manage employee ↔ app assignments (`employee_apps`)
+ * - Upload/delete employee documents (private Supabase Storage bucket)
+ * - Guard against deleting employees with operational records
+ *
+ * All queries go through Supabase client with RLS enforced.
+ */
 import { supabase } from '@services/supabase/client';
 import { ServiceError, toServiceError } from '@services/serviceError';
 import { createPagedResult } from '@shared/types/pagination';

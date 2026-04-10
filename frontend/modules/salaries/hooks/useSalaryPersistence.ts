@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { isEmployeeIdUuid, isValidSalaryMonthYear } from '@shared/lib/salaryValidation';
 import { salaryDataService } from '@services/salaryDataService';
-import { driverService } from '@services/driverService';
+import { employeeService } from '@services/employeeService';
 import { salaryDraftService } from '@services/salaryDraftService';
 import { buildSalaryRowSnapshot, getManualDeductionTotal } from '@modules/salaries/lib/salaryDomain';
 
@@ -404,7 +404,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
       setEmployeeFieldSaving(`${row.employeeId}:city`);
       await run(
         async () => {
-          await driverService.update(row.employeeId, { city: nextCity });
+          await employeeService.updateEmployee(row.employeeId, { city: nextCity });
           await queryClient.invalidateQueries({
             queryKey: ['salaries', uid, 'base-context', selectedMonth],
           });

@@ -1,3 +1,15 @@
+/**
+ * Employee Visibility Module
+ *
+ * Controls which employees appear in lists, attendance rosters, and salary pages.
+ *
+ * Rules:
+ * - Absconded/terminated employees are hidden by default.
+ * - They remain visible if they had activity (orders/attendance) in the target month.
+ * - The `probation_end_date` field doubles as the effective exit date for absconded/terminated.
+ *
+ * Used by: Employees page, Orders page, Salaries page, Attendance page.
+ */
 export const EXCLUDED_SPONSORSHIP_STATUSES = ['absconded', 'terminated'] as const;
 export type ExcludedSponsorshipStatus = (typeof EXCLUDED_SPONSORSHIP_STATUSES)[number];
 

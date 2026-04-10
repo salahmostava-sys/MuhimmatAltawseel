@@ -1,269 +1,176 @@
-# مهمة التوصيل — Muhimmat AlTawseel
+# مهمات التوصيل — MuhimmatAltawseel
 
-Delivery fleet management system — employees, salaries, attendance, orders, advances, fuel, vehicles, alerts, and more.
+نظام إدارة شركات التوصيل — يشمل إدارة الموظفين، الطلبات اليومية، الرواتب، السلف، المركبات، الحضور، والتنبيهات.
 
-Built with React 18 + TypeScript + Vite + Supabase.
+**Stack:** React 18 · TypeScript · Vite · Supabase · TanStack Query · Tailwind CSS · shadcn/ui
+
+**Production:** [muhimat.vercel.app](https://muhimat.vercel.app)
 
 ---
 
-## Quick Start
+## 🚀 التشغيل المحلي
 
-### Prerequisites
+### المتطلبات
+- Node.js ≥ 18
+- npm أو pnpm
 
-- **Node.js 18+** and npm
-- A [Supabase](https://supabase.com) project (free tier works)
-
-### Setup
+### الخطوات
 
 ```bash
-cd frontend
+# 1. Clone
+git clone <repo-url>
+cd MuhimmatAltawseel/frontend
+
+# 2. Install
 npm install
-```
 
-Copy the environment template and fill in your Supabase credentials:
-
-```bash
+# 3. Environment variables
 cp .env.example .env.local
+# عدّل VITE_SUPABASE_URL و VITE_SUPABASE_PUBLISHABLE_KEY
+
+# 4. Run
+npm run dev
 ```
 
-Edit `.env.local`:
+يفتح على `http://localhost:5173`
 
-```env
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=eyJhbGci...your-anon-key
+---
+
+## 📁 هيكل المشروع
+
+```
+MuhimmatAltawseel/
+├── frontend/                  ← React SPA
+│   ├── app/                   ← Routing, providers, config
+│   │   ├── App.tsx            ← Route definitions
+│   │   ├── routesManifest.ts  ← Sidebar navigation config
+│   │   └── providers/         ← Auth, Settings, Temporal contexts
+│   ├── modules/               ← Feature modules (كل feature منفصلة)
+│   │   ├── employees/         ← الموظفين
+│   │   ├── orders/            ← الطلبات اليومية
+│   │   ├── salaries/          ← الرواتب
+│   │   ├── advances/          ← السلف
+│   │   ├── dashboard/         ← لوحة التحكم
+│   │   ├── apps/              ← إدارة المنصات (أمازون، هنقرستيشن...)
+│   │   ├── fuel/              ← استهلاك الوقود
+│   │   ├── maintenance/       ← الصيانة والمخزون
+│   │   ├── platform-accounts/ ← حسابات المنصات
+│   │   ├── violations/        ← المخالفات
+│   │   └── pages/             ← صفحات متنوعة (تنبيهات، مركبات، إلخ)
+│   ├── services/              ← Supabase API layer
+│   ├── shared/                ← مكونات وأدوات مشتركة
+│   │   ├── components/        ← UI components مشتركة
+│   │   ├── hooks/             ← Custom hooks مشتركة
+│   │   ├── lib/               ← Utility functions
+│   │   ├── constants/         ← ثوابت النظام
+│   │   └── types/             ← Types مشتركة
+│   └── docs/                  ← توثيق داخلي
+│
+└── supabase/                  ← Backend
+    ├── functions/             ← Edge Functions
+    │   ├── admin-update-user/ ← إدارة المستخدمين (إنشاء/حذف)
+    │   ├── salary-engine/     ← محرك حساب الرواتب
+    │   └── ai-chat/           ← AI Chat
+    └── migrations/            ← 114 SQL migration
 ```
 
-### Run
+---
 
+## 🧩 بنية الـ Module
+
+كل module يتبع نفس النمط:
+
+```
+modules/[feature]/
+├── pages/          ← صفحة/صفحات الـ feature (يُربط بالـ router)
+├── components/     ← UI components خاصة بالـ feature
+├── hooks/          ← Business logic + state management
+├── model/ أو lib/  ← Pure functions, calculations, utils
+└── types.ts        ← Type definitions
+```
+
+**تدفق البيانات:**
+```
+Page → Hook → Service → Supabase
+                ↓
+            TanStack Query (cache)
+```
+
+---
+
+## 🗃️ Supabase Backend
+
+### الجداول الرئيسية
+| الجدول | الوصف |
+|--------|-------|
+| `employees` | بيانات الموظفين الأساسية |
+| `daily_orders` | الطلبات اليومية لكل موظف/منصة |
+| `daily_shifts` | ساعات الدوام اليومية |
+| `salary_records` | سجلات الرواتب الشهرية |
+| `advances` + `advance_installments` | السلف وأقساطها |
+| `attendance` | الحضور والانصراف |
+| `apps` | المنصات (أمازون، هنقرستيشن...) |
+| `employee_apps` | ربط موظف ↔ منصة |
+| `vehicles` | المركبات |
+| `alerts` | التنبيهات المحفوظة |
+| `user_roles` + `user_permissions` | الأدوار والصلاحيات |
+| `profiles` | ملفات المستخدمين |
+| `system_settings` | إعدادات النظام |
+
+### Edge Functions
+| الوظيفة | الغرض |
+|---------|-------|
+| `salary-engine` | حساب الرواتب (per employee / per month / preview) |
+| `admin-update-user` | إنشاء/حذف مستخدمين (يحتاج admin role) |
+| `ai-chat` | محادثة AI |
+
+### Security
+- **RLS** مُفعّل على كل الجداول
+- **Role-based access**: admin, hr, finance, operations, viewer
+- **Rate limiting** على Edge Functions
+- **Audit logging** لكل العمليات الحساسة
+
+---
+
+## 🔧 الأوامر المتاحة
+
+| الأمر | الوصف |
+|-------|-------|
+| `npm run dev` | تشغيل محلي |
+| `npm run build` | بناء للإنتاج |
+| `npm run test` | تشغيل الاختبارات |
+| `npm run test:watch` | اختبارات مستمرة |
+| `npm run test:coverage` | تغطية الاختبارات |
+| `npm run lint` | فحص ESLint |
+| `npm run lint:fix` | إصلاح ESLint تلقائي |
+| `npm run verify` | lint + test + build |
+| `npm run gen:types` | توليد Types من Supabase |
+
+---
+
+## 🚢 Deploy
+
+### Frontend (Vercel)
+- مربوط بـ GitHub — push = auto deploy
+- Environment variables مضبوطة في Vercel Dashboard
+
+### Edge Functions (Supabase)
 ```bash
-npm run dev        # dev server → http://localhost:5000
-npm run build      # production build
-npm run lint       # ESLint
-npm run test       # Vitest unit tests
-npm run verify     # lint + test + build (CI gate)
+npx supabase functions deploy salary-engine --no-verify-jwt
+npx supabase functions deploy admin-update-user --no-verify-jwt
 ```
 
----
-
-## Project Structure
-
-```
-frontend/
-├── app/           → Entry point, providers, routing, layout
-├── modules/       → Feature pages (one folder per domain)
-│   ├── advances/      → Salary advances & installments
-│   ├── dashboard/     → Main dashboard & charts
-│   ├── employees/     → Employee CRUD, profiles, import/export
-│   ├── finance/       → Financial reports
-│   ├── fuel/          → Fuel tracking
-│   ├── maintenance/   → Vehicle maintenance & spare parts
-│   ├── operations/    → Operational views
-│   ├── orders/        → Platform orders
-│   ├── pages/         → Shared pages (login, settings, alerts, violations)
-│   ├── salaries/      → Monthly salary engine, payslips, approval
-│   └── settings/      → Settings hub pages
-├── shared/        → Reusable components, hooks, lib, types
-├── services/      → All Supabase data access (one file per domain)
-└── supabase/      → Migrations, edge functions, generated types
-```
-
-Each **module** follows a consistent internal layout:
-
-```
-modules/myFeature/
-├── pages/              → Page-level components (lazy-loaded)
-├── components/         → UI components scoped to this feature
-├── hooks/              → Custom hooks (data fetching, actions)
-├── types/              → TypeScript interfaces and types
-├── model/              → Business logic utilities
-├── lib/                → Constants, formatters, helpers
-├── services/           → Service barrel (optional)
-└── index.ts            → Public barrel export
-```
-
----
-
-## How to Add a New Page
-
-### 1. Create the module folder
-
-```
-frontend/modules/myFeature/
-├── pages/MyFeaturePage.tsx
-├── components/
-├── hooks/
-└── index.ts
-```
-
-### 2. Write the page component
-
-```tsx
-// modules/myFeature/pages/MyFeaturePage.tsx
-import { useAuthQueryGate, authQueryUserId } from '@shared/hooks/useAuthQueryGate';
-import { useQuery } from '@tanstack/react-query';
-
-const MyFeaturePage = () => {
-  const { enabled, userId } = useAuthQueryGate();
-  const uid = authQueryUserId(userId);
-
-  const { data, isLoading } = useQuery({
-    queryKey: ['myFeature', uid],
-    queryFn: () => myFeatureService.getAll(),
-    enabled,
-  });
-
-  return (
-    <div className="space-y-4" dir="rtl">
-      <h1 className="page-title">الميزة الجديدة</h1>
-      {/* table / cards / etc */}
-    </div>
-  );
-};
-
-export default MyFeaturePage;
-```
-
-### 3. Register the route in `app/App.tsx`
-
-```tsx
-const MyFeaturePage = lazy(() => import('@modules/myFeature/pages/MyFeaturePage'));
-
-// Inside ProtectedRoute > DashboardLayout:
-<Route
-  path="/my-feature"
-  element={<PageGuard pageKey="my_feature"><MyFeaturePage /></PageGuard>}
-/>
-```
-
-### 4. Add sidebar navigation
-
-Edit `shared/components/layout/Sidebar.tsx` — add an entry with the route path and an Arabic label.
-
----
-
-## How to Add a Database Table
-
-### 1. Create a Supabase migration
-
+### Database Migrations
 ```bash
-supabase migration new my_feature_table
-```
-
-Write the SQL:
-
-```sql
-CREATE TABLE public.my_feature (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
-ALTER TABLE public.my_feature ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Authenticated users can view"
-  ON public.my_feature FOR SELECT
-  USING (public.is_active_user());
-```
-
-Apply:
-
-```bash
-supabase db push
-```
-
-### 2. Regenerate TypeScript types
-
-```bash
-cd frontend
-npm run gen:types
-```
-
-### 3. Create a service
-
-```ts
-// services/myFeatureService.ts
-import { supabase } from './supabase/client';
-import { throwIfError } from './serviceError';
-
-export const myFeatureService = {
-  getAll: async () => {
-    const { data, error } = await supabase
-      .from('my_feature')
-      .select('*')
-      .order('created_at', { ascending: false });
-    throwIfError(error, 'myFeatureService.getAll');
-    return data ?? [];
-  },
-};
-```
-
-### 4. Create a hook
-
-```ts
-// shared/hooks/useMyFeature.ts  (or modules/myFeature/hooks/)
-import { useQuery } from '@tanstack/react-query';
-import { useAuthQueryGate, authQueryUserId } from '@shared/hooks/useAuthQueryGate';
-import { myFeatureService } from '@services/myFeatureService';
-
-export function useMyFeature() {
-  const { enabled, userId } = useAuthQueryGate();
-  const uid = authQueryUserId(userId);
-  return useQuery({
-    queryKey: ['my_feature', uid],
-    queryFn: () => myFeatureService.getAll(),
-    enabled,
-  });
-}
+npx supabase db push
 ```
 
 ---
 
-## Environment Variables
+## 📝 ملاحظات للصيانة
 
-| Variable | Required | Description |
-|---|---|---|
-| `VITE_SUPABASE_URL` | Yes | Supabase project URL (`https://xxx.supabase.co`) |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Yes | Supabase anon/public key |
-| `VITE_MONITORING_ENDPOINT` | No | Optional error logging endpoint URL |
-
-The Supabase client is initialized in `frontend/services/supabase/client.ts`.
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Framework | React 18 + TypeScript |
-| Build | Vite 6 |
-| Backend | Supabase (PostgreSQL, Auth, RLS, Storage, Edge Functions) |
-| Data Fetching | TanStack Query 5 |
-| Styling | Tailwind CSS 4 + shadcn/ui (Radix) |
-| Forms | React Hook Form + Zod |
-| Charts | Recharts |
-| Dates | date-fns |
-| Excel | @e965/xlsx |
-| PDF | jsPDF + html2canvas |
-| i18n | i18next (Arabic RTL primary, English LTR) |
-| Testing | Vitest + Playwright |
-
----
-
-## Roles
-
-| Role | Access |
-|---|---|
-| `admin` | Full access to all features and settings |
-| `hr` | Employees, attendance, tiers |
-| `finance` | Salaries, advances, fuel, financial reports |
-| `operations` | Orders, vehicles, maintenance, platform accounts |
-| `viewer` | Read-only dashboard access |
-
-Permissions are managed per-page via `usePermissions(pageKey)` and enforced by `PageGuard` in routes.
-
----
-
-## License
-
-Private — proprietary software.
+1. **نظام الصلاحيات**: الأدوار والصلاحيات مُعرّفة في `shared/hooks/usePermissions.ts` و `shared/constants/permissionPages.ts`
+2. **الشهر المحدد**: يُدار مركزياً عبر `TemporalContext` — كل الصفحات تتزامن
+3. **Employee visibility**: موظفين الهروب/إنهاء الخدمة يُخفون تلقائياً — المنطق في `shared/lib/employeeVisibility.ts`
+4. **Salary engine**: حساب الرواتب يمر عبر Edge Function → PostgreSQL RPC
+5. **الـ imports**: استيراد Excel يدعم مطابقة ذكية للأسماء العربية

@@ -1,5 +1,4 @@
 import { useCallback } from 'react';
-import { driverService } from '@services/driverService';
 import { todayISO } from '@shared/lib/formatters';
 import { cycleSortState } from '@shared/lib/sortTableIndicators';
 import { employeeService, EMPLOYEE_DELETE_BLOCKED_MESSAGE } from '@services/employeeService';
@@ -71,7 +70,7 @@ export function useEmployeeActions(params: {
     const updatePatch = { [field]: value, ...(extraFields ?? {}) };
     setData(d => d.map(e => e.id === id ? { ...e, ...updatePatch } : e));
     try {
-      await driverService.update(id, updatePatch);
+      await employeeService.updateEmployee(id, updatePatch);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'تعذر حفظ التعديل';
       setData(d => d.map(e => e.id === id ? (prev ?? e) : e));
@@ -104,7 +103,7 @@ export function useEmployeeActions(params: {
     if (!deleteEmployee) return;
     setDeleting(true);
     try {
-      await driverService.delete(deleteEmployee.id);
+      await employeeService.deleteById(deleteEmployee.id);
       setData(d => d.filter(e => e.id !== deleteEmployee.id));
       toast({ title: 'تم الحذف', description: deleteEmployee.name });
     } catch (err: unknown) {

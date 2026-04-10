@@ -1,3 +1,11 @@
+/**
+ * Salary Service — Salary calculations, records, and scheme management.
+ *
+ * Calculation flow:
+ *   Frontend → Edge Function (salary-engine) → PostgreSQL RPC → salary_records upsert
+ *
+ * Also handles: salary record CRUD, salary schemes, pricing rules, app targets.
+ */
 import { supabase } from '@services/supabase/client';
 import { isEmployeeIdUuid, isValidSalaryMonthYear } from '@shared/lib/salaryValidation';
 import { handleSupabaseError } from '@services/serviceError';

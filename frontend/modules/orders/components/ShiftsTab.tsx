@@ -2,13 +2,6 @@ import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { Loader2, Save, Clock } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@shared/components/ui/select';
 import { OrdersMonthNavigator } from '@shared/components/orders/OrdersMonthNavigator';
 import { isShiftCapableApp } from '@shared/lib/workType';
 import { monthLabel } from '@modules/orders/utils/dateMonth';
