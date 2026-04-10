@@ -48,7 +48,7 @@ ALTER FUNCTION public.increment_salary_record_version()
 ALTER FUNCTION public.update_updated_at_column()
   SET search_path = 'public';
 
-ALTER FUNCTION public.calc_tier_salary(UUID, TEXT)
+ALTER FUNCTION public.calc_tier_salary(INTEGER)
   SET search_path = 'public';
 
 ALTER FUNCTION public.fn_handle_employee_sponsorship_alerts()
