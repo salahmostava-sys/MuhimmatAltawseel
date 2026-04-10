@@ -1,11 +1,11 @@
 /**
  * AI Backend Service — Connects React frontend to the FastAPI analytics engine.
  *
- * Base URL is configurable via VITE_AI_BACKEND_URL env variable.
- * Falls back to localhost:8000 in development.
+ * Base URL is configured via VITE_AI_BACKEND_URL env variable (required).
+ * If not set, AI features are silently disabled (no requests sent).
  */
 
-const AI_BASE_URL = (import.meta.env.VITE_AI_BACKEND_URL as string) || 'http://localhost:8000';
+const AI_BASE_URL = import.meta.env.VITE_AI_BACKEND_URL as string | undefined;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -137,6 +137,7 @@ export interface AnomalyDetectionResponse {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function postAI<T>(path: string, body: unknown): Promise<T> {
+  if (!AI_BASE_URL) throw new Error('AI backend not configured (VITE_AI_BACKEND_URL is not set)');
   const res = await fetch(`${AI_BASE_URL}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -207,7 +208,11 @@ export const aiService = {
 
   /** Health check. */
   health: async () => {
+    if (!AI_BASE_URL) throw new Error('AI backend not configured');
     const res = await fetch(`${AI_BASE_URL}/health`);
     return res.json() as Promise<{ status: string; version: string }>;
   },
+
+  /** Whether the AI backend URL is configured. */
+  isConfigured: () => !!AI_BASE_URL,
 };

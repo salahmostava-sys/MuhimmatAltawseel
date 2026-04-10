@@ -8,6 +8,7 @@ import { Textarea } from '@shared/components/ui/textarea';
 import { Label } from '@shared/components/ui/label';
 import { supabase } from '@services/supabase/client';
 import { useToast } from '@shared/hooks/use-toast';
+import { useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { useSystemSettings } from '@app/providers/SystemSettingsContext';
 import { escapeHtml } from '@shared/lib/security';
 import { format, differenceInDays, parseISO, addDays } from 'date-fns';
@@ -64,10 +65,12 @@ const Alerts = () => {
   const [deferDays, setDeferDays] = useState('7');
   const [resolveNote, setResolveNote] = useState('');
   const { toast } = useToast();
+  const { enabled } = useAuthQueryGate();
   const { settings } = useSystemSettings();
   const iqamaAlertDays = settings?.iqama_alert_days ?? 90;
 
   useEffect(() => {
+    if (!enabled) return;
     const fetchAlerts = async () => {
       setLoading(true);
       const today = new Date();

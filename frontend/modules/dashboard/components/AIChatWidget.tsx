@@ -7,7 +7,11 @@ import { MessageCircle, X, Send, Loader2, Bot, User, Sparkles } from 'lucide-rea
 import { groqService, type GroqMessage } from '@services/groqService';
 
 interface AIChatWidgetProps {
-  systemPrompt: string;
+  context?: {
+    month: string;
+    totalRiders: number;
+    topRiderName?: string;
+  };
 }
 
 interface ChatMessage {
@@ -25,7 +29,7 @@ const QUICK_QUESTIONS = [
   'من يستحق مكافأة؟',
 ];
 
-export function AIChatWidget({ systemPrompt }: AIChatWidgetProps) {
+export function AIChatWidget(_props: AIChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -71,7 +75,6 @@ export function AIChatWidget({ systemPrompt }: AIChatWidgetProps) {
 
       try {
         const groqMessages: GroqMessage[] = [
-          { role: 'system', content: systemPrompt },
           ...messages.map((m) => ({
             role: m.role as 'user' | 'assistant',
             content: m.content,
@@ -117,7 +120,7 @@ export function AIChatWidget({ systemPrompt }: AIChatWidgetProps) {
         setIsLoading(false);
       }
     },
-    [isLoading, isConfigured, messages, systemPrompt],
+    [isLoading, isConfigured, messages],
   );
 
   if (!isConfigured) return null;

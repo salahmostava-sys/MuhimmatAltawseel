@@ -13,7 +13,6 @@ import {
 } from '@modules/dashboard/components/DashboardPerformanceHeader';
 import { DashboardPerformanceOverviewTab } from '@modules/dashboard/components/DashboardPerformanceOverviewTab';
 import { buildFleetSummary, buildRiderProfiles } from '@modules/dashboard/lib/performanceEngine';
-import { buildAIChatSystemPrompt } from '@modules/dashboard/lib/aiInsightsEngine';
 import { AIChatWidget } from '@modules/dashboard/components/AIChatWidget';
 
 const loadAnalyticsTab = () =>
@@ -53,30 +52,8 @@ export default function DashboardPerformancePage() {
     queryFn: async () => performanceService.getDashboard(currentMonth),
   });
 
-  // Build AI Chat system prompt from dashboard data
-  const chatSystemPrompt = useMemo(() => {
-    const data = dashboardQuery.data;
-    if (!data) return '';
-
-    try {
-      const summary = buildFleetSummary(data);
-      const allEntries = [
-        ...data.rankings.topPerformers,
-        ...data.rankings.lowPerformers,
-        ...data.rankings.mostImproved,
-        ...data.rankings.mostDeclined,
-      ];
-      const seen = new Set<string>();
-      const unique = allEntries.filter((e) => {
-        if (seen.has(e.employeeId)) return false;
-        seen.add(e.employeeId);
-        return true;
-      });
-      const profiles = buildRiderProfiles(unique);
-      return buildAIChatSystemPrompt(profiles, summary);
-    } catch {
-      return '';
-    }
+  const _chatEnabled = useMemo(() => {
+    return !!dashboardQuery.data;
   }, [dashboardQuery.data]);
 
   const handleTabChange = (tab: DashboardPerformanceTabKey) => {
@@ -133,7 +110,7 @@ export default function DashboardPerformancePage() {
       ) : null}
 
       {/* المساعد الذكي */}
-      {chatSystemPrompt && <AIChatWidget systemPrompt={chatSystemPrompt} />}
+      <AIChatWidget />
     </div>
   );
 }
