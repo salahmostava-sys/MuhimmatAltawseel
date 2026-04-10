@@ -223,22 +223,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [handleUnauthenticatedState]);
 
   // Single redirect owner: keep unauthenticated users off protected routes.
+  // When session is lost, attempt silent recovery once before redirecting.
   useEffect(() => {
     if (loading || refreshing) return;
     if (session) return;
-    redirectToLoginIfNeeded();
-  }, [loading, refreshing, session, redirectToLoginIfNeeded]);
+    // Try one silent recovery before giving up and redirecting
+    void recoverSessionSilently().then((recovered) => {
+      if (!recovered) redirectToLoginIfNeeded();
+    });
+  }, [loading, refreshing, session, redirectToLoginIfNeeded, recoverSessionSilently]);
 
   // عند العودة للتبويب/الاتصال: استعادة/تجديد الجلسة بشكل صامت + إعادة تحميل البيانات
   useEffect(() => {
     let lastRefreshAt = 0;
-    const minMs = 45_000;
+    const minMs = 10_000; // 10s cooldown between recovery attempts
     const onWake = async () => {
       if (document.visibilityState !== 'visible') return;
       const now = Date.now();
       if (now - lastRefreshAt < minMs) return;
       lastRefreshAt = now;
-      await recoverSessionSilently({ refetchActiveQueries: false });
+      const recovered = await recoverSessionSilently({ refetchActiveQueries: false });
+      // If recovery succeeded after being away, refetch active queries to refresh stale data
+      if (recovered) {
+        void queryClient.refetchQueries({ type: 'active' });
+      }
     };
     const onFocus = () => {
       void onWake();
