@@ -573,7 +573,7 @@ export function EmployeeDetailedTable({
                           return (
                             <td
                               key="seq"
-                              className="relative px-2 py-2 text-[11px] text-muted-foreground text-center tabular-nums"
+                              className="relative px-2 py-2 text-sm font-semibold text-muted-foreground text-center tabular-nums"
                             >
                               {globalIdx}
                               {colIdx === 0 && presenceUser && (
@@ -598,28 +598,12 @@ export function EmployeeDetailedTable({
                                   path={emp.personal_photo_url}
                                   name={emp.name}
                                 />
-                                <div className="flex items-center gap-1.5">
-                                  <button
-                                    onClick={() => setSelectedEmployee(emp.id)}
-                                    className="text-sm font-semibold text-foreground transition-colors hover:text-primary text-center"
-                                  >
-                                    {emp.name}
-                                  </button>
-                                  {permissions.can_edit && (
-                                    <InlineInputEditor
-                                      value={emp.name || ""}
-                                      placeholder="اسم الموظف"
-                                      onSave={(nextValue) =>
-                                        saveField(emp.id, "name", nextValue)
-                                      }
-                                      renderDisplay={() => (
-                                        <span className="text-[11px] text-muted-foreground hover:text-primary">
-                                          تعديل
-                                        </span>
-                                      )}
-                                    />
-                                  )}
-                                </div>
+                                <button
+                                  onClick={() => setSelectedEmployee(emp.id)}
+                                  className="text-sm font-semibold text-foreground transition-colors hover:text-primary text-center"
+                                >
+                                  {emp.name}
+                                </button>
                               </div>
                             </td>
                           );
@@ -650,16 +634,7 @@ export function EmployeeDetailedTable({
                               className="px-3 py-2.5 text-center whitespace-nowrap"
                               dir="ltr"
                             >
-                              {renderEditableTextCell(
-                                emp.id,
-                                "national_id",
-                                emp.national_id,
-                                {
-                                  dir: "ltr",
-                                  className: "tabular-nums",
-                                  placeholder: "رقم الهوية",
-                                },
-                              )}
+                              {renderTextValue(emp.national_id, { dir: "ltr", className: "tabular-nums" })}
                             </td>
                           );
 

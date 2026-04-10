@@ -123,6 +123,7 @@ export function EmployeeActionsBar({
                   <DropdownMenuCheckboxItem
                     key={col.key}
                     checked={visibleCols.has(col.key)}
+                    onSelect={(e) => e.preventDefault()}
                     onCheckedChange={checked => {
                       setVisibleCols(prev => {
                         if (!checked && prev.size <= 1) {
