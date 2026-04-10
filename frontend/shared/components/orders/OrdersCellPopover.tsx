@@ -55,7 +55,7 @@ export const OrdersCellPopover = ({ state, apps, data, appColorsList, canEdit, o
 
   const formApi = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: defaultValues as FormValues,
+    defaultValues: defaultValues as unknown as FormValues,
     mode: 'onBlur',
   });
 
@@ -82,7 +82,7 @@ export const OrdersCellPopover = ({ state, apps, data, appColorsList, canEdit, o
   }, [onClose]);
 
   useEffect(() => {
-    reset(defaultValues as FormValues);
+    reset(defaultValues as unknown as FormValues);
   }, [defaultValues, reset]);
 
   const handleApply = () => {

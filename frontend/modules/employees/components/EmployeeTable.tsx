@@ -1207,7 +1207,7 @@ export function EmployeeDetailedTable({
                         default:
                           return (
                             <td
-                              key={col.key}
+                              key={(col as { key: string }).key}
                               className="px-3 py-2.5 text-center"
                             >
                               {EMPTY_DATA_PLACEHOLDER}

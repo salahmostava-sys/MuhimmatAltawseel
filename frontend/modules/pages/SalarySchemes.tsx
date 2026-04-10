@@ -491,10 +491,14 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={s.status === 'active' ? 'badge-success' : 'badge-warning'}>{s.status === 'active' ? 'نشطة' : 'مؤرشفة'}</span>
-                    <button onClick={() => openEdit(s)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors"><Pencil size={14} /></button>
-                    <button onClick={() => handleArchive(s.id, s.status)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors" title={s.status === 'active' ? 'أرشفة' : 'تفعيل'}>
-                      {s.status === 'active' ? <Trash2 size={14} /> : <Check size={14} />}
-                    </button>
+                    {perms.can_edit && (
+                      <>
+                        <button onClick={() => openEdit(s)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors"><Pencil size={14} /></button>
+                        <button onClick={() => handleArchive(s.id, s.status)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors" title={s.status === 'active' ? 'أرشفة' : 'تفعيل'}>
+                          {s.status === 'active' ? <Trash2 size={14} /> : <Check size={14} />}
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -502,9 +506,11 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
                 <div className="mb-3">
                   <div className="flex items-center justify-between mb-1.5">
                     <p className="text-xs font-medium text-muted-foreground">المنصات المرتبطة:</p>
-                    <button onClick={() => openAssign(s.id)} className="text-xs text-primary hover:underline flex items-center gap-1">
-                      <Link2 size={11} /> ربط منصة
-                    </button>
+                    {perms.can_edit && (
+                      <button onClick={() => openAssign(s.id)} className="text-xs text-primary hover:underline flex items-center gap-1">
+                        <Link2 size={11} /> ربط منصة
+                      </button>
+                    )}
                   </div>
                   {assignedApps.length === 0 ? (
                     <p className="text-xs text-warning bg-warning/10 rounded-lg px-3 py-1.5">⚠️ لا توجد منصة مرتبطة — الرواتب ستكون صفر</p>
@@ -513,7 +519,9 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
                       {assignedApps.map(a => (
                         <span key={a.id} className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary rounded-full px-2.5 py-1">
                           {a.name}
-                          <button onClick={() => handleUnassignApp(a.id)} className="hover:text-destructive me-0.5"><X size={10} /></button>
+                          {perms.can_edit && (
+                            <button onClick={() => handleUnassignApp(a.id)} className="hover:text-destructive me-0.5"><X size={10} /></button>
+                          )}
                         </span>
                       ))}
                     </div>

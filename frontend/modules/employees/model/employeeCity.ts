@@ -99,7 +99,7 @@ function normalizeCityAlias(value: string): string {
 }
 
 const CITY_ALIAS_MAP: Record<string, string> = Object.fromEntries(
-  EMPLOYEE_CITY_DEFINITIONS.flatMap(({ value, label, aliases = [] }) =>
+  (EMPLOYEE_CITY_DEFINITIONS as readonly EmployeeCityDefinition[]).flatMap(({ value, label, aliases = [] }) =>
     [value, label, ...aliases].map((alias) => [normalizeCityAlias(alias), value] as const),
   ),
 );

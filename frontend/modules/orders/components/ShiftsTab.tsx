@@ -28,6 +28,7 @@ export type ShiftRow = {
   app_id: string;
   date: string;
   hours_worked: number;
+  notes?: string | null;
   employee?: { name: string };
   app?: { name: string };
 };
