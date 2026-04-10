@@ -1,4 +1,4 @@
-import { useRef, useCallback, useMemo, useState, useEffect } from 'react';
+import { useRef, useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@shared/components/ui/button';
 import { ClipboardCheck, CalendarDays, FolderOpen } from 'lucide-react';
@@ -90,7 +90,7 @@ const Attendance = () => {
       XLSX.utils.book_append_sheet(wb, ws, 'الحضور');
       XLSX.writeFile(wb, `attendance_${selectedYear}-${String(month + 1).padStart(2, '0')}.xlsx`);
       toast({ title: 'تم التصدير بنجاح' });
-    } catch (e) {
+    } catch {
       toast({ title: 'فشل التصدير', description: 'تعذر تحميل بيانات الحضور', variant: 'destructive' });
     }
   };
@@ -153,7 +153,7 @@ const Attendance = () => {
         description: `${imported} سجل ناجح، ${failed} فاشل`,
         variant: failed > 0 ? 'destructive' : 'default',
       });
-    } catch (e) {
+    } catch {
       toast({ title: 'فشل الاستيراد', description: 'تعذر قراءة الملف', variant: 'destructive' });
     } finally {
       setImporting(false);

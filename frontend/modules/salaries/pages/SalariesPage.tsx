@@ -27,7 +27,8 @@ import { SalaryActionsBar, BatchProgressBar } from '@modules/salaries/components
 import { SalaryTable } from '@modules/salaries/components/SalaryTable';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@shared/components/ui/dialog';
 
-import { PLATFORM_COLORS } from '@modules/salaries/lib/salaryConstants';
+// PLATFORM_COLORS import removed — we now derive colors locally via useMemo (platformMeta)
+// import { PLATFORM_COLORS } from '@modules/salaries/lib/salaryConstants';
 import { months } from '@modules/salaries/lib/salaryMonths';
 import { buildSalaryDraftPatch, prepareSalaryState } from '@modules/salaries/lib/salaryDomain';
 import type {

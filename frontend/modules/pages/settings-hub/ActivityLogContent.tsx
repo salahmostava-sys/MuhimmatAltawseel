@@ -119,7 +119,8 @@ export default function ActivityLogContent() {
   const { isRTL } = useLanguage();
   const { enabled, userId } = useAuthQueryGate();
   const uid = authQueryUserId(userId);
-  const { permissions } = usePermissions('settings');
+  const { permissions: _settingsPerms } = usePermissions('settings');
+  // _settingsPerms available for future permission gating on activity logs
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(0);

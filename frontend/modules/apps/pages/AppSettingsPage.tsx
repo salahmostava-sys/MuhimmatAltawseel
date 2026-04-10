@@ -16,7 +16,7 @@ export function AppSettingsPage() {
   const queryClient = useQueryClient();
   const { permissions: { can_edit } = {} } = usePermissions('apps');
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
-  const [workTypeLoading, setWorkTypeLoading] = useState(false);
+  const [workTypeUpdating, setWorkTypeUpdating] = useState(false);
 
   const { data: apps = [], isLoading, error } = useQuery({
     queryKey: ['apps', 'all', uid],
@@ -27,24 +27,25 @@ export function AppSettingsPage() {
   const selectedApp = apps.find((a) => a.id === selectedAppId);
 
   const handleWorkTypeChange = async (workType: WorkType) => {
-    if (!selectedApp) return;
+    if (!selectedApp || workTypeUpdating) return;
     if (!can_edit) {
       toast.error('ليس لديك صلاحية التعديل');
       return;
     }
 
-    setWorkTypeLoading(true);
+    setWorkTypeUpdating(true);
     try {
       await appService.update(selectedApp.id, {
         ...selectedApp,
         work_type: workType,
       });
       await queryClient.invalidateQueries({ queryKey: ['apps'] });
+      toast.success('تم تحديث نوع العمل');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'تعذر تحديث نوع العمل';
       toast.error(message);
     } finally {
-      setWorkTypeLoading(false);
+      setWorkTypeUpdating(false);
     }
   };
 
