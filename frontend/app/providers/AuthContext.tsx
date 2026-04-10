@@ -236,7 +236,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // عند العودة للتبويب/الاتصال: استعادة/تجديد الجلسة بشكل صامت + إعادة تحميل البيانات
   useEffect(() => {
     let lastRefreshAt = 0;
-    const minMs = 10_000; // 10s cooldown between recovery attempts
+    const minMs = 240_000; // 4 minutes cooldown between recovery attempts
     const onWake = async () => {
       if (document.visibilityState !== 'visible') return;
       const now = Date.now();
@@ -335,7 +335,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // ── Session inactivity management (auto-logout + cross-tab sync) ──────────
   useSessionManager({ session, signOut, queryClient });
 
-  const busy = loading || refreshing;
+  // Only initial loading blocks the UI — silent background refreshes should NOT
+  // set authLoading=true (which would disable queries and close modals).
+  const busy = loading;
   const contextValue = useMemo<AuthContextType>(() => ({
     user,
     session,
