@@ -112,19 +112,12 @@ export function ShiftsTab({
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [editingCell, setEditingCell] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setGrid(buildGridFromShifts(shifts));
   }, [shifts]);
 
-  useEffect(() => {
-    if (editingCell && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [editingCell]);
+
 
   const days = getDaysInMonth(year, month);
   const dayArr = useMemo(() => Array.from({ length: days }, (_, i) => i + 1), [days]);
@@ -153,7 +146,7 @@ export function ShiftsTab({
       return;
     }
     setEditingCell(key);
-    setEditValue(String(getVal(empId, day) || ''));
+
   };
 
   const commitAttendance = (key: string, value: number) => {
@@ -164,21 +157,6 @@ export function ShiftsTab({
       return next;
     });
     setEditingCell(null);
-  };
-
-  const commitEdit = () => {
-    if (!editingCell) return;
-    const val = parseFloat(editValue) || 0;
-    commitAttendance(editingCell, Math.min(val, 24));
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === 'Tab') {
-      e.preventDefault();
-      commitEdit();
-    } else if (e.key === 'Escape') {
-      setEditingCell(null);
-    }
   };
 
   const handleSave = async () => {
