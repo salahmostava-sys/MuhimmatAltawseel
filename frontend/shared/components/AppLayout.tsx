@@ -48,6 +48,7 @@ const AppLayoutInner = ({ children }: AppLayoutProps) => { // NOSONAR: layout wi
   const { t } = useTranslation();
   const location = useLocation();
   const [profileName, setProfileName] = useState<string | null>(null);
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => localStorage.getItem('sidebar_collapsed') === 'true'
   );
@@ -68,12 +69,13 @@ const AppLayoutInner = ({ children }: AppLayoutProps) => { // NOSONAR: layout wi
 
   useEffect(() => {
     if (!user?.id) return;
-    profileService.getProfileName(user.id)
+    profileService.getProfile(user.id)
       .then((row) => {
         if (row?.name) setProfileName(row.name);
+        if (row?.avatar_url) setProfileAvatarUrl(row.avatar_url);
       })
       .catch((e: unknown) => {
-        logError('[AppLayout] getProfileName failed', e);
+        logError('[AppLayout] getProfile failed', e);
       });
   }, [user?.id]);
 
@@ -223,12 +225,22 @@ const AppLayoutInner = ({ children }: AppLayoutProps) => { // NOSONAR: layout wi
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
                   )}
                 >
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ring-2 ring-background"
-                    style={{ background: 'linear-gradient(135deg, #2642e6, #465fff)' }}
-                  >
-                    {initials || 'A'}
-                  </div>
+                  {profileAvatarUrl ? (
+                    <img
+                      src={profileAvatarUrl}
+                      alt={displayName}
+                      title={displayName}
+                      className="w-8 h-8 rounded-full object-cover flex-shrink-0 ring-2 ring-background"
+                    />
+                  ) : (
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ring-2 ring-background"
+                      style={{ background: 'linear-gradient(135deg, #2642e6, #465fff)' }}
+                      title={displayName}
+                    >
+                      {initials || 'A'}
+                    </div>
+                  )}
                   <div
                     className={cn(
                       'hidden sm:flex flex-col leading-tight min-w-0 max-w-[120px] lg:max-w-[160px]',
@@ -250,6 +262,16 @@ const AppLayoutInner = ({ children }: AppLayoutProps) => { // NOSONAR: layout wi
               <DropdownMenuContent align="end" className="w-56" sideOffset={6}>
                 <div className="px-3 py-2.5" style={{ borderBottom: '1px solid var(--ds-surface-container)' }}>
                   <div className="flex items-center gap-2.5">
+                    {profileAvatarUrl ? (
+                      <img src={profileAvatarUrl} alt={displayName} className="w-10 h-10 rounded-full object-cover flex-shrink-0 ring-2 ring-border" />
+                    ) : (
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                        style={{ background: 'linear-gradient(135deg, #2642e6, #465fff)' }}
+                      >
+                        {initials || 'A'}
+                      </div>
+                    )}
                     <div className="min-w-0">
                       <p className="text-sm font-semibold truncate" style={{ color: 'var(--ds-on-surface)' }}>
                         {displayName}
