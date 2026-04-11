@@ -45,8 +45,8 @@ export default defineConfig({
         "app/i18n/**",
         "modules/ai-dashboard/**",
       ],
-      /** في CI مع Sonar نولّد lcov دون إيقاف السير بسبب العتبات المنخفضة حالياً */
-      thresholds: process.env.SONAR_CI
+      /** ÙÙŠ CI Ù…Ø¹ Sonar Ù†ÙˆÙ„Ù‘Ø¯ lcov Ø¯ÙˆÙ† Ø¥ÙŠÙ‚Ø§Ù Ø§Ù„Ø³ÙŠØ± Ø¨Ø³Ø¨Ø¨ Ø§Ù„Ø¹ØªØ¨Ø§Øª Ø§Ù„Ù…Ù†Ø®ÙØ¶Ø© Ø­Ø§Ù„ÙŠØ§Ù‹ */
+      thresholds: process.env.CI
         ? undefined
         : {
             lines: 2,

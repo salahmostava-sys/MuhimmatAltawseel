@@ -10,7 +10,6 @@
     "lint": "eslint .",
     "lint:strict": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
-    "lint:sonar": "eslint . --format json --output-file eslint-report.json",
     "verify": "npm run lint && npm run test && npm run build",
     "audit:frontend": "npm run lint:strict && npm run test:coverage && npm run build",
     "gen:types": "cd .. && npx supabase gen types typescript --project-id plxpehtkabmfkdlgjyin -s public > frontend/services/supabase/types.ts",
