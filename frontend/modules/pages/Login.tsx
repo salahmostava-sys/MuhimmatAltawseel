@@ -102,6 +102,14 @@ const Login = () => {
       <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden"
         style={{ background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.7) 50%, hsl(var(--primary) / 0.4) 100%)' }}
       >
+        {/* Logo as large background watermark */}
+        {settings?.logo_url && (
+          <img
+            src={brandLogoSrc(settings.logo_url, settings.updated_at)}
+            alt=""
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70%] max-w-[400px] opacity-[0.08] object-contain pointer-events-none select-none"
+          />
+        )}
         {/* Geometric pattern overlay */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 right-20 w-72 h-72 border border-white/30 rounded-full" />
