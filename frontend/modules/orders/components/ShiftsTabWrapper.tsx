@@ -35,7 +35,7 @@ export function ShiftsTabWrapper() {
     enabled,
   });
 
-  // Fetch employee ↔ app assignments
+  // Fetch employee â†” app assignments
   const { data: employeeApps = [] } = useQuery({
     queryKey: ['employee-apps', uid],
     queryFn: () => orderService.getEmployeeAppAssignments(),
@@ -94,10 +94,10 @@ export function ShiftsTabWrapper() {
           queryClient.invalidateQueries({ queryKey: ['employees', uid, 'active-ids', globalMonth] }),
           queryClient.invalidateQueries({ queryKey: ['salaries', uid, 'base-context', globalMonth] }),
         ]);
-        toast.success('تم حفظ بيانات الدوام بنجاح');
+        toast.success('ØªÙ… Ø­ÙØ¸ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¯ÙˆØ§Ù… Ø¨Ù†Ø¬Ø§Ø­');
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'فشل حفظ البيانات';
-        toast.error('خطأ', { description: message });
+        const message = error instanceof Error ? error.message : 'ÙØ´Ù„ Ø­ÙØ¸ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª';
+        toast.error('Ø®Ø·Ø£', { description: message });
         throw error;
       }
     },
@@ -112,7 +112,7 @@ export function ShiftsTabWrapper() {
         const raw = s as Record<string, unknown>;
         return {
           ...s,
-          date: String(raw.shift_date ?? raw.date ?? ''),
+          date: String(raw.date ?? raw.date ?? ''),
         };
       }) as ShiftRow[]}
       employees={shiftEmployees}
