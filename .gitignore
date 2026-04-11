@@ -58,3 +58,8 @@ attached_assets/*.env
 .sixth/
 
 maestro/
+
+# Python cache
+__pycache__/
+*.pyc
+.circleci/
