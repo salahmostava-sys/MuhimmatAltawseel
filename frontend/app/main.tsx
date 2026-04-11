@@ -12,7 +12,7 @@ Sentry.init({
   // For example, automatic IP address collection on events
   sendDefaultPii: false,
   integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
-  tracesSampleRate: import.meta.env.PROD ? 0.1 : 1,
+  tracesSampleRate: import.meta.env.PROD ? 0.1 : 0,
   environment: import.meta.env.MODE,
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1,
