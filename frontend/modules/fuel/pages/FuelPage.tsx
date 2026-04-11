@@ -59,6 +59,7 @@ const FuelPage = () => { // NOSONAR: UI container with many independent handlers
     permissions,
     refetchMonthly,
     monthOrdersMap,
+    dailyOrderRows,
     error: fuelError,
     refetch: refetchAll,
   } = useFuelPage();
@@ -149,6 +150,7 @@ const FuelPage = () => { // NOSONAR: UI container with many independent handlers
           <FuelSpreadsheetView
             loading={loading}
             dailyRows={filteredDaily}
+            dailyOrderRows={dailyOrderRows}
             riders={ridersForTab}
             monthYear={monthYear}
           />

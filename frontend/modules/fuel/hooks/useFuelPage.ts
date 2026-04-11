@@ -9,6 +9,7 @@ import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGat
 import { defaultQueryRetry } from '@shared/lib/query';
 import { logError } from '@shared/lib/logger';
 import { getErrorMessage } from '@services/serviceError';
+import { supabase } from '@services/supabase/client';
 import { useFuel } from '@modules/fuel/hooks/useFuel';
 import {
   calcDailyStats,
@@ -153,6 +154,25 @@ export function useFuelPage() { // NOSONAR: page data layer with many independen
       const me = format(endOfMonth(new Date(`${monthYear}-01`)), 'yyyy-MM-dd');
       const rows = await fuelApi.getMonthlyOrders(ms, me);
       return (rows || []) as { employee_id: string; orders_count: number }[];
+    },
+    retry: defaultQueryRetry,
+    staleTime: 30_000,
+  });
+
+  /** Daily orders with date — used by spreadsheet view for per-day orders */
+  const { data: dailyOrderRows = [] } = useQuery({
+    queryKey: ['fuel', uid, 'daily-orders-by-date', monthYear],
+    enabled: enabled && view === 'spreadsheet',
+    queryFn: async () => {
+      const ms = `${monthYear}-01`;
+      const me = format(endOfMonth(new Date(`${monthYear}-01`)), 'yyyy-MM-dd');
+      const { data, error } = await supabase
+        .from('daily_orders')
+        .select('employee_id, date, orders_count')
+        .gte('date', ms)
+        .lte('date', me);
+      if (error) throw error;
+      return (data ?? []) as { employee_id: string; date: string; orders_count: number }[];
     },
     retry: defaultQueryRetry,
     staleTime: 30_000,
@@ -382,6 +402,7 @@ export function useFuelPage() { // NOSONAR: page data layer with many independen
     permissions,
     refetchMonthly,
     monthOrdersMap,
+    dailyOrderRows,
     error: fuelBaseError || monthlyError || dailyError,
     refetch: async () => { await refetchMonthly(); await refetchDaily(); },
   };
