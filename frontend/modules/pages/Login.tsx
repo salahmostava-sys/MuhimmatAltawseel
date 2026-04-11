@@ -102,12 +102,12 @@ const Login = () => {
       <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden"
         style={{ background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.7) 50%, hsl(var(--primary) / 0.4) 100%)' }}
       >
-        {/* Logo as large background watermark */}
+        {/* Logo as full background watermark */}
         {settings?.logo_url && (
           <img
             src={brandLogoSrc(settings.logo_url, settings.updated_at)}
             alt=""
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70%] max-w-[400px] opacity-[0.08] object-contain pointer-events-none select-none"
+            className="absolute inset-0 w-full h-full opacity-[0.06] object-contain pointer-events-none select-none p-16"
           />
         )}
         {/* Geometric pattern overlay */}
@@ -125,10 +125,10 @@ const Login = () => {
               <img
                 src={brandLogoSrc(settings.logo_url, settings.updated_at)}
                 alt=""
-                className="w-20 h-20 rounded-2xl object-contain bg-white/10 backdrop-blur-sm p-2 shadow-lg"
+                className="w-28 h-28 rounded-3xl object-contain bg-white/10 backdrop-blur-sm p-3 shadow-xl"
               />
             ) : (
-              <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-4xl shadow-lg">
+              <div className="w-28 h-28 rounded-3xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-5xl shadow-xl">
                 🚀
               </div>
             )}
