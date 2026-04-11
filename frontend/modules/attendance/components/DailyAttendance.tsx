@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@services/supabase/client";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { CalendarIcon, UserCheck, Save } from "lucide-react";
@@ -70,11 +69,8 @@ const DailyAttendance = ({ selectedMonth, selectedYear }: Props) => {
     queryKey: ['attendance-status-configs'],
     enabled,
     queryFn: async () => {
-      const { data, error } = await (supabase.from('attendance_status_configs') as ReturnType<typeof supabase.from>)
-        .select('id, name, color')
-        .order('created_at');
-      if (error) throw error;
-      return (data ?? []).map((r: { name: string }) => r.name);
+      const rows = await attendanceService.getStatusConfigs();
+      return rows.map((r) => r.name);
     },
     staleTime: 5 * 60_000,
     placeholderData: () => {
@@ -85,9 +81,7 @@ const DailyAttendance = ({ selectedMonth, selectedYear }: Props) => {
 
   const addStatusMutation = useMutation({
     mutationFn: async (name: string) => {
-      const { error } = await (supabase.from('attendance_status_configs') as ReturnType<typeof supabase.from>)
-        .insert({ name, color: '#6366f1' });
-      if (error) throw error;
+      await attendanceService.addStatusConfig(name);
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['attendance-status-configs'] });

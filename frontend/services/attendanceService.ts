@@ -182,6 +182,23 @@ export const attendanceService = {
     if (error) handleSupabaseError(error, 'attendanceService.getAttendanceByEmployeeMonth');
     return data ?? [];
   },
+  /** Fetch custom attendance status configs (e.g. إجازة خاصة). */
+  getStatusConfigs: async () => {
+    const { data, error } = await supabase
+      .from('attendance_status_configs' as string)
+      .select('id, name, color')
+      .order('created_at');
+    if (error) handleSupabaseError(error, 'attendanceService.getStatusConfigs');
+    return (data ?? []) as Array<{ id: string; name: string; color: string }>;
+  },
+
+  /** Add a new custom attendance status. */
+  addStatusConfig: async (name: string, color = '#6366f1') => {
+    const { error } = await supabase
+      .from('attendance_status_configs' as string)
+      .insert({ name, color });
+    if (error) handleSupabaseError(error, 'attendanceService.addStatusConfig');
+  },
 };
 
 export default attendanceService;
