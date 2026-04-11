@@ -56,3 +56,5 @@ attached_assets/*.env
 # IDE / local tool configs
 .sonarlint/
 .sixth/
+
+maestro/
