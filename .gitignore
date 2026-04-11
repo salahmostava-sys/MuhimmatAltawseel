@@ -25,6 +25,9 @@ frontend/coverage/
 coverage/
 *.local
 
+# Mockup sandbox (Replit artifact — not part of the app)
+artifacts/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
