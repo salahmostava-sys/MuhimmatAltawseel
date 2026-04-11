@@ -22,16 +22,16 @@ import {
 import { useToast } from '@shared/hooks/use-toast';
 import * as maintenanceService from '@services/maintenanceService';
 import type { SparePart } from '@services/maintenanceService';
-import { useInvalidateMaintenanceQueries } from '@shared/hooks/useMaintenanceData';
+import { useInvalidateMaintenanceQueries } from '@modules/maintenance/hooks/useMaintenanceData';
 
 const MAINT_TYPES = [
-  'غيار زيت',
-  'صيانة دورية',
-  'إطارات',
-  'بطارية',
-  'فرامل',
-  'أعطال',
-  'أخرى',
+  'ØºÙŠØ§Ø± Ø²ÙŠØª',
+  'ØµÙŠØ§Ù†Ø© Ø¯ÙˆØ±ÙŠØ©',
+  'Ø¥Ø·Ø§Ø±Ø§Øª',
+  'Ø¨Ø·Ø§Ø±ÙŠØ©',
+  'ÙØ±Ø§Ù…Ù„',
+  'Ø£Ø¹Ø·Ø§Ù„',
+  'Ø£Ø®Ø±Ù‰',
 ] as const;
 
 type VehicleOpt = { id: string; plate_number: string; brand?: string | null };
@@ -114,7 +114,7 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
     const sp = partById[row.part_id];
     if (!sp) return null;
     const q = Number.parseFloat(row.quantity_used) || 0;
-    if (q > Number(sp.stock_quantity)) return 'الكمية أكبر من المخزون المتاح';
+    if (q > Number(sp.stock_quantity)) return 'Ø§Ù„ÙƒÙ…ÙŠØ© Ø£ÙƒØ¨Ø± Ù…Ù† Ø§Ù„Ù…Ø®Ø²ÙˆÙ† Ø§Ù„Ù…ØªØ§Ø­';
     return null;
   };
 
@@ -132,11 +132,11 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
 
   const handleSave = async () => {
     if (!vehicleId) {
-      toast({ title: 'اختر المركبة', variant: 'destructive' });
+      toast({ title: 'Ø§Ø®ØªØ± Ø§Ù„Ù…Ø±ÙƒØ¨Ø©', variant: 'destructive' });
       return;
     }
     if (rows.some((r) => stockWarning(r))) {
-      toast({ title: 'تصحيح كميات القطع', variant: 'destructive' });
+      toast({ title: 'ØªØµØ­ÙŠØ­ ÙƒÙ…ÙŠØ§Øª Ø§Ù„Ù‚Ø·Ø¹', variant: 'destructive' });
       return;
     }
     const parts = rows
@@ -158,12 +158,12 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
         },
         parts
       );
-      toast({ title: 'تم حفظ سجل الصيانة' });
+      toast({ title: 'ØªÙ… Ø­ÙØ¸ Ø³Ø¬Ù„ Ø§Ù„ØµÙŠØ§Ù†Ø©' });
       invalidate();
       onOpenChange(false);
     } catch (e) {
       toast({
-        title: 'تعذر الحفظ',
+        title: 'ØªØ¹Ø°Ø± Ø§Ù„Ø­ÙØ¸',
         description: e instanceof Error ? e.message : undefined,
         variant: 'destructive',
       });
@@ -176,33 +176,33 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
-          <DialogTitle>إضافة صيانة</DialogTitle>
+          <DialogTitle>Ø¥Ø¶Ø§ÙØ© ØµÙŠØ§Ù†Ø©</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>المركبة</Label>
+            <Label>Ø§Ù„Ù…Ø±ÙƒØ¨Ø©</Label>
             <Select value={vehicleId} onValueChange={setVehicleId}>
               <SelectTrigger>
-                <SelectValue placeholder="اختر المركبة" />
+                <SelectValue placeholder="Ø§Ø®ØªØ± Ø§Ù„Ù…Ø±ÙƒØ¨Ø©" />
               </SelectTrigger>
               <SelectContent>
                 {vehicles.map((v) => (
                   <SelectItem key={v.id} value={v.id}>
                     {v.plate_number}
-                    {v.brand ? ` — ${v.brand}` : ''}
+                    {v.brand ? ` â€” ${v.brand}` : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {driverName && (
-              <p className="text-xs text-muted-foreground">السائق الحالي: {driverName}</p>
+              <p className="text-xs text-muted-foreground">Ø§Ù„Ø³Ø§Ø¦Ù‚ Ø§Ù„Ø­Ø§Ù„ÙŠ: {driverName}</p>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>تاريخ الصيانة</Label>
+              <Label>ØªØ§Ø±ÙŠØ® Ø§Ù„ØµÙŠØ§Ù†Ø©</Label>
               <Input
                 type="date"
                 value={maintenanceDate}
@@ -210,7 +210,7 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
               />
             </div>
             <div className="space-y-2">
-              <Label>نوع الصيانة</Label>
+              <Label>Ù†ÙˆØ¹ Ø§Ù„ØµÙŠØ§Ù†Ø©</Label>
               <Select value={maintType} onValueChange={setMaintType}>
                 <SelectTrigger>
                   <SelectValue />
@@ -227,26 +227,26 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
           </div>
 
           <div className="space-y-2">
-            <Label>قراءة العداد</Label>
+            <Label>Ù‚Ø±Ø§Ø¡Ø© Ø§Ù„Ø¹Ø¯Ø§Ø¯</Label>
             <Input
               type="number"
               inputMode="numeric"
               value={odometer}
               onChange={(e) => setOdometer(e.target.value)}
-              placeholder="اختياري"
+              placeholder="Ø§Ø®ØªÙŠØ§Ø±ÙŠ"
             />
           </div>
 
           <div className="space-y-2">
-            <Label>ملاحظات</Label>
+            <Label>Ù…Ù„Ø§Ø­Ø¸Ø§Øª</Label>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
           </div>
 
           <div className="border rounded-lg p-3 space-y-2">
             <div className="flex items-center justify-between">
-              <Label>قطع الغيار المستخدمة</Label>
+              <Label>Ù‚Ø·Ø¹ Ø§Ù„ØºÙŠØ§Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…Ø©</Label>
               <Button type="button" variant="outline" size="sm" className="gap-1" onClick={addRow}>
-                <Plus size={14} /> إضافة قطعة
+                <Plus size={14} /> Ø¥Ø¶Ø§ÙØ© Ù‚Ø·Ø¹Ø©
               </Button>
             </div>
             {rows.map((row) => {
@@ -260,12 +260,12 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
                       onValueChange={(v) => updateRow(i, { part_id: v })}
                     >
                       <SelectTrigger className="h-9">
-                        <SelectValue placeholder="القطعة" />
+                        <SelectValue placeholder="Ø§Ù„Ù‚Ø·Ø¹Ø©" />
                       </SelectTrigger>
                       <SelectContent>
                         {spareParts.map((p) => (
                           <SelectItem key={p.id} value={p.id}>
-                            {p.name_ar} (متوفر: {p.stock_quantity})
+                            {p.name_ar} (Ù…ØªÙˆÙØ±: {p.stock_quantity})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -276,7 +276,7 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
                     <Input
                       className="h-9"
                       type="number"
-                      placeholder="الكمية"
+                      placeholder="Ø§Ù„ÙƒÙ…ÙŠØ©"
                       value={row.quantity_used}
                       onChange={(e) => updateRow(i, { quantity_used: e.target.value })}
                     />
@@ -285,7 +285,7 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
                     <Input
                       className="h-9"
                       type="number"
-                      placeholder="سعر الوحدة"
+                      placeholder="Ø³Ø¹Ø± Ø§Ù„ÙˆØ­Ø¯Ø©"
                       value={row.cost_at_time}
                       onChange={(e) => updateRow(i, { cost_at_time: e.target.value })}
                     />
@@ -303,14 +303,14 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
 
         <DialogFooter className="flex-col sm:flex-row gap-2 sm:justify-between sm:items-center">
           <div className="text-sm font-semibold">
-            التكلفة الإجمالية: {totalCost.toFixed(2)} ريال
+            Ø§Ù„ØªÙƒÙ„ÙØ© Ø§Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠØ©: {totalCost.toFixed(2)} Ø±ÙŠØ§Ù„
           </div>
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              إلغاء
+              Ø¥Ù„ØºØ§Ø¡
             </Button>
             <Button type="button" disabled={saving || blocked} onClick={() => void handleSave()}>
-              حفظ الصيانة ✓
+              Ø­ÙØ¸ Ø§Ù„ØµÙŠØ§Ù†Ø© âœ“
             </Button>
           </div>
         </DialogFooter>

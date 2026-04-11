@@ -18,7 +18,7 @@ import {
 } from '@shared/components/ui/alert-dialog';
 import { useToast } from '@shared/hooks/use-toast';
 import { usePermissions } from '@shared/hooks/usePermissions';
-import { useMaintenanceLogs, useSpareParts, useInvalidateMaintenanceQueries } from '@shared/hooks/useMaintenanceData';
+import { useMaintenanceLogs, useSpareParts, useInvalidateMaintenanceQueries } from '@modules/maintenance/hooks/useMaintenanceData';
 import { vehicleService } from '@services/vehicleService';
 import * as maintenanceService from '@services/maintenanceService';
 import type { MaintenanceLogWithDetails } from '@services/maintenanceService';
@@ -27,13 +27,13 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthQueryGate, authQueryUserId } from '@shared/hooks/useAuthQueryGate';
 
 const MAINT_TYPES_ALL = [
-  'غيار زيت',
-  'صيانة دورية',
-  'إطارات',
-  'بطارية',
-  'فرامل',
-  'أعطال',
-  'أخرى',
+  'ØºÙŠØ§Ø± Ø²ÙŠØª',
+  'ØµÙŠØ§Ù†Ø© Ø¯ÙˆØ±ÙŠØ©',
+  'Ø¥Ø·Ø§Ø±Ø§Øª',
+  'Ø¨Ø·Ø§Ø±ÙŠØ©',
+  'ÙØ±Ø§Ù…Ù„',
+  'Ø£Ø¹Ø·Ø§Ù„',
+  'Ø£Ø®Ø±Ù‰',
 ];
 
 export function MaintenanceLogsTab() {
@@ -92,12 +92,12 @@ export function MaintenanceLogsTab() {
     setDeleting(true);
     try {
       await maintenanceService.deleteMaintenanceLog(deleteTarget.id);
-      toast({ title: 'تم حذف السجل' });
+      toast({ title: 'ØªÙ… Ø­Ø°Ù Ø§Ù„Ø³Ø¬Ù„' });
       invalidate();
       setDeleteTarget(null);
     } catch (e) {
       toast({
-        title: 'تعذر الحذف',
+        title: 'ØªØ¹Ø°Ø± Ø§Ù„Ø­Ø°Ù',
         description: e instanceof Error ? e.message : undefined,
         variant: 'destructive',
       });
@@ -113,26 +113,26 @@ export function MaintenanceLogsTab() {
       {lowStockParts.length > 0 && (
         <div className="rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm flex flex-wrap items-center gap-2 justify-between">
           <span>
-            <strong>تنبيه مخزون:</strong> يوجد {lowStockParts.length} قطعة تحت الحد الأدنى.
+            <strong>ØªÙ†Ø¨ÙŠÙ‡ Ù…Ø®Ø²ÙˆÙ†:</strong> ÙŠÙˆØ¬Ø¯ {lowStockParts.length} Ù‚Ø·Ø¹Ø© ØªØ­Øª Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ø¯Ù†Ù‰.
           </span>
           <Link
             to="/maintenance?tab=inventory"
             className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
           >
-            فتح تبويب المخزون ←
+            ÙØªØ­ ØªØ¨ÙˆÙŠØ¨ Ø§Ù„Ù…Ø®Ø²ÙˆÙ† â†
           </Link>
         </div>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="rounded-xl border bg-card/80 p-4 shadow-sm">
-          <div className="text-xs text-muted-foreground">سجلات مطابقة للتصفية</div>
+          <div className="text-xs text-muted-foreground">Ø³Ø¬Ù„Ø§Øª Ù…Ø·Ø§Ø¨Ù‚Ø© Ù„Ù„ØªØµÙÙŠØ©</div>
           <div className="text-2xl font-bold tabular-nums">{filteredTotals.count}</div>
         </div>
         <div className="rounded-xl border bg-card/80 p-4 shadow-sm sm:col-span-2">
-          <div className="text-xs text-muted-foreground">مجموع التكلفة (للسجلات المصفّاة)</div>
+          <div className="text-xs text-muted-foreground">Ù…Ø¬Ù…ÙˆØ¹ Ø§Ù„ØªÙƒÙ„ÙØ© (Ù„Ù„Ø³Ø¬Ù„Ø§Øª Ø§Ù„Ù…ØµÙÙ‘Ø§Ø©)</div>
           <div className="text-2xl font-bold tabular-nums text-primary">
-            {filteredTotals.totalCost.toLocaleString('ar-SA', { maximumFractionDigits: 2 })} ر.س
+            {filteredTotals.totalCost.toLocaleString('ar-SA', { maximumFractionDigits: 2 })} Ø±.Ø³
           </div>
         </div>
       </div>
@@ -142,21 +142,21 @@ export function MaintenanceLogsTab() {
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
           <Input
             className="pr-9"
-            placeholder="بحث بالوحة، السائق، أو نوع الصيانة..."
+            placeholder="Ø¨Ø­Ø« Ø¨Ø§Ù„ÙˆØ­Ø©ØŒ Ø§Ù„Ø³Ø§Ø¦Ù‚ØŒ Ø£Ùˆ Ù†ÙˆØ¹ Ø§Ù„ØµÙŠØ§Ù†Ø©..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         {permissions.can_edit && (
           <Button className="gap-1 w-full sm:w-auto shrink-0" onClick={() => setAddOpen(true)}>
-            <Plus size={16} /> إضافة صيانة
+            <Plus size={16} /> Ø¥Ø¶Ø§ÙØ© ØµÙŠØ§Ù†Ø©
           </Button>
         )}
       </div>
 
       <Collapsible defaultOpen className="rounded-xl border border-border/60 bg-muted/15">
         <CollapsibleTrigger className="group flex w-full items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted/30 rounded-t-xl">
-          <span>تصفية نوع الصيانة</span>
+          <span>ØªØµÙÙŠØ© Ù†ÙˆØ¹ Ø§Ù„ØµÙŠØ§Ù†Ø©</span>
           <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" aria-hidden />
         </CollapsibleTrigger>
         <CollapsibleContent>
@@ -182,15 +182,15 @@ export function MaintenanceLogsTab() {
           <table className="w-full min-w-[960px] text-sm">
             <thead className="bg-muted/40">
               <tr>
-                <th className="px-3 py-2 text-right">التاريخ</th>
-                <th className="px-3 py-2 text-right">المركبة</th>
-                <th className="px-3 py-2 text-right">السائق</th>
-                <th className="px-3 py-2 text-right">النوع</th>
-                <th className="px-3 py-2 text-center w-20">قطع الغيار</th>
-                <th className="px-3 py-2 text-right">العداد</th>
-                <th className="px-3 py-2 text-right">التكلفة</th>
-                <th className="px-3 py-2 text-right">الحالة</th>
-                <th className="px-3 py-2 text-right w-24">إجراءات</th>
+                <th className="px-3 py-2 text-right">Ø§Ù„ØªØ§Ø±ÙŠØ®</th>
+                <th className="px-3 py-2 text-right">Ø§Ù„Ù…Ø±ÙƒØ¨Ø©</th>
+                <th className="px-3 py-2 text-right">Ø§Ù„Ø³Ø§Ø¦Ù‚</th>
+                <th className="px-3 py-2 text-right">Ø§Ù„Ù†ÙˆØ¹</th>
+                <th className="px-3 py-2 text-center w-20">Ù‚Ø·Ø¹ Ø§Ù„ØºÙŠØ§Ø±</th>
+                <th className="px-3 py-2 text-right">Ø§Ù„Ø¹Ø¯Ø§Ø¯</th>
+                <th className="px-3 py-2 text-right">Ø§Ù„ØªÙƒÙ„ÙØ©</th>
+                <th className="px-3 py-2 text-right">Ø§Ù„Ø­Ø§Ù„Ø©</th>
+                <th className="px-3 py-2 text-right w-24">Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª</th>
               </tr>
             </thead>
             <tbody>
@@ -198,7 +198,7 @@ export function MaintenanceLogsTab() {
                 <tr>
                   <td colSpan={9} className="py-12 text-center text-muted-foreground">
                     <Loader2 className="inline animate-spin me-2" size={18} />
-                    جاري التحميل...
+                    Ø¬Ø§Ø±ÙŠ Ø§Ù„ØªØ­Ù…ÙŠÙ„...
                   </td>
                 </tr>
               )}
@@ -207,20 +207,20 @@ export function MaintenanceLogsTab() {
                   <tr key={row.id} className="border-b border-border/30 hover:bg-muted/20">
                     <td className="px-3 py-2 whitespace-nowrap">{row.maintenance_date}</td>
                     <td className="px-3 py-2 whitespace-nowrap font-medium">
-                      {row.vehicles?.plate_number ?? '—'}
+                      {row.vehicles?.plate_number ?? 'â€”'}
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap">{row.employees?.name ?? '—'}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{row.employees?.name ?? 'â€”'}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{row.type}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-center text-xs text-muted-foreground">
                       {row.maintenance_parts?.length
-                        ? `${row.maintenance_parts.length} بند`
-                        : '—'}
+                        ? `${row.maintenance_parts.length} Ø¨Ù†Ø¯`
+                        : 'â€”'}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">
-                      {row.odometer_reading ?? '—'}
+                      {row.odometer_reading ?? 'â€”'}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">
-                      {Number(row.total_cost ?? 0).toLocaleString('ar-SA')} ر.س
+                      {Number(row.total_cost ?? 0).toLocaleString('ar-SA')} Ø±.Ø³
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">{row.status}</td>
                     <td className="px-3 py-2">
@@ -240,7 +240,7 @@ export function MaintenanceLogsTab() {
               {!loading && filtered.length === 0 && (
                 <tr>
                   <td colSpan={9} className="py-10 text-center text-muted-foreground">
-                    لا توجد سجلات
+                    Ù„Ø§ ØªÙˆØ¬Ø¯ Ø³Ø¬Ù„Ø§Øª
                   </td>
                 </tr>
               )}
@@ -259,13 +259,13 @@ export function MaintenanceLogsTab() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
-            <AlertDialogTitle>حذف سجل الصيانة؟</AlertDialogTitle>
-            <AlertDialogDescription>لا يمكن التراجع عن هذا الإجراء.</AlertDialogDescription>
+            <AlertDialogTitle>Ø­Ø°Ù Ø³Ø¬Ù„ Ø§Ù„ØµÙŠØ§Ù†Ø©ØŸ</AlertDialogTitle>
+            <AlertDialogDescription>Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø§Ù„ØªØ±Ø§Ø¬Ø¹ Ø¹Ù† Ù‡Ø°Ø§ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogCancel>Ø¥Ù„ØºØ§Ø¡</AlertDialogCancel>
             <AlertDialogAction onClick={() => void handleDelete()} disabled={deleting}>
-              حذف
+              Ø­Ø°Ù
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
