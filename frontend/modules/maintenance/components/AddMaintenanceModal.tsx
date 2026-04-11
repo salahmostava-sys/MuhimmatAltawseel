@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { Plus, Trash2 } from 'lucide-react';
 import {
@@ -25,13 +25,13 @@ import type { SparePart } from '@services/maintenanceService';
 import { useInvalidateMaintenanceQueries } from '@modules/maintenance/hooks/useMaintenanceData';
 
 const MAINT_TYPES = [
-  'ØºÙŠØ§Ø± Ø²ÙŠØª',
-  'ØµÙŠØ§Ù†Ø© Ø¯ÙˆØ±ÙŠØ©',
-  'Ø¥Ø·Ø§Ø±Ø§Øª',
-  'Ø¨Ø·Ø§Ø±ÙŠØ©',
-  'ÙØ±Ø§Ù…Ù„',
-  'Ø£Ø¹Ø·Ø§Ù„',
-  'Ø£Ø®Ø±Ù‰',
+  'غ�Šار ز�Šت',
+  'ص�Šا�†ة د�ˆر�Šة',
+  'إطارات',
+  'بطار�Šة',
+  'فرا�…�„',
+  'أعطا�„',
+  'أخر�‰',
 ] as const;
 
 type VehicleOpt = { id: string; plate_number: string; brand?: string | null };
@@ -114,7 +114,7 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
     const sp = partById[row.part_id];
     if (!sp) return null;
     const q = Number.parseFloat(row.quantity_used) || 0;
-    if (q > Number(sp.stock_quantity)) return 'Ø§Ù„ÙƒÙ…ÙŠØ© Ø£ÙƒØ¨Ø± Ù…Ù† Ø§Ù„Ù…Ø®Ø²ÙˆÙ† Ø§Ù„Ù…ØªØ§Ø­';
+    if (q > Number(sp.stock_quantity)) return 'ا�„�ƒ�…�Šة أ�ƒبر �…�† ا�„�…خز�ˆ�† ا�„�…تاح';
     return null;
   };
 
@@ -132,11 +132,11 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
 
   const handleSave = async () => {
     if (!vehicleId) {
-      toast({ title: 'Ø§Ø®ØªØ± Ø§Ù„Ù…Ø±ÙƒØ¨Ø©', variant: 'destructive' });
+      toast({ title: 'اختر ا�„�…ر�ƒبة', variant: 'destructive' });
       return;
     }
     if (rows.some((r) => stockWarning(r))) {
-      toast({ title: 'ØªØµØ­ÙŠØ­ ÙƒÙ…ÙŠØ§Øª Ø§Ù„Ù‚Ø·Ø¹', variant: 'destructive' });
+      toast({ title: 'تصح�Šح �ƒ�…�Šات ا�„�‚طع', variant: 'destructive' });
       return;
     }
     const parts = rows
@@ -158,12 +158,12 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
         },
         parts
       );
-      toast({ title: 'ØªÙ… Ø­ÙØ¸ Ø³Ø¬Ù„ Ø§Ù„ØµÙŠØ§Ù†Ø©' });
+      toast({ title: 'ت�… حفظ سج�„ ا�„ص�Šا�†ة' });
       invalidate();
       onOpenChange(false);
     } catch (e) {
       toast({
-        title: 'ØªØ¹Ø°Ø± Ø§Ù„Ø­ÙØ¸',
+        title: 'تعذر ا�„حفظ',
         description: e instanceof Error ? e.message : undefined,
         variant: 'destructive',
       });
@@ -176,33 +176,33 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
-          <DialogTitle>Ø¥Ø¶Ø§ÙØ© ØµÙŠØ§Ù†Ø©</DialogTitle>
+          <DialogTitle>إضافة ص�Šا�†ة</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Ø§Ù„Ù…Ø±ÙƒØ¨Ø©</Label>
+            <Label>ا�„�…ر�ƒبة</Label>
             <Select value={vehicleId} onValueChange={setVehicleId}>
               <SelectTrigger>
-                <SelectValue placeholder="Ø§Ø®ØªØ± Ø§Ù„Ù…Ø±ÙƒØ¨Ø©" />
+                <SelectValue placeholder="اختر ا�„�…ر�ƒبة" />
               </SelectTrigger>
               <SelectContent>
                 {vehicles.map((v) => (
                   <SelectItem key={v.id} value={v.id}>
                     {v.plate_number}
-                    {v.brand ? ` â€” ${v.brand}` : ''}
+                    {v.brand ? ` �€” ${v.brand}` : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {driverName && (
-              <p className="text-xs text-muted-foreground">Ø§Ù„Ø³Ø§Ø¦Ù‚ Ø§Ù„Ø­Ø§Ù„ÙŠ: {driverName}</p>
+              <p className="text-xs text-muted-foreground">ا�„سائ�‚ ا�„حا�„�Š: {driverName}</p>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>ØªØ§Ø±ÙŠØ® Ø§Ù„ØµÙŠØ§Ù†Ø©</Label>
+              <Label>تار�Šخ ا�„ص�Šا�†ة</Label>
               <Input
                 type="date"
                 value={maintenanceDate}
@@ -210,7 +210,7 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
               />
             </div>
             <div className="space-y-2">
-              <Label>Ù†ÙˆØ¹ Ø§Ù„ØµÙŠØ§Ù†Ø©</Label>
+              <Label>�†�ˆع ا�„ص�Šا�†ة</Label>
               <Select value={maintType} onValueChange={setMaintType}>
                 <SelectTrigger>
                   <SelectValue />
@@ -227,26 +227,26 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
           </div>
 
           <div className="space-y-2">
-            <Label>Ù‚Ø±Ø§Ø¡Ø© Ø§Ù„Ø¹Ø¯Ø§Ø¯</Label>
+            <Label>�‚راءة ا�„عداد</Label>
             <Input
               type="number"
               inputMode="numeric"
               value={odometer}
               onChange={(e) => setOdometer(e.target.value)}
-              placeholder="Ø§Ø®ØªÙŠØ§Ø±ÙŠ"
+              placeholder="اخت�Šار�Š"
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Ù…Ù„Ø§Ø­Ø¸Ø§Øª</Label>
+            <Label>�…�„احظات</Label>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
           </div>
 
           <div className="border rounded-lg p-3 space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Ù‚Ø·Ø¹ Ø§Ù„ØºÙŠØ§Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…Ø©</Label>
+              <Label>�‚طع ا�„غ�Šار ا�„�…ستخد�…ة</Label>
               <Button type="button" variant="outline" size="sm" className="gap-1" onClick={addRow}>
-                <Plus size={14} /> Ø¥Ø¶Ø§ÙØ© Ù‚Ø·Ø¹Ø©
+                <Plus size={14} /> إضافة �‚طعة
               </Button>
             </div>
             {rows.map((row) => {
@@ -260,12 +260,12 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
                       onValueChange={(v) => updateRow(i, { part_id: v })}
                     >
                       <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Ø§Ù„Ù‚Ø·Ø¹Ø©" />
+                        <SelectValue placeholder="ا�„�‚طعة" />
                       </SelectTrigger>
                       <SelectContent>
                         {spareParts.map((p) => (
                           <SelectItem key={p.id} value={p.id}>
-                            {p.name_ar} (Ù…ØªÙˆÙØ±: {p.stock_quantity})
+                            {p.name_ar} (�…ت�ˆفر: {p.stock_quantity})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -276,7 +276,7 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
                     <Input
                       className="h-9"
                       type="number"
-                      placeholder="Ø§Ù„ÙƒÙ…ÙŠØ©"
+                      placeholder="ا�„�ƒ�…�Šة"
                       value={row.quantity_used}
                       onChange={(e) => updateRow(i, { quantity_used: e.target.value })}
                     />
@@ -285,7 +285,7 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
                     <Input
                       className="h-9"
                       type="number"
-                      placeholder="Ø³Ø¹Ø± Ø§Ù„ÙˆØ­Ø¯Ø©"
+                      placeholder="سعر ا�„�ˆحدة"
                       value={row.cost_at_time}
                       onChange={(e) => updateRow(i, { cost_at_time: e.target.value })}
                     />
@@ -303,14 +303,14 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
 
         <DialogFooter className="flex-col sm:flex-row gap-2 sm:justify-between sm:items-center">
           <div className="text-sm font-semibold">
-            Ø§Ù„ØªÙƒÙ„ÙØ© Ø§Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠØ©: {totalCost.toFixed(2)} Ø±ÙŠØ§Ù„
+            ا�„ت�ƒ�„فة ا�„إج�…ا�„�Šة: {totalCost.toFixed(2)} ر�Šا�„
           </div>
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Ø¥Ù„ØºØ§Ø¡
+              إ�„غاء
             </Button>
             <Button type="button" disabled={saving || blocked} onClick={() => void handleSave()}>
-              Ø­ÙØ¸ Ø§Ù„ØµÙŠØ§Ù†Ø© âœ“
+              حفظ ا�„ص�Šا�†ة �œ“
             </Button>
           </div>
         </DialogFooter>

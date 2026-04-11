@@ -36,14 +36,14 @@ export const ImportModal = ({
     const wb = XLSX.read(fileBuffer, { type: 'array' });
     const ws = wb.Sheets[wb.SheetNames[0]];
     const data: Record<string, unknown>[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
-    if (!data.length) return toast({ title: 'Ø§Ù„Ù…Ù„Ù ÙØ§Ø±Øº', variant: 'destructive' });
+    if (!data.length) return toast({ title: 'الملف فارغ', variant: 'destructive' });
     setHeaders(Object.keys(data[0]));
     setRawData(data);
     setStep(2);
   };
 
   const buildPreview = () => {
-    if (!mapping.name || !mapping.km) return toast({ title: 'Ø­Ø¯Ø¯ Ø¹Ù…ÙˆØ¯ Ø§Ù„Ø§Ø³Ù… ÙˆØ§Ù„ÙƒÙŠÙ„ÙˆÙ…ØªØ±Ø§Øª', variant: 'destructive' });
+    if (!mapping.name || !mapping.km) return toast({ title: 'حدد عمود الاسم والكيلومترات', variant: 'destructive' });
     const preview: ImportRow[] = rawData.map((r, idx) => {
       const raw_name = toCellString(r[mapping.name]).trim();
       const km_total = Number.parseFloat(toCellString(r[mapping.km])) || 0;
@@ -69,9 +69,9 @@ export const ImportModal = ({
 
   const matched = rows.filter(r => r.matched_employee || r.manual_employee_id).length;
   const importStepLabel = (s: ImportStep) => {
-    if (s === 1) return 'Ø±ÙØ¹ Ø§Ù„Ù…Ù„Ù';
-    if (s === 2) return 'Ø±Ø¨Ø· Ø§Ù„Ø£Ø¹Ù…Ø¯Ø©';
-    return 'Ù…Ø¹Ø§ÙŠÙ†Ø© ÙˆØªØ£ÙƒÙŠØ¯';
+    if (s === 1) return 'رفع الملف';
+    if (s === 2) return 'ربط الأعمدة';
+    return 'معاينة وتأكيد';
   };
   const handleManualEmployeeSelect = (rowKey: string, employeeId: string) => {
     setRows((currentRows) =>
@@ -83,7 +83,7 @@ export const ImportModal = ({
 
   const doImport = async () => {
     const toSave = rows.filter(r => r.matched_employee || r.manual_employee_id);
-    if (!toSave.length) return toast({ title: 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø³Ø¬Ù„Ø§Øª Ù„Ù„Ø§Ø³ØªÙŠØ±Ø§Ø¯', variant: 'destructive' });
+    if (!toSave.length) return toast({ title: 'لا توجد سجلات للاستيراد', variant: 'destructive' });
     setSaving(true);
     try {
       const payload = toSave.map(r => ({
@@ -94,12 +94,12 @@ export const ImportModal = ({
         notes: r.notes || null,
       }));
       await fuelApi.saveMonthlyMileageImport(payload, replaceExisting);
-      toast({ title: `ØªÙ… Ø§Ø³ØªÙŠØ±Ø§Ø¯ ${payload.length} Ø³Ø¬Ù„ Ø¨Ù†Ø¬Ø§Ø­` });
+      toast({ title: `تم استيراد ${payload.length} سجل بنجاح` });
       onImported();
     } catch (e) {
       logError('[Fuel] import failed', e);
       const message = getErrorMessage(e);
-      toast({ title: 'Ø®Ø·Ø£ ÙÙŠ Ø§Ù„Ø§Ø³ØªÙŠØ±Ø§Ø¯', description: message, variant: 'destructive' });
+      toast({ title: 'خطأ في الاستيراد', description: message, variant: 'destructive' });
     } finally {
       setSaving(false);
     }
@@ -109,7 +109,7 @@ export const ImportModal = ({
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
       <div className="bg-card rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-border/50">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <h2 className="text-lg font-bold text-foreground">Ø§Ø³ØªÙŠØ±Ø§Ø¯ ÙƒÙŠÙ„ÙˆÙ…ØªØ±Ø§Øª GPS (Ø´Ù‡Ø±ÙŠ)</h2>
+          <h2 className="text-lg font-bold text-foreground">استيراد كيلومترات GPS (شهري)</h2>
           <button type="button" onClick={onClose} className="p-2 hover:bg-muted rounded-lg text-muted-foreground"><X size={16} /></button>
         </div>
         <div className="flex items-center gap-2 px-6 py-3 border-b border-border/50 shrink-0">
@@ -128,21 +128,21 @@ export const ImportModal = ({
               className="w-full border-2 border-dashed border-border rounded-xl p-10 text-center cursor-pointer hover:border-primary/50 transition-colors"
               onClick={() => fileRef.current?.click()}
             >
-              <div className="text-4xl mb-3">ðŸ“‚</div>
-              <p className="font-medium text-foreground">Ø§Ø¶ØºØ· Ù„Ø±ÙØ¹ Ù…Ù„Ù Excel Ø£Ùˆ CSV</p>
-              <p className="text-sm text-muted-foreground mt-1">Ù…Ù„Ù GPS ÙŠØ­ØªÙˆÙŠ Ø¹Ù„Ù‰ Ø£Ø³Ù…Ø§Ø¡ Ø§Ù„Ù…Ù†Ø§Ø¯ÙŠØ¨ ÙˆØ§Ù„ÙƒÙŠÙ„ÙˆÙ…ØªØ±Ø§Øª</p>
+              <div className="text-4xl mb-3">📂</div>
+              <p className="font-medium text-foreground">اضغط لرفع ملف Excel أو CSV</p>
+              <p className="text-sm text-muted-foreground mt-1">ملف GPS يحتوي على أسماء المناديب والكيلومترات</p>
               <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFile} />
             </button>
           )}
           {step === 2 && (
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">ØªÙ… Ø§ÙƒØªØ´Ø§Ù <strong>{headers.length}</strong> Ø¹Ù…ÙˆØ¯ Ùˆ <strong>{rawData.length}</strong> ØµÙ.</p>
+              <p className="text-sm text-muted-foreground">تم اكتشاف <strong>{headers.length}</strong> عمود و <strong>{rawData.length}</strong> صف.</p>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { key: 'name' as const, label: 'Ø¹Ù…ÙˆØ¯ Ø§Ø³Ù… Ø§Ù„Ù…Ù†Ø¯ÙˆØ¨', required: true },
-                  { key: 'km' as const, label: 'Ø¹Ù…ÙˆØ¯ Ø§Ù„ÙƒÙŠÙ„ÙˆÙ…ØªØ±Ø§Øª', required: true },
-                  { key: 'fuel' as const, label: 'Ø¹Ù…ÙˆØ¯ ØªÙƒÙ„ÙØ© Ø§Ù„Ø¨Ù†Ø²ÙŠÙ†', required: false },
-                  { key: 'notes' as const, label: 'Ø¹Ù…ÙˆØ¯ Ø§Ù„Ù…Ù„Ø§Ø­Ø¸Ø§Øª', required: false },
+                  { key: 'name' as const, label: 'عمود اسم المندوب', required: true },
+                  { key: 'km' as const, label: 'عمود الكيلومترات', required: true },
+                  { key: 'fuel' as const, label: 'عمود تكلفة البنزين', required: false },
+                  { key: 'notes' as const, label: 'عمود الملاحظات', required: false },
                 ].map(f => (
                   <div key={f.key}>
                     <Label className="text-sm mb-1.5 block">{f.label} {f.required && <span className="text-destructive">*</span>}</Label>
@@ -150,36 +150,36 @@ export const ImportModal = ({
                       value={mapping[f.key]}
                       onValueChange={v => setMapping(m => ({ ...m, [f.key]: v }))}
                     >
-                      <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={f.required ? 'Ù…Ø·Ù„ÙˆØ¨' : 'Ø§Ø®ØªÙŠØ§Ø±ÙŠ'} /></SelectTrigger>
+                      <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={f.required ? 'مطلوب' : 'اختياري'} /></SelectTrigger>
                       <SelectContent>
-                        {!f.required && <SelectItem value="__none__">â€” Ù„Ø§ ÙŠÙˆØ¬Ø¯ â€”</SelectItem>}
+                        {!f.required && <SelectItem value="__none__">— لا يوجد —</SelectItem>}
                         {headers.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                 ))}
               </div>
-              <Button onClick={buildPreview} className="w-full">Ø§Ù„ØªØ§Ù„ÙŠ: Ù…Ø¹Ø§ÙŠÙ†Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª</Button>
+              <Button onClick={buildPreview} className="w-full">التالي: معاينة البيانات</Button>
             </div>
           )}
           {step === 3 && (
             <div className="space-y-4">
               <div className="flex items-center gap-3 text-sm">
-                <span className="badge-success">{matched} Ù…ØªØ·Ø§Ø¨Ù‚</span>
-                <span className="badge-warning">{rows.length - matched} ÙŠØ­ØªØ§Ø¬ Ù…Ø±Ø§Ø¬Ø¹Ø©</span>
+                <span className="badge-success">{matched} متطابق</span>
+                <span className="badge-warning">{rows.length - matched} يحتاج مراجعة</span>
                 <label className="flex items-center gap-1.5 ms-auto text-muted-foreground cursor-pointer">
                   <input type="checkbox" className="align-middle" checked={replaceExisting} onChange={e => setReplaceExisting(e.target.checked)} />
-                  <span>Ø§Ø³ØªØ¨Ø¯Ø§Ù„ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…ÙˆØ¬ÙˆØ¯Ø©</span>
+                  <span>استبدال البيانات الموجودة</span>
                 </label>
               </div>
               <div className="border border-border rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <thead className="bg-muted/40">
                     <tr>
-                      <th className="px-3 py-2 text-start text-xs text-muted-foreground">Ø§Ù„Ø§Ø³Ù… ÙÙŠ Ø§Ù„Ù…Ù„Ù</th>
-                      <th className="px-3 py-2 text-start text-xs text-muted-foreground">Ø§Ù„Ù…Ù†Ø¯ÙˆØ¨ Ø§Ù„Ù…Ø·Ø§Ø¨Ù‚</th>
-                      <th className="px-3 py-2 text-xs text-muted-foreground">ÙƒÙ…</th>
-                      <th className="px-3 py-2 text-xs text-muted-foreground">Ø¨Ù†Ø²ÙŠÙ†</th>
+                      <th className="px-3 py-2 text-start text-xs text-muted-foreground">الاسم في الملف</th>
+                      <th className="px-3 py-2 text-start text-xs text-muted-foreground">المندوب المطابق</th>
+                      <th className="px-3 py-2 text-xs text-muted-foreground">كم</th>
+                      <th className="px-3 py-2 text-xs text-muted-foreground">بنزين</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -197,7 +197,7 @@ export const ImportModal = ({
                                 value={row.manual_employee_id || ''}
                                 onValueChange={(v) => handleManualEmployeeSelect(row.row_key, v)}
                               >
-                                <SelectTrigger className="h-7 text-xs border-warning/50"><SelectValue placeholder="Ø§Ø®ØªØ± ÙŠØ¯ÙˆÙŠØ§Ù‹..." /></SelectTrigger>
+                                <SelectTrigger className="h-7 text-xs border-warning/50"><SelectValue placeholder="اختر يدوياً..." /></SelectTrigger>
                                 <SelectContent className="max-h-48">
                                   {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
                                 </SelectContent>
@@ -218,7 +218,7 @@ export const ImportModal = ({
         {step === 3 && (
           <div className="px-6 py-4 border-t border-border shrink-0">
             <Button onClick={doImport} disabled={saving || matched === 0} className="w-full gap-2">
-              {saving ? 'Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø§Ø³ØªÙŠØ±Ø§Ø¯...' : <><Check size={15} /> ØªØ£ÙƒÙŠØ¯ Ø§Ø³ØªÙŠØ±Ø§Ø¯ {matched} Ø³Ø¬Ù„</>}
+              {saving ? 'جاري الاستيراد...' : <><Check size={15} /> تأكيد استيراد {matched} سجل</>}
             </Button>
           </div>
         )}
