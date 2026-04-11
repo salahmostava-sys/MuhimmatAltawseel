@@ -13,7 +13,7 @@ import {
 } from '@modules/dashboard/components/DashboardPerformanceHeader';
 import { DashboardPerformanceOverviewTab } from '@modules/dashboard/components/DashboardPerformanceOverviewTab';
 import { buildFleetSummary, buildRiderProfiles } from '@modules/dashboard/lib/performanceEngine';
-import { AIChatWidget } from '@modules/dashboard/components/AIChatWidget';
+
 
 const loadAnalyticsTab = () =>
   import('@modules/dashboard/components/DashboardPerformanceAnalyticsTab').then((module) => ({
@@ -110,7 +110,7 @@ export default function DashboardPerformancePage() {
       ) : null}
 
       {/* المساعد الذكي */}
-      <AIChatWidget />
+
     </div>
   );
 }
