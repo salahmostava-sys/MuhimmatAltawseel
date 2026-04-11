@@ -111,16 +111,16 @@ const Login = () => {
         </div>
 
         <div className="relative z-10 flex flex-col justify-between p-12 text-white w-full">
-          {/* Top: Logo centered + Name */}
-          <div className="flex flex-col items-center text-center">
+          {/* Top: Logo + Name */}
+          <div>
             {settings?.logo_url ? (
               <img
                 src={brandLogoSrc(settings.logo_url, settings.updated_at)}
                 alt=""
-                className="w-40 h-40 rounded-3xl object-contain bg-white/10 backdrop-blur-sm p-4 shadow-2xl border border-white/10"
+                className="w-20 h-20 rounded-2xl object-contain bg-white/10 backdrop-blur-sm p-2 shadow-lg"
               />
             ) : (
-              <div className="w-40 h-40 rounded-3xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-7xl shadow-2xl border border-white/10">
+              <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-4xl shadow-lg">
                 🚀
               </div>
             )}
