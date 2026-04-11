@@ -94,10 +94,10 @@ export function ShiftsTabWrapper() {
           queryClient.invalidateQueries({ queryKey: ['employees', uid, 'active-ids', globalMonth] }),
           queryClient.invalidateQueries({ queryKey: ['salaries', uid, 'base-context', globalMonth] }),
         ]);
-        toast.success('ØªÙ… Ø­ÙØ¸ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¯ÙˆØ§Ù… Ø¨Ù†Ø¬Ø§Ø­');
+        toast.success('تم حفظ بيانات الدوام بنجاح');
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'ÙØ´Ù„ Ø­ÙØ¸ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª';
-        toast.error('Ø®Ø·Ø£', { description: message });
+        const message = error instanceof Error ? error.message : 'فشل حفظ البيانات';
+        toast.error('خطأ', { description: message });
         throw error;
       }
     },
