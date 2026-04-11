@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
-import { Activity, BarChart3, Calendar } from 'lucide-react';
+import { Activity, BarChart3, Calendar, Grid3X3 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { FUEL_PAGE_MONTHS } from '@modules/fuel/lib/fuelMonthOptions';
 
-type FuelView = 'monthly' | 'daily';
+type FuelView = 'monthly' | 'daily' | 'spreadsheet';
 
 type FuelPageHeaderProps = {
   view: FuelView;
@@ -69,6 +69,13 @@ export function FuelPageHeader({
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${view === 'daily' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
           >
             <Calendar size={13} /> عرض يومي
+          </button>
+          <button
+            type="button"
+            onClick={() => onViewChange('spreadsheet')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${view === 'spreadsheet' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            <Grid3X3 size={13} /> جدول بيانات
           </button>
         </div>
         {toolbarEnd}

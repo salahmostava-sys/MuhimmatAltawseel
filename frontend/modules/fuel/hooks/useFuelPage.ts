@@ -46,7 +46,7 @@ export function useFuelPage() { // NOSONAR: page data layer with many independen
   const { permissions } = usePermissions('fuel');
   const { selectedMonth: globalMonth } = useTemporalContext();
   const now = new Date();
-  const [view, setView] = useState<'monthly' | 'daily'>('monthly');
+  const [view, setView] = useState<'monthly' | 'daily' | 'spreadsheet'>('monthly');
 
   const [yearStr, monthStr] = globalMonth.split('-');
   const selectedMonth = monthStr;
@@ -177,7 +177,7 @@ export function useFuelPage() { // NOSONAR: page data layer with many independen
     refetch: refetchMonthly,
   } = useQuery({
     queryKey: ['fuel', uid, 'monthly', monthYear, platformTab, employees.map((e) => e.id).join(',')],
-    enabled: enabled && view === 'monthly',
+    enabled: enabled && (view === 'monthly' || view === 'spreadsheet'),
     queryFn: async () => {
       const ms = `${monthYear}-01`;
       const me = format(endOfMonth(new Date(`${monthYear}-01`)), 'yyyy-MM-dd');
@@ -202,7 +202,7 @@ export function useFuelPage() { // NOSONAR: page data layer with many independen
     refetch: refetchDaily,
   } = useQuery({
     queryKey: ['fuel', uid, 'daily', monthYear, selectedEmployee, platformTab],
-    enabled: enabled && view === 'daily',
+    enabled: enabled && (view === 'daily' || view === 'spreadsheet'),
     queryFn: async () => {
       const ms = `${monthYear}-01`;
       const me = format(endOfMonth(new Date(`${monthYear}-01`)), 'yyyy-MM-dd');
@@ -230,7 +230,7 @@ export function useFuelPage() { // NOSONAR: page data layer with many independen
     void refetchMonthly();
     void refetchDaily();
   };
-  const loading = view === 'monthly' ? monthlyLoading : dailyLoading;
+  const loading = view === 'monthly' ? monthlyLoading : view === 'spreadsheet' ? (monthlyLoading || dailyLoading) : dailyLoading;
 
   const handleDeleteDaily = async (id: string) => {
     if (!confirm('هل تريد حذف هذا السجل؟')) return;

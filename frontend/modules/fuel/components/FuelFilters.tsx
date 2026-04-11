@@ -9,7 +9,7 @@ import type { AppRow } from '@modules/fuel/types/fuel.types';
 export function FuelFiltersToolbar(props: Readonly<{
   search: string;
   setSearch: (v: string) => void;
-  view: 'monthly' | 'daily';
+  view: 'monthly' | 'daily' | 'spreadsheet';
   handleExportMonthly: () => void;
   handleExportDaily: () => void;
   onOpenImport: () => void;

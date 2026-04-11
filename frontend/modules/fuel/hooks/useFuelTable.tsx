@@ -5,7 +5,7 @@ import type { DailyRow, MonthlyRow } from '@modules/fuel/types/fuel.types';
 import { DAY_NAMES } from '@modules/fuel/types/fuel.types';
 
 export function useFuelTable(args: {
-  view: 'monthly' | 'daily';
+  view: 'monthly' | 'daily' | 'spreadsheet';
   filteredMonthly: MonthlyRow[];
   filteredDaily: DailyRow[];
   selectedMonth: string;

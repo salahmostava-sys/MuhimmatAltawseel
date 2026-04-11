@@ -1,12 +1,11 @@
-import { Link } from 'react-router-dom';
-import { Calendar, Medal, TrendingUp } from 'lucide-react';
+import { Calendar, LayoutGrid, Medal, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 import { useTemporalContext } from '@app/providers/TemporalContext';
 import { cn } from '@shared/lib/utils';
 
-export type DashboardPerformanceTabKey = 'overview' | 'analytics' | 'ranking';
+export type DashboardPerformanceTabKey = 'overview' | 'analytics' | 'ranking' | 'platforms';
 
 const DASHBOARD_SHORTCUTS = [
   { to: '/orders', label: 'الطلبات' },
@@ -25,6 +24,7 @@ const TAB_LABELS: Record<DashboardPerformanceTabKey, string> = {
   overview: 'النظرة العامة',
   analytics: 'التحليلات',
   ranking: 'التصنيف',
+  platforms: 'المنصات',
 };
 
 export function DashboardPerformanceHeader({
@@ -50,7 +50,7 @@ export function DashboardPerformanceHeader({
         </div>
 
         <div className="flex items-center bg-muted rounded-xl p-1 gap-1 overflow-x-auto">
-          {(['overview', 'analytics', 'ranking'] as const).map((tab) => (
+          {(['overview', 'analytics', 'ranking', 'platforms'] as const).map((tab) => (
             <button
               key={tab}
               type="button"
@@ -65,6 +65,7 @@ export function DashboardPerformanceHeader({
             >
               {tab === 'analytics' ? <TrendingUp size={13} /> : null}
               {tab === 'ranking' ? <Medal size={13} /> : null}
+              {tab === 'platforms' ? <LayoutGrid size={13} /> : null}
               {TAB_LABELS[tab]}
             </button>
           ))}
@@ -80,17 +81,7 @@ export function DashboardPerformanceHeader({
           </span>
         </div>
 
-        <nav className="flex flex-wrap items-center gap-2" aria-label="اختصارات تشغيلية">
-          {DASHBOARD_SHORTCUTS.map((shortcut) => (
-            <Link
-              key={shortcut.to}
-              to={shortcut.to}
-              className="rounded-lg border border-border/70 bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm transition-colors hover:bg-muted/60"
-            >
-              {shortcut.label}
-            </Link>
-          ))}
-        </nav>
+
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { FuelPageHeader } from '@modules/fuel/components/FuelPageHeader';
 import { FuelFiltersToolbar, FuelPlatformTabs } from '@modules/fuel/components/FuelFilters';
 import {
@@ -8,6 +8,8 @@ import {
 import { ImportModal } from '@modules/fuel/components/FuelImportModal';
 import { useFuelPage } from '@modules/fuel/hooks/useFuelPage';
 import { QueryErrorRetry } from '@shared/components/QueryErrorRetry';
+
+const FuelSpreadsheetView = lazy(() => import('@modules/fuel/components/FuelSpreadsheetView'));
 
 const FuelPage = () => { // NOSONAR: UI container with many independent handlers
   const {
@@ -140,6 +142,17 @@ const FuelPage = () => { // NOSONAR: UI container with many independent handlers
           saveEditedDaily={saveEditedDaily}
           handleDeleteDaily={handleDeleteDaily}
         />
+      )}
+
+      {view === 'spreadsheet' && (
+        <Suspense fallback={<div className="bg-card rounded-xl h-80 animate-pulse shadow-card" />}>
+          <FuelSpreadsheetView
+            loading={loading}
+            dailyRows={filteredDaily}
+            riders={ridersForTab}
+            monthYear={monthYear}
+          />
+        </Suspense>
       )}
 
       {showImport && (

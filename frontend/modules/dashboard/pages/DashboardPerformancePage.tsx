@@ -25,8 +25,14 @@ const loadRankingTab = () =>
     default: module.DashboardRankingTab,
   }));
 
+const loadPlatformsTab = () =>
+  import('@modules/dashboard/components/DashboardPlatformsTab').then((module) => ({
+    default: module.DashboardPlatformsTab,
+  }));
+
 const LazyDashboardPerformanceAnalyticsTab = lazy(loadAnalyticsTab);
 const LazyDashboardRankingTab = lazy(loadRankingTab);
+const LazyDashboardPlatformsTab = lazy(loadPlatformsTab);
 
 function TabFallback() {
   return <div className="bg-card rounded-2xl h-80 animate-pulse shadow-card" />;
@@ -63,6 +69,9 @@ export default function DashboardPerformancePage() {
     if (tab === 'ranking') {
       void loadRankingTab();
     }
+    if (tab === 'platforms') {
+      void loadPlatformsTab();
+    }
 
     startTransition(() => {
       setActiveTab(tab);
@@ -77,6 +86,7 @@ export default function DashboardPerformancePage() {
         onPrefetchIntent={() => {
           void loadAnalyticsTab();
           void loadRankingTab();
+          void loadPlatformsTab();
         }}
       />
 
@@ -106,6 +116,12 @@ export default function DashboardPerformancePage() {
       {!dashboardQuery.isError && activeTab === 'ranking' ? (
         <Suspense fallback={<TabFallback />}>
           <LazyDashboardRankingTab dashboard={dashboardQuery.data ?? null} />
+        </Suspense>
+      ) : null}
+
+      {!dashboardQuery.isError && activeTab === 'platforms' ? (
+        <Suspense fallback={<TabFallback />}>
+          <LazyDashboardPlatformsTab dashboard={dashboardQuery.data ?? null} />
         </Suspense>
       ) : null}
 

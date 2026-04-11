@@ -185,7 +185,7 @@ export function FuelMonthlyView(props: Readonly<{
   totalOrders: number;
   avgCostPerKm: number;
   setSelectedEmployee: (id: string) => void;
-  setView: (v: 'monthly' | 'daily') => void;
+  setView: (v: 'monthly' | 'daily' | 'spreadsheet') => void;
   setExpandedRider: (id: string | null) => void;
   tableRef: React.RefObject<HTMLTableElement | null>;
 }>) {
