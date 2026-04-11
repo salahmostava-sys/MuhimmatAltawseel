@@ -176,7 +176,11 @@ export function ShiftsTab({
     const headers = ['الموظف', ...dayArr.map((d) => String(d)), 'المجموع'];
     const rows = filteredEmployees.map((emp) => {
       const values: Array<string | number> = [emp.name];
-      dayArr.forEach((d) => values.push(getVal(emp.id, d) > 0 ? 'حاضر' : 'غائب'));
+      dayArr.forEach((d) => {
+        const v = getVal(emp.id, d);
+        const key = `${emp.id}::${d}`;
+        values.push(v > 0 ? 'حاضر' : grid[key] !== undefined ? 'غائب' : '');
+      });
       values.push(empMonthTotal(emp.id));
       return values;
     });
@@ -351,11 +355,21 @@ export function ShiftsTab({
                             {isEditing ? (
                               <select
                                 autoFocus
-                                value={val > 0 ? '1' : '0'}
-                                onChange={(e) => commitAttendance(cellKey, parseInt(e.target.value, 10))}
+                                value={val > 0 ? '1' : val === 0 && grid[cellKey] !== undefined ? '0' : ''}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  if (v === '') {
+                                    // فاضي — مسح من الشبكة
+                                    setGrid((prev) => { const next = { ...prev }; delete next[cellKey]; return next; });
+                                    setEditingCell(null);
+                                  } else {
+                                    commitAttendance(cellKey, parseInt(v, 10));
+                                  }
+                                }}
                                 onBlur={() => setEditingCell(null)}
                                 className="h-7 w-full text-center text-[10px] border-0 bg-transparent cursor-pointer focus:outline-none font-bold"
                               >
+                                <option value="">— فاضي —</option>
                                 <option value="1">حاضر ✅</option>
                                 <option value="0">غائب ❌</option>
                               </select>
@@ -363,8 +377,10 @@ export function ShiftsTab({
                               <div className="h-7 flex items-center justify-center">
                                 {isPresent ? (
                                   <span className="font-bold text-[10px] leading-none text-emerald-600 dark:text-emerald-400">حاضر</span>
-                                ) : (
+                                ) : grid[cellKey] !== undefined ? (
                                   <span className="font-bold text-[10px] leading-none text-rose-500 dark:text-rose-400">غائب</span>
+                                ) : (
+                                  <span className="text-muted-foreground/20">·</span>
                                 )}
                               </div>
                             )}
@@ -424,6 +440,7 @@ export function ShiftsTab({
       <div className="flex items-center gap-4 text-[10px] text-muted-foreground px-1">
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" /> حاضر</span>
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" /> غائب</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-muted-foreground/20 inline-block" /> لم يُحدد</span>
         <span>• اضغط على الخلية لتغيير الحالة</span>
       </div>
     </div>
