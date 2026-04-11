@@ -47,16 +47,28 @@ jobs:
   sonarcloud:
     name: SonarCloud
     runs-on: ubuntu-latest
-    # Only run if SONAR_TOKEN is configured
-    if: ${{ secrets.SONAR_TOKEN != '' }}
     needs: build-and-test
+    # Skip gracefully when token is not configured
+    continue-on-error: true
     steps:
+      - name: Check SONAR_TOKEN
+        id: check
+        run: |
+          if [ -z "${{ secrets.SONAR_TOKEN }}" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "⚠️ SONAR_TOKEN not set — skipping SonarCloud scan"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout repository
+        if: steps.check.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
+        if: steps.check.outputs.skip != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -64,14 +76,17 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
+        if: steps.check.outputs.skip != 'true'
         working-directory: frontend
         run: npm ci
 
       - name: Generate Coverage
+        if: steps.check.outputs.skip != 'true'
         working-directory: frontend
         run: npm run test:coverage || true
 
       - name: SonarCloud Scan
+        if: steps.check.outputs.skip != 'true'
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
