@@ -7,8 +7,7 @@ import DailyAttendance from '@shared/components/attendance/DailyAttendance';
 import MonthlyRecord from '@shared/components/attendance/MonthlyRecord';
 import { useLanguage } from '@app/providers/LanguageContext';
 import { useTranslation } from 'react-i18next';
-let _xlsxCache: Promise<typeof import('@e965/xlsx')> | null = null;
-const loadXlsx = () => { if (!_xlsxCache) _xlsxCache = import('@e965/xlsx'); return _xlsxCache; };
+import { loadXlsx } from '@modules/orders/utils/xlsx';
 import { printHtmlTable } from '@shared/lib/printTable';
 import attendanceService from '@services/attendanceService';
 import { useToast } from '@shared/hooks/use-toast';
@@ -116,24 +115,40 @@ const Attendance = () => {
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as string[][];
 
-      // Skip header row and process data
       const rows = json.slice(1).filter((row: string[]) => row[0] && row[1]);
+      if (rows.length === 0) {
+        toast({ title: 'الملف فارغ', description: 'لا توجد بيانات بعد صف العناوين', variant: 'destructive' });
+        return;
+      }
+
+      // Fetch employee list to resolve names → UUIDs
+      const employeesData = await attendanceService.getDailyAttendanceBase();
+      const employees = employeesData.employees as Array<{ id: string; name: string }>;
+      const nameToId = new Map<string, string>();
+      for (const emp of employees) {
+        nameToId.set(emp.name.trim(), emp.id);
+        // Also index without extra whitespace for fuzzy matching
+        nameToId.set(emp.name.trim().replace(/\s+/g, ' '), emp.id);
+      }
+
       let imported = 0;
       let failed = 0;
+      const unmatchedNames: string[] = [];
 
-      // TODO: employeeName is passed as employee_id — this is a known limitation.
-      // The backend service should resolve employee name to ID, or we should look up
-      // the employee ID from an employees list. For now, we send the name and rely
-      // on backend resolution, with graceful error handling per row.
-      // Use Promise.allSettled for parallel execution instead of sequential await
       const results = await Promise.allSettled(
         rows.map(async (row) => {
           const [employeeName, date, status, notes] = row;
           if (!employeeName || !date || !status) {
             throw new Error('missing-fields');
           }
+          const normalizedName = employeeName.trim().replace(/\s+/g, ' ');
+          const employeeId = nameToId.get(normalizedName) ?? nameToId.get(employeeName.trim());
+          if (!employeeId) {
+            unmatchedNames.push(normalizedName);
+            throw new Error(`employee-not-found: ${normalizedName}`);
+          }
           await attendanceService.upsertDailyAttendance({
-            employee_id: employeeName, // TODO: Known limitation — should be resolved to actual ID
+            employee_id: employeeId,
             date,
             status: status.toLowerCase() as 'present' | 'absent' | 'leave' | 'sick' | 'late',
             check_in: '',
@@ -148,16 +163,21 @@ const Attendance = () => {
         else failed++;
       }
 
+      const uniqueUnmatched = [...new Set(unmatchedNames)];
+      const description = uniqueUnmatched.length > 0
+        ? `${imported} سجل ناجح، ${failed} فاشل — أسماء غير موجودة: ${uniqueUnmatched.slice(0, 5).join('، ')}${uniqueUnmatched.length > 5 ? ` و${uniqueUnmatched.length - 5} آخرين` : ''}`
+        : `${imported} سجل ناجح، ${failed} فاشل`;
+
       toast({
         title: 'تم الاستيراد',
-        description: `${imported} سجل ناجح، ${failed} فاشل`,
+        description,
         variant: failed > 0 ? 'destructive' : 'default',
       });
     } catch {
       toast({ title: 'فشل الاستيراد', description: 'تعذر قراءة الملف', variant: 'destructive' });
     } finally {
       setImporting(false);
-      e.target.value = ''; // Reset input
+      e.target.value = '';
     }
   };
 

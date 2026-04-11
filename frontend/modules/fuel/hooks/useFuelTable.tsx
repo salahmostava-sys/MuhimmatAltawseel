@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react';
-const loadXlsx = () => import('@e965/xlsx');
 import { createDefaultGlobalFilters } from '@shared/components/table/GlobalTableFilters';
 import type { DailyRow, MonthlyRow } from '@modules/fuel/types/fuel.types';
 import { DAY_NAMES } from '@modules/fuel/types/fuel.types';
@@ -25,32 +24,32 @@ export function useFuelTable(args: {
 
   const handleExportMonthly = () => {
     const data = filteredMonthly.map(r => ({
-      'الاسم': r.employee_name,
-      'أيام مسجّلة': r.daily_count,
-      'الكيلومترات': r.km_total,
-      'تكلفة البنزين (ر.س)': r.fuel_cost,
-      'تكلفة/كم (ر.س)': r.km_total > 0 ? (r.fuel_cost / r.km_total).toFixed(3) : '',
-      'عدد الطلبات': r.orders_count,
+      'Ø§Ù„Ø§Ø³Ù…': r.employee_name,
+      'Ø£ÙŠØ§Ù… Ù…Ø³Ø¬Ù‘Ù„Ø©': r.daily_count,
+      'Ø§Ù„ÙƒÙŠÙ„ÙˆÙ…ØªØ±Ø§Øª': r.km_total,
+      'ØªÙƒÙ„ÙØ© Ø§Ù„Ø¨Ù†Ø²ÙŠÙ† (Ø±.Ø³)': r.fuel_cost,
+      'ØªÙƒÙ„ÙØ©/ÙƒÙ… (Ø±.Ø³)': r.km_total > 0 ? (r.fuel_cost / r.km_total).toFixed(3) : '',
+      'Ø¹Ø¯Ø¯ Ø§Ù„Ø·Ù„Ø¨Ø§Øª': r.orders_count,
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'ملخص شهري');
-    XLSX.writeFile(wb, `ملخص_الاستهلاك_${selectedMonth}_${selectedYear}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, 'Ù…Ù„Ø®Øµ Ø´Ù‡Ø±ÙŠ');
+    XLSX.writeFile(wb, `Ù…Ù„Ø®Øµ_Ø§Ù„Ø§Ø³ØªÙ‡Ù„Ø§Ùƒ_${selectedMonth}_${selectedYear}.xlsx`);
   };
 
   const handleExportDaily = () => {
     const data = filteredDaily.map(r => ({
-      'التاريخ': r.date,
-      'اليوم': DAY_NAMES[new Date(r.date + 'T12:00:00').getDay()],
-      'الاسم': r.employee?.name || '',
-      'الكيلومترات': r.km_total,
-      'تكلفة البنزين (ر.س)': r.fuel_cost,
-      'ملاحظات': r.notes || '',
+      'Ø§Ù„ØªØ§Ø±ÙŠØ®': r.date,
+      'Ø§Ù„ÙŠÙˆÙ…': DAY_NAMES[new Date(r.date + 'T12:00:00').getDay()],
+      'Ø§Ù„Ø§Ø³Ù…': r.employee?.name || '',
+      'Ø§Ù„ÙƒÙŠÙ„ÙˆÙ…ØªØ±Ø§Øª': r.km_total,
+      'ØªÙƒÙ„ÙØ© Ø§Ù„Ø¨Ù†Ø²ÙŠÙ† (Ø±.Ø³)': r.fuel_cost,
+      'Ù…Ù„Ø§Ø­Ø¸Ø§Øª': r.notes || '',
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'إدخالات يومية');
-    XLSX.writeFile(wb, `إدخالات_يومية_${selectedMonth}_${selectedYear}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, 'Ø¥Ø¯Ø®Ø§Ù„Ø§Øª ÙŠÙˆÙ…ÙŠØ©');
+    XLSX.writeFile(wb, `Ø¥Ø¯Ø®Ø§Ù„Ø§Øª_ÙŠÙˆÙ…ÙŠØ©_${selectedMonth}_${selectedYear}.xlsx`);
   };
 
   return {

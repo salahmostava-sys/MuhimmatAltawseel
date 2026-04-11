@@ -10,14 +10,7 @@ import { advanceService } from '@services/advanceService';
 import type { Advance, EmployeeSummary } from '@modules/advances/types/advance.types';
 import { calcPaid, calcPending } from '@modules/advances/types/advance.types';
 
-let xlsxLoader: Promise<typeof import('@e965/xlsx')> | null = null;
-
-const loadXlsx = () => {
-  if (!xlsxLoader) {
-    xlsxLoader = import('@e965/xlsx');
-  }
-  return xlsxLoader;
-};
+import { loadXlsx } from '@modules/orders/utils/xlsx';
 
 export function useAdvanceTable(
   advances: Advance[],

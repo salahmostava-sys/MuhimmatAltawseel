@@ -136,18 +136,32 @@ export interface AnomalyDetectionResponse {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+const AI_TIMEOUT_MS = 20_000;
+
 async function postAI<T>(path: string, body: unknown): Promise<T> {
   if (!AI_BASE_URL) throw new Error('AI backend not configured (VITE_AI_BACKEND_URL is not set)');
-  const res = await fetch(`${AI_BASE_URL}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`AI API error ${res.status}: ${text || res.statusText}`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${AI_BASE_URL}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`AI API error ${res.status}: ${text || res.statusText}`);
+    }
+    return res.json() as Promise<T>;
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new Error(`AI API timeout after ${AI_TIMEOUT_MS / 1000}s: ${path}`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
-  return res.json() as Promise<T>;
 }
 
 // ─── Service ─────────────────────────────────────────────────────────────────
@@ -209,8 +223,14 @@ export const aiService = {
   /** Health check. */
   health: async () => {
     if (!AI_BASE_URL) throw new Error('AI backend not configured');
-    const res = await fetch(`${AI_BASE_URL}/health`);
-    return res.json() as Promise<{ status: string; version: string }>;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5_000);
+    try {
+      const res = await fetch(`${AI_BASE_URL}/health`, { signal: controller.signal });
+      return res.json() as Promise<{ status: string; version: string }>;
+    } finally {
+      clearTimeout(timer);
+    }
   },
 
   /** Whether the AI backend URL is configured. */

@@ -27,7 +27,7 @@ function empAlertName(emp: Record<string, unknown>): string {
   return parts.join(' — ');
 }
 
-const loadXlsx = () => import('@e965/xlsx');
+import { loadXlsx } from '@modules/orders/utils/xlsx';
 
 export const alertTypeLabels: Record<string, string> = {
   residency: 'إقامة',

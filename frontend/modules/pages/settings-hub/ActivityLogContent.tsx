@@ -11,8 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@shared/components/ui/dropdown-menu';
 import { Badge } from '@shared/components/ui/badge';
 import { Skeleton } from '@shared/components/ui/skeleton';
-let _xlsxCache: Promise<typeof import('@e965/xlsx')> | null = null;
-const loadXlsx = () => { if (!_xlsxCache) _xlsxCache = import('@e965/xlsx'); return _xlsxCache; };
+import { loadXlsx } from '@modules/orders/utils/xlsx';
 import { format } from 'date-fns';
 import { settingsHubService } from '@services/settingsHubService';
 import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';

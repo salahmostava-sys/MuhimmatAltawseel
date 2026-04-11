@@ -18,7 +18,7 @@ import {
   type UploadLiveStats,
 } from '@modules/employees/types/employee.types';
 
-const loadXlsx = () => import('@e965/xlsx');
+import { loadXlsx } from '@modules/orders/utils/xlsx';
 
 export function useEmployeeActions(params: {
   data: Employee[];

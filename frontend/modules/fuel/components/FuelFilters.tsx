@@ -1,6 +1,5 @@
 import { Search, FolderOpen } from 'lucide-react';
-import type * as XLSXType from '@e965/xlsx';
-const loadXlsx = (): Promise<typeof XLSXType> => import('@e965/xlsx');
+import { loadXlsx } from '@modules/orders/utils/xlsx';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@shared/components/ui/dropdown-menu';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';

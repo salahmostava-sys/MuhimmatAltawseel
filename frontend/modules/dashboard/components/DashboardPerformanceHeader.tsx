@@ -7,13 +7,6 @@ import { cn } from '@shared/lib/utils';
 
 export type DashboardPerformanceTabKey = 'overview' | 'analytics' | 'ranking' | 'platforms';
 
-const DASHBOARD_SHORTCUTS = [
-  { to: '/orders', label: 'الطلبات' },
-  { to: '/employees', label: 'المناديب' },
-  { to: '/alerts', label: 'التنبيهات' },
-  { to: '/salaries', label: 'الرواتب' },
-] as const;
-
 type DashboardPerformanceHeaderProps = {
   activeTab: DashboardPerformanceTabKey;
   onTabChange: (tab: DashboardPerformanceTabKey) => void;

@@ -4,4 +4,4 @@ export const loadJsPdf = async () => (await import('jspdf')).default;
 
 export const loadJsZip = async () => (await import('jszip')).default;
 
-export const loadXlsx = () => import('@e965/xlsx');
+export { loadXlsx } from '@modules/orders/utils/xlsx';

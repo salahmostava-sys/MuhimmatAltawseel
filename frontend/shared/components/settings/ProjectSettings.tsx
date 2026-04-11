@@ -9,7 +9,6 @@ import { toast } from '@shared/components/ui/sonner';
 import { TOAST_ERROR_GENERIC, TOAST_SUCCESS_ACTION, TOAST_SUCCESS_EDIT } from '@shared/lib/toastMessages';
 import { Loader2, Save, Globe, Building2, Upload, X, Download, Database, Bell } from 'lucide-react';
 import { cn } from '@shared/lib/utils';
-const loadXlsx = () => import('@e965/xlsx');
 import { format } from 'date-fns';
 import { usePermissions } from '@shared/hooks/usePermissions';
 import { useAuth } from '@app/providers/AuthContext';
@@ -56,7 +55,7 @@ export default function ProjectSettings() {
       allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'],
     });
     if (!validation.valid) {
-      toast.error(TOAST_ERROR_GENERIC, { description: validation.error ?? (isRTL ? 'خطأ في الملف' : 'Invalid file') });
+      toast.error(TOAST_ERROR_GENERIC, { description: validation.error ?? (isRTL ? 'Ø®Ø·Ø£ ÙÙŠ Ø§Ù„Ù…Ù„Ù' : 'Invalid file') });
       return;
     }
     if (logoObjectUrlRef.current) {
@@ -91,7 +90,7 @@ export default function ProjectSettings() {
         if (!uid) {
           setSaving(false);
           toast.error(TOAST_ERROR_GENERIC, {
-            description: isRTL ? 'تعذر الرفع — يجب تسجيل الدخول لرفع الشعار.' : 'Cannot upload — You must be signed in to upload a logo.',
+            description: isRTL ? 'ØªØ¹Ø°Ø± Ø§Ù„Ø±ÙØ¹ â€” ÙŠØ¬Ø¨ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ù„Ø±ÙØ¹ Ø§Ù„Ø´Ø¹Ø§Ø±.' : 'Cannot upload â€” You must be signed in to upload a logo.',
           });
           return;
         }
@@ -126,7 +125,7 @@ export default function ProjectSettings() {
       setRemoveLogo(false);
       await refresh();
       toast.success(TOAST_SUCCESS_EDIT, {
-        description: isRTL ? 'تم تحديث إعدادات المشروع' : 'Project settings updated',
+        description: isRTL ? 'ØªÙ… ØªØ­Ø¯ÙŠØ« Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù…Ø´Ø±ÙˆØ¹' : 'Project settings updated',
       });
     } catch (err: unknown) {
       logError('[ProjectSettings] save failed', err);
@@ -135,7 +134,7 @@ export default function ProjectSettings() {
     setSaving(false);
   };
 
-  // ── Backup Handler ──
+  // â”€â”€ Backup Handler â”€â”€
   const handleBackup = async () => {
     setBackupLoading(true);
     try {
@@ -168,7 +167,7 @@ export default function ProjectSettings() {
 
       const exportedCount = Object.keys(results).filter(k => results[k].length >= 0).length;
 
-      // ── Export JSON ──
+      // â”€â”€ Export JSON â”€â”€
       const jsonBlob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
       const jsonUrl = URL.createObjectURL(jsonBlob);
       const jsonLink = document.createElement('a');
@@ -177,7 +176,7 @@ export default function ProjectSettings() {
       jsonLink.click();
       URL.revokeObjectURL(jsonUrl);
 
-      // ── Export Excel ──
+      // â”€â”€ Export Excel â”€â”€
       const wb = XLSX.utils.book_new();
       for (const table of tables) {
         const sheetData = results[table];
@@ -194,8 +193,8 @@ export default function ProjectSettings() {
 
       toast.success(TOAST_SUCCESS_ACTION, {
         description: isRTL
-          ? `تم تصدير ${exportedCount} جدول — JSON + Excel`
-          : `Exported ${exportedCount} tables — JSON + Excel`,
+          ? `ØªÙ… ØªØµØ¯ÙŠØ± ${exportedCount} Ø¬Ø¯ÙˆÙ„ â€” JSON + Excel`
+          : `Exported ${exportedCount} tables â€” JSON + Excel`,
       });
     } catch (err: unknown) {
       logError('[ProjectSettings] backup export failed', err);
@@ -215,18 +214,18 @@ export default function ProjectSettings() {
     <div className="max-w-2xl space-y-6">
       {/* Project Name */}
       <div className="bg-card rounded-xl border border-border/50 p-5 shadow-sm">
-        <SectionHeader icon={<Building2 size={14} />} title={isRTL ? 'اسم المشروع' : 'Project Name'} />
+        <SectionHeader icon={<Building2 size={14} />} title={isRTL ? 'Ø§Ø³Ù… Ø§Ù„Ù…Ø´Ø±ÙˆØ¹' : 'Project Name'} />
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-xs font-medium text-muted-foreground">
-                {isRTL ? 'اسم المشروع (عربي)' : 'Project Name (Arabic)'}
+                {isRTL ? 'Ø§Ø³Ù… Ø§Ù„Ù…Ø´Ø±ÙˆØ¹ (Ø¹Ø±Ø¨ÙŠ)' : 'Project Name (Arabic)'}
               </Label>
-              <Input value={nameAr} onChange={e => setNameAr(e.target.value)} placeholder="مهمة التوصيل" dir="rtl" />
+              <Input value={nameAr} onChange={e => setNameAr(e.target.value)} placeholder="Ù…Ù‡Ù…Ø© Ø§Ù„ØªÙˆØµÙŠÙ„" dir="rtl" />
             </div>
             <div className="space-y-2">
               <Label className="text-xs font-medium text-muted-foreground">
-                {isRTL ? 'اسم المشروع (إنجليزي)' : 'Project Name (English)'}
+                {isRTL ? 'Ø§Ø³Ù… Ø§Ù„Ù…Ø´Ø±ÙˆØ¹ (Ø¥Ù†Ø¬Ù„ÙŠØ²ÙŠ)' : 'Project Name (English)'}
               </Label>
               <Input value={nameEn} onChange={e => setNameEn(e.target.value)} placeholder="Delivery System" dir="ltr" />
             </div>
@@ -236,7 +235,7 @@ export default function ProjectSettings() {
 
       {/* Logo */}
       <div className="bg-card rounded-xl border border-border/50 p-5 shadow-sm">
-        <SectionHeader icon={<Upload size={14} />} title={isRTL ? 'شعار المشروع' : 'Project Logo'} />
+        <SectionHeader icon={<Upload size={14} />} title={isRTL ? 'Ø´Ø¹Ø§Ø± Ø§Ù„Ù…Ø´Ø±ÙˆØ¹' : 'Project Logo'} />
         <div className="flex items-center gap-4">
           {logoPreview ? (
             <div className="relative">
@@ -255,7 +254,7 @@ export default function ProjectSettings() {
             </div>
           ) : (
             <div className="h-16 w-16 rounded-xl bg-muted flex items-center justify-center text-2xl border border-border border-dashed">
-              🚀
+              ðŸš€
             </div>
           )}
           <div>
@@ -264,7 +263,7 @@ export default function ProjectSettings() {
               type="file"
               accept="image/jpeg,image/png,image/webp,image/svg+xml"
               className="sr-only"
-              aria-label={isRTL ? 'اختيار ملف الشعار' : 'Choose logo file'}
+              aria-label={isRTL ? 'Ø§Ø®ØªÙŠØ§Ø± Ù…Ù„Ù Ø§Ù„Ø´Ø¹Ø§Ø±' : 'Choose logo file'}
               onChange={handleLogoChange}
             />
             <Button
@@ -274,10 +273,10 @@ export default function ProjectSettings() {
               className="gap-2"
               onClick={() => logoInputRef.current?.click()}
             >
-              <Upload size={13} /> {isRTL ? 'رفع شعار' : 'Upload Logo'}
+              <Upload size={13} /> {isRTL ? 'Ø±ÙØ¹ Ø´Ø¹Ø§Ø±' : 'Upload Logo'}
             </Button>
             <p className="text-xs text-muted-foreground mt-1.5">
-              {isRTL ? 'PNG، JPG، SVG — الحد الأقصى 2 ميغابايت' : 'PNG, JPG, SVG — Max 2MB'}
+              {isRTL ? 'PNGØŒ JPGØŒ SVG â€” Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰ 2 Ù…ÙŠØºØ§Ø¨Ø§ÙŠØª' : 'PNG, JPG, SVG â€” Max 2MB'}
             </p>
           </div>
         </div>
@@ -285,11 +284,11 @@ export default function ProjectSettings() {
 
       {/* Language & Theme */}
       <div className="bg-card rounded-xl border border-border/50 p-5 shadow-sm">
-        <SectionHeader icon={<Globe size={14} />} title={isRTL ? 'اللغة والمظهر' : 'Language & Theme'} />
+        <SectionHeader icon={<Globe size={14} />} title={isRTL ? 'Ø§Ù„Ù„ØºØ© ÙˆØ§Ù„Ù…Ø¸Ù‡Ø±' : 'Language & Theme'} />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs font-medium text-muted-foreground">
-              {isRTL ? 'اللغة الافتراضية' : 'Default Language'}
+              {isRTL ? 'Ø§Ù„Ù„ØºØ© Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠØ©' : 'Default Language'}
             </Label>
             <div className="flex gap-2">
               {['ar', 'en'].map(l => (
@@ -303,7 +302,7 @@ export default function ProjectSettings() {
                       : 'bg-background text-muted-foreground border-border hover:border-primary/50'
                   )}
                 >
-                  {l === 'ar' ? 'العربية' : 'English'}
+                  {l === 'ar' ? 'Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©' : 'English'}
                 </button>
               ))}
             </div>
@@ -311,12 +310,12 @@ export default function ProjectSettings() {
 
           <div className="space-y-2">
             <Label className="text-xs font-medium text-muted-foreground">
-              {isRTL ? 'مظهر النظام' : 'System Theme'}
+              {isRTL ? 'Ù…Ø¸Ù‡Ø± Ø§Ù„Ù†Ø¸Ø§Ù…' : 'System Theme'}
             </Label>
             <div className="flex gap-2">
               {[
-                { key: 'light', labelAr: '☀️ فاتح', labelEn: '☀️ Light' },
-                { key: 'dark', labelAr: '🌙 داكن', labelEn: '🌙 Dark' },
+                { key: 'light', labelAr: 'â˜€ï¸ ÙØ§ØªØ­', labelEn: 'â˜€ï¸ Light' },
+                { key: 'dark', labelAr: 'ðŸŒ™ Ø¯Ø§ÙƒÙ†', labelEn: 'ðŸŒ™ Dark' },
               ].map(opt => (
                 <button
                   key={opt.key}
@@ -336,16 +335,16 @@ export default function ProjectSettings() {
         </div>
       </div>
 
-      {/* ── Alert Settings ── */}
+      {/* â”€â”€ Alert Settings â”€â”€ */}
       <div className="bg-card rounded-xl border border-border/50 p-5 shadow-sm">
-        <SectionHeader icon={<Bell size={14} />} title={isRTL ? 'إعدادات التنبيهات' : 'Alert Settings'} />
+        <SectionHeader icon={<Bell size={14} />} title={isRTL ? 'Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„ØªÙ†Ø¨ÙŠÙ‡Ø§Øª' : 'Alert Settings'} />
         <div className="flex items-center gap-4">
           <div className="flex-1">
             <Label className="text-xs font-medium text-muted-foreground">
-              {isRTL ? 'التنبيه بانتهاء الإقامة (حسابات المنصات) قبل' : 'Iqama expiry alert (platform accounts) before'}
+              {isRTL ? 'Ø§Ù„ØªÙ†Ø¨ÙŠÙ‡ Ø¨Ø§Ù†ØªÙ‡Ø§Ø¡ Ø§Ù„Ø¥Ù‚Ø§Ù…Ø© (Ø­Ø³Ø§Ø¨Ø§Øª Ø§Ù„Ù…Ù†ØµØ§Øª) Ù‚Ø¨Ù„' : 'Iqama expiry alert (platform accounts) before'}
             </Label>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {isRTL ? 'سيظهر تنبيه تلقائي عند اقتراب انتهاء إقامة حساب المنصة بهذا العدد من الأيام أو أقل.' : 'An automatic alert shows when a platform account iqama expires within this many days.'}
+              {isRTL ? 'Ø³ÙŠØ¸Ù‡Ø± ØªÙ†Ø¨ÙŠÙ‡ ØªÙ„Ù‚Ø§Ø¦ÙŠ Ø¹Ù†Ø¯ Ø§Ù‚ØªØ±Ø§Ø¨ Ø§Ù†ØªÙ‡Ø§Ø¡ Ø¥Ù‚Ø§Ù…Ø© Ø­Ø³Ø§Ø¨ Ø§Ù„Ù…Ù†ØµØ© Ø¨Ù‡Ø°Ø§ Ø§Ù„Ø¹Ø¯Ø¯ Ù…Ù† Ø§Ù„Ø£ÙŠØ§Ù… Ø£Ùˆ Ø£Ù‚Ù„.' : 'An automatic alert shows when a platform account iqama expires within this many days.'}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -357,24 +356,24 @@ export default function ProjectSettings() {
               onChange={e => setIqamaAlertDays(Math.max(1, Number.parseInt(e.target.value) || 90))}
               className="w-24 text-center"
             />
-            <span className="text-sm text-muted-foreground">{isRTL ? 'يوم' : 'days'}</span>
+            <span className="text-sm text-muted-foreground">{isRTL ? 'ÙŠÙˆÙ…' : 'days'}</span>
           </div>
         </div>
       </div>
 
-      {/* ── Backup Section (Admin only) ── */}
+      {/* â”€â”€ Backup Section (Admin only) â”€â”€ */}
       {isAdmin && (
         <div className="bg-card rounded-xl border border-border/50 p-5 shadow-sm">
-          <SectionHeader icon={<Database size={14} />} title={isRTL ? 'النسخ الاحتياطي' : 'Backup'} />
+          <SectionHeader icon={<Database size={14} />} title={isRTL ? 'Ø§Ù„Ù†Ø³Ø® Ø§Ù„Ø§Ø­ØªÙŠØ§Ø·ÙŠ' : 'Backup'} />
           <div className="flex items-start gap-4">
             <div className="flex-1">
               <p className="text-sm text-muted-foreground mb-1">
                 {isRTL
-                  ? 'تحميل نسخة احتياطية كاملة من قاعدة البيانات تشمل: الموظفين، الحضور، السلف، الطلبات، الرواتب، المركبات، والتنبيهات.'
+                  ? 'ØªØ­Ù…ÙŠÙ„ Ù†Ø³Ø®Ø© Ø§Ø­ØªÙŠØ§Ø·ÙŠØ© ÙƒØ§Ù…Ù„Ø© Ù…Ù† Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª ØªØ´Ù…Ù„: Ø§Ù„Ù…ÙˆØ¸ÙÙŠÙ†ØŒ Ø§Ù„Ø­Ø¶ÙˆØ±ØŒ Ø§Ù„Ø³Ù„ÙØŒ Ø§Ù„Ø·Ù„Ø¨Ø§ØªØŒ Ø§Ù„Ø±ÙˆØ§ØªØ¨ØŒ Ø§Ù„Ù…Ø±ÙƒØ¨Ø§ØªØŒ ÙˆØ§Ù„ØªÙ†Ø¨ÙŠÙ‡Ø§Øª.'
                   : 'Download a full database backup including: employees, attendance, advances, orders, salaries, vehicles, and alerts.'}
               </p>
               <p className="text-xs text-muted-foreground">
-                {isRTL ? 'يُصدر ملفين: JSON + Excel' : 'Exports two files: JSON + Excel'}
+                {isRTL ? 'ÙŠÙØµØ¯Ø± Ù…Ù„ÙÙŠÙ†: JSON + Excel' : 'Exports two files: JSON + Excel'}
               </p>
             </div>
             <Button
@@ -384,9 +383,9 @@ export default function ProjectSettings() {
               className="gap-2 min-w-44 flex-shrink-0"
             >
               {backupLoading ? (
-                <><Loader2 size={14} className="animate-spin" /> {isRTL ? 'جاري التصدير...' : 'Exporting...'}</>
+                <><Loader2 size={14} className="animate-spin" /> {isRTL ? 'Ø¬Ø§Ø±ÙŠ Ø§Ù„ØªØµØ¯ÙŠØ±...' : 'Exporting...'}</>
               ) : (
-                <><Download size={14} /> {isRTL ? 'تحميل نسخة احتياطية' : 'Download Backup'}</>
+                <><Download size={14} /> {isRTL ? 'ØªØ­Ù…ÙŠÙ„ Ù†Ø³Ø®Ø© Ø§Ø­ØªÙŠØ§Ø·ÙŠØ©' : 'Download Backup'}</>
               )}
             </Button>
           </div>
@@ -397,7 +396,7 @@ export default function ProjectSettings() {
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving} className="gap-2 min-w-32">
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-          {isRTL ? 'حفظ الإعدادات' : 'Save Settings'}
+          {isRTL ? 'Ø­ÙØ¸ Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª' : 'Save Settings'}
         </Button>
       </div>
     </div>

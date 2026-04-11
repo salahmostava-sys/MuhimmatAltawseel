@@ -1,4 +1,3 @@
-const loadXlsx = () => import('@e965/xlsx');
 import { isEmployeeIdUuid, isValidSalaryMonthYear, parseSalaryAmount } from '@shared/lib/salaryValidation';
 
 export const SALARY_IO_COLUMNS = [

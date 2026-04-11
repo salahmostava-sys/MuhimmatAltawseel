@@ -1,4 +1,3 @@
-﻿const loadXlsx = () => import('@e965/xlsx');
 import { parseExcelDate } from '@shared/lib/excelDateParse';
 import { employeeService } from '@services/employeeService';
 import { EMPLOYEE_IMPORT_COLUMNS } from '@shared/constants/excelSchemas';

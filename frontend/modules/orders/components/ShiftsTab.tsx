@@ -207,8 +207,14 @@ export function ShiftsTab({
     const doc = win.document;
     doc.documentElement.setAttribute('dir', 'rtl');
     doc.documentElement.setAttribute('lang', 'ar');
-    doc.head.innerHTML = `<meta charset="UTF-8"><title>دوام ${month}/${year}</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:10px;direction:rtl}h2{text-align:center;margin:8px 0}table{width:100%;border-collapse:collapse}th{background:#1e3a5f;color:#fff;padding:4px;text-align:center;font-size:9px}td{padding:3px;border:1px solid #ddd;text-align:center}@media print{body{print-color-adjust:exact}}</style>`;
-    doc.body.innerHTML = `<h2>دوام شهر ${month}/${year} — ${filteredEmployees.length} موظف</h2>`;
+    const meta = doc.createElement('meta'); meta.setAttribute('charset', 'UTF-8'); doc.head.appendChild(meta);
+    doc.title = `دوام ${month}/${year}`;
+    const style = doc.createElement('style');
+    style.textContent = '*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:10px;direction:rtl}h2{text-align:center;margin:8px 0}table{width:100%;border-collapse:collapse}th{background:#1e3a5f;color:#fff;padding:4px;text-align:center;font-size:9px}td{padding:3px;border:1px solid #ddd;text-align:center}@media print{body{print-color-adjust:exact}}';
+    doc.head.appendChild(style);
+    const h2 = doc.createElement('h2');
+    h2.textContent = `دوام شهر ${month}/${year} — ${filteredEmployees.length} موظف`;
+    doc.body.appendChild(h2);
     doc.body.appendChild(table.cloneNode(true));
     win.onload = () => { win.print(); win.onafterprint = () => win.close(); };
   };

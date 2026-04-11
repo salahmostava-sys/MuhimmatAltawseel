@@ -1,6 +1,5 @@
 import type React from 'react';
-import { Loader2, Target, TrendingUp } from 'lucide-react';
-import { Progress } from '@shared/components/ui/progress';
+import { Loader2, TrendingUp } from 'lucide-react';
 import { getAppColor, type AppColorData } from '@shared/hooks/useAppColors';
 import type { App } from '@modules/orders/types';
 
@@ -52,7 +51,6 @@ export function MonthSummaryStats(props: Props) {
           const c = getAppColor(appColorsList, app.name);
           const total = appGrandTotal(app.id);
           const targetVal = Number.parseInt(targets[app.id] || '0', 10) || 0;
-          const pct = targetVal > 0 ? Math.min(Math.round((total / targetVal) * 100), 100) : 0;
           const overTarget = targetVal > 0 && total >= targetVal;
           const isSaving = savingTarget === app.id;
 

@@ -29,7 +29,7 @@ import {
   splitTierPlatformNames,
 } from '@shared/lib/employeeTierExcel';
 
-const loadXlsx = () => import('@e965/xlsx');
+import { loadXlsx } from '@modules/orders/utils/xlsx';
 
 /* ─── Types ─── */
 type Employee = { id: string; name: string; sponsorship_status: string | null; };

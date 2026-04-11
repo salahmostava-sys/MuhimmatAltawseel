@@ -12,7 +12,6 @@ import {
   type DashboardPerformanceTabKey,
 } from '@modules/dashboard/components/DashboardPerformanceHeader';
 import { DashboardPerformanceOverviewTab } from '@modules/dashboard/components/DashboardPerformanceOverviewTab';
-import { buildFleetSummary, buildRiderProfiles } from '@modules/dashboard/lib/performanceEngine';
 
 
 const loadAnalyticsTab = () =>

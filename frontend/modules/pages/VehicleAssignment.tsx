@@ -7,8 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@shared/components/ui/dropdown-menu';
 import { vehicleService, VEHICLES_QUERY_MAX_ROWS } from '@services/vehicleService';
 import { useToast } from '@shared/hooks/use-toast';
-let _xlsxCache: Promise<typeof import('@e965/xlsx')> | null = null;
-const loadXlsx = () => { if (!_xlsxCache) _xlsxCache = import('@e965/xlsx'); return _xlsxCache; };
+import { loadXlsx } from '@modules/orders/utils/xlsx';
 import { format } from 'date-fns';
 import { usePermissions } from '@shared/hooks/usePermissions';
 import { Skeleton } from '@shared/components/ui/skeleton';
