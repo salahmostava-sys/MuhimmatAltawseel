@@ -34,6 +34,7 @@ const AppSettingsPage = lazy(() => import("@modules/apps/pages/AppSettingsPage")
 const Alerts = lazy(() => import("@modules/pages/Alerts"));
 const SettingsHub = lazy(() => import("@modules/pages/SettingsHub"));
 const ViolationResolverPage = lazy(() => import("@modules/violations/pages/ViolationResolverPage"));
+const FinancePage = lazy(() => import("@modules/finance/pages/FinancePage"));
 const Motorcycles = lazy(() => import("@modules/pages/Motorcycles"));
 const VehicleAssignment = lazy(() => import("@modules/pages/VehicleAssignment"));
 const EmployeeTiers = lazy(() => import("@modules/pages/EmployeeTiers"));
@@ -121,6 +122,7 @@ const router = createBrowserRouter([
           { path: "orders", element: <PageGuard pageKey="orders"><Orders /></PageGuard> },
           { path: "salaries", element: <PageGuard pageKey="salaries"><Salaries /></PageGuard> },
           { path: "advances", element: <PageGuard pageKey="advances"><Advances /></PageGuard> },
+          { path: "finance", element: <PageGuard pageKey="finance"><FinancePage /></PageGuard> },
           { path: "motorcycles", element: <PageGuard pageKey="vehicles"><Motorcycles /></PageGuard> },
           {
             path: "vehicle-assignment",
