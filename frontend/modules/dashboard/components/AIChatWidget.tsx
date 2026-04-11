@@ -33,6 +33,12 @@ export function AIChatWidget(_props: AIChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setMessages([]);
+    setInput('');
+  };
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -163,7 +169,7 @@ export function AIChatWidget(_props: AIChatWidgetProps) {
               </div>
             </div>
             <button
-              onClick={() => setIsOpen(false)}
+              onClick={handleClose}
               className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
             >
               <X size={14} />

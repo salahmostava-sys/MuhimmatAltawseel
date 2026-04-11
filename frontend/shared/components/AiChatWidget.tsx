@@ -29,6 +29,13 @@ export function AiChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [hasOpened, setHasOpened] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
+
+  // Clear chat when closed
+  const handleClose = () => {
+    setIsOpen(false);
+    setMessages([WELCOME_MESSAGE]);
+    setInput('');
+  };
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -124,7 +131,7 @@ export function AiChatWidget() {
                 <span>مساعد مهمات التوصيل</span>
               </div>
               <button
-                onClick={() => setIsOpen(false)}
+                onClick={handleClose}
                 className="rounded-full p-1 transition-colors hover:bg-white/20"
                 aria-label="إغلاق"
                 type="button"
