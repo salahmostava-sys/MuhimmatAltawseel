@@ -65,6 +65,100 @@ const tools = [
       parameters: { type: 'object', properties: {}, required: [] },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'get_top_riders',
+      description: 'أكثر المناديب تنفيذاً للطلبات هذا الشهر — يرجع أفضل 10 مع عدد الطلبات لكل واحد',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_attendance_summary',
+      description: 'ملخص الحضور والغياب لليوم أو الشهر الحالي',
+      parameters: {
+        type: 'object',
+        properties: {
+          period: { type: 'string', enum: ['today', 'this_month'], description: 'الفترة' },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_alerts_summary',
+      description: 'ملخص التنبيهات النشطة — إقامات منتهية، تأمين، رخص',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_employee_details',
+      description: 'تفاصيل موظف معين بالاسم — البيانات الشخصية والحالة والمدينة والسجل التجاري',
+      parameters: {
+        type: 'object',
+        properties: { name: { type: 'string', description: 'اسم الموظف أو جزء منه' } },
+        required: ['name'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_platform_accounts',
+      description: 'حسابات المنصات — كم حساب نشط على كل منصة',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_fuel_summary',
+      description: 'ملخص استهلاك الوقود للشهر الحالي',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_maintenance_summary',
+      description: 'ملخص الصيانة — عدد طلبات الصيانة وتكاليفها',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_rider_orders_breakdown',
+      description: 'تفصيل طلبات مندوب معين هذا الشهر حسب المنصة واليوم',
+      parameters: {
+        type: 'object',
+        properties: { name: { type: 'string', description: 'اسم المندوب' } },
+        required: ['name'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_bottom_riders',
+      description: 'أضعف 10 مناديب أداءً هذا الشهر — الأقل طلبات',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_apps_overview',
+      description: 'نظرة عامة على المنصات — أسماؤها وأنواعها وعدد الموظفين والطلبات لكل منصة',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
 ];
 
 // ── Tool Implementations ──────────────────────────────────────
@@ -179,6 +273,239 @@ async function getAdvancesSummary(sb: SupabaseAdmin) {
   return { count: rows.length, total_amount: totalAmount };
 }
 
+async function getTopRiders(sb: SupabaseAdmin) {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const from = `${y}-${m}-01`;
+  const to = new Date(y, now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+  const { data, error } = await sb
+    .from('daily_orders')
+    .select('employee_id, orders_count, employees(name)')
+    .gte('date', from)
+    .lte('date', to);
+  if (error) throw error;
+
+  const totals: Record<string, { name: string; total: number }> = {};
+  for (const r of (data ?? [])) {
+    const empId = r.employee_id as string;
+    const name = ((r.employees as { name?: string } | null)?.name) ?? empId;
+    const count = (r.orders_count as number) ?? 0;
+    if (!totals[empId]) totals[empId] = { name, total: 0 };
+    totals[empId].total += count;
+  }
+
+  const sorted = Object.values(totals).sort((a, b) => b.total - a.total).slice(0, 10);
+  return {
+    month: `${y}-${m}`,
+    top_riders: sorted.map((r, i) => ({ rank: i + 1, name: r.name, orders: r.total })),
+  };
+}
+
+async function getAttendanceSummary(sb: SupabaseAdmin, period: string = 'today') {
+  const now = new Date();
+  let from: string;
+  let to: string;
+
+  if (period === 'this_month') {
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    from = `${y}-${m}-01`;
+    to = new Date(y, now.getMonth() + 1, 0).toISOString().split('T')[0];
+  } else {
+    from = now.toISOString().split('T')[0];
+    to = from;
+  }
+
+  const { data, error } = await sb
+    .from('attendance')
+    .select('status')
+    .gte('date', from)
+    .lte('date', to);
+  if (error) throw error;
+
+  const rows = data ?? [];
+  const byStatus: Record<string, number> = {};
+  for (const r of rows) {
+    const s = (r.status as string) ?? 'unknown';
+    byStatus[s] = (byStatus[s] ?? 0) + 1;
+  }
+
+  return { period: period === 'this_month' ? 'الشهر الحالي' : 'اليوم', total_records: rows.length, by_status: byStatus };
+}
+
+async function getAlertsSummary(sb: SupabaseAdmin) {
+  const now = new Date();
+  const threshold = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+  const { data, error } = await sb
+    .from('employees')
+    .select('id, name, residency_expiry')
+    .eq('status', 'active')
+    .not('residency_expiry', 'is', null)
+    .lte('residency_expiry', threshold);
+  if (error) throw error;
+
+  const expiring = (data ?? []).map((e) => ({
+    name: e.name,
+    expiry: e.residency_expiry,
+    days_left: Math.round((new Date(e.residency_expiry as string).getTime() - now.getTime()) / 86400000),
+  })).sort((a, b) => a.days_left - b.days_left);
+
+  return {
+    expiring_residencies: expiring.length,
+    details: expiring.slice(0, 10),
+  };
+}
+
+async function getEmployeeDetails(sb: SupabaseAdmin, name: string) {
+  const { data, error } = await sb
+    .from('employees')
+    .select('id, name, national_id, phone, city, cities, status, sponsorship_status, job_title, join_date, residency_expiry, commercial_record, salary_type, base_salary')
+    .ilike('name', `%${name}%`)
+    .limit(5);
+  if (error) throw error;
+  if (!data || data.length === 0) return { found: false, message: `لم يُعثر على موظف باسم "${name}"` };
+  return { found: true, employees: data };
+}
+
+async function getPlatformAccounts(sb: SupabaseAdmin) {
+  const { data, error } = await sb
+    .from('platform_accounts')
+    .select('status, app_id, apps(name)')
+    .eq('status', 'active');
+  if (error) throw error;
+  const byApp: Record<string, number> = {};
+  for (const r of (data ?? [])) {
+    const appName = ((r.apps as { name?: string } | null)?.name) ?? 'أخرى';
+    byApp[appName] = (byApp[appName] ?? 0) + 1;
+  }
+  return { total_active: (data ?? []).length, by_platform: byApp };
+}
+
+async function getFuelSummary(sb: SupabaseAdmin) {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const from = `${y}-${m}-01`;
+  const to = new Date(y, now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+  const { data, error } = await sb
+    .from('fuel_records')
+    .select('cost, liters')
+    .gte('date', from)
+    .lte('date', to);
+  if (error) throw error;
+  const rows = data ?? [];
+  const totalCost = rows.reduce((s, r) => s + ((r.cost as number) ?? 0), 0);
+  const totalLiters = rows.reduce((s, r) => s + ((r.liters as number) ?? 0), 0);
+  return { month: `${y}-${m}`, records: rows.length, total_cost: totalCost, total_liters: totalLiters };
+}
+
+async function getMaintenanceSummary(sb: SupabaseAdmin) {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const from = `${y}-${m}-01`;
+  const to = new Date(y, now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+  const { data, error } = await sb
+    .from('maintenance_logs')
+    .select('cost, status, type')
+    .gte('date', from)
+    .lte('date', to);
+  if (error) throw error;
+  const rows = data ?? [];
+  const totalCost = rows.reduce((s, r) => s + ((r.cost as number) ?? 0), 0);
+  const byStatus: Record<string, number> = {};
+  for (const r of rows) { const s = (r.status as string) ?? 'unknown'; byStatus[s] = (byStatus[s] ?? 0) + 1; }
+  return { month: `${y}-${m}`, records: rows.length, total_cost: totalCost, by_status: byStatus };
+}
+
+async function getRiderOrdersBreakdown(sb: SupabaseAdmin, name: string) {
+  const { data: emps } = await sb.from('employees').select('id, name').ilike('name', `%${name}%`).limit(1);
+  if (!emps || emps.length === 0) return { found: false, message: `لم يُعثر على مندوب باسم "${name}"` };
+  const emp = emps[0];
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const from = `${y}-${m}-01`;
+  const to = new Date(y, now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+  const { data, error } = await sb
+    .from('daily_orders')
+    .select('date, orders_count, apps(name)')
+    .eq('employee_id', emp.id)
+    .gte('date', from)
+    .lte('date', to)
+    .order('date');
+  if (error) throw error;
+
+  let total = 0;
+  const byApp: Record<string, number> = {};
+  const days: { date: string; app: string; orders: number }[] = [];
+  for (const r of (data ?? [])) {
+    const count = (r.orders_count as number) ?? 0;
+    total += count;
+    const appName = ((r.apps as { name?: string } | null)?.name) ?? 'أخرى';
+    byApp[appName] = (byApp[appName] ?? 0) + count;
+    days.push({ date: r.date as string, app: appName, orders: count });
+  }
+  return { found: true, employee: emp.name, month: `${y}-${m}`, total_orders: total, by_platform: byApp, daily: days.slice(-10) };
+}
+
+async function getBottomRiders(sb: SupabaseAdmin) {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const from = `${y}-${m}-01`;
+  const to = new Date(y, now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+  const { data } = await sb
+    .from('daily_orders')
+    .select('employee_id, orders_count, employees(name)')
+    .gte('date', from)
+    .lte('date', to);
+
+  const totals: Record<string, { name: string; total: number }> = {};
+  for (const r of (data ?? [])) {
+    const empId = r.employee_id as string;
+    const name = ((r.employees as { name?: string } | null)?.name) ?? empId;
+    const count = (r.orders_count as number) ?? 0;
+    if (!totals[empId]) totals[empId] = { name, total: 0 };
+    totals[empId].total += count;
+  }
+  const sorted = Object.values(totals).sort((a, b) => a.total - b.total).slice(0, 10);
+  return { month: `${y}-${m}`, bottom_riders: sorted.map((r, i) => ({ rank: i + 1, name: r.name, orders: r.total })) };
+}
+
+async function getAppsOverview(sb: SupabaseAdmin) {
+  const { data: apps } = await sb.from('apps').select('id, name, work_type, is_active').eq('is_active', true);
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const from = `${y}-${m}-01`;
+  const to = new Date(y, now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+  const { data: empApps } = await sb.from('employee_apps').select('app_id');
+  const { data: orders } = await sb.from('daily_orders').select('app_id, orders_count').gte('date', from).lte('date', to);
+
+  const empCount: Record<string, number> = {};
+  for (const r of (empApps ?? [])) { const id = r.app_id as string; empCount[id] = (empCount[id] ?? 0) + 1; }
+  const orderCount: Record<string, number> = {};
+  for (const r of (orders ?? [])) { const id = r.app_id as string; orderCount[id] = (orderCount[id] ?? 0) + ((r.orders_count as number) ?? 0); }
+
+  return {
+    apps: (apps ?? []).map((a) => ({
+      name: a.name,
+      work_type: a.work_type ?? 'orders',
+      employees: empCount[a.id as string] ?? 0,
+      orders_this_month: orderCount[a.id as string] ?? 0,
+    })),
+  };
+}
+
 async function executeTool(sb: SupabaseAdmin, name: string, args: Record<string, unknown>) {
   switch (name) {
     case 'get_employee_stats':
@@ -191,6 +518,26 @@ async function executeTool(sb: SupabaseAdmin, name: string, args: Record<string,
       return await getSalarySummary(sb);
     case 'get_advances_summary':
       return await getAdvancesSummary(sb);
+    case 'get_top_riders':
+      return await getTopRiders(sb);
+    case 'get_attendance_summary':
+      return await getAttendanceSummary(sb, (args.period as string) ?? 'today');
+    case 'get_alerts_summary':
+      return await getAlertsSummary(sb);
+    case 'get_employee_details':
+      return await getEmployeeDetails(sb, (args.name as string) ?? '');
+    case 'get_platform_accounts':
+      return await getPlatformAccounts(sb);
+    case 'get_fuel_summary':
+      return await getFuelSummary(sb);
+    case 'get_maintenance_summary':
+      return await getMaintenanceSummary(sb);
+    case 'get_rider_orders_breakdown':
+      return await getRiderOrdersBreakdown(sb, (args.name as string) ?? '');
+    case 'get_bottom_riders':
+      return await getBottomRiders(sb);
+    case 'get_apps_overview':
+      return await getAppsOverview(sb);
     default:
       return { error: `Unknown tool: ${name}` };
   }
