@@ -432,6 +432,9 @@ const Salaries = () => {
 
   return (
     <div className="space-y-4" dir="rtl">
+      <div>
+        <nav className="page-breadcrumb"><span>الرئيسية</span><span className="page-breadcrumb-sep">/</span><span>الرواتب</span></nav>
+      </div>
       <SalaryMonthSelector
         loadingData={loadingData}
         previewBackendError={previewBackendError}

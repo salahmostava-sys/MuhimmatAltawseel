@@ -111,6 +111,7 @@ export function AppSettingsPage() {
   if (selectedApp) {
     return (
       <div className="space-y-4" dir="rtl">
+      <nav className="page-breadcrumb"><span>الرئيسية</span><span className="page-breadcrumb-sep">/</span><span>إعدادات المنصات</span></nav>
         <Button
           variant="ghost"
           size="sm"
@@ -132,6 +133,7 @@ export function AppSettingsPage() {
 
   return (
     <div className="space-y-4" dir="rtl">
+      <nav className="page-breadcrumb"><span>الرئيسية</span><span className="page-breadcrumb-sep">/</span><span>إعدادات المنصات</span></nav>
       <div>
         <h2 className="text-2xl font-bold">إعدادات المنصات</h2>
         <p className="text-sm text-muted-foreground">

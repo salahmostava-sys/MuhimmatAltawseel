@@ -228,6 +228,9 @@ const Employees = () => {
   if (employeesError && !loading) {
     return (
       <div className="space-y-4" dir="rtl">
+      <div>
+        <nav className="page-breadcrumb"><span>الرئيسية</span><span className="page-breadcrumb-sep">/</span><span>الموظفون</span></nav>
+      </div>
         <QueryErrorRetry
           error={employeesError}
           onRetry={() => void refetchEmployees()}

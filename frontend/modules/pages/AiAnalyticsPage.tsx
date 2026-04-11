@@ -98,6 +98,7 @@ const AiAnalyticsPage = () => {
 
   return (
     <div className="space-y-4" dir="rtl">
+      <nav className="page-breadcrumb"><span>الرئيسية</span><span className="page-breadcrumb-sep">/</span><span>تحليلات ذكية</span></nav>
       {/* AI-Powered Dashboard */}
       <PageSection title="لوحة القرارات الذكية">
         <div className="flex items-center gap-2 mb-4">
