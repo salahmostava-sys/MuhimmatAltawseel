@@ -147,20 +147,29 @@ export function ShiftsTab({
   const handleCellClick = (empId: string, day: number) => {
     if (!canEdit) return;
     const key = `${empId}::${day}`;
+    // Toggle: if already editing this cell, close it
+    if (editingCell === key) {
+      setEditingCell(null);
+      return;
+    }
     setEditingCell(key);
     setEditValue(String(getVal(empId, day) || ''));
+  };
+
+  const commitAttendance = (key: string, value: number) => {
+    setGrid((prev) => {
+      const next = { ...prev };
+      if (value > 0) next[key] = value;
+      else delete next[key];
+      return next;
+    });
+    setEditingCell(null);
   };
 
   const commitEdit = () => {
     if (!editingCell) return;
     const val = parseFloat(editValue) || 0;
-    setGrid((prev) => {
-      const next = { ...prev };
-      if (val > 0) next[editingCell] = Math.min(val, 24);
-      else delete next[editingCell];
-      return next;
-    });
-    setEditingCell(null);
+    commitAttendance(editingCell, Math.min(val, 24));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -189,7 +198,7 @@ export function ShiftsTab({
     const headers = ['الموظف', ...dayArr.map((d) => String(d)), 'المجموع'];
     const rows = filteredEmployees.map((emp) => {
       const values: Array<string | number> = [emp.name];
-      dayArr.forEach((d) => values.push(getVal(emp.id, d) || ''));
+      dayArr.forEach((d) => values.push(getVal(emp.id, d) > 0 ? 'حاضر' : 'غائب'));
       values.push(empMonthTotal(emp.id));
       return values;
     });
@@ -349,6 +358,7 @@ export function ShiftsTab({
                         const dow = new Date(year, month - 1, d).getDay();
                         const isWeekend = dow === 5 || dow === 6;
                         const isToday = d === today;
+                        const isPresent = val > 0;
 
                         return (
                           <td
@@ -357,30 +367,26 @@ export function ShiftsTab({
                               ${isToday ? 'bg-primary/10' : isWeekend ? 'bg-muted/20' : ''}
                               ${isEditing ? 'ring-2 ring-inset ring-primary' : ''}
                               ${canEdit && !isEditing ? 'cursor-pointer hover:bg-primary/5' : ''}`}
-                            style={{ minWidth: 40 }}
+                            style={{ minWidth: 52 }}
                             onClick={() => !isEditing && handleCellClick(emp.id, d)}
                           >
                             {isEditing ? (
-                              <Input
-                                ref={inputRef}
-                                type="number"
-                                step="0.5"
-                                min="0"
-                                max="24"
-                                value={editValue}
-                                onChange={(e) => setEditValue(e.target.value)}
-                                onBlur={commitEdit}
-                                onKeyDown={handleKeyDown}
-                                className="h-7 w-full text-center text-[11px] border-0 bg-transparent p-0 focus-visible:ring-0"
-                              />
+                              <select
+                                autoFocus
+                                value={val > 0 ? '1' : '0'}
+                                onChange={(e) => commitAttendance(cellKey, parseInt(e.target.value, 10))}
+                                onBlur={() => setEditingCell(null)}
+                                className="h-7 w-full text-center text-[10px] border-0 bg-transparent cursor-pointer focus:outline-none font-bold"
+                              >
+                                <option value="1">حاضر ✅</option>
+                                <option value="0">غائب ❌</option>
+                              </select>
                             ) : (
                               <div className="h-7 flex items-center justify-center">
-                                {val > 0 ? (
-                                  <span className={`font-semibold leading-none ${val >= 8 ? 'text-success' : val >= 4 ? 'text-warning' : 'text-foreground'}`}>
-                                    {val}
-                                  </span>
+                                {isPresent ? (
+                                  <span className="font-bold text-[10px] leading-none text-emerald-600 dark:text-emerald-400">حاضر</span>
                                 ) : (
-                                  <span className="text-muted-foreground/20">·</span>
+                                  <span className="font-bold text-[10px] leading-none text-rose-500 dark:text-rose-400">غائب</span>
                                 )}
                               </div>
                             )}
@@ -392,11 +398,8 @@ export function ShiftsTab({
                         className="sticky left-0 z-10 text-center px-1 py-1 font-bold border-r-2 border-border bg-muted"
                         style={{ minWidth: 64 }}
                       >
-                        {total > 0 ? (
-                          <span className="text-primary">{total}</span>
-                        ) : (
-                          <span className="text-muted-foreground/30">0</span>
-                        )}
+                        <span className="text-emerald-600 font-bold text-[10px]">{total}</span>
+                        <span className="text-muted-foreground/50 text-[9px]"> / {days}</span>
                       </td>
                     </tr>
                   );
@@ -413,15 +416,19 @@ export function ShiftsTab({
                     الإجمالي
                   </td>
                   {dayArr.map((d) => {
-                    const dayTotal = filteredEmployees.reduce((s, e) => s + getVal(e.id, d), 0);
+                    const dayTotal = filteredEmployees.reduce((s, e) => s + (getVal(e.id, d) > 0 ? 1 : 0), 0);
                     const isToday = d === today;
                     return (
                       <td
                         key={d}
                         className={`text-center px-0.5 py-1.5 font-bold border-l border-border/40 ${isToday ? 'bg-primary/10 text-primary' : 'text-foreground'}`}
-                        style={{ minWidth: 40, backgroundColor: isToday ? undefined : 'hsl(var(--muted) / 0.4)' }}
+                        style={{ minWidth: 52, backgroundColor: isToday ? undefined : 'hsl(var(--muted) / 0.4)' }}
                       >
-                        {dayTotal > 0 ? dayTotal : <span className="text-muted-foreground/30">—</span>}
+                        {dayTotal > 0 ? (
+                          <span className="text-emerald-600">{dayTotal}</span>
+                        ) : (
+                          <span className="text-muted-foreground/30">0</span>
+                        )}
                       </td>
                     );
                   })}
@@ -437,9 +444,9 @@ export function ShiftsTab({
 
       {/* Legend */}
       <div className="flex items-center gap-4 text-[10px] text-muted-foreground px-1">
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-success inline-block" /> ≥ 8 ساعات (دوام كامل)</span>
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-warning inline-block" /> 4-7 ساعات (دوام جزئي)</span>
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-foreground inline-block" /> &lt; 4 ساعات</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" /> حاضر</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" /> غائب</span>
+        <span>• اضغط على الخلية لتغيير الحالة</span>
       </div>
     </div>
   );
