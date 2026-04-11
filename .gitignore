@@ -52,3 +52,7 @@ prompt.md
 *.prompt
 /src/
 attached_assets/*.env
+
+# IDE / local tool configs
+.sonarlint/
+.sixth/
