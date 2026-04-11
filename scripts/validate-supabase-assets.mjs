@@ -41,7 +41,7 @@ export function validateSupabaseAssets(repoRoot = process.cwd()) {
     readText(repoRoot, file);
   }
 
-  const tenantRlsText = readText(repoRoot, 'supabase/tenant_rls_smoke_tests.sql');
+  const tenantRlsText = readText(repoRoot, 'supabase/oneoff/tenant_rls_smoke_tests.sql');
   for (const snippet of [
     'SECTION A',
     'SECTION B',
@@ -53,10 +53,10 @@ export function validateSupabaseAssets(repoRoot = process.cwd()) {
     'BEGIN;',
     'ROLLBACK;',
   ]) {
-    assertContains('supabase/tenant_rls_smoke_tests.sql', tenantRlsText, snippet);
+    assertContains('supabase/oneoff/tenant_rls_smoke_tests.sql', tenantRlsText, snippet);
   }
 
-  const phaseValidationText = readText(repoRoot, 'supabase/phase_1_5_validation_checks.sql');
+  const phaseValidationText = readText(repoRoot, 'supabase/oneoff/phase_1_5_validation_checks.sql');
   for (const snippet of [
     'MISSING_RLS',
     'has_permission',
@@ -64,10 +64,10 @@ export function validateSupabaseAssets(repoRoot = process.cwd()) {
     'admin_action_log',
     '[admin][SELECT employees]',
   ]) {
-    assertContains('supabase/phase_1_5_validation_checks.sql', phaseValidationText, snippet);
+    assertContains('supabase/oneoff/phase_1_5_validation_checks.sql', phaseValidationText, snippet);
   }
 
-  const maintenanceText = readText(repoRoot, 'supabase/maintenance_system_tests.sql');
+  const maintenanceText = readText(repoRoot, 'supabase/oneoff/maintenance_system_tests.sql');
   for (const snippet of [
     'spare_parts',
     'maintenance_logs',
@@ -76,7 +76,7 @@ export function validateSupabaseAssets(repoRoot = process.cwd()) {
     'deduct_spare_part_stock',
     'ROLLBACK;',
   ]) {
-    assertContains('supabase/maintenance_system_tests.sql', maintenanceText, snippet);
+    assertContains('supabase/oneoff/maintenance_system_tests.sql', maintenanceText, snippet);
   }
 
   const migrationsDir = path.join(repoRoot, 'supabase', 'migrations');
