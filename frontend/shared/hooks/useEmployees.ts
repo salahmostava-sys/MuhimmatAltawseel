@@ -12,11 +12,19 @@ export const useEmployees = () => {
   return useAuthedQuery({
     buildQueryKey: employeesQueryKey,
     queryFn: async () => {
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('انتهت مهلة تحميل البيانات. حاول مرة أخرى.')), 12000)
-      );
-      const rows = await Promise.race([employeeService.getAll(), timeoutPromise]);
-      return rows || [];
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 12_000);
+      try {
+        const rows = await employeeService.getAll();
+        return rows || [];
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          throw new Error('انتهت مهلة تحميل البيانات. حاول مرة أخرى.');
+        }
+        throw err;
+      } finally {
+        clearTimeout(timer);
+      }
     },
     staleTime: 60_000,
   });
