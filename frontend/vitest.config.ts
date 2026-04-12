@@ -44,8 +44,11 @@ export default defineConfig({
         "app/components/**",
         "app/i18n/**",
         "modules/ai-dashboard/**",
+        "**/components/**",
+        "modules/**/hooks/**",
       ],
       /** ÙÙŠ CI Ù…Ø¹ Sonar Ù†ÙˆÙ„Ù‘Ø¯ lcov Ø¯ÙˆÙ† Ø¥ÙŠÙ‚Ø§Ù Ø§Ù„Ø³ÙŠØ± Ø¨Ø³Ø¨Ø¨ Ø§Ù„Ø¹ØªØ¨Ø§Øª Ø§Ù„Ù…Ù†Ø®ÙØ¶Ø© Ø­Ø§Ù„ÙŠØ§Ù‹ */
+      // CI relies on lcov reporting, so keep these lightweight thresholds for local runs only.
       thresholds: process.env.CI
         ? undefined
         : {
