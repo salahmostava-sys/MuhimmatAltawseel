@@ -5,6 +5,7 @@ import { useToast } from '@shared/hooks/use-toast';
 import { useAppColors } from '@shared/hooks/useAppColors';
 import { useAuth } from '@app/providers/AuthContext';
 import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
+import { usePermissions } from '@shared/hooks/usePermissions';
 import { useNavigate } from 'react-router-dom';
 import { useSystemSettings } from '@app/providers/SystemSettingsContext';
 import type { PricingRule } from '@services/salaryService';
@@ -83,6 +84,7 @@ const Salaries = () => {
   const { enabled, userId } = useAuthQueryGate();
   const uid = authQueryUserId(userId);
   const navigate = useNavigate();
+  const { permissions } = usePermissions('salaries');
   const { projectName } = useSystemSettings();
   const { apps: appColorsList } = useAppColors();
   const { selectedMonth } = useTemporalContext();
@@ -474,6 +476,7 @@ const Salaries = () => {
         viewMode={viewMode}
         setViewMode={setViewMode}
         pendingCount={pendingCount}
+        canEdit={permissions.can_edit}
         approveAll={actions.approveAll}
         salaryActionLoading={salaryActionLoading}
         salaryToolbarImportRef={salaryToolbarImportRef}
