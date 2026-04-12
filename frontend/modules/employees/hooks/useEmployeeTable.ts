@@ -212,7 +212,7 @@ export function useEmployeeActions(params: {
       record_id: null,
       meta: { total: out.length, branch: branch ?? null, status: status ?? null, search: search ?? null },
     });
-      toast({ title: `Success: ${out.length} rows processed` });
+      toast({ title: 'تم التصدير', description: `تمت معالجة ${out.length} صف` });
   };
 
   const handleTemplate = async () => {

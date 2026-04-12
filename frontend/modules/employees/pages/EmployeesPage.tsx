@@ -70,7 +70,11 @@ const Employees = () => {
       const saved = localStorage.getItem('employees_visible_cols');
       if (saved) {
         const parsed = JSON.parse(saved) as string[];
-        if (Array.isArray(parsed) && parsed.length > 0) return new Set(parsed as ColKey[]);
+        const validKeys = new Set<string>(ALL_COLUMNS.map(c => c.key));
+        if (Array.isArray(parsed)) {
+          const filtered = parsed.filter(k => validKeys.has(k));
+          if (filtered.length > 0) return new Set(filtered as ColKey[]);
+        }
       }
     } catch { /* ignore */ }
     return new Set(ALL_COLUMNS.map(c => c.key).filter(k => !DEFAULT_HIDDEN_COLS.has(k)));
@@ -242,7 +246,8 @@ const Employees = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" dir="rtl">
+      <nav className="page-breadcrumb"><span>الرئيسية</span><span className="page-breadcrumb-sep">/</span><span>الموظفون</span></nav>
       {/* Real-time presence — who else is on this page */}
       {presence.onlineUsers.length > 0 && (
         <div className="flex items-center justify-end gap-2">
