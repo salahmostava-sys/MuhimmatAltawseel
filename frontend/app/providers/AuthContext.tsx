@@ -262,7 +262,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       globalThis.removeEventListener('focus', onFocus);
       globalThis.removeEventListener('online', onOnline);
     };
-  }, [recoverSessionSilently]);
+  }, [queryClient, recoverSessionSilently]);
 
   useEffect(() => {
     if (!user) return;

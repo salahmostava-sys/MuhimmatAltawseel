@@ -1,4 +1,4 @@
-﻿import { toast } from '@shared/components/ui/sonner';
+import { toast } from '@shared/components/ui/sonner';
 import {
   TOAST_SUCCESS_ACTION,
   TOAST_SUCCESS_OPERATION,
@@ -212,7 +212,7 @@ export async function runSpreadsheetImport(params: {
       });
     } else if (file.name === '__never__') {
       toast.success(TOAST_SUCCESS_OPERATION, {
-        description: `ت�… �…سح ج�…�Šع ط�„بات ا�„ش�‡ر �€" ${monthLabel(0, 0)}`
+        description: `تم مسح جميع طلبات الشهر - ${monthLabel(0, 0)}`
       });
     } else {
       toast.success(TOAST_SUCCESS_ACTION, {

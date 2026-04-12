@@ -78,6 +78,12 @@ export function PayslipModal({ row, onClose, onApprove, selectedMonth, companyNa
   useEffect(() => {
     let cancelled = false;
     setAnalysis(null);
+    if (!aiService.isConfigured()) {
+      setAnalysisLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
     setAnalysisLoading(true);
     aiService.analyzeSalary(totalPlatformSalary, totalOrders, totalBonus)
       .then((res) => {

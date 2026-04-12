@@ -236,7 +236,7 @@ export async function upsertEmployeeArabicRows(
   let processed = 0;
 
   for (const row of rows) {
-    const nameHint = strVal(row.name) ?? strVal(row.national_id) ?? '�';
+    const nameHint = strVal(row.name) ?? strVal(row.national_id) ?? '-';
     try {
       const nm = strVal(row.name);
       if (!nm) {

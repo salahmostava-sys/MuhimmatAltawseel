@@ -30,11 +30,12 @@ export function AIDashboard({
   const [salaryForecast, setSalaryForecast] = useState<SalaryForecastResponse | null>(null);
   const [loadingForecast, setLoadingForecast] = useState(false);
 
+  const aiConfigured = aiService.isConfigured();
   const normalizedOrders = currentOrders == null ? null : Math.max(0, currentOrders);
   const normalizedDaysPassed = Math.max(1, Math.min(daysPassed, 30));
 
   const loadSalaryForecast = useCallback(async () => {
-    if (normalizedOrders === null) {
+    if (!aiConfigured || normalizedOrders === null) {
       setSalaryForecast(null);
       return;
     }
@@ -60,7 +61,7 @@ export function AIDashboard({
     } finally {
       setLoadingForecast(false);
     }
-  }, [normalizedDaysPassed, normalizedOrders, toast]);
+  }, [aiConfigured, normalizedDaysPassed, normalizedOrders, toast]);
 
   useEffect(() => {
     void loadSalaryForecast();
@@ -158,6 +159,10 @@ export function AIDashboard({
                   متبقي {salaryForecast.days_remaining.toLocaleString('ar-SA')} يوم في الشهر
                 </div>
               </div>
+            ) : !aiConfigured ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                خدمة الذكاء الاصطناعي غير مهيأة في هذه البيئة.
+              </div>
             ) : (
               <div className="py-8 text-center text-sm text-muted-foreground">
                 لا توجد بيانات طلبات كافية لتوليد التوقع.
@@ -213,12 +218,18 @@ export function AIDashboard({
           </CardHeader>
           <CardContent>
             <div className="space-y-3 text-sm">
-              <Badge variant="secondary">تم تعطيل البيانات الوهمية</Badge>
+              <Badge variant={aiConfigured ? 'secondary' : 'outline'}>
+                {aiConfigured ? 'تم تعطيل البيانات الوهمية' : 'AI غير مهيأ'}
+              </Badge>
               <div className="rounded-lg border border-dashed border-border/70 bg-muted/30 p-3 text-muted-foreground">
-                تم إيقاف أقسام "أفضل الموظفين" و"كشف الشذوذ" لأن النسخة السابقة كانت تعتمد على بيانات تجريبية ثابتة داخل الواجهة.
+                {aiConfigured
+                  ? 'تم إيقاف أقسام "أفضل الموظفين" و"كشف الشذوذ" لأن النسخة السابقة كانت تعتمد على بيانات تجريبية ثابتة داخل الواجهة.'
+                  : 'أضف VITE_AI_BACKEND_URL لتفعيل التوقعات والتحليلات من الخدمة الخارجية.'}
               </div>
               <div className="rounded-lg bg-muted p-3 text-muted-foreground">
-                أعد تفعيل هذه الأقسام فقط بعد ربطها بمصادر حقيقية لبيانات الحضور والاستقطاعات والأخطاء التشغيلية.
+                {aiConfigured
+                  ? 'أعد تفعيل هذه الأقسام فقط بعد ربطها بمصادر حقيقية لبيانات الحضور والاستقطاعات والأخطاء التشغيلية.'
+                  : 'الواجهة ستبقى مستقرة بدون أخطاء، لكن بطاقات AI ستظل معطلة حتى يتم ضبط الإعداد.'}
               </div>
             </div>
           </CardContent>
@@ -230,7 +241,7 @@ export function AIDashboard({
           variant="outline"
           size="sm"
           onClick={() => void loadSalaryForecast()}
-          disabled={normalizedOrders === null || loadingForecast}
+          disabled={!aiConfigured || normalizedOrders === null || loadingForecast}
           className="gap-2"
         >
           {loadingForecast ? (

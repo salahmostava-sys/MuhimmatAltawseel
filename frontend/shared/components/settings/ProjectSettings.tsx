@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLanguage } from '@app/providers/LanguageContext';
 import { useTheme } from '@app/providers/ThemeContext';
 import { useSystemSettings } from '@app/providers/SystemSettingsContext';
@@ -55,7 +55,7 @@ export default function ProjectSettings() {
       allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'],
     });
     if (!validation.valid) {
-      toast.error(TOAST_ERROR_GENERIC, { description: validation.error ?? (isRTL ? 'خطأ ف�Š ا�„�…�„ف' : 'Invalid file') });
+      toast.error(TOAST_ERROR_GENERIC, { description: validation.error ?? (isRTL ? 'خطأ في الملف' : 'Invalid file') });
       return;
     }
     if (logoObjectUrlRef.current) {
@@ -90,7 +90,7 @@ export default function ProjectSettings() {
         if (!uid) {
           setSaving(false);
           toast.error(TOAST_ERROR_GENERIC, {
-            description: isRTL ? 'تعذر ا�„رفع �€” �Šجب تسج�Š�„ ا�„دخ�ˆ�„ �„رفع ا�„شعار.' : 'Cannot upload �€” You must be signed in to upload a logo.',
+            description: isRTL ? 'تعذر الرفع. يجب تسجيل الدخول لرفع الشعار.' : 'Cannot upload. You must be signed in to upload a logo.',
           });
           return;
         }
@@ -125,7 +125,7 @@ export default function ProjectSettings() {
       setRemoveLogo(false);
       await refresh();
       toast.success(TOAST_SUCCESS_EDIT, {
-        description: isRTL ? 'ت�… تحد�Šث إعدادات ا�„�…شر�ˆع' : 'Project settings updated',
+        description: isRTL ? 'تم تحديث إعدادات المشروع' : 'Project settings updated',
       });
     } catch (err: unknown) {
       logError('[ProjectSettings] save failed', err);
@@ -134,7 +134,7 @@ export default function ProjectSettings() {
     setSaving(false);
   };
 
-  // �”€�”€ Backup Handler �”€�”€
+  // Backup handler
   const handleBackup = async () => {
     setBackupLoading(true);
     try {
@@ -167,7 +167,7 @@ export default function ProjectSettings() {
 
       const exportedCount = Object.keys(results).filter(k => results[k].length >= 0).length;
 
-      // �”€�”€ Export JSON �”€�”€
+      // Export JSON
       const jsonBlob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
       const jsonUrl = URL.createObjectURL(jsonBlob);
       const jsonLink = document.createElement('a');
@@ -176,7 +176,7 @@ export default function ProjectSettings() {
       jsonLink.click();
       URL.revokeObjectURL(jsonUrl);
 
-      // �”€�”€ Export Excel �”€�”€
+      // Export Excel
       const wb = XLSX.utils.book_new();
       for (const table of tables) {
         const sheetData = results[table];
@@ -193,8 +193,8 @@ export default function ProjectSettings() {
 
       toast.success(TOAST_SUCCESS_ACTION, {
         description: isRTL
-          ? `ت�… تصد�Šر ${exportedCount} جد�ˆ�„ �€” JSON + Excel`
-          : `Exported ${exportedCount} tables �€” JSON + Excel`,
+          ? `تم تصدير ${exportedCount} جدول - JSON + Excel`
+          : `Exported ${exportedCount} tables - JSON + Excel`,
       });
     } catch (err: unknown) {
       logError('[ProjectSettings] backup export failed', err);
@@ -214,18 +214,18 @@ export default function ProjectSettings() {
     <div className="max-w-2xl space-y-6">
       {/* Project Name */}
       <div className="bg-card rounded-xl border border-border/50 p-5 shadow-sm">
-        <SectionHeader icon={<Building2 size={14} />} title={isRTL ? 'اس�… ا�„�…شر�ˆع' : 'Project Name'} />
+        <SectionHeader icon={<Building2 size={14} />} title={isRTL ? 'اسم المشروع' : 'Project Name'} />
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-xs font-medium text-muted-foreground">
-                {isRTL ? 'اس�… ا�„�…شر�ˆع (عرب�Š)' : 'Project Name (Arabic)'}
+                {isRTL ? 'اسم المشروع (عربي)' : 'Project Name (Arabic)'}
               </Label>
-              <Input value={nameAr} onChange={e => setNameAr(e.target.value)} placeholder="�…�‡�…ة ا�„ت�ˆص�Š�„" dir="rtl" />
+              <Input value={nameAr} onChange={e => setNameAr(e.target.value)} placeholder="مهمة التوصيل" dir="rtl" />
             </div>
             <div className="space-y-2">
               <Label className="text-xs font-medium text-muted-foreground">
-                {isRTL ? 'اس�… ا�„�…شر�ˆع (إ�†ج�„�Šز�Š)' : 'Project Name (English)'}
+                {isRTL ? 'اسم المشروع (إنجليزي)' : 'Project Name (English)'}
               </Label>
               <Input value={nameEn} onChange={e => setNameEn(e.target.value)} placeholder="Delivery System" dir="ltr" />
             </div>
@@ -235,7 +235,7 @@ export default function ProjectSettings() {
 
       {/* Logo */}
       <div className="bg-card rounded-xl border border-border/50 p-5 shadow-sm">
-        <SectionHeader icon={<Upload size={14} />} title={isRTL ? 'شعار ا�„�…شر�ˆع' : 'Project Logo'} />
+        <SectionHeader icon={<Upload size={14} />} title={isRTL ? 'شعار المشروع' : 'Project Logo'} />
         <div className="flex items-center gap-4">
           {logoPreview ? (
             <div className="relative">
@@ -254,7 +254,7 @@ export default function ProjectSettings() {
             </div>
           ) : (
             <div className="h-16 w-16 rounded-xl bg-muted flex items-center justify-center text-2xl border border-border border-dashed">
-              �Ÿš€
+              +
             </div>
           )}
           <div>
@@ -263,7 +263,7 @@ export default function ProjectSettings() {
               type="file"
               accept="image/jpeg,image/png,image/webp,image/svg+xml"
               className="sr-only"
-              aria-label={isRTL ? 'اخت�Šار �…�„ف ا�„شعار' : 'Choose logo file'}
+              aria-label={isRTL ? 'اختيار ملف الشعار' : 'Choose logo file'}
               onChange={handleLogoChange}
             />
             <Button
@@ -276,7 +276,7 @@ export default function ProjectSettings() {
               <Upload size={13} /> {isRTL ? 'رفع شعار' : 'Upload Logo'}
             </Button>
             <p className="text-xs text-muted-foreground mt-1.5">
-              {isRTL ? 'PNG�Œ JPG�Œ SVG �€” ا�„حد ا�„أ�‚ص�‰ 2 �…�Šغابا�Šت' : 'PNG, JPG, SVG �€” Max 2MB'}
+              {isRTL ? 'PNG، JPG، SVG - الحد الأقصى 2 ميغابايت' : 'PNG, JPG, SVG - Max 2MB'}
             </p>
           </div>
         </div>
@@ -284,11 +284,11 @@ export default function ProjectSettings() {
 
       {/* Language & Theme */}
       <div className="bg-card rounded-xl border border-border/50 p-5 shadow-sm">
-        <SectionHeader icon={<Globe size={14} />} title={isRTL ? 'ا�„�„غة �ˆا�„�…ظ�‡ر' : 'Language & Theme'} />
+        <SectionHeader icon={<Globe size={14} />} title={isRTL ? 'اللغة والمظهر' : 'Language & Theme'} />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs font-medium text-muted-foreground">
-              {isRTL ? 'ا�„�„غة ا�„افتراض�Šة' : 'Default Language'}
+              {isRTL ? 'اللغة الافتراضية' : 'Default Language'}
             </Label>
             <div className="flex gap-2">
               {['ar', 'en'].map(l => (
@@ -302,7 +302,7 @@ export default function ProjectSettings() {
                       : 'bg-background text-muted-foreground border-border hover:border-primary/50'
                   )}
                 >
-                  {l === 'ar' ? 'ا�„عرب�Šة' : 'English'}
+                  {l === 'ar' ? 'العربية' : 'English'}
                 </button>
               ))}
             </div>
@@ -310,12 +310,12 @@ export default function ProjectSettings() {
 
           <div className="space-y-2">
             <Label className="text-xs font-medium text-muted-foreground">
-              {isRTL ? '�…ظ�‡ر ا�„�†ظا�…' : 'System Theme'}
+              {isRTL ? 'مظهر النظام' : 'System Theme'}
             </Label>
             <div className="flex gap-2">
               {[
-                { key: 'light', labelAr: '�˜€️ فاتح', labelEn: '�˜€️ Light' },
-                { key: 'dark', labelAr: '�ŸŒ™ دا�ƒ�†', labelEn: '�ŸŒ™ Dark' },
+                { key: 'light', labelAr: 'فاتح', labelEn: 'Light' },
+                { key: 'dark', labelAr: 'داكن', labelEn: 'Dark' },
               ].map(opt => (
                 <button
                   key={opt.key}
@@ -335,16 +335,16 @@ export default function ProjectSettings() {
         </div>
       </div>
 
-      {/* �”€�”€ Alert Settings �”€�”€ */}
+      {/* Alert Settings */}
       <div className="bg-card rounded-xl border border-border/50 p-5 shadow-sm">
-        <SectionHeader icon={<Bell size={14} />} title={isRTL ? 'إعدادات ا�„ت�†ب�Š�‡ات' : 'Alert Settings'} />
+        <SectionHeader icon={<Bell size={14} />} title={isRTL ? 'إعدادات التنبيهات' : 'Alert Settings'} />
         <div className="flex items-center gap-4">
           <div className="flex-1">
             <Label className="text-xs font-medium text-muted-foreground">
-              {isRTL ? 'ا�„ت�†ب�Š�‡ با�†ت�‡اء ا�„إ�‚ا�…ة (حسابات ا�„�…�†صات) �‚ب�„' : 'Iqama expiry alert (platform accounts) before'}
+              {isRTL ? 'التنبيه بانتهاء الإقامة (حسابات المنصات) قبل' : 'Iqama expiry alert (platform accounts) before'}
             </Label>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {isRTL ? 'س�Šظ�‡ر ت�†ب�Š�‡ ت�„�‚ائ�Š ع�†د ا�‚تراب ا�†ت�‡اء إ�‚ا�…ة حساب ا�„�…�†صة ب�‡ذا ا�„عدد �…�† ا�„أ�Šا�… أ�ˆ أ�‚�„.' : 'An automatic alert shows when a platform account iqama expires within this many days.'}
+              {isRTL ? 'سيظهر تنبيه تلقائي عند اقتراب انتهاء إقامة حساب المنصة بهذا العدد من الأيام أو أقل.' : 'An automatic alert shows when a platform account iqama expires within this many days.'}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -356,24 +356,24 @@ export default function ProjectSettings() {
               onChange={e => setIqamaAlertDays(Math.max(1, Number.parseInt(e.target.value) || 90))}
               className="w-24 text-center"
             />
-            <span className="text-sm text-muted-foreground">{isRTL ? '�Š�ˆ�…' : 'days'}</span>
+            <span className="text-sm text-muted-foreground">{isRTL ? 'يوم' : 'days'}</span>
           </div>
         </div>
       </div>
 
-      {/* �”€�”€ Backup Section (Admin only) �”€�”€ */}
+      {/* Backup Section (Admin only) */}
       {isAdmin && (
         <div className="bg-card rounded-xl border border-border/50 p-5 shadow-sm">
-          <SectionHeader icon={<Database size={14} />} title={isRTL ? 'ا�„�†سخ ا�„احت�Šاط�Š' : 'Backup'} />
+          <SectionHeader icon={<Database size={14} />} title={isRTL ? 'النسخ الاحتياطي' : 'Backup'} />
           <div className="flex items-start gap-4">
             <div className="flex-1">
               <p className="text-sm text-muted-foreground mb-1">
                 {isRTL
-                  ? 'تح�…�Š�„ �†سخة احت�Šاط�Šة �ƒا�…�„ة �…�† �‚اعدة ا�„ب�Šا�†ات تش�…�„: ا�„�…�ˆظف�Š�†�Œ ا�„حض�ˆر�Œ ا�„س�„ف�Œ ا�„ط�„بات�Œ ا�„ر�ˆاتب�Œ ا�„�…ر�ƒبات�Œ �ˆا�„ت�†ب�Š�‡ات.'
+                  ? 'تحميل نسخة احتياطية كاملة من قاعدة البيانات تشمل: الموظفين، الحضور، السلف، الطلبات، الرواتب، المركبات، والتنبيهات.'
                   : 'Download a full database backup including: employees, attendance, advances, orders, salaries, vehicles, and alerts.'}
               </p>
               <p className="text-xs text-muted-foreground">
-                {isRTL ? '�Šُصدر �…�„ف�Š�†: JSON + Excel' : 'Exports two files: JSON + Excel'}
+                {isRTL ? 'يُصدر ملفين: JSON + Excel' : 'Exports two files: JSON + Excel'}
               </p>
             </div>
             <Button
@@ -383,9 +383,9 @@ export default function ProjectSettings() {
               className="gap-2 min-w-44 flex-shrink-0"
             >
               {backupLoading ? (
-                <><Loader2 size={14} className="animate-spin" /> {isRTL ? 'جار�Š ا�„تصد�Šر...' : 'Exporting...'}</>
+                <><Loader2 size={14} className="animate-spin" /> {isRTL ? 'جاري التصدير...' : 'Exporting...'}</>
               ) : (
-                <><Download size={14} /> {isRTL ? 'تح�…�Š�„ �†سخة احت�Šاط�Šة' : 'Download Backup'}</>
+                <><Download size={14} /> {isRTL ? 'تحميل نسخة احتياطية' : 'Download Backup'}</>
               )}
             </Button>
           </div>
@@ -396,7 +396,7 @@ export default function ProjectSettings() {
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving} className="gap-2 min-w-32">
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-          {isRTL ? 'حفظ ا�„إعدادات' : 'Save Settings'}
+          {isRTL ? 'حفظ الإعدادات' : 'Save Settings'}
         </Button>
       </div>
     </div>

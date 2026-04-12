@@ -1,4 +1,4 @@
-﻿import { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { createDefaultGlobalFilters } from '@shared/components/table/GlobalTableFilters';
 import type { DailyRow, MonthlyRow } from '@modules/fuel/types/fuel.types';
 import { DAY_NAMES } from '@modules/fuel/types/fuel.types';
@@ -24,32 +24,32 @@ export function useFuelTable(args: {
 
   const handleExportMonthly = () => {
     const data = filteredMonthly.map(r => ({
-      'ا�„اس�…': r.employee_name,
-      'أ�Šا�… �…سج�‘�„ة': r.daily_count,
-      'ا�„�ƒ�Š�„�ˆ�…ترات': r.km_total,
-      'ت�ƒ�„فة ا�„ب�†ز�Š�† (ر.س)': r.fuel_cost,
-      'ت�ƒ�„فة/�ƒ�… (ر.س)': r.km_total > 0 ? (r.fuel_cost / r.km_total).toFixed(3) : '',
-      'عدد ا�„ط�„بات': r.orders_count,
+      'الاسم': r.employee_name,
+      'أيام مسجلة': r.daily_count,
+      'الكيلومترات': r.km_total,
+      'تكلفة البنزين (ر.س)': r.fuel_cost,
+      'تكلفة/كم (ر.س)': r.km_total > 0 ? (r.fuel_cost / r.km_total).toFixed(3) : '',
+      'عدد الطلبات': r.orders_count,
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '�…�„خص ش�‡ر�Š');
-    XLSX.writeFile(wb, `�…�„خص_ا�„است�‡�„ا�ƒ_${selectedMonth}_${selectedYear}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, 'ملخص شهري');
+    XLSX.writeFile(wb, `ملخص_الاستهلاك_${selectedMonth}_${selectedYear}.xlsx`);
   };
 
   const handleExportDaily = () => {
     const data = filteredDaily.map(r => ({
-      'ا�„تار�Šخ': r.date,
-      'ا�„�Š�ˆ�…': DAY_NAMES[new Date(r.date + 'T12:00:00').getDay()],
-      'ا�„اس�…': r.employee?.name || '',
-      'ا�„�ƒ�Š�„�ˆ�…ترات': r.km_total,
-      'ت�ƒ�„فة ا�„ب�†ز�Š�† (ر.س)': r.fuel_cost,
-      '�…�„احظات': r.notes || '',
+      'التاريخ': r.date,
+      'اليوم': DAY_NAMES[new Date(r.date + 'T12:00:00').getDay()],
+      'الاسم': r.employee?.name || '',
+      'الكيلومترات': r.km_total,
+      'تكلفة البنزين (ر.س)': r.fuel_cost,
+      'ملاحظات': r.notes || '',
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'إدخا�„ات �Š�ˆ�…�Šة');
-    XLSX.writeFile(wb, `إدخا�„ات_�Š�ˆ�…�Šة_${selectedMonth}_${selectedYear}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, 'إدخالات يومية');
+    XLSX.writeFile(wb, `إدخالات_يومية_${selectedMonth}_${selectedYear}.xlsx`);
   };
 
   return {
