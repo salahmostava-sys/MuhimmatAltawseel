@@ -65,16 +65,17 @@ export const calculatePlatformSalary = ({
   appSchemeMap: Record<string, SchemeData | null>;
   platformSalaries: Record<string, number>;
 }) => {
+  const scheme = appSchemeMap[platformName];
+  // No scheme linked = no salary calculation (even if pricing_rules exist)
+  if (!scheme) {
+    return 0;
+  }
+
   const appId = appNameToId[platformName];
   const appRules = appId ? rulesMap[appId] || [] : [];
   const ruleResult = salaryService.applyPricingRules(appRules, orders);
   if (ruleResult.matchedRule) {
     return Math.round(ruleResult.salary);
-  }
-
-  const scheme = appSchemeMap[platformName];
-  if (!scheme) {
-    return 0;
   }
 
   if (scheme.scheme_type === 'fixed_monthly') {
