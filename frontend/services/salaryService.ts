@@ -208,16 +208,18 @@ export const salaryService = {
     const tierType = matchedTier.tier_type || 'total_multiplier';
     let total: number;
     if (tierType === 'fixed_amount') {
+      // Flat amount — e.g. 2500 for range 460-480
       total = matchedTier.price_per_order;
     } else if (tierType === 'base_plus_incremental') {
+      // Base + extra — e.g. 2500 + (orders - 480) × 5
       const threshold = matchedTier.incremental_threshold ?? matchedTier.from_orders;
       const incrPrice = matchedTier.incremental_price ?? 0;
       const extra = Math.max(0, orders - threshold);
       total = matchedTier.price_per_order + extra * incrPrice;
-    } else if (tierType === 'per_order_band') {
-      total = orders * matchedTier.price_per_order;
     } else {
-      total = calculateTotalMultiplierSalary(orders, sorted);
+      // Default: Flat Rate per Tier — total_orders × matched tier's rate
+      // Find which tier the rider falls in, multiply ALL orders by that rate
+      total = orders * matchedTier.price_per_order;
     }
 
     return Math.round(addTargetBonusIfEligible(total, orders, targetOrders, targetBonus));
