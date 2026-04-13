@@ -9,25 +9,22 @@ interface TemporalContextType {
 const TemporalContext = createContext<TemporalContextType | undefined>(undefined);
 
 export const TemporalProvider = ({ children }: { children: ReactNode }) => {
-  // Initialize from localStorage if available, otherwise current month
+  // Always start with current month on fresh page load.
+  // Use sessionStorage to persist selection within the same browser session
+  // (navigating between pages keeps the month), but resets when opening new tab/window.
   const [selectedMonth, setSelectedMonthState] = useState(() => {
-    const saved = localStorage.getItem('global_selected_month');
+    const saved = sessionStorage.getItem('global_selected_month');
     return saved || format(new Date(), 'yyyy-MM');
   });
 
   const setSelectedMonth = (month: string) => {
     setSelectedMonthState(month);
-    localStorage.setItem('global_selected_month', month);
+    sessionStorage.setItem('global_selected_month', month);
   };
 
   useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'global_selected_month' && e.newValue) {
-        setSelectedMonthState(e.newValue);
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    // Clean up old localStorage value (migration from previous behavior)
+    localStorage.removeItem('global_selected_month');
   }, []);
 
   return (
