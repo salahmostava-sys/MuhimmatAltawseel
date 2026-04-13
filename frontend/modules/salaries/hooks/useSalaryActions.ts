@@ -114,13 +114,16 @@ export function useSalaryActions(params: UseSalaryActionsParams) {
         const currentMetric = r.platformMetrics[platform];
         if (currentMetric && currentMetric.workType !== 'orders') return r;
         const newOrders = { ...r.platformOrders, [platform]: value };
-        const appId = appIdByName[platform];
-        const appRules = appId ? (pricingRulesByAppId[appId] || []) : [];
-        const ruleResult = salaryService.applyPricingRules(appRules, value);
-        let salary = Math.round(ruleResult.salary || 0);
-        if (!ruleResult.matchedRule) {
-          const scheme = empPlatformScheme?.[r.employeeId]?.[platform];
-          if (scheme?.salary_scheme_tiers) {
+        const scheme = empPlatformScheme?.[r.employeeId]?.[platform];
+        let salary = 0;
+        if (scheme) {
+          // Only calculate salary if scheme is linked
+          const appId = appIdByName[platform];
+          const appRules = appId ? (pricingRulesByAppId[appId] || []) : [];
+          const ruleResult = salaryService.applyPricingRules(appRules, value);
+          if (ruleResult.matchedRule) {
+            salary = Math.round(ruleResult.salary || 0);
+          } else if (scheme.salary_scheme_tiers) {
             salary = salaryService.calculateTierSalary(
               value,
               scheme.salary_scheme_tiers as SalarySchemeTier[],
