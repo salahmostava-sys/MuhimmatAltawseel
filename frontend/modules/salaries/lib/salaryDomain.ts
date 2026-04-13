@@ -311,8 +311,8 @@ export const shouldIncludeEmployeeInSalaryMonth = (
   const hasMonthlyActivity = hasOrders || hasAttendance || hasPreviewActivity;
   if (hasMonthlyActivity) return true;
   if (savedEmployeeIds?.has(employee.id)) return true;
-  if (isExcludedSponsorshipStatus(employee.sponsorship_status ?? null)) return false;
-  return isAdministrativeJobTitle(employee.job_title ?? null);
+  // Employees with no activity AND no saved record are excluded from salary view
+  return false;
 };
 
 export const filterSalaryMonthEmployees = <T extends SalaryMonthVisibilityEmployee>(
