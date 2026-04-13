@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildPlatformSetupWarnings, buildSalaryRows, shouldIncludeEmployeeInSalaryMonth } from './salaryDomain';
+import {
+  buildPlatformSetupWarnings,
+  buildSalaryRows,
+  shouldIncludeEmployeeInSalaryMonth,
+  stripUnlinkedPlatformData,
+} from './salaryDomain';
 import type { AppWithSchemeRow, SalaryRow } from '@modules/salaries/types/salary.types';
 import type { PricingRule } from '@services/salaryService';
 
@@ -79,6 +84,17 @@ describe('buildPlatformSetupWarnings', () => {
 
     expect(result.appsWithoutScheme).toEqual([]);
     expect(result.appsWithoutPricingRules).toEqual([]);
+  });
+
+  it('flags active shift platforms without a linked scheme', () => {
+    const result = buildPlatformSetupWarnings({
+      apps: [{ id: 'app-1', name: 'Shift App', work_type: 'shift', salary_schemes: null }],
+      rulesMap: { 'app-1': [] },
+      rows: [buildRow(['Shift App'])],
+    });
+
+    expect(result.appsWithoutScheme).toEqual(['Shift App']);
+    expect(result.appsWithoutPricingRules).toEqual(['Shift App']);
   });
 });
 describe('shouldIncludeEmployeeInSalaryMonth', () => {
@@ -171,7 +187,7 @@ describe('shouldIncludeEmployeeInSalaryMonth', () => {
 });
 
 describe('buildSalaryRows', () => {
-  it('keeps backend preview salaries as the single source of truth for order-based platforms', () => {
+  it('recalculates order-based platform salaries locally from the preview activity counts', () => {
     const rows = buildSalaryRows({
       employees: [
         {
@@ -240,8 +256,8 @@ describe('buildSalaryRows', () => {
     });
 
     expect(rows).toHaveLength(1);
-    expect(rows[0].platformSalaries.Keeta).toBe(2910);
-    expect(rows[0].platformMetrics.Keeta.salary).toBe(2910);
+    expect(rows[0].platformSalaries.Keeta).toBe(2960);
+    expect(rows[0].platformMetrics.Keeta.salary).toBe(2960);
   });
 
   it('restores approved salary rows from the saved sheet snapshot', () => {
@@ -431,5 +447,98 @@ describe('buildSalaryRows', () => {
     expect(rows[0].externalDeduction).toBe(10);
     expect(rows[0].engineBaseSalary).toBe(1800);
     expect(rows[0].preferEngineBaseSalary).toBe(true);
+  });
+});
+
+describe('stripUnlinkedPlatformData', () => {
+  it('removes pending platform activity and preview salary when the platform is no longer linked', () => {
+    const row = buildSalaryRows({
+      employees: [
+        {
+          id: 'emp-1',
+          name: 'Employee One',
+          job_title: 'Driver',
+          national_id: '1234567890',
+          city: 'makkah',
+          iban: 'SA123456',
+          preferred_language: 'ar',
+          phone: '0550000000',
+        },
+      ],
+      selectedMonth: '2026-04',
+      platformNames: ['Keeta'],
+      appNameToId: { Keeta: 'keeta-id' },
+      appWorkTypeMap: { Keeta: 'orders' },
+      rulesMap: { 'keeta-id': [] },
+      appSchemeMap: { Keeta: null },
+      ordMap: { 'emp-1': { Keeta: 300 } },
+      attendanceDaysMap: {},
+      savedMap: {},
+      previewMap: {
+        'emp-1': {
+          base_salary: 2500,
+          advance_deduction: 0,
+          external_deduction: 0,
+          total_shift_days: 0,
+          platform_breakdown: {
+            Keeta: {
+              appName: 'Keeta',
+              workType: 'orders',
+              calculationMethod: 'orders',
+              ordersCount: 300,
+              shiftDays: 0,
+              salary: 2500,
+            },
+          },
+        },
+      },
+      advInstIds: {},
+      deductedInstIds: {},
+      advRemainingMap: {},
+      fuelCostMap: {},
+    })[0];
+
+    const normalized = stripUnlinkedPlatformData({
+      row,
+      platformNames: ['Keeta'],
+      appSchemeMap: { Keeta: null },
+      appWorkTypeMap: { Keeta: 'orders' },
+    });
+
+    expect(normalized.registeredApps).toEqual([]);
+    expect(normalized.platformOrders.Keeta).toBe(0);
+    expect(normalized.platformSalaries.Keeta).toBe(0);
+    expect(normalized.platformMetrics.Keeta.ordersCount).toBe(0);
+    expect(normalized.engineBaseSalary).toBe(0);
+  });
+
+  it('keeps approved snapshot rows unchanged so saved history still renders as approved', () => {
+    const normalized = stripUnlinkedPlatformData({
+      row: {
+        ...buildRow(['Keeta']),
+        status: 'approved',
+        platformOrders: { Keeta: 410 },
+        platformSalaries: { Keeta: 3100 },
+        platformMetrics: {
+          Keeta: {
+            appName: 'Keeta',
+            workType: 'orders',
+            calculationMethod: 'orders',
+            ordersCount: 410,
+            shiftDays: 0,
+            salary: 3100,
+          },
+        },
+        engineBaseSalary: 3100,
+      },
+      platformNames: ['Keeta'],
+      appSchemeMap: { Keeta: null },
+      appWorkTypeMap: { Keeta: 'orders' },
+    });
+
+    expect(normalized.platformOrders.Keeta).toBe(410);
+    expect(normalized.platformSalaries.Keeta).toBe(3100);
+    expect(normalized.registeredApps).toEqual(['Keeta']);
+    expect(normalized.engineBaseSalary).toBe(3100);
   });
 });

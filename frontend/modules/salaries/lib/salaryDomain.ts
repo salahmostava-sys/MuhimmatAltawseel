@@ -367,6 +367,102 @@ export const buildEmpPlatformSchemeMap = (
   return out;
 };
 
+const buildZeroPlatformMetric = (
+  platformName: string,
+  appWorkTypeMap: Record<string, WorkType>,
+  currentMetric?: PlatformSalaryMetric | null,
+): PlatformSalaryMetric => ({
+  appName: platformName,
+  workType: currentMetric?.workType || appWorkTypeMap[platformName] || 'orders',
+  calculationMethod: null,
+  ordersCount: 0,
+  shiftDays: 0,
+  salary: 0,
+});
+
+const shouldRespectCurrentSchemeLinks = (row: Pick<SalaryRow, 'status' | 'isDirty'>) =>
+  row.status === 'pending' || !!row.isDirty;
+
+export const stripUnlinkedPlatformData = ({
+  row,
+  platformNames,
+  appSchemeMap,
+  appWorkTypeMap,
+}: {
+  row: SalaryRow;
+  platformNames: string[];
+  appSchemeMap: Record<string, SchemeData | null>;
+  appWorkTypeMap: Record<string, WorkType>;
+}) => {
+  if (!shouldRespectCurrentSchemeLinks(row)) {
+    return row;
+  }
+
+  let hasChanges = false;
+  let hadHiddenActivity = false;
+  let hiddenSalaryTotal = 0;
+
+  const nextPlatformOrders = { ...row.platformOrders };
+  const nextPlatformSalaries = { ...row.platformSalaries };
+  const nextPlatformMetrics = { ...row.platformMetrics };
+
+  for (const platformName of platformNames) {
+    if (appSchemeMap[platformName]?.id) continue;
+
+    const currentOrders = Number(row.platformOrders[platformName] || 0);
+    const currentSalary = Number(row.platformSalaries[platformName] || 0);
+    const currentMetric = row.platformMetrics[platformName];
+
+    if (currentOrders > 0 || currentSalary > 0 || hasPlatformActivity(currentMetric)) {
+      hasChanges = true;
+      hadHiddenActivity = true;
+      hiddenSalaryTotal += currentSalary;
+    }
+
+    nextPlatformOrders[platformName] = 0;
+    nextPlatformSalaries[platformName] = 0;
+    nextPlatformMetrics[platformName] = buildZeroPlatformMetric(
+      platformName,
+      appWorkTypeMap,
+      currentMetric,
+    );
+  }
+
+  const nextRegisteredApps = platformNames.filter((platformName) =>
+    hasPlatformActivity(nextPlatformMetrics[platformName]),
+  );
+  const visiblePlatformSalaryTotal = Object.values(nextPlatformSalaries).reduce(
+    (sum, value) => sum + Number(value || 0),
+    0,
+  );
+
+  let nextEngineBaseSalary = Number(row.engineBaseSalary || 0);
+  if (!row.preferEngineBaseSalary) {
+    if (visiblePlatformSalaryTotal === 0 && hadHiddenActivity) {
+      nextEngineBaseSalary = 0;
+    } else if (hiddenSalaryTotal > 0 && nextEngineBaseSalary > 0) {
+      nextEngineBaseSalary = Math.max(0, nextEngineBaseSalary - hiddenSalaryTotal);
+    }
+  }
+
+  if (
+    !hasChanges &&
+    nextRegisteredApps.length === row.registeredApps.length &&
+    nextEngineBaseSalary === Number(row.engineBaseSalary || 0)
+  ) {
+    return row;
+  }
+
+  return {
+    ...row,
+    registeredApps: nextRegisteredApps,
+    platformOrders: nextPlatformOrders,
+    platformSalaries: nextPlatformSalaries,
+    platformMetrics: nextPlatformMetrics,
+    engineBaseSalary: nextEngineBaseSalary,
+  };
+};
+
 export const buildAdvanceInstallmentMaps = async (
   selectedMonth: string,
   allAdvances: Array<{ id: string; employee_id: string }> | null | undefined
@@ -681,12 +777,8 @@ export const buildPlatformSetupWarnings = ({
       .map((app) => app.name),
     appsWithoutScheme: relevantApps
       .filter((app) => {
-        const needsScheme = app.work_type === 'orders' || app.work_type === 'hybrid' || !app.work_type;
-        if (!needsScheme) return false;
-        // Check scheme_id on the app record (more reliable than join result)
         const appRecord = app as { scheme_id?: string | null };
-        if (appRecord.scheme_id) return false; // has scheme linked
-        // Fallback: check the joined salary_schemes object
+        if (appRecord.scheme_id) return false;
         const scheme = app.salary_schemes;
         return !scheme || (typeof scheme === 'object' && !scheme.id);
       })
@@ -762,10 +854,18 @@ export async function prepareSalaryState({
     fuelCostMap,
   });
   const hydratedRows = await hydrateRowsWithDraft(newRows, selectedMonth, _salariesDraftKey);
+  const normalizedRows = hydratedRows.map((row) =>
+    stripUnlinkedPlatformData({
+      row,
+      platformNames,
+      appSchemeMap,
+      appWorkTypeMap,
+    }),
+  );
   const { appsWithoutPricingRules, appsWithoutScheme } = buildPlatformSetupWarnings({
     apps: appsFromApi,
     rulesMap,
-    rows: hydratedRows,
+    rows: normalizedRows,
   });
 
   return {
@@ -774,6 +874,6 @@ export async function prepareSalaryState({
     appsWithoutPricingRules,
     appsWithoutScheme,
     builtEmpPlatformScheme,
-    hydratedRows,
+    hydratedRows: normalizedRows,
   };
 }
