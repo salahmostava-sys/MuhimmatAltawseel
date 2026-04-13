@@ -230,9 +230,11 @@ export const employeeService = {
   },
 
   async createEmployee(payload: Record<string, unknown>) {
+    // Supabase generated types require exact shape — payload comes from dynamic forms
+    // so we validate at the DB level (NOT NULL constraints + RLS) rather than compile-time.
     const { data, error } = await supabase
       .from('employees')
-      .insert(payload as unknown as TablesInsert<'employees'>)
+      .insert(payload as TablesInsert<'employees'>)
       .select()
       .single();
     if (error) throw toServiceError(error, 'employeeService.createEmployee');
@@ -242,7 +244,7 @@ export const employeeService = {
   async updateEmployee(employeeId: string, payload: Record<string, unknown>) {
     const { error } = await supabase
       .from('employees')
-      .update(payload as unknown as TablesInsert<'employees'>)
+      .update(payload as TablesInsert<'employees'>)
       .eq('id', employeeId);
     if (error) throw toServiceError(error, 'employeeService.updateEmployee');
   },
