@@ -396,14 +396,6 @@ export const orderService = {
         const { error } = await upsertDailyOrderRows(chunk);
         
         if (error) {
-          // console.error('❌ Chunk upsert error:', {
-            message: error.message,
-            code: error.code,
-            details: error.details,
-            hint: error.hint,
-            chunkSize: chunk.length,
-            firstRow: chunk[0]
-          });
 
           if (chunk.length === 1) {
             failed.push({ row: chunk[0], error: getBulkUpsertErrorMessage(error) });
