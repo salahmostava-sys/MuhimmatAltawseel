@@ -311,8 +311,9 @@ export const shouldIncludeEmployeeInSalaryMonth = (
   const hasMonthlyActivity = hasOrders || hasAttendance || hasPreviewActivity;
   if (hasMonthlyActivity) return true;
   if (savedEmployeeIds?.has(employee.id)) return true;
-  // Employees with no activity AND no saved record are excluded from salary view
-  return false;
+  if (isExcludedSponsorshipStatus(employee.sponsorship_status ?? null)) return false;
+  // Administrative employees (e.g. operations room) always appear — salary is set manually
+  return isAdministrativeJobTitle(employee.job_title ?? null);
 };
 
 export const filterSalaryMonthEmployees = <T extends SalaryMonthVisibilityEmployee>(
@@ -457,7 +458,14 @@ export const buildSalaryRows = ({
     const platformOrders: Record<string, number> = {};
     const platformSalaries: Record<string, number> = {};
     const platformMetrics: Record<string, PlatformSalaryMetric> = {};
+
+    // Administrative employees: skip platform calculations — salary is set manually
+    const isAdmin = isAdministrativeJobTitle(String(emp.job_title || ''));
+    const hasAnyOrders = Object.values(empOrders).some((count) => count > 0);
+    const skipPlatformCalc = isAdmin && !hasAnyOrders && attendanceDays === 0;
+
     for (const platformName of platformNames) {
+      if (skipPlatformCalc) continue;
       const previewMetric = resolvePlatformPreviewMetric({
         previewMetric: preview?.platform_breakdown[platformName],
       });
