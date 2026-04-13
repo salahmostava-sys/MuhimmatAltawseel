@@ -354,7 +354,12 @@ export async function saveSpreadsheetMonth(params: {
   }
 
   try {
-    const { saved, failed } = await orderService.replaceMonthData(monthKey, rows, SAVE_CHUNK_SIZE, saveMeta);
+    // For imports (excel/api): use upsert to preserve existing data from other platforms
+    // For manual saves: use replace to ensure grid state is the source of truth
+    const isImport = saveMeta?.sourceType === 'excel' || saveMeta?.sourceType === 'api';
+    const { saved, failed } = isImport
+      ? await orderService.bulkUpsert(rows, SAVE_CHUNK_SIZE)
+      : await orderService.replaceMonthData(monthKey, rows, SAVE_CHUNK_SIZE, saveMeta);
 
     if (failed.length > 0) {
       logger.error('فشل حفظ بعض السجلات', { meta: { failed: failed.slice(0, 10) } });
