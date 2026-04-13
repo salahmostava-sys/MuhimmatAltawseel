@@ -294,7 +294,7 @@ export async function saveSpreadsheetMonth(params: {
   apps: App[];
   saveMeta?: ReplaceMonthDataMeta;
 }): Promise<boolean> {
-  const { isMonthLocked, year, month, days, data, setSaving, employees, apps, saveMeta } = params;
+  const { isMonthLocked, year, month, days, data, setSaving, employees, apps, saveMeta: _saveMeta } = params;
   if (isMonthLocked) {
     toast.error('الشهر مقفل', {
       description: 'لا يمكن حفظ التغييرات في شهر مقفل'
@@ -307,7 +307,7 @@ export async function saveSpreadsheetMonth(params: {
   const appNames = new Map(apps.map((app) => [app.id, app.name]));
   const rows: { employee_id: string; app_id: string; date: string; orders_count: number }[] = [];
   const invalidRows: string[] = [];
-  const monthKey = monthYear(year, month);
+  const _monthKey = monthYear(year, month);
   const isClearingMonth = Object.keys(data).length === 0;
 
   Object.entries(data).forEach(([key, count]) => {

@@ -1,5 +1,5 @@
 -- ============================================================
--- Lovable security findings fix:
+-- Security findings fix:
 -- 1) Open signup auto-assigns 'viewer' role + profiles defaulted to is_active=true
 --    which caused any new authenticated user to pass `is_active_user()` and read PII.
 -- 2) Legacy broad RLS policies allowed authenticated users to read employee PII.

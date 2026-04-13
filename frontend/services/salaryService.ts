@@ -132,6 +132,28 @@ const calculateTotalMultiplierSalary = (orders: number, tiers: SalarySchemeTier[
   return total;
 };
 
+const buildTotalMultiplierBreakdown = (
+  orders: number,
+  tiers: SalarySchemeTier[],
+): { parts: string[]; total: number } => {
+  const parts: string[] = [];
+  let total = 0;
+
+  for (const tier of tiers) {
+    const from = tier.from_orders;
+    const to = tier.to_orders ?? Infinity;
+    if (orders < from) break;
+
+    const inTier = Math.min(orders, to) - from + 1;
+    if (inTier <= 0) continue;
+
+    total += inTier * tier.price_per_order;
+    parts.push(`${formatExplanationNumber(inTier)} × ${formatExplanationNumber(tier.price_per_order)}`);
+  }
+
+  return { parts, total };
+};
+
 /** أسطر توضيحية لمعاينة السكيما في الواجهة */
 export function getTierSalaryExplanationLines(
   orders: number,
@@ -163,10 +185,9 @@ export function getTierSalaryExplanationLines(
       `المعادلة: ${isolateLtr(`${formatExplanationNumber(Math.round(matched.price_per_order))} + (${formatExplanationNumber(orders)} - ${formatExplanationNumber(thr)}) × ${formatExplanationNumber(incrementalPrice)} = ${formatExplanationNumber(tierTotal)}`)} ر.س`,
     );
   } else {
-    // Default: flat rate — total orders × matched tier rate
-    const flatTotal = orders * matched.price_per_order;
+    const { parts, total } = buildTotalMultiplierBreakdown(orders, sorted);
     lines.push(
-      `المعادلة: ${isolateLtr(`${formatExplanationNumber(orders)} × ${formatExplanationNumber(matched.price_per_order)} = ${formatExplanationNumber(flatTotal)}`)} ر.س (شريحة ${formatExplanationRange(matched.from_orders, matched.to_orders ?? null)})`,
+      `المعادلة: ${isolateLtr(`${parts.join(' + ')} = ${formatExplanationNumber(total)}`)} ر.س`,
     );
   }
 
@@ -202,18 +223,16 @@ export const salaryService = {
     const tierType = matchedTier.tier_type || 'total_multiplier';
     let total: number;
     if (tierType === 'fixed_amount') {
-      // Flat amount — e.g. 2500 for range 460-480
       total = matchedTier.price_per_order;
     } else if (tierType === 'base_plus_incremental') {
-      // Base + extra — e.g. 2500 + (orders - 480) × 5
       const threshold = matchedTier.incremental_threshold ?? matchedTier.from_orders;
       const incrPrice = matchedTier.incremental_price ?? 0;
       const extra = Math.max(0, orders - threshold);
       total = matchedTier.price_per_order + extra * incrPrice;
-    } else {
-      // Default: Flat Rate per Tier — total_orders × matched tier's rate
-      // Find which tier the rider falls in, multiply ALL orders by that rate
+    } else if (tierType === 'per_order_band') {
       total = orders * matchedTier.price_per_order;
+    } else {
+      total = calculateTotalMultiplierSalary(orders, sorted);
     }
 
     return Math.round(addTargetBonusIfEligible(total, orders, targetOrders, targetBonus));
