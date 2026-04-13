@@ -461,14 +461,13 @@ export const buildSalaryRows = ({
       const previewMetric = resolvePlatformPreviewMetric({
         previewMetric: preview?.platform_breakdown[platformName],
       });
-      if (previewMetric) {
-        platformMetrics[platformName] = previewMetric;
-        platformOrders[platformName] = getPrimaryPlatformActivityCount(previewMetric);
-        platformSalaries[platformName] = Math.round(previewMetric.salary);
-        continue;
-      }
 
-      const orders = empOrders[platformName] || 0;
+      // Use preview for activity counts but ALWAYS calculate salary locally.
+      // The DB RPC uses a hardcoded 150/day fallback which doesn't match the actual scheme.
+      const orders = previewMetric
+        ? getPrimaryPlatformActivityCount(previewMetric)
+        : (empOrders[platformName] || 0);
+
       const salary = calculatePlatformSalary({
         platformName,
         orders,
@@ -480,17 +479,17 @@ export const buildSalaryRows = ({
         platformSalaries,
       });
 
-      const fallbackMetric: PlatformSalaryMetric = {
+      const metric: PlatformSalaryMetric = {
         appName: platformName,
-        workType: appWorkTypeMap[platformName] || 'orders',
-        calculationMethod: null,
-        ordersCount: orders,
-        shiftDays: 0,
+        workType: previewMetric?.workType || appWorkTypeMap[platformName] || 'orders',
+        calculationMethod: previewMetric?.calculationMethod || null,
+        ordersCount: previewMetric?.ordersCount ?? orders,
+        shiftDays: previewMetric?.shiftDays ?? 0,
         salary,
       };
 
-      platformMetrics[platformName] = fallbackMetric;
-      platformOrders[platformName] = getPrimaryPlatformActivityCount(fallbackMetric);
+      platformMetrics[platformName] = metric;
+      platformOrders[platformName] = orders;
       platformSalaries[platformName] = salary;
     }
 

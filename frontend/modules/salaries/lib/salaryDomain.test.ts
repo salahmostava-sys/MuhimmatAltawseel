@@ -171,7 +171,7 @@ describe('shouldIncludeEmployeeInSalaryMonth', () => {
 });
 
 describe('buildSalaryRows', () => {
-  it('keeps backend preview salaries as the single source of truth for order-based platforms', () => {
+  it('recalculates salary locally using scheme tiers instead of preview salary', () => {
     const rows = buildSalaryRows({
       employees: [
         {
@@ -240,8 +240,9 @@ describe('buildSalaryRows', () => {
     });
 
     expect(rows).toHaveLength(1);
-    expect(rows[0].platformSalaries.Keeta).toBe(2910);
-    expect(rows[0].platformMetrics.Keeta.salary).toBe(2910);
+    // 542 orders with base_plus_incremental: 2500 + (542-450)*5 = 2500 + 460 = 2960
+    expect(rows[0].platformSalaries.Keeta).toBe(2960);
+    expect(rows[0].platformMetrics.Keeta.salary).toBe(2960);
   });
 
   it('restores approved salary rows from the saved sheet snapshot', () => {
