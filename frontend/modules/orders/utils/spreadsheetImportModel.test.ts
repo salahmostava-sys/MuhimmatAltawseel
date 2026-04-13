@@ -43,10 +43,10 @@ describe('mergeImportedOrdersFromMatrixWithMapping', () => {
 
     expect(result.imported).toBe(0);
     expect(result.skipped).toBe(1);
-    expect(result.errors[0]).toContain('أكثر من منصة طلبات');
+    expect(result.errors[0]).toContain('أكثر من منصة');
   });
 
-  it('skips employees not assigned to the selected target app', () => {
+  it('imports employees to target app even if not assigned (assignment not required for import)', () => {
     const result = mergeImportedOrdersFromMatrixWithMapping({
       matrixRows: [['أحمد', 12]],
       dayArr: [1],
@@ -60,9 +60,8 @@ describe('mergeImportedOrdersFromMatrixWithMapping', () => {
       },
     });
 
-    expect(result.imported).toBe(0);
-    expect(result.skipped).toBe(1);
-    expect(result.errors[0]).toContain('غير مسجل على منصة');
+    expect(result.imported).toBe(1);
+    expect(result.skipped).toBe(0);
   });
 
   it('replaces previous values inside the imported employee and app scope', () => {

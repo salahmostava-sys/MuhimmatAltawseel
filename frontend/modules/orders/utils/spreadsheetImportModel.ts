@@ -50,29 +50,28 @@ function resolveImportTargetAppsForEmployee(params: {
       };
     }
 
-    if (!appEmployeeIds[targetAppId]?.has(empId)) {
-      return {
-        targetApps: [],
-        error: `الموظف غير مسجل على منصة ${targetApp.name}`,
-      };
-    }
-
+    // Allow import even if employee is not assigned to the platform
+    // The assignment check was blocking valid imports
     return { targetApps: [targetApp] };
   }
 
   const assignedApps = getEmployeeAssignedApps(empId, apps, appEmployeeIds);
 
   if (assignedApps.length === 0) {
+    // No assigned apps — if there's only one app total, use it
+    if (apps.length === 1) {
+      return { targetApps: [apps[0]] };
+    }
     return {
       targetApps: [],
-      error: 'لا توجد منصة طلبات مسجلة لهذا الموظف',
+      error: 'لا توجد منصة مربوطة بهذا الموظف — اختر منصة محددة عند الاستيراد',
     };
   }
 
   if (assignedApps.length > 1) {
     return {
       targetApps: [],
-      error: 'الموظف مسجل على أكثر من منصة طلبات؛ اختر منصة محددة عند الاستيراد',
+      error: 'الموظف مسجل على أكثر من منصة — اختر منصة محددة عند الاستيراد',
     };
   }
 
