@@ -777,10 +777,10 @@ export const buildPlatformSetupWarnings = ({
       .map((app) => app.name),
     appsWithoutScheme: relevantApps
       .filter((app) => {
-        const appRecord = app as { scheme_id?: string | null };
-        if (appRecord.scheme_id) return false;
-        const scheme = app.salary_schemes;
-        return !scheme || (typeof scheme === 'object' && !scheme.id);
+        const needsScheme = app.work_type === 'orders' || app.work_type === 'hybrid' || !app.work_type;
+        if (!needsScheme) return false;
+        if (app.scheme_id) return false;
+        return !app.salary_schemes?.id;
       })
       .map((app) => app.name),
   };
