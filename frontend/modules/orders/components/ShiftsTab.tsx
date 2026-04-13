@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { Loader2, Save, Clock, Download, Printer } from 'lucide-react';
+import { Loader2, Save, Clock, Download, Upload, Printer } from 'lucide-react';
+import { toast } from '@shared/components/ui/sonner';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { loadXlsx } from '@modules/orders/utils/xlsx';
@@ -190,6 +191,87 @@ export function ShiftsTab({
     XLSX.writeFile(wb, `دوام_${month}_${year}.xlsx`);
   };
 
+  const importRef = useRef<HTMLInputElement>(null);
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    try {
+      const XLSX = await loadXlsx();
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const matrix = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: '' });
+
+      if (matrix.length < 2) {
+        toast.error('الملف فارغ', { description: 'يجب أن يحتوي على صف عناوين + بيانات' });
+        return;
+      }
+
+      // Build name → employee map
+      const nameMap = new Map<string, string>();
+      allShiftEmployees.forEach(emp => {
+        nameMap.set(emp.name.trim(), emp.id);
+        nameMap.set(emp.name.trim().replace(/\s+/g, ' '), emp.id);
+      });
+
+      let imported = 0;
+      let skipped = 0;
+      const errors: string[] = [];
+
+      for (let rowIdx = 1; rowIdx < matrix.length; rowIdx++) {
+        const row = Array.isArray(matrix[rowIdx]) ? matrix[rowIdx] : [];
+        const empName = String((row as string[])[0] ?? '').trim();
+        if (!empName) { skipped++; continue; }
+
+        const empId = nameMap.get(empName) ?? nameMap.get(empName.replace(/\s+/g, ' '));
+        if (!empId) {
+          skipped++;
+          errors.push(`صف ${rowIdx + 1}: "${empName}" غير موجود`);
+          continue;
+        }
+
+        for (let idx = 0; idx < dayArr.length; idx++) {
+          const d = dayArr[idx];
+          const cellValue = String((row as string[])[idx + 1] ?? '').trim();
+          const key = `${empId}::${d}`;
+
+          if (cellValue === 'حاضر' || cellValue === '1' || cellValue === 'present') {
+            setGrid(prev => ({ ...prev, [key]: 1 }));
+            imported++;
+          } else if (cellValue === 'غائب' || cellValue === '0' || cellValue === 'absent') {
+            setGrid(prev => { const next = { ...prev }; next[key] = 0; return next; });
+            imported++;
+          }
+          // فاضي = لا تغيير
+        }
+      }
+
+      if (errors.length > 0) {
+        toast.warning('تم الاستيراد مع تحذيرات', {
+          description: `✅ نجح: ${imported} خلية | ⚠️ تخطي: ${skipped} صف\n${errors.slice(0, 5).join('\n')}`,
+          duration: 10000,
+        });
+      } else {
+        toast.success('تم الاستيراد', { description: `${imported} خلية من ${matrix.length - 1} صف` });
+      }
+    } catch (err) {
+      toast.error('فشل الاستيراد', { description: err instanceof Error ? err.message : 'خطأ في قراءة الملف' });
+    }
+  };
+
+  const downloadTemplate = async () => {
+    const XLSX = await loadXlsx();
+    const headers = ['الموظف', ...dayArr.map(d => String(d))];
+    const rows = filteredEmployees.map(emp => [emp.name, ...dayArr.map(() => '')]);
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'قالب الدوام');
+    XLSX.writeFile(wb, `قالب_دوام_${month}_${year}.xlsx`);
+    toast.success('تم تنزيل القالب');
+  };
+
   const handlePrint = () => {
     const table = tableRef.current;
     if (!table) return;
@@ -255,6 +337,17 @@ export function ShiftsTab({
           <Button size="sm" variant="outline" onClick={() => void exportExcel()} className="gap-1.5 h-8 text-xs">
             <Download size={13} /> تصدير
           </Button>
+          <Button size="sm" variant="outline" onClick={() => void downloadTemplate()} className="gap-1.5 h-8 text-xs">
+            <Download size={13} /> قالب
+          </Button>
+          {canEdit && (
+            <>
+              <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
+              <Button size="sm" variant="outline" onClick={() => importRef.current?.click()} className="gap-1.5 h-8 text-xs">
+                <Upload size={13} /> استيراد
+              </Button>
+            </>
+          )}
           <Button size="sm" variant="outline" onClick={handlePrint} className="gap-1.5 h-8 text-xs">
             <Printer size={13} /> طباعة
           </Button>
