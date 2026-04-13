@@ -15,7 +15,6 @@ import type JSZip from 'jszip';
 import { toast as sonnerToast } from '@shared/components/ui/sonner';
 import { salaryService, type PricingRule, type SalarySchemeTier } from '@services/salaryService';
 import type { SalaryRow, SchemeData, SortDir } from '@modules/salaries/types/salary.types';
-import { cycleSortState } from '@shared/lib/sortTableIndicators';
 import { computeSalaryRow } from '@modules/salaries/hooks/useSalaryTable';
 import { getPrimaryPlatformActivityCount } from '@modules/salaries/model/salaryUtils';
 import { useSalaryIO } from '@modules/salaries/hooks/useSalaryIO';
@@ -102,9 +101,14 @@ export function useSalaryActions(params: UseSalaryActionsParams) {
   // ── Local helpers (too small to warrant their own hook) ────────────────────
 
   const handleSort = (field: string) => {
-    const next = cycleSortState(sortField, sortDir, field);
-    setSortField(next.sortField);
-    setSortDir(next.sortDir);
+    if (sortField === field) {
+      if (sortDir === 'asc') setSortDir('desc');
+      else if (sortDir === 'desc') { setSortField(null); setSortDir(null); }
+      else setSortDir('asc');
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
   };
 
   const updatePlatformOrders = (id: string, platform: string, value: number) => {
@@ -114,16 +118,13 @@ export function useSalaryActions(params: UseSalaryActionsParams) {
         const currentMetric = r.platformMetrics[platform];
         if (currentMetric && currentMetric.workType !== 'orders') return r;
         const newOrders = { ...r.platformOrders, [platform]: value };
-        const scheme = empPlatformScheme?.[r.employeeId]?.[platform];
-        let salary = 0;
-        if (scheme) {
-          // Only calculate salary if scheme is linked
-          const appId = appIdByName[platform];
-          const appRules = appId ? (pricingRulesByAppId[appId] || []) : [];
-          const ruleResult = salaryService.applyPricingRules(appRules, value);
-          if (ruleResult.matchedRule) {
-            salary = Math.round(ruleResult.salary || 0);
-          } else if (scheme.salary_scheme_tiers) {
+        const appId = appIdByName[platform];
+        const appRules = appId ? (pricingRulesByAppId[appId] || []) : [];
+        const ruleResult = salaryService.applyPricingRules(appRules, value);
+        let salary = Math.round(ruleResult.salary || 0);
+        if (!ruleResult.matchedRule) {
+          const scheme = empPlatformScheme?.[r.employeeId]?.[platform];
+          if (scheme?.salary_scheme_tiers) {
             salary = salaryService.calculateTierSalary(
               value,
               scheme.salary_scheme_tiers as SalarySchemeTier[],

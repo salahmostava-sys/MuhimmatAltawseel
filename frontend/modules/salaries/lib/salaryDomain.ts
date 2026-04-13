@@ -65,17 +65,16 @@ export const calculatePlatformSalary = ({
   appSchemeMap: Record<string, SchemeData | null>;
   platformSalaries: Record<string, number>;
 }) => {
-  const scheme = appSchemeMap[platformName];
-  // No scheme linked = no salary calculation (even if pricing_rules exist)
-  if (!scheme) {
-    return 0;
-  }
-
   const appId = appNameToId[platformName];
   const appRules = appId ? rulesMap[appId] || [] : [];
   const ruleResult = salaryService.applyPricingRules(appRules, orders);
   if (ruleResult.matchedRule) {
     return Math.round(ruleResult.salary);
+  }
+
+  const scheme = appSchemeMap[platformName];
+  if (!scheme) {
+    return 0;
   }
 
   if (scheme.scheme_type === 'fixed_monthly') {
@@ -310,16 +309,9 @@ export const shouldIncludeEmployeeInSalaryMonth = (
   const hasAttendance = (attendanceDaysMap[employee.id] || 0) > 0;
   const hasPreviewActivity = hasMonthlyPlatformPreviewActivity(employee.id, previewMap);
   const hasMonthlyActivity = hasOrders || hasAttendance || hasPreviewActivity;
-
-  // Absconded/terminated: only show if they have ACTUAL activity (orders/attendance)
-  // Even having a saved salary record is not enough — they must have worked
-  if (isExcludedSponsorshipStatus(employee.sponsorship_status ?? null)) {
-    return hasMonthlyActivity;
-  }
-
   if (hasMonthlyActivity) return true;
   if (savedEmployeeIds?.has(employee.id)) return true;
-  // Administrative employees (e.g. operations room) always appear — salary is set manually
+  if (isExcludedSponsorshipStatus(employee.sponsorship_status ?? null)) return false;
   return isAdministrativeJobTitle(employee.job_title ?? null);
 };
 
@@ -365,111 +357,6 @@ export const buildEmpPlatformSchemeMap = (
     }
   }
   return out;
-};
-
-const buildZeroPlatformMetric = (
-  platformName: string,
-  appWorkTypeMap: Record<string, WorkType>,
-  currentMetric?: PlatformSalaryMetric | null,
-): PlatformSalaryMetric => ({
-  appName: platformName,
-  workType: currentMetric?.workType || appWorkTypeMap[platformName] || 'orders',
-  calculationMethod: null,
-  ordersCount: 0,
-  shiftDays: 0,
-  salary: 0,
-});
-
-const shouldRespectCurrentSchemeLinks = (row: Pick<SalaryRow, 'status' | 'isDirty'>) =>
-  row.status === 'pending' || !!row.isDirty;
-
-export const stripUnlinkedPlatformData = ({
-  row,
-  platformNames,
-  appSchemeMap,
-  appWorkTypeMap,
-}: {
-  row: SalaryRow;
-  platformNames: string[];
-  appSchemeMap: Record<string, SchemeData | null>;
-  appWorkTypeMap: Record<string, WorkType>;
-}) => {
-  if (!shouldRespectCurrentSchemeLinks(row)) {
-    return row;
-  }
-
-  let hasChanges = false;
-  let hadHiddenActivity = false;
-  let hiddenSalaryTotal = 0;
-
-  const nextPlatformOrders = { ...row.platformOrders };
-  const nextPlatformSalaries = { ...row.platformSalaries };
-  const nextPlatformMetrics = { ...row.platformMetrics };
-
-  for (const platformName of platformNames) {
-    if (appSchemeMap[platformName]?.id) continue;
-
-    const currentOrders = Number(row.platformOrders[platformName] || 0);
-    const currentSalary = Number(row.platformSalaries[platformName] || 0);
-    const currentMetric = row.platformMetrics[platformName];
-
-    if (currentOrders > 0 || currentSalary > 0 || hasPlatformActivity(currentMetric)) {
-      hasChanges = true;
-      hadHiddenActivity = true;
-      hiddenSalaryTotal += currentSalary;
-    }
-
-    nextPlatformOrders[platformName] = 0;
-    nextPlatformSalaries[platformName] = 0;
-    nextPlatformMetrics[platformName] = buildZeroPlatformMetric(
-      platformName,
-      appWorkTypeMap,
-      currentMetric,
-    );
-  }
-
-  const nextRegisteredApps = platformNames.filter((platformName) =>
-    hasPlatformActivity(nextPlatformMetrics[platformName]),
-  );
-  const visiblePlatformSalaryTotal = Object.values(nextPlatformSalaries).reduce(
-    (sum, value) => sum + Number(value || 0),
-    0,
-  );
-
-  let nextEngineBaseSalary = Number(row.engineBaseSalary || 0);
-  if (!row.preferEngineBaseSalary) {
-    if (visiblePlatformSalaryTotal === 0 && hadHiddenActivity) {
-      nextEngineBaseSalary = 0;
-    } else if (hiddenSalaryTotal > 0 && nextEngineBaseSalary > 0) {
-      nextEngineBaseSalary = Math.max(0, nextEngineBaseSalary - hiddenSalaryTotal);
-    }
-  }
-
-  if (
-    !hasChanges &&
-    nextRegisteredApps.length === row.registeredApps.length &&
-    nextEngineBaseSalary === Number(row.engineBaseSalary || 0)
-  ) {
-    return row;
-  }
-
-  return {
-    ...row,
-    registeredApps: nextRegisteredApps,
-    platformOrders: nextPlatformOrders,
-    platformSalaries: nextPlatformSalaries,
-    platformMetrics: nextPlatformMetrics,
-    engineBaseSalary: nextEngineBaseSalary,
-  };
-};
-
-export const shouldRetainSalaryRowAfterSchemeFilter = (
-  row: Pick<SalaryRow, 'registeredApps' | 'status' | 'isDirty' | 'jobTitle'>,
-) => {
-  if (row.status === 'approved' || row.status === 'paid') return true;
-  if (row.isDirty) return true;
-  if (isAdministrativeJobTitle(row.jobTitle)) return true;
-  return row.registeredApps.length > 0;
 };
 
 export const buildAdvanceInstallmentMaps = async (
@@ -571,16 +458,17 @@ export const buildSalaryRows = ({
     const platformSalaries: Record<string, number> = {};
     const platformMetrics: Record<string, PlatformSalaryMetric> = {};
     for (const platformName of platformNames) {
-      // Use preview metrics for activity counts (orders/shift days) but
-      // ALWAYS recalculate salary locally using the frontend tier logic.
-      // The DB RPC (calc_tier_salary) may use a different calculation method.
       const previewMetric = resolvePlatformPreviewMetric({
         previewMetric: preview?.platform_breakdown[platformName],
       });
+      if (previewMetric) {
+        platformMetrics[platformName] = previewMetric;
+        platformOrders[platformName] = getPrimaryPlatformActivityCount(previewMetric);
+        platformSalaries[platformName] = Math.round(previewMetric.salary);
+        continue;
+      }
 
-      const orders = previewMetric
-        ? getPrimaryPlatformActivityCount(previewMetric)
-        : (empOrders[platformName] || 0);
+      const orders = empOrders[platformName] || 0;
       const salary = calculatePlatformSalary({
         platformName,
         orders,
@@ -594,10 +482,10 @@ export const buildSalaryRows = ({
 
       const fallbackMetric: PlatformSalaryMetric = {
         appName: platformName,
-        workType: previewMetric?.workType || appWorkTypeMap[platformName] || 'orders',
-        calculationMethod: previewMetric?.calculationMethod || null,
-        ordersCount: previewMetric?.ordersCount ?? orders,
-        shiftDays: previewMetric?.shiftDays ?? 0,
+        workType: appWorkTypeMap[platformName] || 'orders',
+        calculationMethod: null,
+        ordersCount: orders,
+        shiftDays: 0,
         salary,
       };
 
@@ -785,7 +673,11 @@ export const buildPlatformSetupWarnings = ({
       })
       .map((app) => app.name),
     appsWithoutScheme: relevantApps
-      .filter((app) => !app.scheme_id && !app.salary_schemes?.id)
+      .filter((app) => {
+        const needsScheme = app.work_type === 'orders' || app.work_type === 'hybrid' || !app.work_type;
+        if (!needsScheme) return false;
+        return !app.salary_schemes;
+      })
       .map((app) => app.name),
   };
 };
@@ -858,19 +750,10 @@ export async function prepareSalaryState({
     fuelCostMap,
   });
   const hydratedRows = await hydrateRowsWithDraft(newRows, selectedMonth, _salariesDraftKey);
-  const normalizedRows = hydratedRows.map((row) =>
-    stripUnlinkedPlatformData({
-      row,
-      platformNames,
-      appSchemeMap,
-      appWorkTypeMap,
-    }),
-  );
-  const visibleRows = normalizedRows.filter(shouldRetainSalaryRowAfterSchemeFilter);
   const { appsWithoutPricingRules, appsWithoutScheme } = buildPlatformSetupWarnings({
     apps: appsFromApi,
     rulesMap,
-    rows: visibleRows,
+    rows: hydratedRows,
   });
 
   return {
@@ -879,6 +762,6 @@ export async function prepareSalaryState({
     appsWithoutPricingRules,
     appsWithoutScheme,
     builtEmpPlatformScheme,
-    hydratedRows: visibleRows,
+    hydratedRows,
   };
 }
