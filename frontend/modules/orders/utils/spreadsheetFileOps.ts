@@ -176,7 +176,8 @@ export async function runSpreadsheetImport(params: {
 
           if (errors.length > 0) {
             toast.warning(`تم الاستيراد مع تحذيرات`, {
-              description: `تم استيراد ${imported} إدخال، تم تجاهل ${skipped} صف. ${errors.slice(0, 3).join('، ')}`
+              description: `✅ نجح: ${imported} إدخال | ⚠️ تخطي: ${skipped} صف\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? `\n... و${errors.length - 5} أخطاء أخرى` : ''}`,
+              duration: 10000,
             });
           } else {
             toast.success(TOAST_SUCCESS_ACTION, {
@@ -208,7 +209,8 @@ export async function runSpreadsheetImport(params: {
 
     if (errors.length > 0) {
       toast.warning(`تم الاستيراد مع تحذيرات`, {
-        description: `تم استيراد ${imported} إدخال، تم تجاهل ${skipped} صف. الأخطاء: ${errors.slice(0, 3).join('، ')}`
+        description: `✅ نجح: ${imported} إدخال | ⚠️ تخطي: ${skipped} صف\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? `\n... و${errors.length - 5} أخطاء أخرى` : ''}`,
+        duration: 10000,
       });
     } else if (file.name === '__never__') {
       toast.success(TOAST_SUCCESS_OPERATION, {
