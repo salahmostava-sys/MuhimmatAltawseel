@@ -163,17 +163,11 @@ export function getTierSalaryExplanationLines(
       `المعادلة: ${isolateLtr(`${formatExplanationNumber(Math.round(matched.price_per_order))} + (${formatExplanationNumber(orders)} - ${formatExplanationNumber(thr)}) × ${formatExplanationNumber(incrementalPrice)} = ${formatExplanationNumber(tierTotal)}`)} ر.س`,
     );
   } else {
-    for (const tier of sorted) {
-      const from = tier.from_orders;
-      const to = tier.to_orders ?? Infinity;
-      if (orders < from) break;
-      const inTier = Math.min(orders, to) - from + 1;
-      if (inTier <= 0) continue;
-      const tierSubtotal = inTier * tier.price_per_order;
-      lines.push(
-        `تراكمي ${formatExplanationRange(from, tier.to_orders ?? null)}: ${isolateLtr(`${formatExplanationNumber(inTier)} × ${formatExplanationNumber(tier.price_per_order)} = ${formatExplanationNumber(tierSubtotal)}`)} ر.س`,
-      );
-    }
+    // Default: flat rate — total orders × matched tier rate
+    const flatTotal = orders * matched.price_per_order;
+    lines.push(
+      `المعادلة: ${isolateLtr(`${formatExplanationNumber(orders)} × ${formatExplanationNumber(matched.price_per_order)} = ${formatExplanationNumber(flatTotal)}`)} ر.س (شريحة ${formatExplanationRange(matched.from_orders, matched.to_orders ?? null)})`,
+    );
   }
 
   if (targetOrders && targetBonus && orders >= targetOrders) {

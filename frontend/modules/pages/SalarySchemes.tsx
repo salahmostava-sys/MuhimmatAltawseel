@@ -256,7 +256,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
 
   const addTier = () => setFormTiers(prev => [
     ...prev,
-    { from: (prev[prev.length - 1]?.to || 0) + 1, to: (prev[prev.length - 1]?.to || 0) + 500, pricePerOrder: 6, tierType: 'total_multiplier' as TierType }
+    { from: (prev[prev.length - 1]?.to || 0) + 1, to: (prev[prev.length - 1]?.to || 0) + 500, pricePerOrder: 6, tierType: 'per_order_band' as TierType }
   ]);
   const removeTier = (i: number) => setFormTiers(prev => prev.filter((_, idx) => idx !== i));
   const updateTier = (i: number, field: string, val: number | string) =>
@@ -434,7 +434,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
     if (t.tierType === 'per_order_band') {
       return <span className="ms-auto font-semibold text-primary">كل الطلبات × {t.pricePerOrder} ر.س</span>;
     }
-    return <span className="ms-auto font-semibold text-primary">{t.pricePerOrder} ر.س/طلب (تراكمي)</span>;
+    return <span className="ms-auto font-semibold text-primary">الطلبات × {t.pricePerOrder} ر.س</span>;
   };
 
   return (
