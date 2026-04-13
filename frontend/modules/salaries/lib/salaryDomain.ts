@@ -677,7 +677,11 @@ export const buildPlatformSetupWarnings = ({
       .filter((app) => {
         const needsScheme = app.work_type === 'orders' || app.work_type === 'hybrid' || !app.work_type;
         if (!needsScheme) return false;
-        return !app.salary_schemes;
+        // Check both null and empty scheme (no id means not linked)
+        const scheme = app.salary_schemes;
+        if (!scheme) return true;
+        if (typeof scheme === 'object' && !('id' in scheme)) return true;
+        return false;
       })
       .map((app) => app.name),
   };
