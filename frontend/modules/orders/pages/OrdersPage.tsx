@@ -7,6 +7,7 @@ import Loading from '@shared/components/Loading';
 import { useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { usePermissions } from '@shared/hooks/usePermissions';
 import { Button } from '@shared/components/ui/button';
+import { logError } from '@shared/lib/logger';
 
 /* ── Simple error boundary for page-level errors ── */
 class OrdersErrorBoundary extends Component<
@@ -23,7 +24,7 @@ class OrdersErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('[OrdersPage] Error boundary caught:', error, info);
+    logError('[OrdersPage] Error boundary caught', error, { componentStack: info.componentStack });
   }
 
   render() {
