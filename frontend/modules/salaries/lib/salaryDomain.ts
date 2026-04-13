@@ -458,14 +458,7 @@ export const buildSalaryRows = ({
     const platformOrders: Record<string, number> = {};
     const platformSalaries: Record<string, number> = {};
     const platformMetrics: Record<string, PlatformSalaryMetric> = {};
-
-    // Administrative employees: skip platform calculations — salary is set manually
-    const isAdmin = isAdministrativeJobTitle(String(emp.job_title || ''));
-    const hasAnyOrders = Object.values(empOrders).some((count) => count > 0);
-    const skipPlatformCalc = isAdmin && !hasAnyOrders && attendanceDays === 0;
-
     for (const platformName of platformNames) {
-      if (skipPlatformCalc) continue;
       const previewMetric = resolvePlatformPreviewMetric({
         previewMetric: preview?.platform_breakdown[platformName],
       });
