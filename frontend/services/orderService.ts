@@ -310,13 +310,25 @@ export const orderService = {
     const from = `${year}-${String(month).padStart(2, '0')}-01`;
     const lastDay = new Date(year, month, 0).getDate();
     const to = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-    const { data, error } = await supabase
-      .from('daily_orders')
-      .select('employee_id, app_id, date, orders_count')
-      .gte('date', from)
-      .lte('date', to);
-    if (error) throw toServiceError(error, 'orderService.getMonthRaw');
-    return data ?? [];
+    // Fetch ALL rows — Supabase default limit is 1000 which truncates large months.
+    // 50 employees × 3 apps × 30 days = 4,500 rows possible.
+    const allRows: { employee_id: string; app_id: string; date: string; orders_count: number }[] = [];
+    const PAGE_SIZE = 1000;
+    let offset = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('daily_orders')
+        .select('employee_id, app_id, date, orders_count')
+        .gte('date', from)
+        .lte('date', to)
+        .range(offset, offset + PAGE_SIZE - 1);
+      if (error) throw toServiceError(error, 'orderService.getMonthRaw');
+      allRows.push(...(data ?? []));
+      hasMore = (data?.length ?? 0) === PAGE_SIZE;
+      offset += PAGE_SIZE;
+    }
+    return allRows;
   },
 
   replaceMonthData: async (
