@@ -18,7 +18,7 @@ export type NameMatchingOptions = {
   maxSuggestions?: number;
 };
 
-const DEFAULT_AUTO_MATCH_THRESHOLD = 90;
+const DEFAULT_AUTO_MATCH_THRESHOLD = 80;
 const DEFAULT_SUGGESTION_THRESHOLD = 45;
 const DEFAULT_MAX_SUGGESTIONS = 5;
 
@@ -67,12 +67,16 @@ function similarityPercentage(str1: string, str2: string): number {
  */
 function normalizeText(text: string): string {
   return text
+    .normalize('NFKC') // Unicode normalization
     .trim()
     .toLowerCase()
+    .replace(/[\u200B-\u200F\u202A-\u202E\uFEFF\u00A0]/g, '') // zero-width + non-breaking spaces
     .replace(/\s+/g, ' ') // توحيد المسافات
-    .replace(/[أإآ]/g, 'ا') // توحيد الألف
-    .replace(/[ىي]/g, 'ي') // توحيد الياء
+    .replace(/[أإآٱ]/g, 'ا') // توحيد الألف
+    .replace(/[ىئي]/g, 'ي') // توحيد الياء
     .replace(/ة/g, 'ه') // توحيد التاء المربوطة
+    .replace(/ؤ/g, 'و') // توحيد الهمزة على الواو
+    .replace(/[َُِّْـ]/g, '') // إزالة التشكيل
     .replace(/[^\u0600-\u06FFa-zA-Z0-9\s]/g, ''); // إزالة الرموز
 }
 
