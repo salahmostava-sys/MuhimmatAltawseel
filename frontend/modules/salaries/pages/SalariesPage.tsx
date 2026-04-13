@@ -105,18 +105,33 @@ const Salaries = () => {
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [markingPaid, setMarkingPaid] = useState<string | null>(null);
   const [editingCell, setEditingCell] = useState<{ rowId: string; platform: string } | null>(null);
-  const [appsWithoutScheme, setAppsWithoutScheme] = useState<string[]>([]);
-  const [appsWithoutPricingRules, setAppsWithoutPricingRules] = useState<string[]>([]);
-  const [appIdByName, setAppIdByName] = useState<Record<string, string>>({});
-  const [pricingRulesByAppId, setPricingRulesByAppId] = useState<Record<string, PricingRule[]>>({});
+  // Salary preparation state — set together in applyPreparedSalaryState
+  const [salaryMeta, setSalaryMeta] = useState<{
+    appsWithoutScheme: string[];
+    appsWithoutPricingRules: string[];
+    appIdByName: Record<string, string>;
+    pricingRulesByAppId: Record<string, PricingRule[]>;
+  }>({ appsWithoutScheme: [], appsWithoutPricingRules: [], appIdByName: {}, pricingRulesByAppId: {} });
+  const appsWithoutScheme = salaryMeta.appsWithoutScheme;
+  const appsWithoutPricingRules = salaryMeta.appsWithoutPricingRules;
+  const appIdByName = salaryMeta.appIdByName;
+  const pricingRulesByAppId = salaryMeta.pricingRulesByAppId;
   const [employeeFieldSaving, setEmployeeFieldSaving] = useState<string | null>(null);
   const [detailRow, setDetailRow] = useState<SalaryRow | null>(null);
   const [showTemplateEditor, setShowTemplateEditor] = useState(false);
 
-  const [batchQueue, setBatchQueue] = useState<SalaryRow[]>([]);
-  const [batchIndex, setBatchIndex] = useState(0);
-  const [batchZip, setBatchZip] = useState<JSZip | null>(null);
-  const [batchMonth, setBatchMonth] = useState('');
+  // Batch PDF state — grouped since always used together
+  const [batch, setBatch] = useState<{ queue: SalaryRow[]; index: number; zip: JSZip | null; month: string }>({
+    queue: [], index: 0, zip: null, month: '',
+  });
+  const batchQueue = batch.queue;
+  const batchIndex = batch.index;
+  const batchZip = batch.zip;
+  const batchMonth = batch.month;
+  const setBatchQueue = (v: React.SetStateAction<SalaryRow[]>) => setBatch(b => ({ ...b, queue: typeof v === 'function' ? v(b.queue) : v }));
+  const setBatchIndex = (v: React.SetStateAction<number>) => setBatch(b => ({ ...b, index: typeof v === 'function' ? v(b.index) : v }));
+  const setBatchZip = (v: React.SetStateAction<JSZip | null>) => setBatch(b => ({ ...b, zip: typeof v === 'function' ? v(b.zip) : v }));
+  const setBatchMonth = (v: string) => setBatch(b => ({ ...b, month: v }));
   const salaryToolbarImportRef = useRef<HTMLInputElement>(null);
   const skipNextDraftSaveRef = useRef(true);
   const lastDraftSignatureRef = useRef<string | null>(null);
@@ -224,10 +239,12 @@ const Salaries = () => {
     };
 
     const applyPreparedSalaryState = (prepared: PreparedSalaryState) => {
-      setAppIdByName(prepared.appNameToId);
-      setPricingRulesByAppId(prepared.rulesMap);
-      setAppsWithoutPricingRules(prepared.appsWithoutPricingRules);
-      setAppsWithoutScheme(prepared.appsWithoutScheme);
+      setSalaryMeta({
+        appIdByName: prepared.appNameToId,
+        pricingRulesByAppId: prepared.rulesMap,
+        appsWithoutPricingRules: prepared.appsWithoutPricingRules,
+        appsWithoutScheme: prepared.appsWithoutScheme,
+      });
       setEmpPlatformScheme(prepared.builtEmpPlatformScheme);
       setRows(prepared.hydratedRows);
     };
