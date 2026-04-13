@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@app/providers/AuthContext';
 import { useTheme } from '@app/providers/ThemeContext';
-import { Input } from '@shared/components/ui/input';
-import { Checkbox } from '@shared/components/ui/checkbox';
-import { Loader2, Eye, EyeOff, Mail, Lock, Sun, Moon, Truck, Users, Package, TrendingUp } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { dashboardService } from '@services/dashboardService';
 import { loadRememberedEmail, persistRememberedEmail } from '@shared/lib/loginRememberStorage';
 import { logError } from '@shared/lib/logger';
@@ -20,10 +18,10 @@ interface SystemSettings {
 }
 
 const FEATURES = [
-  { icon: Users, label: 'إدارة المناديب', desc: 'تتبع وإدارة فريق التوصيل بالكامل' },
-  { icon: Package, label: 'الطلبات اليومية', desc: 'تسجيل ومتابعة طلبات كل مندوب' },
-  { icon: TrendingUp, label: 'تحليلات ذكية', desc: 'تقارير أداء شاملة واقتراحات' },
-  { icon: Truck, label: 'إدارة الأسطول', desc: 'مركبات وصيانة واستهلاك' },
+  { icon: 'dashboard_customize', title: 'لوحة تحكم ذكية', desc: 'متابعة فورية لجميع العمليات والمؤشرات الحيوية بلمحة واحدة.' },
+  { icon: 'local_shipping', title: 'إدارة المناديب', desc: 'تتبع وإدارة فريق التوصيل بالكامل مع تحليل الأداء.' },
+  { icon: 'analytics', title: 'تقارير مفصلة', desc: 'تحليل البيانات لتحسين الأداء وتقليل التكاليف التشغيلية.' },
+  { icon: 'security', title: 'أمان البيانات', desc: 'حماية كاملة لبيانات العملاء والشحنات بأحدث معايير التشفير.' },
 ];
 
 const Login = () => {
@@ -70,7 +68,7 @@ const Login = () => {
   }, []);
 
   const projectName = settings?.project_name_ar || 'مهمات التوصيل';
-  const projectSubtitle = settings?.project_subtitle_ar || 'نظام إدارة المناديب';
+  const projectSubtitle = settings?.project_subtitle_ar || 'دقة في الإدارة';
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -98,197 +96,204 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex" dir="rtl">
-      {/* ── Left: Hero/Branding Panel ── */}
-      <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.7) 50%, hsl(var(--primary) / 0.4) 100%)' }}
+      {/* ── Left: Branding Panel (55%) ── */}
+      <section
+        className="hidden lg:flex lg:w-[55%] relative flex-col justify-between p-16 overflow-hidden"
+        style={{ background: 'linear-gradient(225deg, #00288e 0%, #1e40af 100%)' }}
       >
-        {/* Logo as full background watermark */}
+        {/* Background watermark */}
         {settings?.logo_url && (
           <img
             src={brandLogoSrc(settings.logo_url, settings.updated_at)}
             alt=""
-            className="absolute inset-0 w-full h-full opacity-[0.06] object-contain pointer-events-none select-none p-16"
+            className="absolute inset-0 w-full h-full opacity-[0.05] object-contain pointer-events-none select-none p-20"
           />
         )}
-        {/* Geometric pattern overlay */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 right-20 w-72 h-72 border border-white/30 rounded-full" />
-          <div className="absolute top-40 right-40 w-96 h-96 border border-white/20 rounded-full" />
-          <div className="absolute bottom-20 left-10 w-48 h-48 border border-white/20 rounded-full" />
-          <div className="absolute top-10 left-1/3 w-32 h-32 border border-white/15 rounded-full" />
-        </div>
+        <div className="absolute inset-0 opacity-10 pointer-events-none bg-gradient-to-br from-white/5 to-transparent" />
 
-        <div className="relative z-10 flex flex-col justify-between p-12 text-white w-full">
-          {/* Top: Logo + Name */}
-          <div>
+        {/* Header */}
+        <div className="relative z-10">
+          <div className="flex items-center gap-4 mb-8">
             {settings?.logo_url ? (
               <img
                 src={brandLogoSrc(settings.logo_url, settings.updated_at)}
                 alt=""
-                className="w-28 h-28 rounded-3xl object-contain bg-white/10 backdrop-blur-sm p-3 shadow-xl"
+                className="w-14 h-14 rounded-2xl object-contain bg-white/10 backdrop-blur-sm p-2"
               />
             ) : (
-              <div className="w-28 h-28 rounded-3xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-5xl shadow-xl">
-                🚀
+              <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                <span className="material-symbols-outlined text-3xl text-white" style={{ fontVariationSettings: "'FILL' 1" }}>local_shipping</span>
               </div>
             )}
-            <h1 className="text-4xl font-black mt-6 leading-tight">{projectName}</h1>
-            <p className="text-lg text-white/80 mt-2">{projectSubtitle}</p>
+            <div>
+              <h1 className="text-3xl font-extrabold text-white tracking-tight">{projectName}</h1>
+              <p className="text-blue-200/80 text-sm mt-0.5">{projectSubtitle}</p>
+            </div>
           </div>
-
-          {/* Middle: Features */}
-          <div className="space-y-5 my-8">
-            {FEATURES.map((f) => (
-              <div key={f.label} className="flex items-start gap-4 group">
-                <div className="w-11 h-11 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center shrink-0 group-hover:bg-white/20 transition-colors">
-                  <f.icon size={20} />
-                </div>
-                <div>
-                  <p className="font-bold text-sm">{f.label}</p>
-                  <p className="text-xs text-white/60 mt-0.5">{f.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Bottom: Copyright */}
-          <p className="text-xs text-white/40">
-            {`© ${new Date().getFullYear()} ${projectName} — جميع الحقوق محفوظة`}
+          <p className="text-blue-100/70 text-lg max-w-md leading-relaxed">
+            نظام متكامل لإدارة الخدمات اللوجستية، مصمم لرفع كفاءة التوصيل وضمان الدقة في كل خطوة.
           </p>
         </div>
-      </div>
 
-      {/* ── Right: Login Form ── */}
-      <div className="flex-1 flex items-center justify-center bg-background px-6 py-10 relative">
+        {/* Features Grid */}
+        <div className="relative z-10 grid grid-cols-2 gap-5 mt-12">
+          {FEATURES.map((f) => (
+            <div key={f.icon} className="bg-white/5 backdrop-blur-sm border border-white/10 p-5 rounded-xl flex flex-col gap-2.5">
+              <span className="material-symbols-outlined text-blue-200 text-2xl">{f.icon}</span>
+              <h3 className="text-white font-bold text-sm">{f.title}</h3>
+              <p className="text-blue-100/60 text-xs leading-relaxed">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <p className="relative z-10 text-blue-200/40 text-xs tracking-widest uppercase mt-8">
+          {`© ${new Date().getFullYear()} ${projectName}`}
+        </p>
+      </section>
+
+      {/* ── Right: Login Form (45%) ── */}
+      <section className="w-full lg:w-[45%] flex flex-col justify-center items-center p-8 sm:p-12 lg:p-20 bg-background relative">
         {/* Theme toggle */}
         <button
           type="button"
           onClick={toggleTheme}
-          className="absolute top-5 left-5 h-9 w-9 flex items-center justify-center rounded-xl hover:bg-muted transition-colors text-muted-foreground border border-border"
+          className="absolute top-5 left-5 w-10 h-10 rounded-full flex items-center justify-center bg-muted/50 text-muted-foreground hover:text-foreground border border-border/50 transition-all"
           title={isDark ? 'الوضع الفاتح' : 'الوضع الداكن'}
         >
-          {isDark ? <Sun size={16} className="text-yellow-500" /> : <Moon size={16} />}
+          {isDark ? <span className="material-symbols-outlined text-xl text-yellow-500">light_mode</span> : <span className="material-symbols-outlined text-xl">dark_mode</span>}
         </button>
 
-        <div className="w-full max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {/* Mobile logo (hidden on lg+) */}
-          <div className="flex flex-col items-center mb-8 lg:hidden">
-            {settings?.logo_url ? (
-              <img
-                src={brandLogoSrc(settings.logo_url, settings.updated_at)}
-                alt=""
-                className="w-20 h-20 rounded-2xl object-contain shadow-lg border border-border bg-card p-1 mb-3"
-              />
-            ) : (
-              <div className="w-20 h-20 rounded-2xl mb-3 flex items-center justify-center text-4xl shadow-lg"
-                style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))' }}>
-                🚀
-              </div>
-            )}
-            <h1 className="text-xl font-extrabold text-foreground">{projectName}</h1>
-            <p className="text-sm text-muted-foreground">{projectSubtitle}</p>
+        {/* Mobile logo */}
+        <div className="lg:hidden flex flex-col items-center mb-12">
+          {settings?.logo_url ? (
+            <img
+              src={brandLogoSrc(settings.logo_url, settings.updated_at)}
+              alt=""
+              className="w-16 h-16 rounded-2xl object-contain shadow-lg border border-border bg-card p-1 mb-3"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-2xl mb-3 flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(225deg, #00288e, #1e40af)' }}>
+              <span className="material-symbols-outlined text-3xl text-white" style={{ fontVariationSettings: "'FILL' 1" }}>local_shipping</span>
+            </div>
+          )}
+          <h1 className="text-2xl font-extrabold text-foreground">{projectName}</h1>
+          <p className="text-sm text-muted-foreground">{projectSubtitle}</p>
+        </div>
+
+        <div className="w-full max-w-md">
+          {/* Title */}
+          <div className="mb-10">
+            <h2 className="text-3xl font-extrabold text-foreground mb-2">تسجيل الدخول</h2>
+            <p className="text-muted-foreground">مرحباً بك مجدداً، يرجى إدخال بياناتك للمتابعة</p>
           </div>
 
-          {/* Form card */}
-          <div className="bg-card border border-border rounded-2xl p-7 shadow-xl">
-            <div className="mb-6">
-              <h2 className="text-xl font-bold text-foreground">مرحباً بك 👋</h2>
-              <p className="text-sm text-muted-foreground mt-1">سجّل دخولك للمتابعة</p>
+          <form onSubmit={handleLogin} className="space-y-6">
+            {/* Email */}
+            <div className="space-y-2">
+              <label htmlFor="login-email" className="block text-sm font-medium text-muted-foreground">البريد الإلكتروني</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-muted-foreground group-focus-within:text-primary transition-colors">
+                  <span className="material-symbols-outlined text-xl">mail</span>
+                </div>
+                <input
+                  id="login-email"
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="name@company.com"
+                  required
+                  dir="ltr"
+                  autoComplete="email"
+                  autoFocus={!email}
+                  className="block w-full pr-12 pl-4 py-4 bg-muted/30 border border-border/50 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all outline-none text-foreground placeholder:text-muted-foreground/50"
+                />
+              </div>
             </div>
 
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label htmlFor="login-email" className="block text-sm font-medium text-muted-foreground mb-1.5">
-                  البريد الإلكتروني
-                </label>
-                <div className="relative">
-                  <Mail size={16} className="absolute top-1/2 -translate-y-1/2 text-muted-foreground right-3 pointer-events-none" />
-                  <Input
-                    id="login-email"
-                    type="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    placeholder="example@company.com"
-                    required
-                    dir="ltr"
-                    autoComplete="email"
-                    autoFocus={!email}
-                    className="h-11 pr-10 text-sm"
-                  />
+            {/* Password */}
+            <div className="space-y-2">
+              <label htmlFor="login-password" className="block text-sm font-medium text-muted-foreground">كلمة المرور</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-muted-foreground group-focus-within:text-primary transition-colors">
+                  <span className="material-symbols-outlined text-xl">lock</span>
                 </div>
-              </div>
-
-              <div>
-                <label htmlFor="login-password" className="block text-sm font-medium text-muted-foreground mb-1.5">
-                  كلمة المرور
-                </label>
-                <div className="relative">
-                  <Lock size={16} className="absolute top-1/2 -translate-y-1/2 text-muted-foreground right-3 pointer-events-none" />
-                  <Input
-                    id="login-password"
-                    type={showPw ? 'text' : 'password'}
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    onKeyUp={e => setCapsLock(e.getModifierState('CapsLock'))}
-                    placeholder="••••••••"
-                    required
-                    autoComplete="current-password"
-                    autoFocus={!!email}
-                    className="h-11 pr-10 pl-10 text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPw(v => !v)}
-                    className="absolute top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors left-3"
-                  >
-                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-                {capsLock && (
-                  <p className="text-[11px] text-warning mt-1 flex items-center gap-1">
-                    ⚠️ Caps Lock مفعّل
-                  </p>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2.5 pt-0.5">
-                <Checkbox
-                  id="remember-me"
-                  checked={rememberMe}
-                  onCheckedChange={v => setRememberMe(v === true)}
-                  className="h-4 w-4"
+                <input
+                  id="login-password"
+                  type={showPw ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  onKeyUp={e => setCapsLock(e.getModifierState('CapsLock'))}
+                  placeholder="••••••••"
+                  required
+                  autoComplete="current-password"
+                  autoFocus={!!email}
+                  className="block w-full pr-12 pl-12 py-4 bg-muted/30 border border-border/50 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all outline-none text-foreground placeholder:text-muted-foreground/50"
                 />
-                <label htmlFor="remember-me" className="text-sm text-muted-foreground cursor-pointer select-none">
-                  تذكرني
-                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowPw(v => !v)}
+                  className="absolute inset-y-0 left-0 pl-4 flex items-center text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
-
-              {loginError && (
-                <div className="flex items-center gap-2 bg-destructive/10 border border-destructive/30 rounded-xl px-3 py-2.5 animate-in slide-in-from-top-1 fade-in">
-                  <span className="text-sm">⚠️</span>
-                  <p className="text-destructive text-sm">{loginError}</p>
+              {capsLock && (
+                <div className="flex items-center gap-2 text-amber-600 px-1">
+                  <span className="material-symbols-outlined text-sm">warning</span>
+                  <span className="text-xs">تنبيه: زر Caps Lock مفعّل</span>
                 </div>
               )}
+            </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full h-11 rounded-xl font-bold text-sm text-primary-foreground transition-all duration-150 hover:opacity-90 active:scale-[0.99] disabled:opacity-70 flex items-center justify-center gap-2 mt-2"
-                style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85))' }}
-              >
-                {loading
-                  ? <><Loader2 size={16} className="animate-spin" /> جاري التحقق...</>
-                  : 'تسجيل الدخول'
-                }
-              </button>
-            </form>
-          </div>
+            {/* Remember Me */}
+            <div className="flex items-center gap-3 px-1">
+              <input
+                id="remember-me"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={e => setRememberMe(e.target.checked)}
+                className="w-5 h-5 rounded border-border text-primary focus:ring-primary cursor-pointer"
+              />
+              <label htmlFor="remember-me" className="text-sm text-muted-foreground cursor-pointer select-none">
+                تذكرني في المرة القادمة
+              </label>
+            </div>
 
-          {/* Desktop copyright hidden (shown in hero panel) */}
-          <p className="text-center text-xs text-muted-foreground mt-6 lg:hidden">
-            {`© ${new Date().getFullYear()} ${projectName}`}
-          </p>
+            {/* Error */}
+            {loginError && (
+              <div className="flex items-center gap-2 bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 animate-in slide-in-from-top-1 fade-in">
+                <span className="material-symbols-outlined text-destructive text-lg">error</span>
+                <p className="text-destructive text-sm">{loginError}</p>
+              </div>
+            )}
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-4 px-6 text-white font-bold rounded-xl shadow-lg hover:shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+              style={{ background: 'linear-gradient(225deg, #00288e 0%, #1e40af 100%)' }}
+            >
+              {loading ? (
+                <><Loader2 size={18} className="animate-spin" /> جاري التحقق...</>
+              ) : (
+                <><span>تسجيل الدخول</span><span className="material-symbols-outlined text-xl">login</span></>
+              )}
+            </button>
+          </form>
         </div>
+
+        {/* Mobile copyright */}
+        <p className="text-center text-xs text-muted-foreground mt-8 lg:hidden">
+          {`© ${new Date().getFullYear()} ${projectName}`}
+        </p>
+      </section>
+
+      {/* Security badge */}
+      <div className="fixed bottom-6 left-6 hidden lg:flex items-center gap-2 bg-card py-2 px-4 rounded-full shadow-sm border border-border/30">
+        <span className="material-symbols-outlined text-emerald-600 text-lg">verified_user</span>
+        <span className="text-xs font-semibold text-muted-foreground">اتصال آمن ومحمي</span>
       </div>
     </div>
   );
