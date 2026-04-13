@@ -178,20 +178,4 @@ export function SalaryDetailDialog(props: Readonly<SalaryDetailDialogProps>) {
   );
 }
 
-interface BatchSlipRendererProps {
-  batchQueue: SalaryRow[];
-  batchIndex: number;
-  batchMonth: string;
-  projectName: string;
-}
 
-/**
- * BatchSlipRenderer — No longer renders a hidden div for html2canvas capture.
- * Instead, it exposes a method to get the HTML string for each slip.
- * The parent (SalariesPage) uses buildBatchSlipHTML() directly in its export effect.
- */
-export function BatchSlipRenderer(_props: Readonly<BatchSlipRendererProps>) {
-  // This component is now a no-op — batch HTML generation is done inline
-  // in the SalariesPage batch export effect via buildBatchSlipHTML().
-  return null;
-}
