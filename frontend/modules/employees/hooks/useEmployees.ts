@@ -23,13 +23,19 @@ export function useEmployeesData() {
     refetch,
   } = useEmployees();
 
+  const allEmployees = useMemo(
+    () => (employeesData as Employee[]) ?? [],
+    [employeesData],
+  );
+
   const visibleEmployees = useMemo(
-    () => filterVisibleEmployeesInMonth((employeesData as Employee[]) ?? [], activeEmployeeIdsInMonth),
-    [employeesData, activeEmployeeIdsInMonth],
+    () => filterVisibleEmployeesInMonth(allEmployees, activeEmployeeIdsInMonth),
+    [allEmployees, activeEmployeeIdsInMonth],
   );
 
   return {
     employees: visibleEmployees,
+    allEmployees,
     activeEmployeeIdsInMonth,
     isLoading,
     error,

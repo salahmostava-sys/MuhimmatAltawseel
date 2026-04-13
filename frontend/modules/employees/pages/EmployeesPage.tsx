@@ -58,6 +58,7 @@ const Employees = () => {
   const [data, setData] = useState<Employee[]>([]);
   const {
     employees: employeesData,
+    allEmployees: allEmployeesData,
     activeEmployeeIdsInMonth,
     isLoading: loading,
     error: employeesError,
@@ -124,10 +125,14 @@ const Employees = () => {
 
   // Local state mirrors React Query data — kept intentionally because useEmployeeActions
   // receives data/setData for optimistic inline edits (saveField, handleDelete, etc.)
+  // When filtering by absconded/terminated/ended statuses, show ALL employees (including hidden)
   useEffect(() => {
-    const rows = (employeesData as Employee[]) ?? [];
-    setData(rows);
-  }, [employeesData]);
+    const showHidden = colFilters.status === 'ended' ||
+      colFilters.sponsorship_status === 'absconded' ||
+      colFilters.sponsorship_status === 'terminated';
+    const source = showHidden ? (allEmployeesData as Employee[]) : (employeesData as Employee[]);
+    setData(source ?? []);
+  }, [employeesData, allEmployeesData, colFilters.status, colFilters.sponsorship_status]);
 
   useEffect(() => {
     if (!employeesError) return;
