@@ -267,7 +267,7 @@ export function ShiftsTab({
   const downloadTemplate = async () => {
     const XLSX = await loadXlsx();
     const headers = ['الموظف', ...dayArr.map(d => String(d))];
-    const templateEmployees = allEmployees && allEmployees.length > 0 ? allEmployees : filteredEmployees;
+    const templateEmployees = filteredEmployees;
     const rows = templateEmployees.map(emp => [emp.name, ...dayArr.map(() => '')]);
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     const wb = XLSX.utils.book_new();
