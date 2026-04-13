@@ -14,9 +14,11 @@ import type { OrdersPopoverState } from '@shared/components/orders/OrdersCellPop
 import type { UnmatchedEmployeeName } from '@shared/lib/nameMatching';
 import { useSpreadsheetQueries } from '@modules/orders/hooks/useSpreadsheetQueries';
 import {
+  buildDailyDataMap,
   calculatePlatformTotals,
   collectEmployeeIdsWithOrdersOnApp,
 } from '@modules/orders/utils/gridHelpers';
+import type { OrderRawRow } from '@modules/orders/types';
 import {
   exportSpreadsheetExcel,
   runSpreadsheetImport,
@@ -302,6 +304,10 @@ export function useSpreadsheetGrid() {
         fileName: pendingImportFile.name,
         targetAppId: targetAppId ?? null,
       });
+      // Force reload data from DB to ensure grid matches actual saved state
+      const freshRows = await orderService.getMonthRaw(year, month);
+      const freshData = buildDailyDataMap(freshRows as OrderRawRow[]);
+      setData(freshData);
     }
     setPendingImportFile(null);
   };
