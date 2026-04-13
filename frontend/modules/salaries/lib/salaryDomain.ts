@@ -676,11 +676,12 @@ export const buildPlatformSetupWarnings = ({
       .filter((app) => {
         const needsScheme = app.work_type === 'orders' || app.work_type === 'hybrid' || !app.work_type;
         if (!needsScheme) return false;
-        // Check both null and empty scheme (no id means not linked)
+        // Check scheme_id on the app record (more reliable than join result)
+        const appRecord = app as { scheme_id?: string | null };
+        if (appRecord.scheme_id) return false; // has scheme linked
+        // Fallback: check the joined salary_schemes object
         const scheme = app.salary_schemes;
-        if (!scheme) return true;
-        if (typeof scheme === 'object' && !('id' in scheme)) return true;
-        return false;
+        return !scheme || (typeof scheme === 'object' && !scheme.id);
       })
       .map((app) => app.name),
   };
