@@ -463,6 +463,15 @@ export const stripUnlinkedPlatformData = ({
   };
 };
 
+export const shouldRetainSalaryRowAfterSchemeFilter = (
+  row: Pick<SalaryRow, 'registeredApps' | 'status' | 'isDirty' | 'jobTitle'>,
+) => {
+  if (row.status === 'approved' || row.status === 'paid') return true;
+  if (row.isDirty) return true;
+  if (isAdministrativeJobTitle(row.jobTitle)) return true;
+  return row.registeredApps.length > 0;
+};
+
 export const buildAdvanceInstallmentMaps = async (
   selectedMonth: string,
   allAdvances: Array<{ id: string; employee_id: string }> | null | undefined
@@ -776,12 +785,7 @@ export const buildPlatformSetupWarnings = ({
       })
       .map((app) => app.name),
     appsWithoutScheme: relevantApps
-      .filter((app) => {
-        const needsScheme = app.work_type === 'orders' || app.work_type === 'hybrid' || !app.work_type;
-        if (!needsScheme) return false;
-        if (app.scheme_id) return false;
-        return !app.salary_schemes?.id;
-      })
+      .filter((app) => !app.scheme_id && !app.salary_schemes?.id)
       .map((app) => app.name),
   };
 };
@@ -862,10 +866,11 @@ export async function prepareSalaryState({
       appWorkTypeMap,
     }),
   );
+  const visibleRows = normalizedRows.filter(shouldRetainSalaryRowAfterSchemeFilter);
   const { appsWithoutPricingRules, appsWithoutScheme } = buildPlatformSetupWarnings({
     apps: appsFromApi,
     rulesMap,
-    rows: normalizedRows,
+    rows: visibleRows,
   });
 
   return {
@@ -874,6 +879,6 @@ export async function prepareSalaryState({
     appsWithoutPricingRules,
     appsWithoutScheme,
     builtEmpPlatformScheme,
-    hydratedRows: normalizedRows,
+    hydratedRows: visibleRows,
   };
 }

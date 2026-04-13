@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildPlatformSetupWarnings,
   buildSalaryRows,
+  shouldRetainSalaryRowAfterSchemeFilter,
   shouldIncludeEmployeeInSalaryMonth,
   stripUnlinkedPlatformData,
 } from './salaryDomain';
@@ -540,5 +541,38 @@ describe('stripUnlinkedPlatformData', () => {
     expect(normalized.platformSalaries.Keeta).toBe(3100);
     expect(normalized.registeredApps).toEqual(['Keeta']);
     expect(normalized.engineBaseSalary).toBe(3100);
+  });
+});
+
+describe('shouldRetainSalaryRowAfterSchemeFilter', () => {
+  it('drops pending rider rows when no linked platform activity remains', () => {
+    expect(
+      shouldRetainSalaryRowAfterSchemeFilter({
+        registeredApps: [],
+        status: 'pending',
+        isDirty: false,
+        jobTitle: 'مندوب توصيل',
+      }),
+    ).toBe(false);
+  });
+
+  it('keeps approved history and administrative rows even without linked platforms', () => {
+    expect(
+      shouldRetainSalaryRowAfterSchemeFilter({
+        registeredApps: [],
+        status: 'approved',
+        isDirty: false,
+        jobTitle: 'مندوب توصيل',
+      }),
+    ).toBe(true);
+
+    expect(
+      shouldRetainSalaryRowAfterSchemeFilter({
+        registeredApps: [],
+        status: 'pending',
+        isDirty: false,
+        jobTitle: 'مدير عمليات',
+      }),
+    ).toBe(true);
   });
 });
