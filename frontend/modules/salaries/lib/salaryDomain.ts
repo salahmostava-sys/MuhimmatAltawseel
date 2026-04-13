@@ -459,17 +459,16 @@ export const buildSalaryRows = ({
     const platformSalaries: Record<string, number> = {};
     const platformMetrics: Record<string, PlatformSalaryMetric> = {};
     for (const platformName of platformNames) {
+      // Use preview metrics for activity counts (orders/shift days) but
+      // ALWAYS recalculate salary locally using the frontend tier logic.
+      // The DB RPC (calc_tier_salary) may use a different calculation method.
       const previewMetric = resolvePlatformPreviewMetric({
         previewMetric: preview?.platform_breakdown[platformName],
       });
-      if (previewMetric) {
-        platformMetrics[platformName] = previewMetric;
-        platformOrders[platformName] = getPrimaryPlatformActivityCount(previewMetric);
-        platformSalaries[platformName] = Math.round(previewMetric.salary);
-        continue;
-      }
 
-      const orders = empOrders[platformName] || 0;
+      const orders = previewMetric
+        ? getPrimaryPlatformActivityCount(previewMetric)
+        : (empOrders[platformName] || 0);
       const salary = calculatePlatformSalary({
         platformName,
         orders,
@@ -483,10 +482,10 @@ export const buildSalaryRows = ({
 
       const fallbackMetric: PlatformSalaryMetric = {
         appName: platformName,
-        workType: appWorkTypeMap[platformName] || 'orders',
-        calculationMethod: null,
-        ordersCount: orders,
-        shiftDays: 0,
+        workType: previewMetric?.workType || appWorkTypeMap[platformName] || 'orders',
+        calculationMethod: previewMetric?.calculationMethod || null,
+        ordersCount: previewMetric?.ordersCount ?? orders,
+        shiftDays: previewMetric?.shiftDays ?? 0,
         salary,
       };
 
