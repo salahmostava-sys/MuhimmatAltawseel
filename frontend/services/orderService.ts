@@ -396,7 +396,7 @@ export const orderService = {
         const { error } = await upsertDailyOrderRows(chunk);
         
         if (error) {
-          console.error('❌ Chunk upsert error:', {
+          // console.error('❌ Chunk upsert error:', {
             message: error.message,
             code: error.code,
             details: error.details,
@@ -414,7 +414,7 @@ export const orderService = {
           saved += chunk.length;
         }
       } catch (error) {
-        console.error('❌ Chunk upsert exception:', error);
+        // console.error('❌ Chunk upsert exception:', error);
         if (chunk.length === 1) {
           failed.push({ row: chunk[0], error: getBulkUpsertErrorMessage(error) });
         } else {
@@ -424,7 +424,7 @@ export const orderService = {
     }
     
     if (failed.length > 0) {
-      console.warn(`⚠️ Failed to save ${failed.length} orders:`, failed.slice(0, 5));
+      // console.warn(`⚠️ Failed to save ${failed.length} orders:`, failed.slice(0, 5));
     }
     
     return { saved, failed };

@@ -11,8 +11,9 @@ import { ordersImportHeadersMatch } from '@modules/orders/utils/importHelpers';
 
 /** Maximum orders per cell — values above this are rejected during import/save. */
 const MAX_ORDERS_PER_CELL = 10_000;
-/** Chunk size for batch-saving month data to the server. */
-const SAVE_CHUNK_SIZE = 200;
+/** Chunk size for batch-saving month data to the server.
+ * Smaller chunks = more reliable (less chance of timeout/payload limits). */
+const SAVE_CHUNK_SIZE = 100;
 import { dateStr, monthLabel, monthYear } from '@modules/orders/utils/dateMonth';
 import {
   mergeImportedOrdersFromMatrixWithMapping,
