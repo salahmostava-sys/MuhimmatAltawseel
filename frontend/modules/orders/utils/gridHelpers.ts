@@ -27,7 +27,9 @@ export const buildDailyDataMap = (rows: OrderRawRow[]): DailyData => {
     // Parse day directly from ISO date string to avoid timezone issues with new Date()
     const day = parseInt(row.date.slice(8, 10), 10);
     const key = `${row.employee_id}::${row.app_id}::${day}`;
-    mapped[key] = (mapped[key] ?? 0) + (row.orders_count ?? 0);
+    // Use latest value (not sum) — daily_orders has unique constraint on employee_id+app_id+date
+    // Summing caused doubled counts when the same row appeared in query results
+    mapped[key] = row.orders_count ?? 0;
   });
   return mapped;
 };
