@@ -15,7 +15,6 @@ import { useMonthlyActiveEmployeeIds } from '@shared/hooks/useMonthlyActiveEmplo
 import { useRealtimePostgresChanges } from '@shared/hooks/useRealtimePostgresChanges';
 import { isValidSalaryMonthYear } from '@shared/lib/salaryValidation';
 import { defaultQueryRetry } from '@shared/lib/query';
-import { loadJsPdf } from '@modules/salaries/lib/salaryPdfLoaders';
 import Loading from '@shared/components/Loading';
 import { toast as sonnerToast } from '@shared/components/ui/sonner';
 import { logError } from '@shared/lib/logger';
@@ -23,6 +22,7 @@ import { logError } from '@shared/lib/logger';
 import { SalarySchemeSelector } from '@modules/salaries/components/SalarySchemeSelector';
 import { useSalaryFilteredRows } from '@modules/salaries/hooks/useSalaryTable';
 import { useSalaryActions } from '@modules/salaries/hooks/useSalaryActions';
+import { useBatchPdfExport } from '@modules/salaries/hooks/useBatchPdfExport';
 import { SalaryMonthSelector, SalarySummaryCards } from '@modules/salaries/components/SalaryMonthSelector';
 import { SalaryActionsBar, BatchProgressBar } from '@modules/salaries/components/SalaryActionsBar';
 import { SalaryTable } from '@modules/salaries/components/SalaryTable';
@@ -120,7 +120,7 @@ const Salaries = () => {
   const salaryToolbarImportRef = useRef<HTMLInputElement>(null);
   const skipNextDraftSaveRef = useRef(true);
   const lastDraftSignatureRef = useRef<string | null>(null);
-  const batchAbortRef = useRef(false);
+
   const salariesDraftKey = useMemo(
     () => `salaries:draft:${user?.id || 'anon'}:${selectedMonth}`,
     [user?.id, selectedMonth]
@@ -350,85 +350,11 @@ const Salaries = () => {
   const totalNet = filtered.reduce((s, r) => s + computeRow(r).netSalary, 0);
   const pendingCount = filtered.filter((r) => r.status === 'pending' || r.isDirty).length;
 
-  // ── Batch ZIP export: generate HTML-based PDFs sequentially ────
-  // Uses batchAbortRef to cancel work on unmount and clearTimeout for cleanup.
-  useEffect(() => {
-    batchAbortRef.current = false;
-
-    if (batchQueue.length === 0 || !batchZip) return;
-    if (batchIndex >= batchQueue.length) {
-      const [y, m] = selectedMonth.split('-');
-      batchZip.generateAsync({ type: 'blob' }).then(blob => {
-        if (batchAbortRef.current) return;
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `كشوف_رواتب_${m}_${y}.zip`;
-        a.click();
-        URL.revokeObjectURL(url);
-        toast({ title: `✅ تم تحميل ${batchQueue.length} كشف راتب في ملف ZIP` });
-        setBatchQueue([]);
-        setBatchIndex(0);
-        setBatchZip(null);
-      });
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      if (batchAbortRef.current) return;
-      try {
-        const row = batchQueue[batchIndex];
-        const { buildBatchSlipHTML } = await import('@modules/salaries/lib/buildBatchSlipHTML');
-        const html = buildBatchSlipHTML(row, months.find(m => m.v === selectedMonth)?.l || selectedMonth, projectName);
-
-        // Use jsPDF for blob generation
-        const JsPdf = await loadJsPdf();
-        const pdf = new JsPdf({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-
-        // Create a temporary iframe to render HTML for jsPDF
-        const iframe = document.createElement('iframe');
-        iframe.style.cssText = 'position:fixed;left:-10000px;top:-10000px;width:794px;height:1123px;border:none';
-        document.body.appendChild(iframe);
-        const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
-        if (iDoc) {
-          iDoc.open();
-          iDoc.write(html);
-          iDoc.close();
-        }
-
-        // Wait for render, then capture
-        await new Promise(resolve => setTimeout(resolve, 200));
-        if (batchAbortRef.current) {
-          try { document.body.removeChild(iframe); } catch { /* ignore */ }
-          return;
-        }
-        const container = iDoc?.querySelector('.slip-container') as HTMLElement | null;
-        if (container) {
-          await pdf.html(container, {
-            x: 5,
-            y: 5,
-            width: 190,
-            windowWidth: 700,
-          });
-        }
-
-        try { document.body.removeChild(iframe); } catch { /* ignore */ }
-
-        if (batchAbortRef.current) return;
-        const pdfBlob = pdf.output('blob');
-        const safeName = row.employeeName.replace(/\s+/g, '_');
-        const [y, m] = selectedMonth.split('-');
-        batchZip.file(`كشف_راتب_${safeName}_${m}_${y}.pdf`, pdfBlob);
-        setBatchIndex(i => i + 1);
-      } catch {
-        if (!batchAbortRef.current) setBatchIndex(i => i + 1);
-      }
-    }, 150);
-    return () => {
-      batchAbortRef.current = true;
-      clearTimeout(timer);
-    };
-  }, [batchIndex, batchQueue, batchZip, selectedMonth, toast, projectName]);
+  // Batch ZIP export — extracted to dedicated hook
+  useBatchPdfExport({
+    batchQueue, batchIndex, batchZip, selectedMonth, projectName,
+    setBatchQueue, setBatchIndex, setBatchZip, toast,
+  });
 
   const monthLabel = months.find(m => m.v === selectedMonth)?.l || selectedMonth;
 
