@@ -354,10 +354,12 @@ export async function saveSpreadsheetMonth(params: {
   }
 
   try {
-    // Always use bulkUpsert to prevent deleting orders from other platforms.
-    // replaceMonthData deletes ALL orders for the month first, which causes
-    // data loss when the grid state doesn't contain all platforms' data.
-    const { saved, failed } = await orderService.bulkUpsert(rows, SAVE_CHUNK_SIZE);
+    // Use replaceMonthData for full grid saves (source of truth for all visible data).
+    // For targeted imports, use bulkUpsert to preserve other platforms' data.
+    const isTargetedImport = saveMeta?.sourceType === 'excel' && saveMeta?.targetAppId;
+    const { saved, failed } = isTargetedImport
+      ? await orderService.bulkUpsert(rows, SAVE_CHUNK_SIZE)
+      : await orderService.replaceMonthData(monthKey, rows, SAVE_CHUNK_SIZE, saveMeta);
 
     if (failed.length > 0) {
       logger.error('فشل حفظ بعض السجلات', { meta: { failed: failed.slice(0, 10) } });
