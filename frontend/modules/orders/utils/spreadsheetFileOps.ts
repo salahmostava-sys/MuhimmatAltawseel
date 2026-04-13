@@ -354,10 +354,10 @@ export async function saveSpreadsheetMonth(params: {
   }
 
   try {
-    // Use replaceMonthData for full grid saves (source of truth for all visible data).
-    // For targeted imports, use bulkUpsert to preserve other platforms' data.
-    const isTargetedImport = saveMeta?.sourceType === 'excel' && saveMeta?.targetAppId;
-    const { saved, failed } = isTargetedImport
+    // Imports (excel/api): always upsert to preserve data from other imports/platforms.
+    // Manual grid save: replace (grid contains ALL data, is the source of truth).
+    const isImport = saveMeta?.sourceType === 'excel' || saveMeta?.sourceType === 'api';
+    const { saved, failed } = isImport
       ? await orderService.bulkUpsert(rows, SAVE_CHUNK_SIZE)
       : await orderService.replaceMonthData(monthKey, rows, SAVE_CHUNK_SIZE, saveMeta);
 
