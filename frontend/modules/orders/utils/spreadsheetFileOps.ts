@@ -355,12 +355,10 @@ export async function saveSpreadsheetMonth(params: {
   }
 
   try {
-    // Imports (excel/api): always upsert to preserve data from other imports/platforms.
-    // Manual grid save: replace (grid contains ALL data, is the source of truth).
-    const isImport = saveMeta?.sourceType === 'excel' || saveMeta?.sourceType === 'api';
-    const { saved, failed } = isImport
-      ? await orderService.bulkUpsert(rows, SAVE_CHUNK_SIZE)
-      : await orderService.replaceMonthData(monthKey, rows, SAVE_CHUNK_SIZE, saveMeta);
+    // ALWAYS use bulkUpsert — replaceMonthData calls an RPC that deletes ALL
+    // orders for the entire month (not filtered by app), which causes data loss
+    // when the grid state doesn't contain every platform's data.
+    const { saved, failed } = await orderService.bulkUpsert(rows, SAVE_CHUNK_SIZE);
 
     if (failed.length > 0) {
       logger.error('فشل حفظ بعض السجلات', { meta: { failed: failed.slice(0, 10) } });
