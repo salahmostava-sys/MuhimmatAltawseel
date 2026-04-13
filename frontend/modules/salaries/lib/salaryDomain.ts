@@ -309,9 +309,15 @@ export const shouldIncludeEmployeeInSalaryMonth = (
   const hasAttendance = (attendanceDaysMap[employee.id] || 0) > 0;
   const hasPreviewActivity = hasMonthlyPlatformPreviewActivity(employee.id, previewMap);
   const hasMonthlyActivity = hasOrders || hasAttendance || hasPreviewActivity;
+
+  // Absconded/terminated: only show if they have ACTUAL activity (orders/attendance)
+  // Even having a saved salary record is not enough — they must have worked
+  if (isExcludedSponsorshipStatus(employee.sponsorship_status ?? null)) {
+    return hasMonthlyActivity;
+  }
+
   if (hasMonthlyActivity) return true;
   if (savedEmployeeIds?.has(employee.id)) return true;
-  if (isExcludedSponsorshipStatus(employee.sponsorship_status ?? null)) return false;
   // Administrative employees (e.g. operations room) always appear — salary is set manually
   return isAdministrativeJobTitle(employee.job_title ?? null);
 };
