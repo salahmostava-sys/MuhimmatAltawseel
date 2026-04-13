@@ -116,6 +116,7 @@ export function ShiftsTabWrapper() {
         };
       }) as ShiftRow[]}
       employees={shiftEmployees}
+      allEmployees={employees}
       apps={apps}
       loading={isLoading}
       onPrevMonth={handlePrevMonth}

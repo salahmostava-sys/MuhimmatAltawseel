@@ -28,6 +28,7 @@ type Props = {
   month: number;
   shifts: ShiftRow[];
   employees: Employee[];
+  allEmployees?: Employee[];
   apps: App[];
   loading: boolean;
   onPrevMonth: () => void;
@@ -79,6 +80,7 @@ export function ShiftsTab({
   month,
   shifts,
   employees,
+  allEmployees,
   apps,
   loading,
   onPrevMonth,
@@ -209,9 +211,10 @@ export function ShiftsTab({
         return;
       }
 
-      // Build name → employee map
+      // Build name → employee map (use ALL employees, not just shift-assigned)
       const nameMap = new Map<string, string>();
-      allShiftEmployees.forEach(emp => {
+      const importEmployeeList = allEmployees && allEmployees.length > 0 ? allEmployees : allShiftEmployees;
+      importEmployeeList.forEach(emp => {
         nameMap.set(emp.name.trim(), emp.id);
         nameMap.set(emp.name.trim().replace(/\s+/g, ' '), emp.id);
       });
@@ -264,7 +267,8 @@ export function ShiftsTab({
   const downloadTemplate = async () => {
     const XLSX = await loadXlsx();
     const headers = ['الموظف', ...dayArr.map(d => String(d))];
-    const rows = filteredEmployees.map(emp => [emp.name, ...dayArr.map(() => '')]);
+    const templateEmployees = allEmployees && allEmployees.length > 0 ? allEmployees : filteredEmployees;
+    const rows = templateEmployees.map(emp => [emp.name, ...dayArr.map(() => '')]);
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'قالب الدوام');
