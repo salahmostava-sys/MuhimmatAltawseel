@@ -96,18 +96,56 @@ export function useFinance() {
         .eq('month_year', selectedMonth);
 
       // Group orders by platform
-      const platformMap = new Map<string, { name: string; orders: number }>();
+      const platformMap = new Map<string, { name: string; orders: number; appId: string }>();
       (orders ?? []).forEach((row: { app_id: string; orders_count: number; apps: { name: string } | null }) => {
         const name = row.apps?.name ?? row.app_id;
-        const existing = platformMap.get(name) ?? { name, orders: 0 };
+        const existing = platformMap.get(name) ?? { name, orders: 0, appId: row.app_id };
         existing.orders += row.orders_count ?? 0;
         platformMap.set(name, existing);
       });
 
-      const totalSalaries = (salaries ?? []).reduce((s: number, r: { net_salary: number }) => s + (Number(r.net_salary) || 0), 0);
+      // Get salary breakdown per platform from salary engine preview
+      const { data: previewData } = await supabase.functions.invoke('salary-engine', {
+        body: { mode: 'month_preview', month_year: selectedMonth },
+      });
+      const preview = ((previewData as { data?: unknown[] })?.data ?? previewData ?? []) as Array<{
+        platform_breakdown?: Array<{ app_name: string; earnings: number }>;
+        net_salary?: number;
+      }>;
+
+      // Sum salary per platform
+      const platformSalaryMap = new Map<string, number>();
+      let totalSalaries = 0;
+      for (const row of preview) {
+        totalSalaries += Number(row.net_salary ?? 0);
+        for (const pb of (row.platform_breakdown ?? [])) {
+          platformSalaryMap.set(pb.app_name, (platformSalaryMap.get(pb.app_name) ?? 0) + (pb.earnings ?? 0));
+        }
+      }
+
+      // Match revenue from finance_transactions to platforms
+      const { data: financeData } = await supabase
+        .from('finance_transactions')
+        .select('description, amount')
+        .eq('month_year', selectedMonth)
+        .eq('type', 'revenue');
+
+      const platformRevenueMap = new Map<string, number>();
+      for (const ft of (financeData ?? [])) {
+        const desc = (ft.description ?? '').toLowerCase();
+        for (const [name] of platformMap) {
+          if (desc.includes(name.toLowerCase())) {
+            platformRevenueMap.set(name, (platformRevenueMap.get(name) ?? 0) + (ft.amount ?? 0));
+          }
+        }
+      }
 
       return {
-        platforms: [...platformMap.values()].sort((a, b) => b.orders - a.orders),
+        platforms: [...platformMap.values()].map(p => ({
+          ...p,
+          salary: platformSalaryMap.get(p.name) ?? 0,
+          revenue: platformRevenueMap.get(p.name) ?? 0,
+        })).sort((a, b) => b.orders - a.orders),
         totalSalaries,
       };
     },

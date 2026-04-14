@@ -292,61 +292,59 @@ export default function FinancePage() {
             💡 توصيات ذكية
           </h3>
           <div className="space-y-2.5">
-            {/* Platform performance comparison */}
-            {platformStats && platformStats.platforms.length > 1 && (
-              <div className="flex items-start gap-2 bg-primary/5 rounded-lg px-3 py-2.5">
-                <span className="text-primary text-lg leading-none mt-0.5">📊</span>
-                <div className="w-full">
-                  <p className="text-sm font-semibold text-foreground mb-2">أداء المنصات هذا الشهر</p>
-                  <div className="space-y-1.5">
-                    {platformStats.platforms.map((p, i) => {
-                      const best = platformStats.platforms[0];
-                      const pct = best.orders > 0 ? (p.orders / best.orders) * 100 : 0;
-                      return (
-                        <div key={p.name} className="flex items-center gap-2">
-                          <span className="text-xs font-semibold w-20 truncate">{p.name}</span>
-                          <div className="flex-1 h-5 bg-muted/50 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all ${i === 0 ? 'bg-emerald-500' : 'bg-primary/60'}`}
-                              style={{ width: `${Math.max(pct, 5)}%` }}
-                            />
-                          </div>
-                          <span className="text-xs font-bold w-16 text-end">{p.orders.toLocaleString()} طلب</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {platformStats.platforms.length >= 2 && (() => {
-                    const best = platformStats.platforms[0];
-                    const second = platformStats.platforms[1];
-                    const diff = best.orders - second.orders;
+            {/* Per-platform profitability */}
+            {platformStats && platformStats.platforms.length > 0 && (
+              <div className="bg-primary/5 rounded-lg px-4 py-3">
+                <p className="text-sm font-bold text-foreground mb-3">📊 تحليل كل منصة: إيرادات مقابل رواتب</p>
+                <div className="space-y-3">
+                  {platformStats.platforms.map(p => {
+                    const profit = p.revenue - p.salary;
+                    const isProfitable = profit > 0;
+                    const marginPct = p.revenue > 0 ? ((profit / p.revenue) * 100).toFixed(0) : '0';
                     return (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        🏆 <strong className="text-foreground">{best.name}</strong> الأفضل بـ {diff.toLocaleString()} طلب إضافي عن {second.name}
-                        {diff > second.orders * 0.5 && ' — ركّز على زيادة الطلبات في المنصات الأخرى'}
-                      </p>
+                      <div key={p.name} className={`rounded-xl p-3 border ${isProfitable ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/10' : 'border-rose-200 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/10'}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-bold text-sm text-foreground">{p.name}</span>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isProfitable ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300'}`}>
+                            {isProfitable ? `✅ ربح ${marginPct}%` : `⚠️ خسارة`}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-xs">
+                          <div>
+                            <p className="text-muted-foreground">الإيرادات</p>
+                            <p className="font-bold text-emerald-600">{p.revenue > 0 ? p.revenue.toLocaleString() : '—'}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">الرواتب</p>
+                            <p className="font-bold text-rose-500">{p.salary > 0 ? p.salary.toLocaleString() : '—'}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">الفرق</p>
+                            <p className={`font-bold ${isProfitable ? 'text-emerald-600' : 'text-rose-500'}`}>
+                              {profit > 0 ? '+' : ''}{profit.toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-2">
+                          {p.orders.toLocaleString()} طلب
+                          {p.revenue > 0 && p.orders > 0 && ` • متوسط الإيراد/طلب: ${(p.revenue / p.orders).toFixed(1)} ر.س`}
+                          {p.salary > 0 && p.orders > 0 && ` • تكلفة الراتب/طلب: ${(p.salary / p.orders).toFixed(1)} ر.س`}
+                        </p>
+                      </div>
                     );
-                  })()}
+                  })}
                 </div>
-              </div>
-            )}
-
-            {/* Revenue vs Salary ratio */}
-            {platformStats && platformStats.totalSalaries > 0 && revenue > 0 && (
-              <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg px-3 py-2.5">
-                <span className="text-blue-500 text-lg leading-none mt-0.5">💰</span>
-                <div>
-                  <p className="text-sm font-semibold text-blue-600">
-                    نسبة الرواتب من الإيرادات: {((platformStats.totalSalaries / revenue) * 100).toFixed(0)}%
+                {platformStats.platforms.some(p => p.revenue > 0) && (
+                  <p className="text-xs text-muted-foreground mt-3 bg-muted/30 rounded-lg px-3 py-2">
+                    💡 <strong>نصيحة:</strong>{' '}
+                    {(() => {
+                      const profitable = platformStats.platforms.filter(p => p.revenue > p.salary);
+                      const losing = platformStats.platforms.filter(p => p.revenue > 0 && p.revenue <= p.salary);
+                      if (losing.length > 0) return `ركّز على ${profitable[0]?.name ?? 'المنصات الرابحة'} وراجع تكاليف ${losing.map(l => l.name).join(' و ')}`;
+                      return 'كل المنصات رابحة — استمر وزد الطلبات';
+                    })()}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {platformStats.totalSalaries > revenue * 0.7
-                      ? '⚠️ الرواتب عالية جداً — حاول زيادة الإيرادات أو تقليل عدد المناديب'
-                      : platformStats.totalSalaries > revenue * 0.5
-                        ? 'الرواتب تشكل نسبة كبيرة — زيادة الطلبات لكل مندوب ترفع الكفاءة'
-                        : '✅ نسبة الرواتب مقبولة ومتوازنة'}
-                  </p>
-                </div>
+                )}
               </div>
             )}
 
