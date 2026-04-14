@@ -418,7 +418,6 @@ export const orderService = {
           saved += chunk.length;
         }
       } catch (error) {
-        // console.error('❌ Chunk upsert exception:', error);
         if (chunk.length === 1) {
           failed.push({ row: chunk[0], error: getBulkUpsertErrorMessage(error) });
         } else {
@@ -428,7 +427,6 @@ export const orderService = {
     }
     
     if (failed.length > 0) {
-      // console.warn(`⚠️ Failed to save ${failed.length} orders:`, failed.slice(0, 5));
     }
     
     return { saved, failed };

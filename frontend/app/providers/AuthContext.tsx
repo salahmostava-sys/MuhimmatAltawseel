@@ -6,6 +6,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { onAuthFailure } from '@shared/lib/auth/authFailureBus';
 import { logError } from '@shared/lib/logger';
 import { useSessionManager } from '@shared/hooks/useSessionManager';
+import { getErrorMessage } from '@services/serviceError';
 
 type AppRole = 'admin' | 'hr' | 'finance' | 'operations' | 'viewer';
 
@@ -316,7 +317,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       return { error: null };
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'تعذر تسجيل الدخول';
+      const msg = getErrorMessage(e, 'تعذر تسجيل الدخول');
       if (msg.includes(':timeout')) {
         return { error: { message: 'انتهت مهلة الاتصال بالخادم. تحقّق من الإنترنت وإعدادات Supabase ثم حاول مجددًا.' } };
       }

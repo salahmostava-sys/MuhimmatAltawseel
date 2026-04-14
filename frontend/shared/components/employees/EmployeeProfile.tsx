@@ -21,6 +21,7 @@ import {
   type EmployeeProfileSalaryRecord,
 } from '@services/employeeProfileService';
 import { EmployeePerformanceTab } from '@shared/components/employees/EmployeePerformanceTab';
+import { getErrorMessage } from '@services/serviceError';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Employee {
@@ -402,7 +403,7 @@ const EmployeeProfile = ({ employee, onBack }: Props) => {
                               } catch (error) {
                                 toast({
                                   title: 'خطأ',
-                                  description: error instanceof Error ? error.message : 'فشل تحديث الجنسية',
+                                  description: getErrorMessage(error, 'فشل تحديث الجنسية'),
                                   variant: 'destructive',
                                 });
                               } finally {

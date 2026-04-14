@@ -585,7 +585,7 @@ const EmployeeTiers = () => {
         } else {
           const { rowIndex } = validatedRows[idx];
           logError('[EmployeeTiers] import row failed', result.reason, { level: 'warn' });
-          rowErrors.push(`سطر ${rowIndex + 1}: ${result.reason instanceof Error ? result.reason.message : 'فشل الحفظ'}`);
+          rowErrors.push(`سطر ${rowIndex + 1}: ${getErrorMessage(result.reason, 'فشل الحفظ')}`);
         }
       });
       await queryClient.invalidateQueries({ queryKey: ['employee-tiers', uid, 'page-data'] });

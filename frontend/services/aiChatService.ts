@@ -19,7 +19,6 @@ async function formatInvokeError(error: unknown): Promise<string> {
     try {
       const data = (await err.context.clone().json()) as { error?: string };
       const responseError = data.error ?? '';
-      console.error('[aiChat] Edge function error:', data, err.context.status);
 
       if (responseError.includes('OPENAI_API_KEY') || responseError.includes('GROQ_API_KEY')) {
         return 'المساعد غير مهيأ على الخادم. راجع إعدادات المشروع.';

@@ -9,7 +9,7 @@ import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGat
 import { defaultQueryRetry } from '@shared/lib/query';
 import { logError } from '@shared/lib/logger';
 import { getErrorMessage } from '@services/serviceError';
-import { supabase } from '@services/supabase/client';
+import { orderService } from '@services/orderService';
 import { useFuel } from '@modules/fuel/hooks/useFuel';
 import {
   calcDailyStats,
@@ -164,15 +164,9 @@ export function useFuelPage() { // NOSONAR: page data layer with many independen
     queryKey: ['fuel', uid, 'daily-orders-by-date', monthYear],
     enabled: enabled && view === 'spreadsheet',
     queryFn: async () => {
-      const ms = `${monthYear}-01`;
-      const me = format(endOfMonth(new Date(`${monthYear}-01`)), 'yyyy-MM-dd');
-      const { data, error } = await supabase
-        .from('daily_orders')
-        .select('employee_id, date, orders_count')
-        .gte('date', ms)
-        .lte('date', me);
-      if (error) throw error;
-      return (data ?? []) as { employee_id: string; date: string; orders_count: number }[];
+      const [y, m] = monthYear.split('-').map(Number);
+      const rows = await orderService.getMonthRaw(y, m);
+      return (rows ?? []).map(r => ({ employee_id: r.employee_id, date: r.date, orders_count: r.orders_count }));
     },
     retry: defaultQueryRetry,
     staleTime: 30_000,
