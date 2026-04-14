@@ -120,7 +120,7 @@ export function SalaryActionsBar(props: Readonly<SalaryActionsBarProps>) {
               <FileText size={13} className="me-2" /> PDF مدمج للكل
             </DropdownMenuItem>
             <DropdownMenuItem onClick={openTemplateEditor} className="text-primary font-semibold">
-              ⚙️ إدارة قوالب الكشوف
+              ⚙️ تخصيص كشف الراتب
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
