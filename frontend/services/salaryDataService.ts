@@ -1,4 +1,4 @@
-import { attendanceService } from '@services/attendanceService';
+// attendanceService removed — salaries depend on daily_shifts (orders page attendance tab) not attendance table
 import { employeeService } from '@services/employeeService';
 import { orderService } from '@services/orderService';
 import { appService } from '@services/appService';
@@ -34,13 +34,12 @@ export const salaryDataService = {
   },
 
   async getMonthlyContext(selectedMonth: string) {
-    const [employees, extRes, orders, appsWithSchemeRes, attendanceRows, fuelRes, savedRecords, allAdvances] =
+    const [employees, extRes, orders, appsWithSchemeRes, fuelRes, savedRecords, allAdvances] =
       await Promise.all([
         employeeService.getActiveForSalaryContext(),
         externalDeductionService.getApprovedByMonth(selectedMonth),
         orderService.getSalaryContextOrdersByMonth(selectedMonth),
         appService.getActiveWithSalarySchemes(),
-        attendanceService.getAttendanceByMonth(selectedMonth),
         fuelService.getMonthlyFuelByMonthYear(selectedMonth),
         salaryService.getMonthRecordsForSalaryContext(selectedMonth),
         advanceService.getActiveAndPausedForSalaryContext(),
@@ -51,7 +50,7 @@ export const salaryDataService = {
       extRes,
       orders,
       appsWithSchemeRes,
-      attendanceRows,
+      attendanceRows: [] as Array<{ employee_id: string }>, // attendance page is separate from salary
       fuelRes,
       savedRecords,
       allAdvances,
