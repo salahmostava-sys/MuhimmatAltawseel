@@ -426,9 +426,6 @@ export const orderService = {
       }
     }
     
-    if (failed.length > 0) {
-    }
-    
     return { saved, failed };
   },
 
