@@ -59,6 +59,10 @@ export function SalaryDetailDialog(props: Readonly<SalaryDetailDialogProps>) {
             <div><span className="text-muted-foreground">الشهر: </span><span className="font-semibold">{monthLabel}</span></div>
             <div><span className="text-muted-foreground">طريقة الصرف: </span><span className="font-semibold">{detailRow.paymentMethod === 'bank' ? '🏦 بنكي' : '💵 كاش'}</span></div>
             {detailRow.phone && <div><span className="text-muted-foreground">الهاتف: </span><span className="font-semibold" dir="ltr">{detailRow.phone}</span></div>}
+            <div><span className="text-muted-foreground">أيام العمل: </span><span className="font-semibold">{detailRow.workDays ?? 0} يوم</span></div>
+            {detailRow.bankAccount && <div><span className="text-muted-foreground">الحساب البنكي: </span><span className="font-semibold" dir="ltr">{detailRow.bankAccount}</span></div>}
+            {(detailRow.fuelCost ?? 0) > 0 && <div><span className="text-muted-foreground">تكلفة البنزين: </span><span className="font-semibold">{detailRow.fuelCost?.toLocaleString()} ر.س</span></div>}
+            {(detailRow.engineBaseSalary ?? 0) > 0 && <div><span className="text-muted-foreground">الراتب الأساسي (محرك): </span><span className="font-semibold">{detailRow.engineBaseSalary?.toLocaleString()} ر.س</span></div>}
           </div>
 
           <div className="rounded-xl border border-success/20 bg-success/5 overflow-hidden">
