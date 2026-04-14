@@ -44,6 +44,16 @@ export function useFinance() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: (params: { id: string; description: string }) => financeService.update(params.id, { description: params.description }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey });
+    },
+    onError: (e) => {
+      toast({ title: 'خطأ في التعديل', description: getErrorMessage(e), variant: 'destructive' });
+    },
+  });
+
   const syncSalaries = useMutation({
     mutationFn: () => financeService.syncSalariesAsExpenses(selectedMonth),
     onSuccess: () => {
@@ -120,6 +130,7 @@ export function useFinance() {
     isSaving: createMutation.isPending,
     isDeleting: deleteMutation.isPending,
     isSyncing: syncSalaries.isPending,
+    updateDescription: updateMutation.mutateAsync,
     platformStats: platformStats ?? null,
   };
 }

@@ -15,10 +15,12 @@ export default function FinancePage() {
     loading, error, refetch,
     revenue, expenses, balance,
     revenueItems, expenseItems,
-    createTransaction, deleteTransaction, syncSalaries,
+    createTransaction, deleteTransaction, syncSalaries, updateDescription,
     isSaving, isDeleting, isSyncing,
     platformStats,
   } = useFinance();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
 
   const monthLabel = format(new Date(`${selectedMonth}-01`), 'MMMM yyyy', { locale: ar });
   const [newRevenue, setNewRevenue] = useState({ amount: '', description: '' });
@@ -149,7 +151,22 @@ export default function FinancePage() {
                 revenueItems.sort((a, b) => b.date.localeCompare(a.date)).map(t => (
                   <tr key={t.id} className="border-t border-border/20 hover:bg-muted/10">
                     <td className="px-3 py-2.5 text-center font-bold text-emerald-600">{t.amount.toLocaleString()}</td>
-                    <td className="px-3 py-2.5 text-sm text-foreground">{t.description || t.category}</td>
+                    <td className="px-3 py-2.5 text-sm text-foreground">
+                      {editingId === t.id ? (
+                        <Input
+                          autoFocus
+                          value={editText}
+                          onChange={e => setEditText(e.target.value)}
+                          onBlur={async () => { await updateDescription({ id: t.id, description: editText }); setEditingId(null); }}
+                          onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingId(null); }}
+                          className="h-7 text-sm" dir="rtl"
+                        />
+                      ) : (
+                        <span className="cursor-pointer hover:text-primary" onClick={() => { if (!t.is_auto) { setEditingId(t.id); setEditText(t.description || t.category); } }}>
+                          {t.description || t.category}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 py-2.5 text-center">
                       {t.is_auto ? <Lock size={12} className="mx-auto text-muted-foreground/40" /> : (
                         <button type="button" onClick={() => void deleteTransaction(t.id)} disabled={isDeleting} className="p-1 rounded hover:bg-destructive/10 text-destructive/60 hover:text-destructive"><Trash2 size={13} /></button>
@@ -199,8 +216,21 @@ export default function FinancePage() {
                   <tr key={t.id} className="border-t border-border/20 hover:bg-muted/10">
                     <td className="px-3 py-2.5 text-center font-bold text-rose-500">{t.amount.toLocaleString()}</td>
                     <td className="px-3 py-2.5 text-sm text-foreground">
-                      {t.description || t.category}
-                      {t.is_auto && <span className="text-[10px] text-muted-foreground ms-1.5">🔒 تلقائي</span>}
+                      {editingId === t.id ? (
+                        <Input
+                          autoFocus
+                          value={editText}
+                          onChange={e => setEditText(e.target.value)}
+                          onBlur={async () => { await updateDescription({ id: t.id, description: editText }); setEditingId(null); }}
+                          onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingId(null); }}
+                          className="h-7 text-sm" dir="rtl"
+                        />
+                      ) : (
+                        <span className={`${t.is_auto ? '' : 'cursor-pointer hover:text-primary'}`} onClick={() => { if (!t.is_auto) { setEditingId(t.id); setEditText(t.description || t.category); } }}>
+                          {t.description || t.category}
+                          {t.is_auto && <span className="text-[10px] text-muted-foreground ms-1.5">🔒</span>}
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-2.5 text-center">
                       {!t.is_auto && (
