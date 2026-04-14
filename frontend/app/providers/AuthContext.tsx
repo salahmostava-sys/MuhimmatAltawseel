@@ -98,6 +98,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setSession(null);
     setRole(null);
+    // Clear session-scoped data so next login starts fresh
+    sessionStorage.removeItem('global_selected_month');
     redirectToLoginIfNeeded();
   }, [redirectToLoginIfNeeded, user?.id]);
 
