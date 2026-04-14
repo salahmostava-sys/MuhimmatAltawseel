@@ -84,11 +84,23 @@ export function useFinance() {
       const lastDay = new Date(Number(y), Number(m), 0).getDate();
       const to = `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
 
-      const { data: orders } = await supabase
-        .from('daily_orders')
-        .select('app_id, orders_count, apps(name)')
-        .gte('date', from)
-        .lte('date', to);
+      // Paginate to avoid Supabase 1000 row default limit
+      const allOrders: { app_id: string; orders_count: number; apps: { name: string } | null }[] = [];
+      let offset = 0;
+      const PAGE = 1000;
+      let hasMore = true;
+      while (hasMore) {
+        const { data: chunk } = await supabase
+          .from('daily_orders')
+          .select('app_id, orders_count, apps(name)')
+          .gte('date', from)
+          .lte('date', to)
+          .range(offset, offset + PAGE - 1);
+        allOrders.push(...(chunk ?? []));
+        hasMore = (chunk?.length ?? 0) === PAGE;
+        offset += PAGE;
+      }
+      const orders = allOrders;
 
       const { data: salaries } = await supabase
         .from('salary_records')
