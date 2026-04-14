@@ -92,6 +92,7 @@ export type AppWithSchemeRow = {
   id: string;
   name: string;
   work_type?: WorkType | null;
+  scheme_id?: string | null;
   salary_schemes?: SchemeData | null;
 };
 

@@ -679,7 +679,9 @@ export const buildPlatformSetupWarnings = ({
       .filter((app) => {
         const needsScheme = app.work_type === 'orders' || app.work_type === 'hybrid' || !app.work_type;
         if (!needsScheme) return false;
-        return !app.salary_schemes;
+        // Check scheme_id (the FK) first — more reliable than the join result
+        if (app.scheme_id) return false;
+        return !app.salary_schemes?.id;
       })
       .map((app) => app.name),
   };
