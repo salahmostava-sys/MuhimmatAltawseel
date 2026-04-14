@@ -21,4 +21,5 @@ export const PERMISSION_PAGE_ENTRIES: { key: string; labelAr: string; labelEn: s
   { key: 'maintenance', labelAr: 'الصيانة والمخزون', labelEn: 'Maintenance & inventory' },
   { key: 'employee_tiers', labelAr: 'شرائح الشركة', labelEn: 'Employee tiers' },
   { key: 'finance', labelAr: 'المصاريف والإيرادات', labelEn: 'Finance' },
+  { key: 'salary_schemes', labelAr: 'إسكيمات الرواتب', labelEn: 'Salary schemes' },
 ];
