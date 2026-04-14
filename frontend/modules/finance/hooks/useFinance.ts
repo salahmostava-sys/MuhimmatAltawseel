@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthQueryGate, authQueryUserId } from '@shared/hooks/useAuthQueryGate';
 import { useTemporalContext } from '@app/providers/TemporalContext';
 import { financeService, type CreateTransactionInput } from '@services/financeService';
+import { supabase } from '@services/supabase/client';
 import { useToast } from '@shared/hooks/use-toast';
 import { getErrorMessage } from '@services/serviceError';
 
@@ -62,6 +63,46 @@ export function useFinance() {
   const revenueItems = transactions.filter(t => t.type === 'revenue');
   const expenseItems = transactions.filter(t => t.type === 'expense');
 
+  // Platform performance data for smart recommendations
+  const { data: platformStats } = useQuery({
+    queryKey: ['finance', uid, 'platform-stats', selectedMonth],
+    enabled,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const [y, m] = selectedMonth.split('-');
+      const from = `${y}-${m}-01`;
+      const lastDay = new Date(Number(y), Number(m), 0).getDate();
+      const to = `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
+
+      const { data: orders } = await supabase
+        .from('daily_orders')
+        .select('app_id, orders_count, apps(name)')
+        .gte('date', from)
+        .lte('date', to);
+
+      const { data: salaries } = await supabase
+        .from('salary_records')
+        .select('net_salary')
+        .eq('month_year', selectedMonth);
+
+      // Group orders by platform
+      const platformMap = new Map<string, { name: string; orders: number }>();
+      (orders ?? []).forEach((row: { app_id: string; orders_count: number; apps: { name: string } | null }) => {
+        const name = row.apps?.name ?? row.app_id;
+        const existing = platformMap.get(name) ?? { name, orders: 0 };
+        existing.orders += row.orders_count ?? 0;
+        platformMap.set(name, existing);
+      });
+
+      const totalSalaries = (salaries ?? []).reduce((s: number, r: { net_salary: number }) => s + (Number(r.net_salary) || 0), 0);
+
+      return {
+        platforms: [...platformMap.values()].sort((a, b) => b.orders - a.orders),
+        totalSalaries,
+      };
+    },
+  });
+
   return {
     loading: isLoading,
     error,
@@ -79,5 +120,6 @@ export function useFinance() {
     isSaving: createMutation.isPending,
     isDeleting: deleteMutation.isPending,
     isSyncing: syncSalaries.isPending,
+    platformStats: platformStats ?? null,
   };
 }

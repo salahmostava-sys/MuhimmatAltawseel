@@ -17,6 +17,7 @@ export default function FinancePage() {
     revenueItems, expenseItems,
     createTransaction, deleteTransaction, syncSalaries,
     isSaving, isDeleting, isSyncing,
+    platformStats,
   } = useFinance();
 
   const monthLabel = format(new Date(`${selectedMonth}-01`), 'MMMM yyyy', { locale: ar });
@@ -233,64 +234,85 @@ export default function FinancePage() {
           <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
             💡 توصيات ذكية
           </h3>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
+            {/* Platform performance comparison */}
+            {platformStats && platformStats.platforms.length > 1 && (
+              <div className="flex items-start gap-2 bg-primary/5 rounded-lg px-3 py-2.5">
+                <span className="text-primary text-lg leading-none mt-0.5">📊</span>
+                <div className="w-full">
+                  <p className="text-sm font-semibold text-foreground mb-2">أداء المنصات هذا الشهر</p>
+                  <div className="space-y-1.5">
+                    {platformStats.platforms.map((p, i) => {
+                      const best = platformStats.platforms[0];
+                      const pct = best.orders > 0 ? (p.orders / best.orders) * 100 : 0;
+                      return (
+                        <div key={p.name} className="flex items-center gap-2">
+                          <span className="text-xs font-semibold w-20 truncate">{p.name}</span>
+                          <div className="flex-1 h-5 bg-muted/50 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${i === 0 ? 'bg-emerald-500' : 'bg-primary/60'}`}
+                              style={{ width: `${Math.max(pct, 5)}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-bold w-16 text-end">{p.orders.toLocaleString()} طلب</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {platformStats.platforms.length >= 2 && (() => {
+                    const best = platformStats.platforms[0];
+                    const second = platformStats.platforms[1];
+                    const diff = best.orders - second.orders;
+                    return (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        🏆 <strong className="text-foreground">{best.name}</strong> الأفضل بـ {diff.toLocaleString()} طلب إضافي عن {second.name}
+                        {diff > second.orders * 0.5 && ' — ركّز على زيادة الطلبات في المنصات الأخرى'}
+                      </p>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+
+            {/* Revenue vs Salary ratio */}
+            {platformStats && platformStats.totalSalaries > 0 && revenue > 0 && (
+              <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg px-3 py-2.5">
+                <span className="text-blue-500 text-lg leading-none mt-0.5">💰</span>
+                <div>
+                  <p className="text-sm font-semibold text-blue-600">
+                    نسبة الرواتب من الإيرادات: {((platformStats.totalSalaries / revenue) * 100).toFixed(0)}%
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {platformStats.totalSalaries > revenue * 0.7
+                      ? '⚠️ الرواتب عالية جداً — حاول زيادة الإيرادات أو تقليل عدد المناديب'
+                      : platformStats.totalSalaries > revenue * 0.5
+                        ? 'الرواتب تشكل نسبة كبيرة — زيادة الطلبات لكل مندوب ترفع الكفاءة'
+                        : '✅ نسبة الرواتب مقبولة ومتوازنة'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Profit/Loss */}
             {balance < 0 && (
               <div className="flex items-start gap-2 bg-rose-50 dark:bg-rose-950/20 rounded-lg px-3 py-2.5">
                 <span className="text-rose-500 text-lg leading-none mt-0.5">⚠️</span>
                 <div>
                   <p className="text-sm font-semibold text-rose-600">أنت خسران {Math.abs(balance).toLocaleString()} ر.س هذا الشهر</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">حاول زيادة الإيرادات أو تقليل المصاريف غير الضرورية</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {platformStats && platformStats.platforms.length > 0
+                      ? `ركّز على زيادة طلبات ${platformStats.platforms[0].name} أو قلل المصاريف غير الضرورية`
+                      : 'حاول زيادة الإيرادات أو تقليل المصاريف'}
+                  </p>
                 </div>
               </div>
             )}
-            {balance >= 0 && balance < expenses * 0.1 && (
-              <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-950/20 rounded-lg px-3 py-2.5">
-                <span className="text-amber-500 text-lg leading-none mt-0.5">⚡</span>
-                <div>
-                  <p className="text-sm font-semibold text-amber-600">هامش الربح ضعيف ({revenue > 0 ? ((balance / revenue) * 100).toFixed(0) : 0}%)</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">الربح قليل مقارنة بالإيرادات — حاول تقليل المصاريف أو زيادة الطلبات</p>
-                </div>
-              </div>
-            )}
-            {expenses > 0 && (() => {
-              const salaryExpense = expenseItems.filter(e => e.is_auto || e.category === 'رواتب').reduce((s, e) => s + e.amount, 0);
-              const salaryPct = (salaryExpense / expenses) * 100;
-              if (salaryPct > 70) return (
-                <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg px-3 py-2.5">
-                  <span className="text-blue-500 text-lg leading-none mt-0.5">📊</span>
-                  <div>
-                    <p className="text-sm font-semibold text-blue-600">الرواتب تشكل {salaryPct.toFixed(0)}% من المصاريف</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">زيادة عدد الطلبات لكل مندوب تقلل تكلفة الطلب الواحد وترفع الربح</p>
-                  </div>
-                </div>
-              );
-              return null;
-            })()}
-            {revenue > 0 && (() => {
-              const revenueByDesc = new Map<string, number>();
-              revenueItems.forEach(r => {
-                const key = r.description || r.category;
-                revenueByDesc.set(key, (revenueByDesc.get(key) ?? 0) + r.amount);
-              });
-              const sorted = [...revenueByDesc.entries()].sort((a, b) => b[1] - a[1]);
-              const top = sorted[0];
-              if (top && sorted.length > 1) return (
-                <div className="flex items-start gap-2 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg px-3 py-2.5">
-                  <span className="text-emerald-500 text-lg leading-none mt-0.5">🚀</span>
-                  <div>
-                    <p className="text-sm font-semibold text-emerald-600">أعلى مصدر إيراد: {top[0]} ({top[1].toLocaleString()} ر.س)</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">ركّز على هذا المصدر لزيادة الأرباح — {((top[1] / revenue) * 100).toFixed(0)}% من إجمالي الإيرادات</p>
-                  </div>
-                </div>
-              );
-              return null;
-            })()}
             {balance >= 0 && balance >= expenses * 0.3 && (
               <div className="flex items-start gap-2 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg px-3 py-2.5">
                 <span className="text-emerald-500 text-lg leading-none mt-0.5">✅</span>
                 <div>
                   <p className="text-sm font-semibold text-emerald-600">أداء ممتاز! هامش ربح {revenue > 0 ? ((balance / revenue) * 100).toFixed(0) : 0}%</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">استمر على هذا الأداء — الإيرادات تغطي المصاريف بشكل جيد</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">استمر على هذا الأداء</p>
                 </div>
               </div>
             )}
