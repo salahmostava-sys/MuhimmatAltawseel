@@ -155,7 +155,7 @@ export const useAppsPage = () => {
       await queryClient.invalidateQueries({ queryKey: ['apps'] });
       toast.success('تم تحديث نوع العمل');
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'تعذر تحديث نوع العمل';
+      const message = getErrorMessage(err, 'تعذر تحديث نوع العمل');
       toast.error(message);
     }
   };

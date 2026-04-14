@@ -72,7 +72,7 @@ export function useEmployeeActions(params: {
     try {
       await employeeService.updateEmployee(id, updatePatch);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'تعذر حفظ التعديل';
+      const message = getErrorMessage(err, 'تعذر حفظ التعديل');
       setData(d => d.map(e => e.id === id ? (prev ?? e) : e));
       toast({ title: 'خطأ في الحفظ', description: message, variant: 'destructive' });
     }
@@ -183,7 +183,7 @@ export function useEmployeeActions(params: {
     try {
       out = (await employeeService.exportEmployees({ filters: { branch, search, status } })) as typeof out;
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'تعذر التصدير';
+      const message = getErrorMessage(e, 'تعذر التصدير');
       toast({ title: 'خطأ', description: message, variant: 'destructive' });
       return;
     }
@@ -241,7 +241,7 @@ export function useEmployeeActions(params: {
     } catch (e: unknown) {
       toast({
         title: 'تعذر التصدير',
-        description: e instanceof Error ? e.message : 'صيغة الملف أو البيانات غير صالحة',
+        description: getErrorMessage(e, 'صيغة الملف أو البيانات غير صالحة'),
         variant: 'destructive',
       });
     } finally {
@@ -257,7 +257,7 @@ export function useEmployeeActions(params: {
     } catch (e: unknown) {
       toast({
         title: 'تعذر التنزيل',
-        description: e instanceof Error ? e.message : 'فشل إنشاء ملف القالب',
+        description: getErrorMessage(e, 'فشل إنشاء ملف القالب'),
         variant: 'destructive',
       });
     } finally {
@@ -345,7 +345,7 @@ export function useEmployeeActions(params: {
     } catch (e: unknown) {
       toast({
         title: 'تعذر معالجة الملف',
-        description: e instanceof Error ? e.message : 'حدث خطأ أثناء معالجة الملف',
+        description: getErrorMessage(e, 'حدث خطأ أثناء معالجة الملف'),
         variant: 'destructive',
       });
       if (uploadIntervalRef.current) {
