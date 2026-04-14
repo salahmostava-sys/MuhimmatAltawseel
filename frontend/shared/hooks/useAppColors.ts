@@ -25,11 +25,23 @@ export const appColorsQueryKey = (userId: string) => ['apps', userId, 'colors'] 
 // Re-use the canonical parser from appsModel to avoid duplication
 import { normalizeCustomColumns } from '@modules/apps/lib/appsModel';
 
+/** Auto-detect readable text color (black or white) based on background brightness */
+function getContrastText(hexColor: string): string {
+  const hex = hexColor.replace('#', '');
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  // Perceived brightness formula
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness > 150 ? '#000000' : '#ffffff';
+}
+
 export const getAppColor = (apps: AppColorData[], appName: string) => {
   const idx = Math.max(0, apps.findIndex((app) => app.name === appName));
   const app = apps.find((item) => item.name === appName);
   const brand = app?.brand_color || FALLBACK_COLORS[idx % FALLBACK_COLORS.length];
-  const text = app?.text_color || '#ffffff';
+  // Auto-detect contrast text instead of using stored text_color
+  const text = getContrastText(brand);
   return {
     bg: `${brand}22`,
     cellBg: `${brand}15`,
@@ -55,7 +67,7 @@ export const useAppColors = () => {
         id: app.id,
         name: app.name,
         brand_color: app.brand_color || FALLBACK_COLORS[index % FALLBACK_COLORS.length],
-        text_color: app.text_color || '#ffffff',
+        text_color: getContrastText(app.brand_color || FALLBACK_COLORS[index % FALLBACK_COLORS.length]),
         is_active: app.is_active ?? true,
         custom_columns: normalizeCustomColumns(app.custom_columns),
       }));
