@@ -96,10 +96,10 @@ export const AppEmployeesPanel = ({
                       {employee.monthOrders.toLocaleString()}
                     </td>
                     <td className="ta-td text-center text-xs tabular-nums text-muted-foreground">
-                      {employee.targetShare != null ? Math.round(employee.targetShare).toLocaleString() : '—'}
+                      {employee.targetShare !== null ? Math.round(employee.targetShare).toLocaleString() : '—'}
                     </td>
                     <td className="ta-td text-center text-xs font-semibold tabular-nums">
-                      {employee.projectedMonthEnd != null ? employee.projectedMonthEnd.toLocaleString() : '—'}
+                      {employee.projectedMonthEnd !== null ? employee.projectedMonthEnd.toLocaleString() : '—'}
                     </td>
                     <td className="ta-td text-center">
                       {employee.onTrack === null ? (

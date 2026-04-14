@@ -143,7 +143,7 @@ export const usePermissions = (pageKey: string) => {
   });
 
   const fallbackPermission =
-    role != null ? (DEFAULT_PERMISSIONS[role as AppRole] || DEFAULT_PERMISSIONS.viewer)[pageKey] || DENY_ALL : DENY_ALL;
+    role !== null ? (DEFAULT_PERMISSIONS[role as AppRole] || DEFAULT_PERMISSIONS.viewer)[pageKey] || DENY_ALL : DENY_ALL;
 
   // Hardening: while permissions are loading, do NOT render edit buttons based on
   // a permissive fallback. Default to deny-all until the query resolves.

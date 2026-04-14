@@ -103,7 +103,7 @@ export function CommercialRecordsManager({
     }
   };
 
-  const canMutate = tableAvailable && busyAction == null;
+  const canMutate = tableAvailable && busyAction === null;
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>

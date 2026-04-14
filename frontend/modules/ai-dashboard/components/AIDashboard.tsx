@@ -31,7 +31,7 @@ export function AIDashboard({
   const [loadingForecast, setLoadingForecast] = useState(false);
 
   const aiConfigured = aiService.isConfigured();
-  const normalizedOrders = currentOrders == null ? null : Math.max(0, currentOrders);
+  const normalizedOrders = currentOrders === null ? null : Math.max(0, currentOrders);
   const normalizedDaysPassed = Math.max(1, Math.min(daysPassed, 30));
 
   const loadSalaryForecast = useCallback(async () => {

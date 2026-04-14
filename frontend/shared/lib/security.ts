@@ -6,7 +6,7 @@
  * manual HTML template literals written to document.write() or similar APIs.
  */
 export function escapeHtml(value: unknown): string {
-  const str = value === null ? '' : String(value);
+  const str = value === null || value === undefined ? '' : String(value);
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

@@ -103,7 +103,7 @@ const formatExplanationNumber = (value: number): string => {
 const isolateLtr = (value: string): string => `\u2066${value}\u2069`;
 
 const formatExplanationRange = (from: number, to: number | null): string =>
-  isolateLtr(`${formatExplanationNumber(from)}-${to == null ? '∞' : formatExplanationNumber(to)}`);
+  isolateLtr(`${formatExplanationNumber(from)}-${to === null ? '∞' : formatExplanationNumber(to)}`);
 
 const findMatchedSalaryTier = (tiers: SalarySchemeTier[], orders: number): SalarySchemeTier => {
   let matchedTier = tiers[0];

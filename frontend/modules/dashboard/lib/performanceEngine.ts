@@ -293,7 +293,7 @@ export function enrichWithDelta(
 ): EnrichedValue {
   const formatted = `${value.toLocaleString('ar-SA')}${unit ? ` ${unit}` : ''}`;
 
-  if (previous == null || previous === 0) {
+  if (previous === null || previous === 0) {
     return { value, formatted, delta: null, enrichedText: formatted };
   }
 

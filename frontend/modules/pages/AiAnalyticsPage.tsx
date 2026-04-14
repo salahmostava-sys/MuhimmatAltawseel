@@ -128,10 +128,10 @@ const AiAnalyticsPage = () => {
               <TrendingUp className="h-5 w-5 text-primary" />
               <span className="font-semibold">تنبؤ الطلبات للشهر القادم:</span>
               <span className="text-2xl font-bold tabular-nums">
-                {forecast != null ? forecast.next.toLocaleString('ar-SA') : '—'}
+                {forecast !== null ? forecast.next.toLocaleString('ar-SA') : '—'}
               </span>
             </div>
-            {forecast != null && (
+            {forecast !== null && (
               <span className="text-xs text-muted-foreground">
                 التغيّر بين آخر شهرين: {forecast.lastGrowth >= 0 ? '+' : ''}
                 {Math.round(forecast.lastGrowth).toLocaleString('ar-SA')} طلب
@@ -162,7 +162,7 @@ const AiAnalyticsPage = () => {
                 <Tooltip
                   formatter={(value: number | undefined, name: string) => {
                     const label = name === 'actual' ? 'فعلي' : 'تنبؤ';
-                    return [value != null ? value.toLocaleString('ar-SA') : '—', label];
+                    return [value !== null ? value.toLocaleString('ar-SA') : '—', label];
                   }}
                   contentStyle={{ direction: 'rtl' }}
                 />

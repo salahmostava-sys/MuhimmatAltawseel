@@ -3,7 +3,7 @@ import { toast as sonnerToast } from "@shared/components/ui/sonner";
 import { TOAST_ERROR_GENERIC } from "@shared/lib/toastMessages";
 
 function nodeToText(node: React.ReactNode): string | undefined {
-  if (node == null || node === false) return undefined;
+  if (node === null || node === false) return undefined;
   if (typeof node === "string" || typeof node === "number") return String(node);
   if (Array.isArray(node)) {
     const parts = node.map(nodeToText).filter(Boolean);

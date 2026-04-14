@@ -155,7 +155,7 @@ export const buildAppEmployees = ({
   });
 
   const riderCount = visibleEmployees.length;
-  const targetShare = targetOrders != null && riderCount > 0 ? targetOrders / riderCount : null;
+  const targetShare = targetOrders !== null && riderCount > 0 ? targetOrders / riderCount : null;
 
   return visibleEmployees.map((employee) => {
     const monthOrders = totalsByEmployee.get(employee.id) ?? 0;
@@ -171,7 +171,7 @@ export const buildAppEmployees = ({
       monthOrders,
       targetShare,
       projectedMonthEnd,
-      onTrack: targetShare != null ? projectedMonthEnd >= targetShare * 0.95 : null,
+      onTrack: targetShare !== null ? projectedMonthEnd >= targetShare * 0.95 : null,
     };
   });
 };
