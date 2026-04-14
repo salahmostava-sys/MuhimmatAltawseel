@@ -79,12 +79,20 @@ export function buildSlipFieldsFromRow(
     fields.push({ key: 'violations', label: t.violations, value: row.violations, type: 'deduction', color: 'red' });
   }
 
-  // Custom deductions (dynamic from DB)
+  // Custom columns (dynamic from DB — can be deductions or earnings)
   if (row.customDeductions) {
     Object.entries(row.customDeductions).forEach(([key, val]) => {
       if (val > 0) {
         const label = key.split('___').slice(1).join('___') || key;
         fields.push({ key: `custom_${key}`, label, value: val, type: 'deduction', color: 'red' });
+      }
+    });
+  }
+  if ((row as Record<string, unknown>).customEarnings) {
+    Object.entries((row as Record<string, unknown>).customEarnings as Record<string, number>).forEach(([key, val]) => {
+      if (val > 0) {
+        const label = key.split('___').slice(1).join('___') || key;
+        fields.push({ key: `custom_earning_${key}`, label, value: val, type: 'earning', color: 'green' });
       }
     });
   }

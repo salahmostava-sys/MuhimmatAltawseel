@@ -5,6 +5,8 @@ import { useAuthedQuery } from '@shared/hooks/useAuthedQuery';
 export interface CustomColumn {
   key: string;
   label: string;
+  /** 'deduction' (default) or 'earning' — determines where it appears in salary slip */
+  column_type?: 'deduction' | 'earning';
 }
 
 export interface AppColorData {
