@@ -30,7 +30,7 @@ export function formatDate(date: Date | null | undefined): string {
  * @returns Formatted currency string.
  */
 export function formatCurrency(amount: number | null | undefined, currencySymbol: string = '$'): string {
-    if (amount == null || isNaN(amount)) {
+    if (amount === null || isNaN(amount)) {
         return `${currencySymbol}0.00`;
     }
     return `${currencySymbol}${amount.toFixed(2)}`;
@@ -55,7 +55,7 @@ export function todayISO(): string {
  * @returns Formatted number string.
  */
 export function formatNumber(num: number | null | undefined): string {
-    if (num == null || isNaN(num)) {
+    if (num === null || isNaN(num)) {
         return '0';
     }
     return new Intl.NumberFormat('en-US').format(num);

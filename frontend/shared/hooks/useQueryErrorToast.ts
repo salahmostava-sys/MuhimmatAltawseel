@@ -14,7 +14,7 @@ export function useQueryErrorToast(
 ) {
   const lastMsg = useRef<string | null>(null);
   useEffect(() => {
-    if (!isError || error == null) {
+    if (!isError || error === null) {
       lastMsg.current = null;
       return;
     }
