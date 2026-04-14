@@ -10,6 +10,7 @@ import { toast } from '@shared/components/ui/sonner';
 import { hybridRuleService } from '@services/hybridRuleService';
 import { logger } from '@shared/lib/logger';
 import type { WorkType, AppHybridRule } from '@shared/types/shifts';
+import { getErrorMessage } from '@services/serviceError';
 
 type Props = {
   appId: string;
@@ -71,7 +72,7 @@ export function AppWorkTypeSettings({ appId, appName, currentWorkType, onWorkTyp
 
       toast.success('تم حفظ الإعدادات بنجاح');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'فشل حفظ الإعدادات';
+      const message = getErrorMessage(error, 'فشل حفظ الإعدادات');
       toast.error('خطأ', { description: message });
     } finally {
       setSaving(false);

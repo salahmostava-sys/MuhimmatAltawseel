@@ -8,6 +8,7 @@ import { useToast } from '@shared/hooks/use-toast';
 import { vehicleService } from '@services/vehicleService';
 import { logError } from '@shared/lib/logger';
 import { ALL_STATUSES, statusLabels, type Vehicle, type VehicleStatus } from '@modules/pages/motorcycles.shared';
+import { getErrorMessage } from '@services/serviceError';
 
 type VehicleFormModalProps = {
   open: boolean;
@@ -121,7 +122,7 @@ export function VehicleFormModal({ open, onClose, onSaved, editVehicle }: Vehicl
       onClose();
     } catch (error) {
       logError('[Motorcycles] action failed', error);
-      const message = error instanceof Error ? error.message : 'حدث خطأ غير متوقع';
+      const message = getErrorMessage(error, 'حدث خطأ غير متوقع');
       toast({ title: 'حدث خطأ', description: message, variant: 'destructive' });
     } finally {
       setSaving(false);

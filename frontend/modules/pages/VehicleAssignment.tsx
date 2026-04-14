@@ -14,6 +14,7 @@ import { Skeleton } from '@shared/components/ui/skeleton';
 import { useVehicleAssignmentData } from '@shared/hooks/useVehicleAssignmentData';
 import { logError } from '@shared/lib/logger';
 import { printHtmlTable } from '@shared/lib/printTable';
+import { getErrorMessage } from '@services/serviceError';
 
 type Vehicle = {
   id: string;
@@ -86,7 +87,7 @@ const AssignmentFormModal = ({
       onSaved(); onClose();
     } catch (e) {
       logError('[VehicleAssignment] load failed', e);
-      const message = e instanceof Error ? e.message : 'حدث خطأ غير متوقع';
+      const message = getErrorMessage(e, 'حدث خطأ غير متوقع');
       toast({ title: 'حدث خطأ', description: message, variant: 'destructive' });
     } finally {
       setSaving(false);
@@ -205,7 +206,7 @@ const ReturnModal = ({
       onSaved(); onClose();
     } catch (e) {
       logError('[VehicleAssignment] save failed', e);
-      const message = e instanceof Error ? e.message : 'حدث خطأ غير متوقع';
+      const message = getErrorMessage(e, 'حدث خطأ غير متوقع');
       toast({ title: 'حدث خطأ', description: message, variant: 'destructive' });
     } finally {
       setSaving(false);

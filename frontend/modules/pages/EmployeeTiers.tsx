@@ -4,6 +4,7 @@ import {
   Plus, Trash2, Search, Loader2, AlertTriangle, CheckCircle2,
   Calendar, Layers, ChevronUp, ChevronDown, ChevronsUpDown, Check, X,
 } from 'lucide-react';
+import { getErrorMessage } from '@services/serviceError';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@shared/components/ui/alert-dialog';
@@ -250,7 +251,7 @@ const EmployeeTiers = () => {
 
   useEffect(() => {
     if (!tiersError) return;
-    const message = tiersError instanceof Error ? tiersError.message : 'تعذر تحميل البيانات';
+    const message = getErrorMessage(tiersError, 'تعذر تحميل البيانات');
     toast({ title: 'خطأ', description: message, variant: 'destructive' });
   }, [tiersError, toast]);
 
@@ -327,7 +328,7 @@ const EmployeeTiers = () => {
       toast({ title: '✅ تم الحفظ' });
       setEditRows(prev => { const n = { ...prev }; delete n[tier.id]; return n; });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'تعذر حفظ التعديل';
+      const message = getErrorMessage(err, 'تعذر حفظ التعديل');
       toast({ title: 'خطأ', description: message, variant: 'destructive' });
     }
     setSavingId(null);
@@ -359,7 +360,7 @@ const EmployeeTiers = () => {
       setAddingRow(false);
       setNewRow({ sim_number: '', employee_id: '', package_type: '', renewal_date: '', delivery_status: STATUS_DELIVERED, app_ids: [] });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'تعذر إنشاء السجل';
+      const message = getErrorMessage(err, 'تعذر إنشاء السجل');
       toast({ title: 'خطأ', description: message, variant: 'destructive' });
     }
     setSavingNew(false);
@@ -405,7 +406,7 @@ const EmployeeTiers = () => {
       setDeleteId(null);
       void refetchTiersData();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'تعذر حذف الشريحة';
+      const message = getErrorMessage(err, 'تعذر حذف الشريحة');
       toast({ title: 'خطأ في الحذف', description: message, variant: 'destructive' });
     }
   };
@@ -597,7 +598,7 @@ const EmployeeTiers = () => {
       logError('[EmployeeTiers] import failed', e);
       toast({
         title: 'فشل الاستيراد',
-        description: e instanceof Error ? e.message : 'خطأ غير متوقع',
+        description: getErrorMessage(e, 'خطأ غير متوقع'),
         variant: 'destructive',
       });
     } finally {

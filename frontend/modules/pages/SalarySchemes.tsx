@@ -15,6 +15,7 @@ import { salarySchemeService } from '@services/salarySchemeService';
 import { cn } from '@shared/lib/utils';
 import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { defaultQueryRetry } from '@shared/lib/query';
+import { getErrorMessage } from '@services/serviceError';
 
 type TierType = 'total_multiplier' | 'fixed_amount' | 'base_plus_incremental' | 'per_order_band';
 
@@ -200,7 +201,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
 
   useEffect(() => {
     if (!schemeDataError) return;
-    const message = schemeDataError instanceof Error ? schemeDataError.message : 'تعذر تحميل بيانات السكيّمات';
+    const message = getErrorMessage(schemeDataError, 'تعذر تحميل بيانات السكيّمات');
     toast({ title: 'خطأ في التحميل', description: message, variant: 'destructive' });
   }, [schemeDataError, toast]);
 
@@ -303,7 +304,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
       await invalidateRelatedQueries();
       void refetchSchemeData();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'حدث خطأ غير متوقع';
+      const message = getErrorMessage(err, 'حدث خطأ غير متوقع');
       toast({ title: 'خطأ', description: message, variant: 'destructive' });
     }
     setSaving(false);
@@ -319,7 +320,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
       await invalidateRelatedQueries();
       void refetchSchemeData();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'حدث خطأ غير متوقع';
+      const message = getErrorMessage(err, 'حدث خطأ غير متوقع');
       toast({ title: 'خطأ', description: message, variant: 'destructive' });
     }
     setAssigning(false);
@@ -332,7 +333,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
       await invalidateRelatedQueries();
       void refetchSchemeData();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'حدث خطأ غير متوقع';
+      const message = getErrorMessage(err, 'حدث خطأ غير متوقع');
       toast({ title: 'خطأ', description: message, variant: 'destructive' });
     }
   };
@@ -345,7 +346,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
       toast({ title: 'تم التحديث' });
       await invalidateRelatedQueries();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'حدث خطأ غير متوقع';
+      const message = getErrorMessage(err, 'حدث خطأ غير متوقع');
       toast({ title: 'خطأ', description: message, variant: 'destructive' });
     }
   };
@@ -378,7 +379,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
       }));
       await invalidateRelatedQueries();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'حدث خطأ غير متوقع';
+      const message = getErrorMessage(err, 'حدث خطأ غير متوقع');
       toast({ title: 'خطأ', description: message, variant: 'destructive' });
     }
     setSnapshotLoading(null);
@@ -395,7 +396,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
       toast({ title: 'تم إلغاء التثبيت', description: monthLabel(monthYear) });
       await invalidateRelatedQueries();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'حدث خطأ غير متوقع';
+      const message = getErrorMessage(err, 'حدث خطأ غير متوقع');
       toast({ title: 'خطأ', description: message, variant: 'destructive' });
     }
     setSnapshotLoading(null);
@@ -467,7 +468,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
           <Settings size={40} className="mx-auto text-destructive mb-3" />
           <p className="text-destructive font-medium">تعذر تحميل البيانات</p>
           <p className="text-muted-foreground text-sm mt-1">
-            {schemeDataError instanceof Error ? schemeDataError.message : 'حدث خطأ أثناء تحميل السكيمات'}
+            {getErrorMessage(schemeDataError, 'حدث خطأ أثناء تحميل السكيمات')}
           </p>
           <Button variant="outline" className="mt-4" onClick={() => refetchSchemeData()}>
             إعادة المحاولة

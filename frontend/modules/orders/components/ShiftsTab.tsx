@@ -8,6 +8,7 @@ import { OrdersMonthNavigator } from '@shared/components/orders/OrdersMonthNavig
 import { isShiftCapableApp } from '@shared/lib/workType';
 import { monthLabel } from '@modules/orders/utils/dateMonth';
 import type { App, Employee } from '@modules/orders/types';
+import { getErrorMessage } from '@services/serviceError';
 
 export type ShiftRow = {
   id?: string;
@@ -260,7 +261,7 @@ export function ShiftsTab({
         toast.success('تم الاستيراد', { description: `${imported} خلية من ${matrix.length - 1} صف` });
       }
     } catch (err) {
-      toast.error('فشل الاستيراد', { description: err instanceof Error ? err.message : 'خطأ في قراءة الملف' });
+      toast.error('فشل الاستيراد', { description: getErrorMessage(err, 'خطأ في قراءة الملف') });
     }
   };
 

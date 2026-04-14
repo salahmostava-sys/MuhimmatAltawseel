@@ -18,6 +18,7 @@ import {
   calculatePlatformTotals,
   collectEmployeeIdsWithOrdersOnApp,
 } from '@modules/orders/utils/gridHelpers';
+import { getErrorMessage } from '@services/serviceError';
 import type { OrderRawRow } from '@modules/orders/types';
 import {
   exportSpreadsheetExcel,
@@ -92,7 +93,7 @@ export function useSpreadsheetGrid() {
   useEffect(() => {
     const error = sq.spreadsheetBaseError || sq.spreadsheetMonthError || sq.spreadsheetLockError;
     if (!error) return;
-    const message = error instanceof Error ? error.message : 'فشل تحميل بيانات الطلبات';
+    const message = getErrorMessage(error, 'فشل تحميل بيانات الطلبات');
     toast.error(TOAST_ERROR_GENERIC, { description: message });
   }, [sq.spreadsheetBaseError, sq.spreadsheetMonthError, sq.spreadsheetLockError]);
 
@@ -367,7 +368,7 @@ export function useSpreadsheetGrid() {
         toast.success('تم قفل الشهر بنجاح');
       }
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'فشل العملية';
+      const message = getErrorMessage(e, 'فشل العملية');
       toast.error(TOAST_ERROR_GENERIC, { description: message });
     } finally {
       setLockingMonth(false);
@@ -396,7 +397,7 @@ export function useSpreadsheetGrid() {
       toast.success(`تم حذف ${count} طلب بنجاح`);
       await invalidateMonthDependencies();
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'فشل الحذف';
+      const message = getErrorMessage(e, 'فشل الحذف');
       toast.error(TOAST_ERROR_GENERIC, { description: message });
       throw e;
     }
@@ -408,7 +409,7 @@ export function useSpreadsheetGrid() {
       toast.success('تم حذف سجل الاستيراد');
       await queryClient.invalidateQueries({ queryKey: ['orders', uid, 'import-history', monthKey] });
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'فشل حذف السجل';
+      const message = getErrorMessage(e, 'فشل حذف السجل');
       toast.error(TOAST_ERROR_GENERIC, { description: message });
     }
   }, [monthKey, queryClient, uid]);

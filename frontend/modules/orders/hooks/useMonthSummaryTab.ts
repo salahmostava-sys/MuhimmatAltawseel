@@ -16,6 +16,7 @@ import { getDaysInMonth, monthYear } from '@modules/orders/utils/dateMonth';
 import { ordersQueryKeys } from '@modules/orders/hooks/ordersQueryKeys';
 
 import { useTemporalContext } from '@app/providers/TemporalContext';
+import { getErrorMessage } from '@services/serviceError';
 
 export function useMonthSummaryTab() {
   const { enabled, userId } = useAuthQueryGate();
@@ -136,7 +137,7 @@ export function useMonthSummaryTab() {
   useEffect(() => {
     const error = summaryBaseError || summaryMonthMetaError || summaryMonthError;
     if (!error) return;
-    const message = error instanceof Error ? error.message : 'فشل تحميل ملخص الشهر';
+    const message = getErrorMessage(error, 'فشل تحميل ملخص الشهر');
     toast.error(TOAST_ERROR_GENERIC, { description: message });
   }, [summaryBaseError, summaryMonthMetaError, summaryMonthError]);
 

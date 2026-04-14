@@ -3,6 +3,7 @@ import {
   TOAST_SUCCESS_ACTION,
   TOAST_SUCCESS_OPERATION,
 } from '@shared/lib/toastMessages';
+import { getErrorMessage } from '@services/serviceError';
 import { buildOrdersIoHeaders } from '@shared/constants/excelSchemas';
 import { logError, logger } from '@shared/lib/logger';
 import { orderService, type ReplaceMonthDataMeta } from '@services/orderService';
@@ -225,7 +226,7 @@ export async function runSpreadsheetImport(params: {
     return { appliedData: newData, imported, skipped, errors };
   } catch (err) {
     logError('[Orders] import spreadsheet failed', err);
-    const errorMsg = err instanceof Error ? err.message : 'خطأ غير معروف';
+    const errorMsg = getErrorMessage(err, 'خطأ غير معروف');
     toast.error('فشل استيراد الملف', {
       description: `حدث خطأ أثناء قراءة الملف: ${errorMsg}`
     });
@@ -375,7 +376,7 @@ export async function saveSpreadsheetMonth(params: {
     }
     return isClearingMonth || saved > 0;
   } catch (e: unknown) {
-    const errorMsg = e instanceof Error ? e.message : 'خطأ غير معروف';
+    const errorMsg = getErrorMessage(e, 'خطأ غير معروف');
     toast.error('فشل عملية الحفظ', {
       description: `حدث خطأ: ${errorMsg}`
     });

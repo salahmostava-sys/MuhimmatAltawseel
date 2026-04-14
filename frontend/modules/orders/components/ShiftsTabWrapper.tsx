@@ -9,6 +9,7 @@ import { orderService } from '@services/orderService';
 import { isShiftCapableApp } from '@shared/lib/workType';
 import { ShiftsTab, type ShiftRow } from '@modules/orders/components/ShiftsTab';
 import { shiftMonth } from '@modules/orders/utils/dateMonth';
+import { getErrorMessage } from '@services/serviceError';
 
 export function ShiftsTabWrapper() {
   const { enabled, userId } = useAuthQueryGate();
@@ -96,7 +97,7 @@ export function ShiftsTabWrapper() {
         ]);
         toast.success('تم حفظ بيانات الدوام بنجاح');
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'فشل حفظ البيانات';
+        const message = getErrorMessage(error, 'فشل حفظ البيانات');
         toast.error('خطأ', { description: message });
         throw error;
       }

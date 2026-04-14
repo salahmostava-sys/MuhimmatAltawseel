@@ -16,6 +16,7 @@ import type {
   ViolationSortFieldKey,
   VehicleAssignmentForViolation,
 } from '@modules/violations/types/violation.types';
+import { getErrorMessage } from '@services/serviceError';
 import {
   assignmentStartMs,
   assignmentEndMs,
@@ -300,7 +301,7 @@ export function useViolationTable() {
       });
     } catch (e: unknown) {
       setAssigningEmployeeId(null);
-      const message = e instanceof Error ? e.message : 'حدث خطأ';
+      const message = getErrorMessage(e, 'حدث خطأ');
       toast({ title: 'حدث خطأ', description: message, variant: 'destructive' });
       return;
     }
@@ -332,7 +333,7 @@ export function useViolationTable() {
       await violationService.deleteViolation(row.external_deduction_id);
     } catch (e: unknown) {
       setDeletingSearchDeductionId(null);
-      const message = e instanceof Error ? e.message : 'حدث خطأ';
+      const message = getErrorMessage(e, 'حدث خطأ');
       toast({ title: 'تعذر الحذف', description: message, variant: 'destructive' });
       return;
     }
@@ -389,7 +390,7 @@ export function useViolationTable() {
       });
     } catch (e: unknown) {
       setEditSaving(false);
-      const message = e instanceof Error ? e.message : 'حدث خطأ';
+      const message = getErrorMessage(e, 'حدث خطأ');
       toast({ title: 'حدث خطأ', description: message, variant: 'destructive' });
       return;
     }
@@ -412,7 +413,7 @@ export function useViolationTable() {
       await violationService.deleteViolation(id);
     } catch (e: unknown) {
       setDeletingId(null);
-      const message = e instanceof Error ? e.message : 'حدث خطأ';
+      const message = getErrorMessage(e, 'حدث خطأ');
       toast({ title: 'حدث خطأ', description: message, variant: 'destructive' });
       return;
     }
@@ -466,7 +467,7 @@ export function useViolationTable() {
       });
     } catch (e: unknown) {
       setConvertingId(null);
-      const message = e instanceof Error ? e.message : 'تعذر إنشاء السلفة';
+      const message = getErrorMessage(e, 'تعذر إنشاء السلفة');
       toast({ title: 'حدث خطأ', description: message, variant: 'destructive' });
       return;
     }
@@ -486,7 +487,7 @@ export function useViolationTable() {
       });
     } catch (e: unknown) {
       setConvertingId(null);
-      const message = e instanceof Error ? e.message : 'حدث خطأ';
+      const message = getErrorMessage(e, 'حدث خطأ');
       toast({ title: 'حدث خطأ', description: message, variant: 'destructive' });
       return;
     }

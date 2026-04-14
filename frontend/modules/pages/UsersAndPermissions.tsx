@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@shared/components/ui/dialog';
+import { getErrorMessage } from '@services/serviceError';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -147,7 +148,7 @@ const UsersAndPermissions = ({ embedded = false }: UsersAndPermissionsProps) => 
 
   useEffect(() => {
     if (!usersError) return;
-    const message = usersError instanceof Error ? usersError.message : 'تعذر تحميل بيانات المستخدمين والصلاحيات';
+    const message = getErrorMessage(usersError, 'تعذر تحميل بيانات المستخدمين والصلاحيات');
     toast({
       title: 'خطأ في تحميل المستخدمين',
       description: message,
@@ -164,7 +165,7 @@ const UsersAndPermissions = ({ embedded = false }: UsersAndPermissionsProps) => 
       const data = await userPermissionService.getUserPermissions(userId);
       setMatrix(mergeMatrix(role, (data || []) as { permission_key: string; can_view: boolean; can_edit: boolean; can_delete: boolean }[]));
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'تعذر تحميل الصلاحيات';
+      const message = getErrorMessage(err, 'تعذر تحميل الصلاحيات');
       toast({ title: 'خطأ', description: message, variant: 'destructive' });
     } finally {
       setMatrixLoading(false);
@@ -196,7 +197,7 @@ const UsersAndPermissions = ({ embedded = false }: UsersAndPermissionsProps) => 
         await loadMatrix(userId, role);
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'حدث خطأ أثناء الحفظ';
+      const message = getErrorMessage(err, 'حدث خطأ أثناء الحفظ');
       toast({
         title: 'فشل تحديث الدور',
         description: message,
@@ -236,7 +237,7 @@ const UsersAndPermissions = ({ embedded = false }: UsersAndPermissionsProps) => 
       toast({ title: 'تم حفظ الصلاحيات' });
       await loadMatrix(selectedUser.id, selectedUser.role);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'فشل الحفظ';
+      const message = getErrorMessage(err, 'فشل الحفظ');
       toast({ title: 'خطأ', description: message, variant: 'destructive' });
     } finally {
       setSavingMatrix(false);
@@ -293,7 +294,7 @@ const UsersAndPermissions = ({ embedded = false }: UsersAndPermissionsProps) => 
         setPermUserId(created.user_id);
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'تعذر إنشاء المستخدم';
+      const message = getErrorMessage(err, 'تعذر إنشاء المستخدم');
       toast({
         title: 'فشل إنشاء المستخدم',
         description: message,
@@ -325,7 +326,7 @@ const UsersAndPermissions = ({ embedded = false }: UsersAndPermissionsProps) => 
       setDeleteTarget(null);
       await refetchUsersData();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'تعذر حذف المستخدم';
+      const message = getErrorMessage(err, 'تعذر حذف المستخدم');
       toast({
         title: 'فشل حذف المستخدم',
         description: message,

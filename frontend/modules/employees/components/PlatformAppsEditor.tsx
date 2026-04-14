@@ -1,10 +1,11 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Check, Loader2 } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
 import { Checkbox } from '@shared/components/ui/checkbox';
 import { useToast } from '@shared/hooks/use-toast';
 import employeeService from '@services/employeeService';
+import { getErrorMessage } from '@services/serviceError';
 
 type PlatformApp = {
   id: string;
@@ -66,7 +67,7 @@ export function PlatformAppsEditor({
     } catch (error) {
       toast({
         title: 'خطأ',
-        description: error instanceof Error ? error.message : 'فشل تحديث التطبيقات',
+        description: getErrorMessage(error, 'فشل تحديث التطبيقات'),
         variant: 'destructive',
       });
     } finally {

@@ -15,6 +15,7 @@ import { printHtmlTable } from '@shared/lib/printTable';
 import { MOTORCYCLE_IO_COLUMNS } from '@shared/constants/excelSchemas';
 import { logError } from '@shared/lib/logger';
 import type { Vehicle, VehicleStatus } from '@modules/pages/motorcycles.shared';
+import { getErrorMessage } from '@services/serviceError';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 import { loadXlsx } from '@modules/orders/utils/xlsx';
@@ -341,7 +342,7 @@ const Motorcycles = () => {
         void refetchVehicles();
       } catch (err) {
         logError('[Motorcycles] import failed', err);
-        const message = err instanceof Error ? err.message : 'فشل قراءة الملف أو الاتصال بالخادم';
+        const message = getErrorMessage(err, 'فشل قراءة الملف أو الاتصال بالخادم');
         toast({ title: 'فشل الاستيراد', description: message, variant: 'destructive' });
         setFileIoHint({ kind: 'err', message });
       }
@@ -436,7 +437,7 @@ const Motorcycles = () => {
       void refetchVehicles();
     } catch (e) {
       logError('[Motorcycles] delete failed', e);
-      const message = e instanceof Error ? e.message : 'حدث خطأ غير متوقع';
+      const message = getErrorMessage(e, 'حدث خطأ غير متوقع');
       toast({ title: 'خطأ في الحذف', description: message, variant: 'destructive' });
     } finally {
       setDeletingVehicle(false);

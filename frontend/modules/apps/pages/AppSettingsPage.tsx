@@ -9,6 +9,7 @@ import { appService } from '@services/appService';
 import { AppWorkTypeSettings } from '@modules/settings/components/AppWorkTypeSettings';
 import type { WorkType } from '@shared/types/shifts';
 import { toast } from '@shared/components/ui/sonner';
+import { getErrorMessage } from '@services/serviceError';
 
 export function AppSettingsPage() {
   const { enabled, userId } = useAuthQueryGate();
@@ -42,7 +43,7 @@ export function AppSettingsPage() {
       await queryClient.invalidateQueries({ queryKey: ['apps'] });
       toast.success('تم تحديث نوع العمل');
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'تعذر تحديث نوع العمل';
+      const message = getErrorMessage(err, 'تعذر تحديث نوع العمل');
       toast.error(message);
     } finally {
       setWorkTypeUpdating(false);
@@ -71,7 +72,7 @@ export function AppSettingsPage() {
             <AlertCircle size={48} className="text-destructive mb-4" />
             <h3 className="text-lg font-medium">تعذر تحميل البيانات</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              {error instanceof Error ? error.message : 'حدث خطأ أثناء تحميل المنصات'}
+              {getErrorMessage(error, 'حدث خطأ أثناء تحميل المنصات')}
             </p>
             <Button
               variant="outline"

@@ -27,6 +27,7 @@ import { SalaryMonthSelector, SalarySummaryCards } from '@modules/salaries/compo
 import { SalaryActionsBar, BatchProgressBar } from '@modules/salaries/components/SalaryActionsBar';
 import { SalaryTable } from '@modules/salaries/components/SalaryTable';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@shared/components/ui/dialog';
+import { getErrorMessage } from '@services/serviceError';
 
 // PLATFORM_COLORS import removed — we now derive colors locally via useMemo (platformMeta)
 // import { PLATFORM_COLORS } from '@modules/salaries/lib/salaryConstants';
@@ -225,7 +226,7 @@ const Salaries = () => {
   useEffect(() => {
     let cancelled = false;
     const handleFetchError = (error: unknown) => {
-      const message = error instanceof Error ? error.message : 'حدث خطأ غير متوقع أثناء تحميل الرواتب';
+      const message = getErrorMessage(error, 'حدث خطأ غير متوقع أثناء تحميل الرواتب');
       if (message.startsWith('PREVIEW_BACKEND:')) {
         const normalized = message.replace('PREVIEW_BACKEND:', '').trim();
         setRows([]);

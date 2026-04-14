@@ -11,6 +11,7 @@ import type { Advance, EmployeeSummary } from '@modules/advances/types/advance.t
 import { calcPaid, calcPending } from '@modules/advances/types/advance.types';
 
 import { loadXlsx } from '@modules/orders/utils/xlsx';
+import { getErrorMessage } from '@services/serviceError';
 
 export function useAdvanceTable(
   advances: Advance[],
@@ -223,7 +224,7 @@ export function useAdvanceTable(
       fetchAll();
     } catch (e) {
       logError('[Advances] bulk add failed', e);
-      const message = e instanceof Error ? e.message : 'حدث خطأ غير متوقع';
+      const message = getErrorMessage(e, 'حدث خطأ غير متوقع');
       toast({ title: 'خطأ في الحذف', description: message, variant: 'destructive' });
     } finally {
       setDeletingEmployeeAdvances(false);

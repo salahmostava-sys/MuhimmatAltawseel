@@ -22,6 +22,7 @@ import type {
   TransactionsModalProps,
   EmployeeSummary,
 } from '@modules/advances/types/advance.types';
+import { getErrorMessage } from '@services/serviceError';
 import { buildInstallmentsPayload } from '@modules/advances/types/advance.types';
 
 export const InlineRowEntry = ({ employeeId, onSaved, onCancel }: InlineRowProps) => {
@@ -62,7 +63,7 @@ export const InlineRowEntry = ({ employeeId, onSaved, onCancel }: InlineRowProps
       onSaved();
     } catch (e) {
       logError('[Advances] load employees failed', e);
-      const message = e instanceof Error ? e.message : 'حدث خطأ غير متوقع';
+      const message = getErrorMessage(e, 'حدث خطأ غير متوقع');
       toast({ title: 'حدث خطأ', description: message, variant: 'destructive' });
     } finally {
       setSaving(false);
@@ -115,7 +116,7 @@ export const WriteOffDialog = ({ employeeName, remaining, advanceIds, onClose, o
       onDone(); onClose();
     } catch (e) {
       logError('[Advances] create failed', e);
-      const message = e instanceof Error ? e.message : 'حدث خطأ غير متوقع';
+      const message = getErrorMessage(e, 'حدث خطأ غير متوقع');
       toast({ title: 'حدث خطأ', description: message, variant: 'destructive' });
     } finally {
       setSaving(false);
@@ -162,7 +163,7 @@ export const RestoreWriteOffDialog = ({ employeeName, advanceIds, onClose, onDon
       onDone(); onClose();
     } catch (e) {
       logError('[Advances] update failed', e);
-      const message = e instanceof Error ? e.message : 'حدث خطأ غير متوقع';
+      const message = getErrorMessage(e, 'حدث خطأ غير متوقع');
       toast({ title: 'حدث خطأ', description: message, variant: 'destructive' });
     } finally {
       setSaving(false);
@@ -239,7 +240,7 @@ export const EditAdvanceModal = ({ advance, onClose, onSaved }: EditAdvanceModal
       onSaved(); onClose();
     } catch (e) {
       logError('[Advances] save installments failed', e);
-      const message = e instanceof Error ? e.message : 'حدث خطأ غير متوقع';
+      const message = getErrorMessage(e, 'حدث خطأ غير متوقع');
       toast({ title: 'حدث خطأ', description: message, variant: 'destructive' });
     } finally {
       setSaving(false);
@@ -407,7 +408,7 @@ export const TransactionsModal = ({ employeeId, employeeName, nationalId, totalD
       onRefresh();
     } catch (e) {
       logError('[Advances] delete advance failed', e);
-      const message = e instanceof Error ? e.message : 'حدث خطأ غير متوقع';
+      const message = getErrorMessage(e, 'حدث خطأ غير متوقع');
       toast({ title: 'خطأ في الحذف', description: message, variant: 'destructive' });
     } finally {
       setDeletingAdvance(false);
@@ -424,7 +425,7 @@ export const TransactionsModal = ({ employeeId, employeeName, nationalId, totalD
       onRefresh();
     } catch (e) {
       logError('[Advances] delete installment failed', e);
-      const message = e instanceof Error ? e.message : 'حدث خطأ غير متوقع';
+      const message = getErrorMessage(e, 'حدث خطأ غير متوقع');
       toast({ title: 'خطأ في الحذف', description: message, variant: 'destructive' });
     } finally {
       setDeletingInstallment(false);
