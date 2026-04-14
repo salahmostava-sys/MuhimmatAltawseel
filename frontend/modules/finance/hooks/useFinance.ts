@@ -102,10 +102,6 @@ export function useFinance() {
       }
       const orders = allOrders;
 
-      const { data: salaries } = await supabase
-        .from('salary_records')
-        .select('net_salary')
-        .eq('month_year', selectedMonth);
 
       // Group orders by platform
       const platformMap = new Map<string, { name: string; orders: number; appId: string }>();
