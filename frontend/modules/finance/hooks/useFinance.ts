@@ -45,7 +45,7 @@ export function useFinance() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (params: { id: string; description: string }) => financeService.update(params.id, { description: params.description }),
+    mutationFn: (params: { id: string; description?: string; amount?: number }) => financeService.update(params.id, params),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey });
     },
@@ -130,7 +130,7 @@ export function useFinance() {
     isSaving: createMutation.isPending,
     isDeleting: deleteMutation.isPending,
     isSyncing: syncSalaries.isPending,
-    updateDescription: updateMutation.mutateAsync,
+    updateTransaction: updateMutation.mutateAsync,
     platformStats: platformStats ?? null,
   };
 }
