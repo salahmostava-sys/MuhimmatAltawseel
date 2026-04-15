@@ -13,7 +13,15 @@ const formatArabicCount = (count: number, noun: string) => `${count.toLocaleStri
 export const hasPlatformActivity = (metric?: PlatformSalaryMetric | null) =>
   Boolean(metric && (metric.ordersCount > 0 || metric.shiftDays > 0 || metric.salary > 0));
 
+/**
+ * Keywords that identify administrative / non-delivery job titles.
+ * These roles are NOT riders, so they are treated differently in salary calculations.
+ *
+ * ⚠️ Do NOT add delivery / field roles here (driver, سائق, مندوب…).
+ *    Delivery roles must return false from isAdministrativeJobTitle.
+ */
 const ADMIN_JOB_TITLE_KEYWORDS = [
+  // ── English administrative titles ──────────────────────────────────────────
   'admin',
   'administrator',
   'manager',
@@ -24,18 +32,14 @@ const ADMIN_JOB_TITLE_KEYWORDS = [
   'financial',
   'hr',
   'human resources',
-  'operations',
-  'operation',
   'office',
   'reception',
   'support',
   'customer service',
-  'it',
-  'logistics',
-  'fleet',
   'procurement',
   'purchasing',
   'payroll',
+  // ── Arabic administrative titles ───────────────────────────────────────────
   'ادارة',
   'اداري',
   'مدير',
@@ -49,30 +53,6 @@ const ADMIN_JOB_TITLE_KEYWORDS = [
   'استقبال',
   'خدمة عملاء',
   'دعم',
-  'تقنية',
-  'عمليات',
-  'تشغيل',
-  'لوجست',
-  'ميكانيكي',
-  'ميكانيك',
-  'نظافة',
-  'نظافه',
-  'صيانة',
-  'صيانه',
-  'سائق',
-  'حارس',
-  'أمن',
-  'كهربائي',
-  'سباك',
-  'عامل',
-  'فني',
-  'mechanic',
-  'cleaner',
-  'janitor',
-  'driver',
-  'guard',
-  'technician',
-  'maintenance',
 ];
 
 const normalizeSalaryJobTitle = (value?: string | null) =>

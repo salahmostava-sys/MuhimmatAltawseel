@@ -174,14 +174,34 @@ Deno.serve(async (req) => {
           : typeof err === 'string'
             ? err
             : JSON.stringify(err) ?? 'Unknown error';
+
     logError('Salary engine request failed', {
       request_id: requestId,
       error: message,
       raw_error: typeof err === 'object' ? JSON.stringify(err) : String(err),
     });
+
+    // Distinguish client errors (bad input) from internal failures:
+    // - 400: known validation errors (invalid input, missing auth, wrong mode)
+    // - 403: authorization failures (role check)
+    // - 500: unexpected internal errors (DB failures, unhandled exceptions)
+    const clientErrorPhrases = [
+      'Invalid month_year',
+      'Invalid employee_id',
+      'Invalid mode',
+      'No authorization header',
+      'Not authenticated',
+      'Method not allowed',
+      'Only admin/finance',
+    ];
+    const isClientError = clientErrorPhrases.some((phrase) => message.includes(phrase));
+    const isAuthzError = message.includes('Only admin/finance');
+
+    const statusCode = isAuthzError ? 403 : isClientError ? 400 : 500;
+
     return new Response(JSON.stringify({ error: message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
+      status: statusCode,
     });
   }
 });

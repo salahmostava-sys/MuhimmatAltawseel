@@ -3,8 +3,11 @@ import type { Database } from './types';
 import { logError } from '@shared/lib/logger';
 
 /** Strips one leading/trailing quote from env values; avoids ReDoS from quantified alternation (Sonar). */
-const cleanEnv = (value: string | undefined) =>
-  value === null ? undefined : value.trim().replace(/^['"]/, '').replace(/['"]$/, '');
+const cleanEnv = (value: string | undefined): string | undefined => {
+  // value == null catches both null and undefined (defensive guard even if type is string | undefined)
+  if (value == null || value.trim() === '') return undefined;
+  return value.trim().replace(/^['"]/, '').replace(/['"]$/, '');
+};
 
 const SUPABASE_URL = cleanEnv(import.meta.env.VITE_SUPABASE_URL as string | undefined);
 const SUPABASE_PUBLISHABLE_KEY = cleanEnv(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined);
