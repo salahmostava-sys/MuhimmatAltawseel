@@ -30,7 +30,7 @@ export const settingsHubService = {
   getAuditLogs: async (from: number, to: number, filterAction: string, filterTable: string, search: string) => {
     let query = supabase
       .from('audit_log')
-      .select('*', { count: 'exact' })
+      .select('*', { count: 'estimated' })
       .order('created_at', { ascending: false })
       .range(from, to);
 
