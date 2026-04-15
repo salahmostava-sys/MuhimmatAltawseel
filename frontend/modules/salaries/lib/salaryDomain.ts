@@ -662,16 +662,14 @@ export const buildPlatformSetupWarnings = ({
   return {
     appsWithoutPricingRules: relevantApps
       .filter((app) => {
-        const needsPricingRule = app.work_type === 'shift' || app.work_type === 'hybrid';
-        if (!needsPricingRule) return false;
+        // Only hybrid needs pricing rules; shift uses salary_schemes.monthly_amount directly
+        if (app.work_type !== 'hybrid') return false;
         return !rulesMap[app.id] || rulesMap[app.id].length === 0;
       })
       .map((app) => app.name),
     appsWithoutScheme: relevantApps
       .filter((app) => {
-        const needsScheme = app.work_type === 'orders' || app.work_type === 'hybrid' || !app.work_type;
-        if (!needsScheme) return false;
-        // Check scheme_id (the FK) first — more reliable than the join result
+        // All platform types need a scheme (orders for tiers, shift for monthly_amount)
         if (app.scheme_id) return false;
         return !app.salary_schemes?.id;
       })
