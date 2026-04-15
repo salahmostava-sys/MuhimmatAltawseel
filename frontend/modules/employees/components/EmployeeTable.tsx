@@ -318,9 +318,16 @@ export function EmployeeDetailedTable({
                               onCheckedChange={() => toggleApp(app.id)}
                             />
                             <span
-                              className="inline-flex items-center rounded px-2 py-0.5 text-[10px] font-medium text-white"
+                              className="inline-flex items-center rounded px-2 py-0.5 text-[10px] font-medium"
                               style={{
                                 backgroundColor: app.brand_color || "#6366f1",
+                                color: (() => {
+                                  const hex = (app.brand_color || "#6366f1").replace('#', '');
+                                  const r = parseInt(hex.substring(0, 2), 16);
+                                  const g = parseInt(hex.substring(2, 4), 16);
+                                  const b = parseInt(hex.substring(4, 6), 16);
+                                  return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#000000' : '#ffffff';
+                                })(),
                               }}
                             >
                               {app.name}
@@ -802,7 +809,13 @@ export function EmployeeDetailedTable({
                                           style={{
                                             backgroundColor:
                                               app.brand_color || "#6366f1",
-                                            color: "#ffffff",
+                                            color: (() => {
+                                              const hex = (app.brand_color || "#6366f1").replace('#', '');
+                                              const r = parseInt(hex.substring(0, 2), 16);
+                                              const g = parseInt(hex.substring(2, 4), 16);
+                                              const b = parseInt(hex.substring(4, 6), 16);
+                                              return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#000000' : '#ffffff';
+                                            })(),
                                           }}
                                         >
                                           {app.name}
