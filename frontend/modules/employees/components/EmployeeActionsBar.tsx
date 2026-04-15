@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Columns, Filter, Building2, X } from 'lucide-react';
+import { Plus, Columns, Filter, Building2, X, Search } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { cityLabel } from '@modules/employees/model/employeeCity';
 import {
@@ -100,6 +100,18 @@ export function EmployeeActionsBar({
         </div>
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-1 w-full lg:w-auto">
           <div className="flex flex-wrap items-center gap-2">
+            {/* Search */}
+            <div className="relative">
+              <Search size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <input
+                type="text"
+                placeholder="بحث عن موظف..."
+                value={colFilters.name || ''}
+                onChange={e => setColFilter('name', e.target.value)}
+                className="h-9 w-48 rounded-lg border border-border bg-background pe-8 ps-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+
             <DataTableActions
               loading={actionLoading}
               onExport={onExport}

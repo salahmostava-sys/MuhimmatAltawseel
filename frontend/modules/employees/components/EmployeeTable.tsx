@@ -484,6 +484,25 @@ export function EmployeeDetailedTable({
                         </SelectContent>
                       </Select>
                     );
+                  if (col.key === "commercial_record")
+                    return (
+                      <Select
+                        value={colFilters.commercial_record || "all"}
+                        onValueChange={(v) => setColFilter("commercial_record", v)}
+                      >
+                        <SelectTrigger className="h-7 text-xs w-full">
+                          <SelectValue placeholder="الكل" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">الكل</SelectItem>
+                          {commercialRecordNames.map((cr) => (
+                            <SelectItem key={cr} value={cr}>
+                              {cr}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    );
                   return (
                     <TextFilterInput
                       value={colFilters[col.key] || ""}
