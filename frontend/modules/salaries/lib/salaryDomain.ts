@@ -471,17 +471,9 @@ export const buildSalaryRows = ({
         continue;
       }
 
+      // No local fallback calculation — all salary logic lives in Supabase RPC.
+      // If the RPC didn't return data for this platform, show 0.
       const orders = empOrders[platformName] || 0;
-      const salary = calculatePlatformSalary({
-        platformName,
-        orders,
-        attendanceDays,
-        platformNames,
-        appNameToId,
-        rulesMap,
-        appSchemeMap,
-        platformSalaries,
-      });
 
       const fallbackMetric: PlatformSalaryMetric = {
         appName: platformName,
@@ -489,12 +481,12 @@ export const buildSalaryRows = ({
         calculationMethod: null,
         ordersCount: orders,
         shiftDays: 0,
-        salary,
+        salary: 0,
       };
 
       platformMetrics[platformName] = fallbackMetric;
       platformOrders[platformName] = getPrimaryPlatformActivityCount(fallbackMetric);
-      platformSalaries[platformName] = salary;
+      platformSalaries[platformName] = 0;
     }
 
     const saved = savedMap[employeeId];
