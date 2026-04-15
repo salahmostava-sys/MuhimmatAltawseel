@@ -1,5 +1,4 @@
-import { Suspense, lazy, useState, useRef, useEffect, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Suspense, lazy, useState, useMemo } from 'react';
 import { AlertTriangle, Settings2 } from 'lucide-react';
 import { useToast } from '@shared/hooks/use-toast';
 import { useAppColors } from '@shared/hooks/useAppColors';
@@ -9,15 +8,10 @@ import { usePermissions } from '@shared/hooks/usePermissions';
 import { useNavigate } from 'react-router-dom';
 import { useSystemSettings } from '@app/providers/SystemSettingsContext';
 import type { PricingRule } from '@services/salaryService';
-import { salaryDataService } from '@services/salaryDataService';
-import { salaryDraftService } from '@services/salaryDraftService';
-import { useMonthlyActiveEmployeeIds } from '@shared/hooks/useMonthlyActiveEmployeeIds';
-import { useRealtimePostgresChanges } from '@shared/hooks/useRealtimePostgresChanges';
-import { isValidSalaryMonthYear } from '@shared/lib/salaryValidation';
-import { defaultQueryRetry } from '@shared/lib/query';
+import { useQueryClient } from '@tanstack/react-query';
 import Loading from '@shared/components/Loading';
 import { toast as sonnerToast } from '@shared/components/ui/sonner';
-import { logError } from '@shared/lib/logger';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@shared/components/ui/dialog';
 
 import { SalarySchemeSelector } from '@modules/salaries/components/SalarySchemeSelector';
 import { useSalaryFilteredRows } from '@modules/salaries/hooks/useSalaryTable';
@@ -26,22 +20,14 @@ import { useBatchPdfExport } from '@modules/salaries/hooks/useBatchPdfExport';
 import { SalaryMonthSelector, SalarySummaryCards } from '@modules/salaries/components/SalaryMonthSelector';
 import { SalaryActionsBar, BatchProgressBar } from '@modules/salaries/components/SalaryActionsBar';
 import { SalaryTable } from '@modules/salaries/components/SalaryTable';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@shared/components/ui/dialog';
-import { getErrorMessage } from '@services/serviceError';
 
-// PLATFORM_COLORS import removed — we now derive colors locally via useMemo (platformMeta)
-// import { PLATFORM_COLORS } from '@modules/salaries/lib/salaryConstants';
+// Phase-5 extracted hooks
+import { useSalaryData } from '@modules/salaries/hooks/useSalaryData';
+import { useSalaryDraft } from '@modules/salaries/hooks/useSalaryDraft';
+
 import { months } from '@modules/salaries/lib/salaryMonths';
-import { buildSalaryDraftPatch, prepareSalaryState } from '@modules/salaries/lib/salaryDomain';
-import type {
-  SalaryRow,
-  SchemeData,
-  SortDir,
-  SalaryBaseContextData,
-  PreparedSalaryState,
-} from '@modules/salaries/types/salary.types';
+import type { SalaryRow, SchemeData, SortDir } from '@modules/salaries/types/salary.types';
 import type JSZip from 'jszip';
-
 import { useTemporalContext } from '@app/providers/TemporalContext';
 
 const PayslipModal = lazy(() =>
@@ -69,16 +55,7 @@ const InlineLoader = ({ minHeightClassName = 'min-h-[220px]' }: Readonly<{ minHe
   <Loading minHeightClassName={minHeightClassName} />
 );
 
-const buildSalaryDraftMap = (rows: SalaryRow[]) => {
-  const draft: Record<string, ReturnType<typeof buildSalaryDraftPatch>> = {};
-  rows
-    .filter((row) => !!row.isDirty)
-    .forEach((row) => {
-      draft[row.id] = buildSalaryDraftPatch(row);
-    });
-  return draft;
-};
-
+// ─────────────────────────────────────────────────────────────────────────────
 const Salaries = () => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -89,39 +66,33 @@ const Salaries = () => {
   const { projectName } = useSystemSettings();
   const { apps: appColorsList } = useAppColors();
   const { selectedMonth } = useTemporalContext();
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [cityFilter] = useState('all');
-  const { data: activeIdsData } = useMonthlyActiveEmployeeIds(selectedMonth);
-  const activeEmployeeIdsInMonth = activeIdsData?.employeeIds;
+  const queryClient = useQueryClient();
+
+  // ── UI-only state (local to the page) ────────────────────────────────────
   const [rows, setRows] = useState<SalaryRow[]>([]);
   const [empPlatformScheme, setEmpPlatformScheme] = useState<Record<string, Record<string, SchemeData | null>>>({});
-  const [payslipRow, setPayslipRow] = useState<SalaryRow | null>(null);
-  const [salaryActionLoading, setSalaryActionLoading] = useState(false);
-  const queryClient = useQueryClient();
-  const [sortField, setSortField] = useState<string | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir>(null);
-  const [loadingData, setLoadingData] = useState(true);
-  const [previewBackendError, setPreviewBackendError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
-  const [markingPaid, setMarkingPaid] = useState<string | null>(null);
-  const [editingCell, setEditingCell] = useState<{ rowId: string; platform: string } | null>(null);
-  // Salary preparation state — set together in applyPreparedSalaryState
   const [salaryMeta, setSalaryMeta] = useState<{
     appsWithoutScheme: string[];
     appsWithoutPricingRules: string[];
     appIdByName: Record<string, string>;
     pricingRulesByAppId: Record<string, PricingRule[]>;
   }>({ appsWithoutScheme: [], appsWithoutPricingRules: [], appIdByName: {}, pricingRulesByAppId: {} });
-  const appsWithoutScheme = salaryMeta.appsWithoutScheme;
-  const appsWithoutPricingRules = salaryMeta.appsWithoutPricingRules;
-  const appIdByName = salaryMeta.appIdByName;
-  const pricingRulesByAppId = salaryMeta.pricingRulesByAppId;
+
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [cityFilter] = useState('all');
+  const [payslipRow, setPayslipRow] = useState<SalaryRow | null>(null);
+  const [salaryActionLoading, setSalaryActionLoading] = useState(false);
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>(null);
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const [markingPaid, setMarkingPaid] = useState<string | null>(null);
+  const [editingCell, setEditingCell] = useState<{ rowId: string; platform: string } | null>(null);
   const [employeeFieldSaving, setEmployeeFieldSaving] = useState<string | null>(null);
   const [detailRow, setDetailRow] = useState<SalaryRow | null>(null);
   const [showTemplateEditor, setShowTemplateEditor] = useState(false);
 
-  // Batch PDF state — grouped since always used together
+  // Batch PDF state — grouped to reduce individual useState calls
   const [batch, setBatch] = useState<{ queue: SalaryRow[]; index: number; zip: JSZip | null; month: string }>({
     queue: [], index: 0, zip: null, month: '',
   });
@@ -129,24 +100,73 @@ const Salaries = () => {
   const batchIndex = batch.index;
   const batchZip = batch.zip;
   const batchMonth = batch.month;
-  const setBatchQueue = (v: React.SetStateAction<SalaryRow[]>) => setBatch(b => ({ ...b, queue: typeof v === 'function' ? v(b.queue) : v }));
-  const setBatchIndex = (v: React.SetStateAction<number>) => setBatch(b => ({ ...b, index: typeof v === 'function' ? v(b.index) : v }));
-  const setBatchZip = (v: React.SetStateAction<JSZip | null>) => setBatch(b => ({ ...b, zip: typeof v === 'function' ? v(b.zip) : v }));
-  const setBatchMonth = (v: string) => setBatch(b => ({ ...b, month: v }));
-  const salaryToolbarImportRef = useRef<HTMLInputElement>(null);
-  const skipNextDraftSaveRef = useRef(true);
-  const lastDraftSignatureRef = useRef<string | null>(null);
+  const setBatchQueue = (v: React.SetStateAction<SalaryRow[]>) =>
+    setBatch((b) => ({ ...b, queue: typeof v === 'function' ? v(b.queue) : v }));
+  const setBatchIndex = (v: React.SetStateAction<number>) =>
+    setBatch((b) => ({ ...b, index: typeof v === 'function' ? v(b.index) : v }));
+  const setBatchZip = (v: React.SetStateAction<JSZip | null>) =>
+    setBatch((b) => ({ ...b, zip: typeof v === 'function' ? v(b.zip) : v }));
+  const setBatchMonth = (v: string) => setBatch((b) => ({ ...b, month: v }));
 
+  const salaryToolbarImportRef = { current: null as HTMLInputElement | null };
+
+  // ── Draft key ─────────────────────────────────────────────────────────────
   const salariesDraftKey = useMemo(
     () => `salaries:draft:${user?.id || 'anon'}:${selectedMonth}`,
-    [user?.id, selectedMonth]
+    [user?.id, selectedMonth],
   );
 
-  const appsWithoutPricingRulesDeduped = useMemo(
-    () => appsWithoutPricingRules.filter((n) => !appsWithoutScheme.includes(n)),
-    [appsWithoutPricingRules, appsWithoutScheme]
-  );
+  // ── Data fetching (React Query — replaces useEffect pattern) ──────────────
+  const {
+    hydratedRows,
+    appNameToId,
+    rulesMap: pricingRulesByAppId,
+    appsWithoutScheme,
+    appsWithoutPricingRules,
+    builtEmpPlatformScheme,
+    previewBackendError,
+    isLoading: loadingData,
+    error: salaryDataError,
+  } = useSalaryData({ selectedMonth, salariesDraftKey });
 
+  // Sync fetched data into local state (needed for useSalaryActions which mutates rows)
+  // We use useMemo to derive initial rows and only setRows when data changes.
+  // Note: rows is kept in local state because useSalaryActions mutates it (dirty/approve/etc.)
+  const [dataVersion, setDataVersion] = useState(0);
+  useMemo(() => {
+    if (!loadingData && hydratedRows.length >= 0) {
+      setRows(hydratedRows);
+      setEmpPlatformScheme(builtEmpPlatformScheme);
+      setSalaryMeta({
+        appIdByName: appNameToId,
+        pricingRulesByAppId,
+        appsWithoutPricingRules,
+        appsWithoutScheme,
+      });
+      setDataVersion((v) => v + 1);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingData, hydratedRows]);
+
+  // Show fetch error in toast
+  useMemo(() => {
+    if (salaryDataError) {
+      const message = salaryDataError.message || 'حدث خطأ غير متوقع أثناء تحميل الرواتب';
+      toast({ title: 'تعذر تحميل البيانات', description: message, variant: 'destructive' });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [salaryDataError?.message]);
+
+  // ── Draft auto-save (extracted hook) ─────────────────────────────────────
+  useSalaryDraft({
+    rows,
+    loadingData,
+    selectedMonth,
+    salariesDraftKey,
+    userId: user?.id,
+  });
+
+  // ── Platform colors & metadata ────────────────────────────────────────────
   const platformMeta = useMemo(() => {
     const newColors: Record<string, { header: string; headerText: string; cellBg: string; valueColor: string; focusBorder: string }> = {};
     const newPlatforms: string[] = [];
@@ -169,190 +189,20 @@ const Salaries = () => {
   const platforms = platformMeta.platforms;
   const platformColors = platformMeta.platformColors;
   const appCustomColumns = platformMeta.appCustomColumns;
-  // NOTE: Previously mutated shared PLATFORM_COLORS in-place — now we only use the local
-  // `platformColors` derived via useMemo above. Components that still import PLATFORM_COLORS
-  // from salaryConstants receive the original defaults; within Salaries we always pass
-  // `platformColors` (from platformMeta) as a prop, so the shared object stays untouched.
 
-  const salaryBaseContextQueryKey = useMemo(
-    () => ['salaries', uid, 'base-context', selectedMonth] as const,
-    [selectedMonth, uid],
+  // Convenience destructures from salaryMeta
+  const appIdByName = salaryMeta.appIdByName;
+  const appsWithoutPricingRulesDeduped = useMemo(
+    () => salaryMeta.appsWithoutPricingRules.filter((n) => !salaryMeta.appsWithoutScheme.includes(n)),
+    [salaryMeta.appsWithoutPricingRules, salaryMeta.appsWithoutScheme],
   );
 
-  const {
-    data: salaryBaseContext,
-    error: salaryBaseContextError,
-    isLoading: salaryBaseContextLoading,
-  } = useQuery({
-    queryKey: salaryBaseContextQueryKey,
-    enabled: enabled && isValidSalaryMonthYear(selectedMonth),
-    queryFn: async () => {
-      const monthlyContextPromise = salaryDataService.getMonthlyContext(selectedMonth);
-      let timeoutId: ReturnType<typeof setTimeout> | undefined;
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(
-          () => reject(new Error('انتهت مهلة تحميل بيانات الرواتب. حاول مرة أخرى.')),
-          15000
-        );
-      });
-
-      let monthlyContext: Awaited<ReturnType<typeof salaryDataService.getMonthlyContext>>;
-      try {
-        monthlyContext = await Promise.race([monthlyContextPromise, timeoutPromise]);
-      } finally {
-        if (timeoutId) clearTimeout(timeoutId);
-      }
-
-      const previewData = await salaryDataService.getSalaryPreviewForMonth(selectedMonth);
-
-      return {
-        monthlyContext,
-        previewData: previewData || [],
-      };
-    },
-    retry: defaultQueryRetry,
-    staleTime: 20_000,
-  });
-
-  useRealtimePostgresChanges(
-    `salaries-orders-sync-${uid}-${selectedMonth}`,
-    ['daily_orders'],
-    () => {
-      void queryClient.invalidateQueries({ queryKey: salaryBaseContextQueryKey });
-    },
-  );
-
-  // ─── Data fetching ─────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false;
-    const handleFetchError = (error: unknown) => {
-      const message = getErrorMessage(error, 'حدث خطأ غير متوقع أثناء تحميل الرواتب');
-      if (message.startsWith('PREVIEW_BACKEND:')) {
-        const normalized = message.replace('PREVIEW_BACKEND:', '').trim();
-        setRows([]);
-        setPreviewBackendError(normalized || 'تعذر تحميل معاينة الرواتب من الخادم');
-      }
-      toast({
-        title: 'تعذر تحميل البيانات',
-        description: message,
-        variant: 'destructive',
-      });
-    };
-
-    const applyPreparedSalaryState = (prepared: PreparedSalaryState) => {
-      setSalaryMeta({
-        appIdByName: prepared.appNameToId,
-        pricingRulesByAppId: prepared.rulesMap,
-        appsWithoutPricingRules: prepared.appsWithoutPricingRules,
-        appsWithoutScheme: prepared.appsWithoutScheme,
-      });
-      setEmpPlatformScheme(prepared.builtEmpPlatformScheme);
-      setRows(prepared.hydratedRows);
-    };
-
-    const fetchAllData = async () => {
-      if (salaryBaseContextLoading) {
-        setLoadingData(true);
-        return;
-      }
-      setLoadingData(true);
-      setPreviewBackendError(null);
-      if (salaryBaseContextError) {
-        if (!cancelled) handleFetchError(salaryBaseContextError);
-        setLoadingData(false);
-        return;
-      }
-      if (!salaryBaseContext || cancelled) return;
-      try {
-        const prepared = await prepareSalaryState({
-          salaryBaseContext: salaryBaseContext as SalaryBaseContextData,
-          selectedMonth,
-          activeEmployeeIdsInMonth,
-          salariesDraftKey,
-        });
-
-        if (cancelled) return;
-        applyPreparedSalaryState(prepared);
-      } catch (error) {
-        if (!cancelled) handleFetchError(error);
-      } finally {
-        if (!cancelled) {
-          setLoadingData(false);
-        }
-      }
-    };
-
-    void fetchAllData();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    selectedMonth,
-    salariesDraftKey,
-    salaryBaseContext,
-    salaryBaseContextError,
-    salaryBaseContextLoading,
-    activeEmployeeIdsInMonth,
-    toast,
-  ]);
-
-  // ── Draft syncing flow ──────────────────────────────────────────
-  // When selectedMonth or user changes, reset draft tracking refs so that the first
-  // render with new data doesn't trigger a premature server sync.
-  useEffect(() => {
-    skipNextDraftSaveRef.current = true;
-    lastDraftSignatureRef.current = null;
-  }, [selectedMonth, user?.id]);
-
-  // Draft auto-save effect:
-  // 1. Build a draft patch from dirty rows → serialize to JSON.
-  // 2. Mirror to localStorage for offline persistence.
-  // 3. On first data load (skipNextDraftSaveRef), capture the signature but don't sync
-  //    to the server — avoids writing back the same data we just loaded.
-  // 4. On subsequent changes, compare serialized draft with lastDraftSignatureRef.
-  //    If different, debounce 2s then sync to server via salaryDraftService.
-  useEffect(() => {
-    if (loadingData) return;
-
-    const draft = buildSalaryDraftMap(rows);
-    const serializedDraft = JSON.stringify(draft);
-
-    try {
-      if (Object.keys(draft).length === 0) {
-        localStorage.removeItem(salariesDraftKey);
-      } else {
-        localStorage.setItem(salariesDraftKey, serializedDraft);
-      }
-    } catch (e) {
-      logError('[Salaries] Failed to mirror drafts to localStorage', e, { level: 'warn' });
-    }
-
-    if (skipNextDraftSaveRef.current) {
-      skipNextDraftSaveRef.current = false;
-      lastDraftSignatureRef.current = serializedDraft;
-      return;
-    }
-
-    if (lastDraftSignatureRef.current === serializedDraft) return;
-
-    const timer = setTimeout(() => {
-      void (async () => {
-        try {
-          await salaryDraftService.syncDraftsForMonth(selectedMonth, draft);
-          lastDraftSignatureRef.current = serializedDraft;
-        } catch (e) {
-          logError('[Salaries] Failed to auto-save drafts to server', e, { level: 'warn' });
-        }
-      })();
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [rows, loadingData, salariesDraftKey, selectedMonth]);
-
+  // ── Filtered rows + computed columns ─────────────────────────────────────
   const { filtered, computeRow } = useSalaryFilteredRows(
-    rows, search, statusFilter, cityFilter, sortField, sortDir, platforms
+    rows, search, statusFilter, cityFilter, sortField, sortDir, platforms,
   );
 
+  // ── Actions ───────────────────────────────────────────────────────────────
   const actions = useSalaryActions({
     rows, setRows, filtered, computeRow, selectedMonth, platforms, platformColors,
     toast: sonnerToast, user, uid, queryClient, projectName,
@@ -361,26 +211,36 @@ const Salaries = () => {
     salaryActionLoading, setSalaryActionLoading,
     setMarkingPaid, setBatchQueue, setBatchIndex, setBatchZip, setBatchMonth,
     salaryToolbarImportRef, employeeFieldSaving, setEmployeeFieldSaving,
-    appIdByName, pricingRulesByAppId, empPlatformScheme,
+    appIdByName, pricingRulesByAppId: salaryMeta.pricingRulesByAppId, empPlatformScheme,
     setDetailRow,
   });
 
   const totalNet = filtered.reduce((s, r) => s + computeRow(r).netSalary, 0);
   const pendingCount = filtered.filter((r) => r.status === 'pending' || r.isDirty).length;
 
-  // Batch ZIP export — extracted to dedicated hook
+  // ── Batch ZIP export ──────────────────────────────────────────────────────
   useBatchPdfExport({
     batchQueue, batchIndex, batchZip, selectedMonth, projectName,
     setBatchQueue, setBatchIndex, setBatchZip, toast,
   });
 
-  const monthLabel = months.find(m => m.v === selectedMonth)?.l || selectedMonth;
+  const monthLabel = months.find((m) => m.v === selectedMonth)?.l || selectedMonth;
 
+  // suppress unused variable warning — enabled/dataVersion used for hook deps
+  void enabled;
+  void dataVersion;
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-4" dir="rtl">
       <div>
-        <nav className="page-breadcrumb"><span>الرئيسية</span><span className="page-breadcrumb-sep">/</span><span>الرواتب</span></nav>
+        <nav className="page-breadcrumb">
+          <span>الرئيسية</span>
+          <span className="page-breadcrumb-sep">/</span>
+          <span>الرواتب</span>
+        </nav>
       </div>
+
       <SalaryMonthSelector
         loadingData={loadingData}
         previewBackendError={previewBackendError}
@@ -407,7 +267,7 @@ const Salaries = () => {
       )}
 
       <SalarySchemeSelector
-        appsWithoutScheme={appsWithoutScheme}
+        appsWithoutScheme={salaryMeta.appsWithoutScheme}
         appsWithoutPricingRulesDeduped={appsWithoutPricingRulesDeduped}
         onOpenSettings={() => navigate('/settings/schemes')}
       />
@@ -530,7 +390,6 @@ const Salaries = () => {
           </div>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 };
