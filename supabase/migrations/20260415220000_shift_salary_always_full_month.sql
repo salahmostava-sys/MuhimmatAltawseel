@@ -30,6 +30,7 @@ DECLARE
   v_tier RECORD;
   v_hybrid_rule RECORD;
   v_day RECORD; v_hours_worked NUMERIC;
+  v_monthly_amount NUMERIC;
 BEGIN
   v_start := to_date(p_month_year || '-01', 'YYYY-MM-DD');
   v_end := (v_start + INTERVAL '1 month - 1 day')::date;
@@ -69,16 +70,21 @@ BEGIN
           SELECT 1 FROM employee_apps ea
           WHERE ea.employee_id = v_emp.id AND ea.app_id = v_app.app_id
         ) THEN
-          -- Salary is always full monthly_amount (decoupled from attendance)
-          v_app_earnings := COALESCE(v_app.monthly_amount, 0);
-
-          -- But shift_days comes from actual daily_shifts data (for display only)
+          -- Count actual shift days from daily_shifts (NOT attendance table)
           SELECT COUNT(*)::INTEGER INTO v_app_shift_days
           FROM daily_shifts ds
           WHERE ds.employee_id = v_emp.id AND ds.app_id = v_app.app_id
             AND ds.date BETWEEN v_start AND v_end AND ds.hours_worked > 0;
 
           v_total_shift_days := v_total_shift_days + v_app_shift_days;
+
+          -- Salary = (monthly_amount / 30) × actual shift days
+          v_monthly_amount := COALESCE(v_app.monthly_amount, 0);
+          IF v_monthly_amount > 0 AND v_app_shift_days > 0 THEN
+            v_app_earnings := ROUND((v_monthly_amount / 30.0) * v_app_shift_days);
+          ELSE
+            v_app_earnings := 0;
+          END IF;
         END IF;
 
       ELSIF v_app.work_type = 'hybrid' THEN
@@ -240,20 +246,22 @@ BEGIN
       END IF;
 
     ELSIF v_app.work_type = 'shift' THEN
-      -- === SHIFT: always full monthly_amount ===
-      -- Salary is decoupled from attendance.
+      -- === SHIFT: salary from daily_shifts (NOT attendance table) ===
+      -- Salary = (monthly_amount / 30) × actual shift days from daily_shifts
       IF EXISTS(
         SELECT 1 FROM public.employee_apps ea
         WHERE ea.employee_id = p_employee_id AND ea.app_id = v_app.id
       ) THEN
-        v_app_earnings := COALESCE(v_app.monthly_amount, 0);
-
-        -- Shift days from actual daily_shifts (display only, not affecting salary)
         SELECT COUNT(*)::INTEGER INTO v_app_shifts
         FROM public.daily_shifts ds
         WHERE ds.employee_id = p_employee_id AND ds.app_id = v_app.id
           AND ds.date BETWEEN v_start AND v_end AND ds.hours_worked > 0;
+
         v_total_shift_days := v_total_shift_days + v_app_shifts;
+
+        IF COALESCE(v_app.monthly_amount, 0) > 0 AND v_app_shifts > 0 THEN
+          v_app_earnings := ROUND((v_app.monthly_amount / 30.0) * v_app_shifts);
+        END IF;
       END IF;
 
     ELSIF v_app.work_type = 'hybrid' THEN
