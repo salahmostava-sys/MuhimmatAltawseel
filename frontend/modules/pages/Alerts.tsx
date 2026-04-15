@@ -59,6 +59,7 @@ const Alerts = () => {
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState('all');
   const [severityFilter, setSeverityFilter] = useState('all');
+  const [crFilter, setCrFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [resolveDialog, setResolveDialog] = useState<Alert | null>(null);
   const [deferDialog, setDeferDialog] = useState<Alert | null>(null);
@@ -184,12 +185,28 @@ const Alerts = () => {
     return () => clearInterval(interval);
   }, [enabled, iqamaAlertDays]);
 
+  // Extract unique commercial records from alerts
+  const commercialRecords = [...new Set(
+    localAlerts
+      .map(a => { const m = a.entityName.match(/سجل: (.+?)(?:$| —)/); return m?.[1] ?? null; })
+      .filter(Boolean) as string[]
+  )].sort();
+
   const filtered = localAlerts.filter(a => {
     const matchType = typeFilter === 'all' || a.type === typeFilter;
     const matchSeverity = severityFilter === 'all' || a.severity === severityFilter;
     const matchSearch = a.entityName.includes(search);
-    return matchType && matchSeverity && matchSearch && !a.resolved;
+    const matchCr = crFilter === 'all' || a.entityName.includes(`سجل: ${crFilter}`);
+    return matchType && matchSeverity && matchSearch && matchCr && !a.resolved;
   });
+
+  // Residency summary per commercial record
+  const residencySummary = commercialRecords.map(cr => {
+    const crAlerts = localAlerts.filter(a => a.type === 'residency' && !a.resolved && a.entityName.includes(`سجل: ${cr}`));
+    const expired = crAlerts.filter(a => a.daysLeft < 0).length;
+    const urgent = crAlerts.filter(a => a.daysLeft >= 0 && a.daysLeft <= 30).length;
+    return { cr, total: crAlerts.length, expired, urgent };
+  }).filter(s => s.total > 0);
 
   const resolved = localAlerts.filter(a => a.resolved);
 
@@ -337,7 +354,44 @@ const Alerts = () => {
             </button>
           ))}
         </div>
+        {commercialRecords.length > 0 && (
+          <div className="flex gap-2 flex-wrap items-center">
+            <span className="text-xs text-muted-foreground font-semibold">السجل التجاري:</span>
+            <button onClick={() => setCrFilter('all')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${crFilter === 'all' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}>
+              الكل
+            </button>
+            {commercialRecords.map(cr => (
+              <button key={cr} onClick={() => setCrFilter(cr)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${crFilter === cr ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}>
+                📋 {cr}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Residency summary per commercial record */}
+      {residencySummary.length > 0 && (
+        <div className="bg-card rounded-xl border border-border/50 p-4">
+          <h3 className="text-sm font-bold text-foreground mb-3">🪪 ملخص الإقامات حسب السجل التجاري</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {residencySummary.map(s => (
+              <div key={s.cr} className="bg-muted/30 rounded-lg p-3 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => { setCrFilter(s.cr); setTypeFilter('residency'); }}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-foreground">📋 {s.cr}</span>
+                  <span className="text-xs font-bold text-primary">{s.total} إقامة</span>
+                </div>
+                <div className="flex gap-2 text-[10px]">
+                  {s.expired > 0 && <span className="text-destructive font-semibold">🔴 {s.expired} منتهية</span>}
+                  {s.urgent > 0 && <span className="text-warning font-semibold">🟠 {s.urgent} قريبة</span>}
+                  {s.expired === 0 && s.urgent === 0 && <span className="text-success">✅ كلها بخير</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-3">
         {loading ? (
