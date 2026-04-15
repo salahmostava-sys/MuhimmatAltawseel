@@ -69,8 +69,15 @@ BEGIN
           SELECT 1 FROM employee_apps ea
           WHERE ea.employee_id = v_emp.id AND ea.app_id = v_app.app_id
         ) THEN
+          -- Salary is always full monthly_amount (decoupled from attendance)
           v_app_earnings := COALESCE(v_app.monthly_amount, 0);
-          v_app_shift_days := 30; -- display only
+
+          -- But shift_days comes from actual daily_shifts data (for display only)
+          SELECT COUNT(*)::INTEGER INTO v_app_shift_days
+          FROM daily_shifts ds
+          WHERE ds.employee_id = v_emp.id AND ds.app_id = v_app.app_id
+            AND ds.date BETWEEN v_start AND v_end AND ds.hours_worked > 0;
+
           v_total_shift_days := v_total_shift_days + v_app_shift_days;
         END IF;
 
@@ -234,13 +241,19 @@ BEGIN
 
     ELSIF v_app.work_type = 'shift' THEN
       -- === SHIFT: always full monthly_amount ===
-      -- Attendance is decoupled from salary.
+      -- Salary is decoupled from attendance.
       IF EXISTS(
         SELECT 1 FROM public.employee_apps ea
         WHERE ea.employee_id = p_employee_id AND ea.app_id = v_app.id
       ) THEN
         v_app_earnings := COALESCE(v_app.monthly_amount, 0);
-        v_total_shift_days := v_total_shift_days + 30;
+
+        -- Shift days from actual daily_shifts (display only, not affecting salary)
+        SELECT COUNT(*)::INTEGER INTO v_app_shifts
+        FROM public.daily_shifts ds
+        WHERE ds.employee_id = p_employee_id AND ds.app_id = v_app.id
+          AND ds.date BETWEEN v_start AND v_end AND ds.hours_worked > 0;
+        v_total_shift_days := v_total_shift_days + v_app_shifts;
       END IF;
 
     ELSIF v_app.work_type = 'hybrid' THEN
