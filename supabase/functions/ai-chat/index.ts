@@ -159,6 +159,18 @@ const tools = [
       parameters: { type: 'object', properties: {}, required: [] },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'get_rider_monthly_average',
+      description: 'حساب متوسط الطلبات الشهري لمندوب معين خلال آخر 3 أشهر + التوقع للشهر الحالي',
+      parameters: {
+        type: 'object',
+        properties: { name: { type: 'string', description: 'اسم المندوب' } },
+        required: ['name'],
+      },
+    },
+  },
 ];
 
 // ── Tool Implementations ──────────────────────────────────────
@@ -506,6 +518,63 @@ async function getAppsOverview(sb: SupabaseAdmin) {
   };
 }
 
+async function getRiderMonthlyAverage(sb: SupabaseAdmin, name: string) {
+  if (!name) return { error: 'يرجى تحديد اسم المندوب' };
+  const { data: emp } = await sb.from('employees').select('id, name').ilike('name', `%${name}%`).limit(1).maybeSingle();
+  if (!emp) return { error: `لم يتم العثور على مندوب باسم "${name}"` };
+
+  const now = new Date();
+  const months: { label: string; from: string; to: string }[] = [];
+  for (let i = 0; i < 3; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const lastDay = new Date(y, d.getMonth() + 1, 0).getDate();
+    months.push({
+      label: `${y}-${m}`,
+      from: `${y}-${m}-01`,
+      to: `${y}-${m}-${String(lastDay).padStart(2, '0')}`,
+    });
+  }
+
+  const monthlyData: { month: string; orders: number; days: number }[] = [];
+  for (const mo of months) {
+    const { data } = await sb
+      .from('daily_orders')
+      .select('orders_count')
+      .eq('employee_id', emp.id)
+      .gte('date', mo.from)
+      .lte('date', mo.to);
+    const total = (data ?? []).reduce((s, r) => s + ((r.orders_count as number) ?? 0), 0);
+    const activeDays = (data ?? []).filter(r => ((r.orders_count as number) ?? 0) > 0).length;
+    monthlyData.push({ month: mo.label, orders: total, days: activeDays });
+  }
+
+  const totalOrders = monthlyData.reduce((s, m) => s + m.orders, 0);
+  const monthsWithData = monthlyData.filter(m => m.orders > 0).length;
+  const avgMonthly = monthsWithData > 0 ? Math.round(totalOrders / monthsWithData) : 0;
+  const avgDaily = monthsWithData > 0 ? Math.round(totalOrders / monthlyData.reduce((s, m) => s + m.days, 0)) : 0;
+
+  // Predict current month based on average
+  const currentMonth = monthlyData[0];
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysPassed = now.getDate();
+  const projectedTotal = currentMonth.days > 0 
+    ? Math.round((currentMonth.orders / daysPassed) * daysInMonth)
+    : avgMonthly;
+
+  return {
+    employee: emp.name,
+    monthly_breakdown: monthlyData,
+    average_monthly: avgMonthly,
+    average_daily: avgDaily,
+    current_month_actual: currentMonth.orders,
+    current_month_projected: projectedTotal,
+    days_passed: daysPassed,
+    days_in_month: daysInMonth,
+  };
+}
+
 async function executeTool(sb: SupabaseAdmin, name: string, args: Record<string, unknown>) {
   switch (name) {
     case 'get_employee_stats':
@@ -538,6 +607,8 @@ async function executeTool(sb: SupabaseAdmin, name: string, args: Record<string,
       return await getBottomRiders(sb);
     case 'get_apps_overview':
       return await getAppsOverview(sb);
+    case 'get_rider_monthly_average':
+      return await getRiderMonthlyAverage(sb, (args.name as string) ?? '');
     default:
       return { error: `Unknown tool: ${name}` };
   }
