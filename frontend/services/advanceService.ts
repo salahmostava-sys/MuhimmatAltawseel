@@ -79,15 +79,15 @@ export const advanceService = {
   },
 
   delete: async (id: string) => {
-    const { error: installmentsError } = await supabase.from('advance_installments').delete().eq('advance_id', id);
-    if (installmentsError) handleSupabaseError(installmentsError, 'advanceService.delete.installments');
+    // advance_installments.advance_id has ON DELETE CASCADE in the DB schema,
+    // so deleting the parent advance automatically removes all child installments
+    // atomically — no need for a separate manual delete step.
     const { error } = await supabase.from('advances').delete().eq('id', id);
     if (error) handleSupabaseError(error, 'advanceService.delete');
   },
 
   deleteMany: async (ids: string[]) => {
-    const { error: installmentsError } = await supabase.from('advance_installments').delete().in('advance_id', ids);
-    if (installmentsError) handleSupabaseError(installmentsError, 'advanceService.deleteMany.installments');
+    // Same as delete: ON DELETE CASCADE handles installments atomically.
     const { error } = await supabase.from('advances').delete().in('id', ids);
     if (error) handleSupabaseError(error, 'advanceService.deleteMany');
   },
