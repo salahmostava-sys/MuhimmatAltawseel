@@ -71,6 +71,7 @@ BEGIN
         ) THEN
           v_app_earnings := COALESCE(v_app.monthly_amount, 0);
           v_app_shift_days := 30; -- display only
+          v_total_shift_days := v_total_shift_days + v_app_shift_days;
         END IF;
 
       ELSIF v_app.work_type = 'hybrid' THEN
