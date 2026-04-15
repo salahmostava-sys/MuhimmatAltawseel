@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState, useMemo } from 'react';
+import { Suspense, lazy, useState, useMemo, useEffect, useRef } from 'react';
 import { AlertTriangle, Settings2 } from 'lucide-react';
 import { useToast } from '@shared/hooks/use-toast';
 import { useAppColors } from '@shared/hooks/useAppColors';
@@ -108,7 +108,7 @@ const Salaries = () => {
     setBatch((b) => ({ ...b, zip: typeof v === 'function' ? v(b.zip) : v }));
   const setBatchMonth = (v: string) => setBatch((b) => ({ ...b, month: v }));
 
-  const salaryToolbarImportRef = { current: null as HTMLInputElement | null };
+  const salaryToolbarImportRef = useRef<HTMLInputElement | null>(null);
 
   // ── Draft key ─────────────────────────────────────────────────────────────
   const salariesDraftKey = useMemo(
@@ -129,12 +129,10 @@ const Salaries = () => {
     error: salaryDataError,
   } = useSalaryData({ selectedMonth, salariesDraftKey });
 
-  // Sync fetched data into local state (needed for useSalaryActions which mutates rows)
-  // We use useMemo to derive initial rows and only setRows when data changes.
-  // Note: rows is kept in local state because useSalaryActions mutates it (dirty/approve/etc.)
-  const [dataVersion, setDataVersion] = useState(0);
-  useMemo(() => {
-    if (!loadingData && hydratedRows.length >= 0) {
+  // Sync fetched data into local state when React Query resolves.
+  // rows lives in local state because useSalaryActions mutates it (dirty/approve/etc.)
+  useEffect(() => {
+    if (!loadingData) {
       setRows(hydratedRows);
       setEmpPlatformScheme(builtEmpPlatformScheme);
       setSalaryMeta({
@@ -143,18 +141,18 @@ const Salaries = () => {
         appsWithoutPricingRules,
         appsWithoutScheme,
       });
-      setDataVersion((v) => v + 1);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // hydratedRows identity changes each query result — intentional dep
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadingData, hydratedRows]);
 
   // Show fetch error in toast
-  useMemo(() => {
+  useEffect(() => {
     if (salaryDataError) {
       const message = salaryDataError.message || 'حدث خطأ غير متوقع أثناء تحميل الرواتب';
       toast({ title: 'تعذر تحميل البيانات', description: message, variant: 'destructive' });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [salaryDataError?.message]);
 
   // ── Draft auto-save (extracted hook) ─────────────────────────────────────
@@ -226,9 +224,7 @@ const Salaries = () => {
 
   const monthLabel = months.find((m) => m.v === selectedMonth)?.l || selectedMonth;
 
-  // suppress unused variable warning — enabled/dataVersion used for hook deps
-  void enabled;
-  void dataVersion;
+  void enabled; // used implicitly via useSalaryData
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
