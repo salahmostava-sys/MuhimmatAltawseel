@@ -27,6 +27,7 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 const AUTH_SIGNIN_TIMEOUT_MS = 15_000;
 const AUTH_ACTIVE_CHECK_TIMEOUT_MS = 10_000;
 
+/** Races a promise against a timeout. Rejects with a `:timeout` error if the promise takes too long. */
 const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
   let timer: ReturnType<typeof setTimeout> | null = null;
   try {
@@ -58,9 +59,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isFirstLoad = useRef(true);
   const redirectLockRef = useRef(false);
   const redirectCooldownUntilRef = useRef(0);
+
   const isPublicAuthRoute = useCallback((pathname: string) => (
     pathname === '/login'
   ), []);
+
   const redirectToLoginIfNeeded = useCallback(() => {
     if (redirectLockRef.current) return;
     if (isPublicAuthRoute(location.pathname)) return;
@@ -71,6 +74,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     navigate('/login', { replace: true, state: { from: location.pathname } });
     setTimeout(() => { redirectLockRef.current = false; }, 300);
   }, [isPublicAuthRoute, location.pathname, navigate]);
+
   const handleUnauthenticatedState = useCallback(async (reason: string) => {
     try {
       await queryClient.cancelQueries();
@@ -103,6 +107,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     sessionStorage.removeItem('global_selected_month');
     redirectToLoginIfNeeded();
   }, [redirectToLoginIfNeeded, user?.id]);
+
+  /**
+   * Shared helper: checks if a user is still active, then applies the session to state.
+   * Returns false and calls forceSignOut() if the user is deactivated.
+   *
+   * Extracted to eliminate the repeated pattern that was duplicated in 4 places:
+   *   1. onAuthStateChange handler
+   *   2. getSession() bootstrap
+   *   (previously also in signIn and the profile-active polling effect)
+   */
+  const checkActiveAndApplySession = useCallback(async (
+    sessionToApply: Session,
+    context: string,
+  ): Promise<boolean> => {
+    const userId = sessionToApply.user.id;
+    try {
+      const active = await withTimeout(
+        authService.fetchIsActive(userId),
+        AUTH_ACTIVE_CHECK_TIMEOUT_MS,
+        'authService.fetchIsActive',
+      );
+      if (!active) {
+        await forceSignOut();
+        return false;
+      }
+      setSession(sessionToApply);
+      setUser(sessionToApply.user);
+      const r = await withTimeout(
+        fetchRole(userId),
+        AUTH_ACTIVE_CHECK_TIMEOUT_MS,
+        'authService.fetchUserRole',
+      );
+      setRole(r);
+      return true;
+    } catch (e) {
+      logError(`[Auth] checkActiveAndApplySession failed (${context})`, e);
+      return false;
+    }
+  }, [forceSignOut]);
 
   const recoverSessionSilently = useCallback(async (opts?: { refetchActiveQueries?: boolean }) => {
     if (recoverInFlightRef.current !== null) return recoverInFlightRef.current;
@@ -144,6 +187,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
   }, [queryClient]);
 
+  // ── Auth state change listener + bootstrap ────────────────────────────────
   useEffect(() => {
     const subscription = authService.onAuthStateChange((event, nextSession) => {
       void (async () => {
@@ -155,26 +199,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
           if (event === 'SIGNED_OUT' || (event as string) === 'TOKEN_REFRESH_FAILED') {
             await handleUnauthenticatedState(event.toLowerCase());
+            return;
           }
           if (nextSession?.user) {
-            const active = await withTimeout(
-              authService.fetchIsActive(nextSession.user.id),
-              AUTH_ACTIVE_CHECK_TIMEOUT_MS,
-              'authService.fetchIsActive'
-            );
-            if (!active) {
-              await forceSignOut();
-              setLoading(false);
-              return;
-            }
-            setSession(nextSession);
-            setUser(nextSession.user);
-            const r = await withTimeout(
-              fetchRole(nextSession.user.id),
-              AUTH_ACTIVE_CHECK_TIMEOUT_MS,
-              'authService.fetchUserRole'
-            );
-            setRole(r);
+            const applied = await checkActiveAndApplySession(nextSession, 'onAuthStateChange');
+            if (!applied) setLoading(false);
           } else {
             setSession(null);
             setUser(null);
@@ -186,27 +215,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })();
     });
 
+    // Bootstrap: resolve current session on mount
     authService.getSession()
       .then(async (currentSession) => {
         if (currentSession?.user) {
-          const active = await withTimeout(
-            authService.fetchIsActive(currentSession.user.id),
-            AUTH_ACTIVE_CHECK_TIMEOUT_MS,
-            'authService.fetchIsActive'
-          );
-          if (!active) {
-            await forceSignOut();
-            setLoading(false);
-            return;
-          }
-          setSession(currentSession);
-          setUser(currentSession.user);
-          const r = await withTimeout(
-            fetchRole(currentSession.user.id),
-            AUTH_ACTIVE_CHECK_TIMEOUT_MS,
-            'authService.fetchUserRole'
-          );
-          setRole(r);
+          const applied = await checkActiveAndApplySession(currentSession, 'getSession.bootstrap');
+          if (!applied) setLoading(false);
         }
       })
       .catch((e) => {
@@ -217,46 +231,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
     return () => subscription.unsubscribe();
-  }, [forceSignOut, handleUnauthenticatedState]);
+  }, [checkActiveAndApplySession, handleUnauthenticatedState]);
 
+  // ── Auth failure bus (React Query errors bubble up here) ──────────────────
   useEffect(() => {
     return onAuthFailure(({ source, reason }) => {
       void handleUnauthenticatedState(`${source}:${reason}`);
     });
   }, [handleUnauthenticatedState]);
 
-  // Single redirect owner: keep unauthenticated users off protected routes.
-  // When session is lost, attempt silent recovery once before redirecting.
+  // ── Single redirect owner ─────────────────────────────────────────────────
+  // Keep unauthenticated users off protected routes.
+  // Try one silent recovery before giving up and redirecting.
   useEffect(() => {
     if (loading || refreshing) return;
     if (session) return;
-    // Try one silent recovery before giving up and redirecting
     void recoverSessionSilently().then((recovered) => {
       if (!recovered) redirectToLoginIfNeeded();
     });
   }, [loading, refreshing, session, redirectToLoginIfNeeded, recoverSessionSilently]);
 
-  // عند العودة للتبويب/الاتصال: استعادة/تجديد الجلسة بشكل صامت + إعادة تحميل البيانات
+  // ── Wake / reconnect: silent session recovery + data refresh ─────────────
   useEffect(() => {
     let lastRefreshAt = 0;
-    const minMs = 240_000; // 4 minutes cooldown between recovery attempts
+    const minMs = 240_000; // 4-minute cooldown between recovery attempts
+
     const onWake = async () => {
       if (document.visibilityState !== 'visible') return;
       const now = Date.now();
       if (now - lastRefreshAt < minMs) return;
       lastRefreshAt = now;
       const recovered = await recoverSessionSilently({ refetchActiveQueries: false });
-      // If recovery succeeded after being away, refetch active queries to refresh stale data
       if (recovered) {
         void queryClient.refetchQueries({ type: 'active' });
       }
     };
-    const onFocus = () => {
-      void onWake();
-    };
-    const onOnline = () => {
-      void onWake();
-    };
+
+    const onFocus = () => { void onWake(); };
+    const onOnline = () => { void onWake(); };
+
     document.addEventListener('visibilitychange', onWake);
     globalThis.addEventListener('focus', onFocus);
     globalThis.addEventListener('online', onOnline);
@@ -267,9 +280,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [queryClient, recoverSessionSilently]);
 
+  // ── Realtime: profile.is_active changes ──────────────────────────────────
   useEffect(() => {
     if (!user) return;
-
     const channel = authService.subscribeToProfileActiveChanges(
       user.id,
       async (payload) => {
@@ -277,13 +290,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (updated.is_active === false) {
           await forceSignOut();
         }
-      }
+      },
     );
-
     return () => { authService.removeRealtimeChannel(channel); };
   }, [forceSignOut, user]);
 
-  // Re-check profile.is_active while logged in (narrows window where JWT still works after deactivation).
+  // ── Periodic is_active polling (narrows deactivation window) ─────────────
   useEffect(() => {
     if (!user?.id) return;
     const tick = async () => {
@@ -295,19 +307,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => clearInterval(id);
   }, [forceSignOut, user?.id]);
 
+  // ── Sign in ───────────────────────────────────────────────────────────────
   const signIn = useCallback(async (email: string, password: string) => {
     try {
       const data = await withTimeout(
         authService.signIn(email, password),
         AUTH_SIGNIN_TIMEOUT_MS,
-        'authService.signIn'
+        'authService.signIn',
       );
 
       if (data.user) {
         const active = await withTimeout(
           authService.fetchIsActive(data.user.id),
           AUTH_ACTIVE_CHECK_TIMEOUT_MS,
-          'authService.fetchIsActive'
+          'authService.fetchIsActive',
         );
         if (!active) {
           await authService.signOut();
@@ -325,6 +338,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  // ── Sign out ──────────────────────────────────────────────────────────────
   const signOut = useCallback(async () => {
     try {
       await authService.signOut();
