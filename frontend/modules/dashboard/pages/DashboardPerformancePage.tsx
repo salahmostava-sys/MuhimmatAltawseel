@@ -54,7 +54,7 @@ export default function DashboardPerformancePage() {
     queryKey: ['performance-dashboard', uid, currentMonth] as const,
     enabled,
     staleTime: 60_000,
-    queryFn: async () => performanceService.getDashboard(currentMonth),
+    queryFn: () => performanceService.getDashboard(currentMonth),
   });
 
   const _chatEnabled = useMemo(() => {

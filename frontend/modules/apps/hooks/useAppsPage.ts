@@ -43,7 +43,7 @@ export const useAppsPage = () => {
     queryKey: appsOverviewQueryKey(uid, monthYear),
     enabled,
     staleTime: 30_000,
-    queryFn: async () => appsPageService.getAppsOverview(monthYear),
+    queryFn: () => appsPageService.getAppsOverview(monthYear),
   });
 
   const apps = appsQuery.data;
@@ -56,7 +56,7 @@ export const useAppsPage = () => {
     queryKey: appEmployeesQueryKey(uid, monthYear, selectedAppId ?? '__none__'),
     enabled: enabled && !!selectedAppId,
     staleTime: 30_000,
-    queryFn: async () => appsPageService.getAppEmployees(selectedAppId!, monthYear),
+    queryFn: () => appsPageService.getAppEmployees(selectedAppId!, monthYear),
   });
 
   useQueryErrorToast(appsQuery.isError, appsQuery.error, undefined, appsQuery.refetch);

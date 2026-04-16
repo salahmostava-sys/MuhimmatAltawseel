@@ -25,7 +25,7 @@ export function useAuthedPagedQuery<TData, TQueryKey extends QueryKey = QueryKey
 
   const query = useQuery<TData, Error, TData, TQueryKey>({
     queryKey: buildQueryKey(uid),
-    queryFn: async () => withQueryTimeout(queryFn()),
+    queryFn: () => withQueryTimeout(queryFn()),
     retry: safeRetry as typeof query.options.retry,
     staleTime,
     enabled: !!session && authReady && enabled,

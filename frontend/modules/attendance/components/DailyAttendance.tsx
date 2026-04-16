@@ -149,7 +149,7 @@ const DailyAttendance = ({ selectedMonth, selectedYear }: Props) => {
     queryKey: ["attendance", uid, "daily-records", dateStr] as const,
     enabled: enabled && allEmployees.length > 0,
     staleTime: 0,
-    queryFn: async () => attendanceService.getDailyAttendanceRecords(dateStr),
+    queryFn: () => attendanceService.getDailyAttendanceRecords(dateStr),
   });
 
   useQueryErrorToast(recordsQuery.isError, recordsQuery.error, undefined, recordsQuery.refetch);

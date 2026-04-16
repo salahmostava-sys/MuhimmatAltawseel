@@ -264,7 +264,7 @@ const EmployeeProfile = ({ employee, onBack }: Props) => {
     queryKey: ['employee-profile', uid, employee.id] as const,
     enabled,
     staleTime: 60_000,
-    queryFn: async () => employeeProfileService.getRelatedData(employee.id),
+    queryFn: () => employeeProfileService.getRelatedData(employee.id),
   });
 
   useQueryErrorToast(relatedDataQuery.isError, relatedDataQuery.error, undefined, relatedDataQuery.refetch);

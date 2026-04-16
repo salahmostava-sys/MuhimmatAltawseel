@@ -27,7 +27,7 @@ export function EmployeePerformanceTab(props: Readonly<{ employeeId: string }>) 
     queryKey: ['employee-performance', uid, employeeId, selectedMonth] as const,
     enabled,
     staleTime: 60_000,
-    queryFn: async () => performanceService.getRiderProfile(employeeId, selectedMonth),
+    queryFn: () => performanceService.getRiderProfile(employeeId, selectedMonth),
   });
 
   useEffect(() => {

@@ -76,7 +76,7 @@ export function useSpreadsheetQueries(
   const { data: spreadsheetMonthLock = false, error: spreadsheetLockError } = useQuery({
     queryKey: qk.spreadsheetMonthLock(year, month),
     enabled,
-    queryFn: async () => {
+    queryFn: () => {
       const my = monthYear(year, month);
       return orderService.getMonthLockStatus(my);
     },

@@ -97,7 +97,7 @@ export function useSalaryData({ selectedMonth, salariesDraftKey }: UseSalaryData
     enabled: isQueryEnabled,
     staleTime: 20_000,
     retry: defaultQueryRetry,
-    queryFn: async () => {
+    queryFn: () => {
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(
           () => reject(new Error('انتهت مهلة تحميل بيانات الرواتب. حاول مرة أخرى.')),

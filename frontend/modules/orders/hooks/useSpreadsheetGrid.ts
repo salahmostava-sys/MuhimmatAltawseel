@@ -70,7 +70,7 @@ export function useSpreadsheetGrid() {
     queryKey: ['orders', uid, 'import-history', monthKey],
     enabled,
     staleTime: 60_000,
-    queryFn: async () => performanceService.getImportHistory(monthKey),
+    queryFn: () => performanceService.getImportHistory(monthKey),
   });
 
   const invalidateMonthDependencies = useCallback(async () => {

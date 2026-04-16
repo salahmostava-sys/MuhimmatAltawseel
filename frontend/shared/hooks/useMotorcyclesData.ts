@@ -6,9 +6,7 @@ export const motorcyclesDataQueryKey = (userId: string) => ['motorcycles', userI
 export const useMotorcyclesData = () => {
   return useAuthedQuery({
     buildQueryKey: motorcyclesDataQueryKey,
-    queryFn: async () => {
-      return vehicleService.getAllWithCurrentRider();
-    },
+    queryFn: () => vehicleService.getAllWithCurrentRider(),
     staleTime: 60_000,
   });
 };

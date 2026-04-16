@@ -44,7 +44,7 @@ export function AiChatWidget() {
   useEffect(() => { if (isOpen) inputRef.current?.focus(); }, [isOpen]);
 
   const chatMutation = useMutation({
-    mutationFn: async (chatMessages: AiChatMessage[]) => aiChatService.sendMessage(chatMessages),
+    mutationFn: (chatMessages: AiChatMessage[]) => aiChatService.sendMessage(chatMessages),
     onSuccess: (content) => {
       setMessages((prev) => [...prev, { id: nextMessageId(), role: 'assistant', content }]);
     },
