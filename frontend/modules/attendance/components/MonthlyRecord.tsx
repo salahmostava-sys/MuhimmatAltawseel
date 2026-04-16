@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@shared/components/ui/popover";
 import { useLanguage } from "@app/providers/LanguageContext";
 import attendanceService from "@services/attendanceService";
-import { logError } from "@shared/lib/logger";
+import { useQuery } from "@tanstack/react-query";
+import { useAuthQueryGate, authQueryUserId } from "@shared/hooks/useAuthQueryGate";
 
 const MONTHS_AR = [
   "يناير",
@@ -47,35 +47,30 @@ interface Props {
 const MonthlyRecord = ({ selectedMonth, selectedYear }: Props) => {
   const { isRTL } = useLanguage();
   const MONTHS = MONTHS_AR;
+  const { enabled, userId } = useAuthQueryGate();
+  const uid = authQueryUserId(userId);
 
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [attendanceRows, setAttendanceRows] = useState<AttendanceRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const monthStr = String(selectedMonth + 1).padStart(2, "0");
+  const startDate = `${selectedYear}-${monthStr}-01`;
+  const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+  const endDate = `${selectedYear}-${monthStr}-${String(daysInMonth).padStart(2, "0")}`;
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const monthStr = String(selectedMonth + 1).padStart(2, "0");
-        const startDate = `${selectedYear}-${monthStr}-01`;
-        const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-        const endDate = `${selectedYear}-${monthStr}-${String(daysInMonth).padStart(2, "0")}`;
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['attendance', 'monthly', uid, selectedYear, selectedMonth] as const,
+    enabled,
+    staleTime: 60_000,
+    retry: 1,
+    queryFn: async () => {
+      const result = await attendanceService.getMonthlyEmployeesAndAttendance(startDate, endDate);
+      return {
+        employees: (result.employees || []) as Employee[],
+        attendanceRows: (result.attendanceRows || []) as AttendanceRow[],
+      };
+    },
+  });
 
-        const { employees: empRows, attendanceRows: attRows } =
-          await attendanceService.getMonthlyEmployeesAndAttendance(startDate, endDate);
-
-        setEmployees((empRows || []) as Employee[]);
-        setAttendanceRows((attRows || []) as AttendanceRow[]);
-      } catch (err) {
-        logError('[MonthlyRecord] fetch failed', err);
-        setEmployees([]);
-        setAttendanceRows([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [selectedMonth, selectedYear]);
+  const employees = data?.employees ?? [];
+  const attendanceRows = data?.attendanceRows ?? [];
 
   const data = employees.map((emp) => {
     const rows = attendanceRows.filter((r) => r.employee_id === emp.id);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Bell, Search, CheckCircle, Clock, Download } from 'lucide-react';
 import { Input } from '@shared/components/ui/input';
 import { Button } from '@shared/components/ui/button';
@@ -8,11 +8,13 @@ import { Textarea } from '@shared/components/ui/textarea';
 import { Label } from '@shared/components/ui/label';
 import { supabase } from '@services/supabase/client';
 import { useToast } from '@shared/hooks/use-toast';
-import { useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
+import { useAuthQueryGate, authQueryUserId } from '@shared/hooks/useAuthQueryGate';
 import { useSystemSettings } from '@app/providers/SystemSettingsContext';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { escapeHtml } from '@shared/lib/security';
 import { format, differenceInDays, parseISO, addDays } from 'date-fns';
 import { cityLabel } from '@modules/employees/model/employeeCity';
+import { QueryErrorRetry } from '@shared/components/QueryErrorRetry';
 
 /** Build employee display name with branch and commercial record. */
 function empAlertName(emp: Record<string, unknown>): string {
@@ -48,15 +50,140 @@ export interface Alert {
 }
 
 const severityStyles: Record<string, string> = { urgent: 'badge-urgent', warning: 'badge-warning', info: 'badge-info' };
-const severityLabels: Record<string, string> = { urgent: '🔴 عاجل', warning: '🟠 تحذير', info: '🔵 معلومات' };
+const severityLabels: Record<string, string> = { urgent: '🔴 عاجل', warning: '🟡 تحذير', info: '🔵 معلومات' };
 
 const typeIcons: Record<string, string> = {
-  residency: '🪪', insurance: '🛡️', authorization: '📜', probation: '⏱️', platform_account: '📱',
+  residency: '🪪', insurance: '🛡️', authorization: '📋', probation: '⏳', platform_account: '📱',
 };
 
+/** Pure function — builds Alert[] from raw Supabase results. No side effects. */
+function buildAlerts(
+  employeesData: Record<string, unknown>[],
+  vehiclesData: Record<string, string | null>[],
+  platformAccountsData: Record<string, unknown>[],
+  iqamaAlertDays: number,
+): Alert[] {
+  const today = new Date();
+  const endOfCurrentMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const threshold = format(endOfCurrentMonth, 'yyyy-MM-dd');
+  const iqamaThreshold = format(addDays(today, iqamaAlertDays), 'yyyy-MM-dd');
+
+  const alerts: Alert[] = [];
+
+  employeesData.forEach((emp) => {
+    const empDisplay = empAlertName(emp);
+    const resExpiry = emp.residency_expiry as string | null;
+    const probEnd = emp.probation_end_date as string | null;
+    if (resExpiry && resExpiry <= threshold) {
+      const daysLeft = differenceInDays(parseISO(resExpiry), today);
+      alerts.push({
+        id: `res-${emp.id}`,
+        type: 'residency',
+        entityName: empDisplay,
+        dueDate: resExpiry,
+        daysLeft,
+        severity: daysLeft < 0 ? 'urgent' : daysLeft <= 7 ? 'urgent' : daysLeft <= 14 ? 'warning' : 'info',
+        resolved: false,
+      });
+    }
+    if (probEnd && probEnd <= threshold) {
+      const daysLeft = differenceInDays(parseISO(probEnd), today);
+      alerts.push({
+        id: `prob-${emp.id}`,
+        type: 'probation',
+        entityName: empDisplay,
+        dueDate: probEnd,
+        daysLeft,
+        severity: daysLeft < 0 ? 'info' : daysLeft <= 7 ? 'urgent' : 'warning',
+        resolved: false,
+      });
+    }
+  });
+
+  vehiclesData.forEach((v) => {
+    if (v.insurance_expiry && v.insurance_expiry <= threshold) {
+      const days = differenceInDays(parseISO(v.insurance_expiry), today);
+      alerts.push({
+        id: `ins-${v.id}`,
+        type: 'insurance',
+        entityName: `مركبة ${v.plate_number}`,
+        dueDate: v.insurance_expiry,
+        daysLeft: days,
+        severity: days < 0 ? 'urgent' : days <= 7 ? 'urgent' : 'warning',
+        resolved: false,
+      });
+    }
+    if (v.authorization_expiry && v.authorization_expiry <= threshold) {
+      const days = differenceInDays(parseISO(v.authorization_expiry), today);
+      alerts.push({
+        id: `auth-${v.id}`,
+        type: 'authorization',
+        entityName: `مركبة ${v.plate_number}`,
+        dueDate: v.authorization_expiry,
+        daysLeft: days,
+        severity: days < 0 ? 'urgent' : days <= 7 ? 'urgent' : 'warning',
+        resolved: false,
+      });
+    }
+  });
+
+  platformAccountsData.forEach((acc) => {
+    const iqamaDate = acc.iqama_expiry_date as string | null;
+    if (!iqamaDate || iqamaDate > iqamaThreshold) return;
+    const days = differenceInDays(parseISO(iqamaDate), today);
+    const appName = (acc.apps as { name?: string } | null)?.name ?? 'منصة';
+    const expiryFormatted = format(parseISO(iqamaDate), 'dd/MM/yyyy');
+    alerts.push({
+      id: `pla-${acc.id}`,
+      type: 'platform_account',
+      entityName: `إقامة الحساب ${acc.account_username} على منصة ${appName} ستنتهي في ${expiryFormatted} ولن يتجدد الحساب.`,
+      dueDate: iqamaDate,
+      daysLeft: days,
+      severity: days < 0 ? 'urgent' : days <= 7 ? 'urgent' : days <= 14 ? 'warning' : 'info',
+      resolved: false,
+    });
+  });
+
+  return alerts.sort((a, b) => a.daysLeft - b.daysLeft);
+}
+
+/** Fetch all raw data needed for alerts — called by React Query queryFn. */
+async function fetchAlertsRaw(iqamaAlertDays: number) {
+  const today = new Date();
+  const endOfCurrentMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const threshold = format(endOfCurrentMonth, 'yyyy-MM-dd');
+  const iqamaThreshold = format(addDays(today, iqamaAlertDays), 'yyyy-MM-dd');
+
+  const [employeesRes, vehiclesRes, platformAccountsRes] = await Promise.all([
+    supabase
+      .from('employees')
+      .select('id, name, residency_expiry, probation_end_date, city, cities, commercial_record')
+      .eq('status', 'active')
+      .or(`residency_expiry.lte.${threshold},probation_end_date.lte.${threshold}`),
+    supabase
+      .from('vehicles')
+      .select('id, plate_number, insurance_expiry, authorization_expiry')
+      .in('status', ['active', 'maintenance', 'rental'])
+      .or(`insurance_expiry.lte.${threshold},authorization_expiry.lte.${threshold}`),
+    (supabase.from('platform_accounts') as ReturnType<typeof supabase.from>)
+      .select('id, account_username, iqama_expiry_date, app_id, apps(name)')
+      .eq('status', 'active')
+      .not('iqama_expiry_date', 'is', null)
+      .lte('iqama_expiry_date', iqamaThreshold),
+  ]);
+
+  if (employeesRes.error) throw new Error(employeesRes.error.message);
+  if (vehiclesRes.error) throw new Error(vehiclesRes.error.message);
+  // platform_accounts error is non-fatal — log and continue
+
+  return {
+    employees: (employeesRes.data ?? []) as Record<string, unknown>[],
+    vehicles: (vehiclesRes.data ?? []) as Record<string, string | null>[],
+    platformAccounts: (platformAccountsRes.data ?? []) as Record<string, unknown>[],
+  };
+}
+
 const Alerts = () => {
-  const [localAlerts, setLocalAlerts] = useState<Alert[]>([]);
-  const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState('all');
   const [severityFilter, setSeverityFilter] = useState('all');
   const [crFilter, setCrFilter] = useState('all');
@@ -65,127 +192,42 @@ const Alerts = () => {
   const [deferDialog, setDeferDialog] = useState<Alert | null>(null);
   const [deferDays, setDeferDays] = useState('7');
   const [resolveNote, setResolveNote] = useState('');
+  // resolved/deferred are local-only UI state (no DB persistence needed)
+  const [localOverrides, setLocalOverrides] = useState<Record<string, Partial<Alert>>>({});
+
   const { toast } = useToast();
-  const { enabled } = useAuthQueryGate();
+  const { enabled, userId } = useAuthQueryGate();
+  const uid = authQueryUserId(userId);
   const { settings } = useSystemSettings();
   const iqamaAlertDays = settings?.iqama_alert_days ?? 90;
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (!enabled) return;
-    const fetchAlerts = async () => {
-      setLoading(true);
-      const today = new Date();
-      const endOfCurrentMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      const threshold = format(endOfCurrentMonth, 'yyyy-MM-dd');
-      const iqamaThreshold = format(addDays(today, iqamaAlertDays), 'yyyy-MM-dd');
+  // ── React Query — replaces useEffect + setLoading ─────────────────────────
+  // staleTime: 60s → cached for 60s, no refetch on window focus
+  // refetchInterval: 5min → auto-refreshes every 5 minutes in background
+  const alertsQuery = useQuery({
+    queryKey: ['alerts', uid, iqamaAlertDays] as const,
+    enabled,
+    staleTime: 60_000,
+    refetchInterval: 5 * 60_000, // refresh every 5 minutes (was setInterval 60s before)
+    retry: 2,
+    queryFn: () => fetchAlertsRaw(iqamaAlertDays),
+  });
 
-      const [employeesRes, vehiclesRes, platformAccountsRes] = await Promise.all([
-        supabase
-          .from('employees')
-          .select('id, name, residency_expiry, probation_end_date, city, cities, commercial_record')
-          .eq('status', 'active')
-          .or(`residency_expiry.lte.${threshold},probation_end_date.lte.${threshold}`),
-        supabase
-          .from('vehicles')
-          .select('id, plate_number, insurance_expiry, authorization_expiry')
-          .in('status', ['active', 'maintenance', 'rental'])
-          .or(`insurance_expiry.lte.${threshold},authorization_expiry.lte.${threshold}`),
-        (supabase.from('platform_accounts') as ReturnType<typeof supabase.from>)
-          .select('id, account_username, iqama_expiry_date, app_id, apps(name)')
-          .eq('status', 'active')
-          .not('iqama_expiry_date', 'is', null)
-          .lte('iqama_expiry_date', iqamaThreshold),
-      ]);
+  // Build Alert[] from raw data + merge localOverrides
+  const rawAlerts: Alert[] = alertsQuery.data
+    ? buildAlerts(
+        alertsQuery.data.employees,
+        alertsQuery.data.vehicles,
+        alertsQuery.data.platformAccounts,
+        iqamaAlertDays,
+      )
+    : [];
 
-      const generatedAlerts: Alert[] = [];
+  // Apply local overrides (resolve/defer — stored in component state only)
+  const localAlerts: Alert[] = rawAlerts.map(a => ({ ...a, ...(localOverrides[a.id] ?? {}) }));
 
-      employeesRes.data?.forEach((emp) => {
-        const empRec = emp as Record<string, unknown>;
-        const empDisplay = empAlertName(empRec);
-        const resExpiry = empRec.residency_expiry as string | null;
-        const probEnd = empRec.probation_end_date as string | null;
-        if (resExpiry && resExpiry <= threshold) {
-          const daysLeft = differenceInDays(parseISO(resExpiry), today);
-          generatedAlerts.push({
-            id: `res-${empRec.id}`,
-            type: 'residency',
-            entityName: empDisplay,
-            dueDate: resExpiry,
-            daysLeft,
-            severity: daysLeft < 0 ? 'urgent' : daysLeft <= 7 ? 'urgent' : daysLeft <= 14 ? 'warning' : 'info',
-            resolved: false,
-          });
-        }
-        if (probEnd && probEnd <= threshold) {
-          const daysLeft = differenceInDays(parseISO(probEnd), today);
-          generatedAlerts.push({
-            id: `prob-${empRec.id}`,
-            type: 'probation',
-            entityName: empDisplay,
-            dueDate: probEnd,
-            daysLeft,
-            severity: daysLeft < 0 ? 'info' : daysLeft <= 7 ? 'urgent' : 'warning',
-            resolved: false,
-          });
-        }
-      });
-
-      vehiclesRes.data?.forEach((v) => {
-        const vRec = v as Record<string, string | null>;
-        if (vRec.insurance_expiry && vRec.insurance_expiry <= threshold) {
-          const days = differenceInDays(parseISO(vRec.insurance_expiry), today);
-          generatedAlerts.push({
-            id: `ins-${vRec.id}`,
-            type: 'insurance',
-            entityName: `مركبة ${vRec.plate_number}`,
-            dueDate: vRec.insurance_expiry,
-            daysLeft: days,
-            severity: days < 0 ? 'urgent' : days <= 7 ? 'urgent' : 'warning',
-            resolved: false,
-          });
-        }
-        if (vRec.authorization_expiry && vRec.authorization_expiry <= threshold) {
-          const days = differenceInDays(parseISO(vRec.authorization_expiry), today);
-          generatedAlerts.push({
-            id: `auth-${vRec.id}`,
-            type: 'authorization',
-            entityName: `مركبة ${vRec.plate_number}`,
-            dueDate: vRec.authorization_expiry,
-            daysLeft: days,
-            severity: days < 0 ? 'urgent' : days <= 7 ? 'urgent' : 'warning',
-            resolved: false,
-          });
-        }
-      });
-
-      ((platformAccountsRes.data ?? []) as Record<string, unknown>[]).forEach((acc) => {
-        const iqamaDate = acc.iqama_expiry_date as string | null;
-        if (!iqamaDate) return;
-        const days = differenceInDays(parseISO(iqamaDate), today);
-        const appName = (acc.apps as { name?: string } | null)?.name ?? 'منصة';
-        const expiryFormatted = format(parseISO(iqamaDate), 'dd/MM/yyyy');
-        generatedAlerts.push({
-          id: `pla-${acc.id}`,
-          type: 'platform_account',
-          entityName: `إقامة الحساب ${acc.account_username} على منصة ${appName} ستنتهي في ${expiryFormatted}، قد يتوقف الحساب.`,
-          dueDate: iqamaDate,
-          daysLeft: days,
-          severity: days < 0 ? 'urgent' : days <= 7 ? 'urgent' : days <= 14 ? 'warning' : 'info',
-          resolved: false,
-        });
-      });
-
-      generatedAlerts.sort((a, b) => a.daysLeft - b.daysLeft);
-      setLocalAlerts(generatedAlerts);
-      setLoading(false);
-    };
-
-    void fetchAlerts();
-    const interval = setInterval(() => void fetchAlerts(), 60_000);
-    return () => clearInterval(interval);
-  }, [enabled, iqamaAlertDays]);
-
-  // Extract unique commercial records from alerts
+  // ── Derived state ─────────────────────────────────────────────────────────
   const commercialRecords = [...new Set(
     localAlerts
       .map(a => { const m = a.entityName.match(/سجل: (.+?)(?:$| —)/); return m?.[1] ?? null; })
@@ -200,7 +242,6 @@ const Alerts = () => {
     return matchType && matchSeverity && matchSearch && matchCr && !a.resolved;
   });
 
-  // Residency summary per commercial record
   const residencySummary = commercialRecords.map(cr => {
     const crAlerts = localAlerts.filter(a => a.type === 'residency' && !a.resolved && a.entityName.includes(`سجل: ${cr}`));
     const expired = crAlerts.filter(a => a.daysLeft < 0).length;
@@ -210,9 +251,14 @@ const Alerts = () => {
 
   const resolved = localAlerts.filter(a => a.resolved);
 
+  const urgentCount = filtered.filter(a => a.severity === 'urgent').length;
+  const warningCount = filtered.filter(a => a.severity === 'warning').length;
+  const infoCount = filtered.filter(a => a.severity === 'info').length;
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
   const handleResolve = () => {
     if (!resolveDialog) return;
-    setLocalAlerts(prev => prev.map(a => a.id === resolveDialog.id ? { ...a, resolved: true } : a));
+    setLocalOverrides(prev => ({ ...prev, [resolveDialog.id]: { resolved: true } }));
     toast({ title: 'تم الحسم', description: `تم حسم تنبيه: ${resolveDialog.entityName}` });
     setResolveDialog(null);
     setResolveNote('');
@@ -223,22 +269,24 @@ const Alerts = () => {
     const days = parseInt(deferDays) || 7;
     const newDate = new Date(deferDialog.dueDate);
     newDate.setDate(newDate.getDate() + days);
-    setLocalAlerts(prev => prev.map(a =>
-      a.id === deferDialog.id
-        ? { ...a, daysLeft: a.daysLeft + days, dueDate: newDate.toISOString().split('T')[0] }
-        : a
-    ));
+    setLocalOverrides(prev => ({
+      ...prev,
+      [deferDialog.id]: {
+        daysLeft: deferDialog.daysLeft + days,
+        dueDate: newDate.toISOString().split('T')[0],
+      },
+    }));
     toast({ title: 'تم التأجيل', description: `تم تأجيل التنبيه ${days} يوم` });
     setDeferDialog(null);
     setDeferDays('7');
   };
 
   const handlePrint = () => {
-    const severityLabels2: Record<string, string> = { urgent: 'عاجل', warning: 'تحذير', info: 'معلومة' };
+    const severityLabels2: Record<string, string> = { urgent: 'عاجل', warning: 'تحذير', info: 'معلومات' };
     const rows = filtered.map(a => `<tr><td>${escapeHtml(alertTypeLabels[a.type] || a.type)}</td><td>${escapeHtml(a.entityName)}</td><td>${escapeHtml(a.dueDate || '—')}</td><td style="text-align:center">${escapeHtml(String(a.daysLeft ?? '—'))}</td><td style="text-align:center;font-weight:700;color:${a.severity === 'urgent' ? '#dc2626' : a.severity === 'warning' ? '#d97706' : '#2563eb'}">${escapeHtml(severityLabels2[a.severity] || a.severity)}</td></tr>`).join('');
     const printWindow = globalThis.open('', '_blank');
     if (!printWindow) return;
-    printWindow.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"/><title>تقرير التنبيهات</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;direction:rtl;color:#111;background:#fff}h2{text-align:center;margin-bottom:8px;font-size:15px}p.sub{text-align:center;color:#666;font-size:11px;margin-bottom:12px}table{width:100%;border-collapse:collapse}th{background:#1e3a5f;color:#fff;padding:6px 8px;text-align:right;font-size:10px}td{padding:5px 8px;border-bottom:1px solid #e0e0e0;text-align:right}tr:nth-child(even) td{background:#f9f9f9}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><h2>تقرير التنبيهات التلقائية</h2><p class="sub">المجموع: ${filtered.length} تنبيه — ${new Date().toLocaleDateString('ar-SA')}</p><table><thead><tr><th>النوع</th><th>الجهة</th><th>تاريخ الاستحقاق</th><th>المتبقي (يوم)</th><th>الأولوية</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}<` + `/script></body></html>`);
+    printWindow.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"/><title>تقرير التنبيهات</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;direction:rtl;color:#111;background:#fff}h2{text-align:center;margin-bottom:8px;font-size:15px}p.sub{text-align:center;color:#666;font-size:11px;margin-bottom:12px}table{width:100%;border-collapse:collapse}th{background:#1e3a5f;color:#fff;padding:6px 8px;text-align:right;font-size:10px}td{padding:5px 8px;border-bottom:1px solid #e0e0e0;text-align:right}tr:nth-child(even) td{background:#f9f9f9}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><h2>تقرير التنبيهات التلقائية</h2><p class="sub">المجموع: ${filtered.length} تنبيه — ${new Date().toLocaleDateString('ar-SA')}</p><table><thead><tr><th>النوع</th><th>الكيان</th><th>تاريخ الاستحقاق</th><th>المتبقي (يوم)</th><th>الأولوية</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}<` + `/script></body></html>`);
     printWindow.document.close();
   };
 
@@ -251,7 +299,7 @@ const Alerts = () => {
       .map(a => ({
         'الأولوية': severityLabels[a.severity] || a.severity,
         'النوع': alertTypeLabels[a.type] || a.type,
-        'الجهة': a.entityName,
+        'الكيان': a.entityName,
         'تاريخ الاستحقاق': a.dueDate,
         'المتبقي (يوم)': a.daysLeft,
         'الحالة': a.resolved ? 'محسوم' : 'نشط',
@@ -264,7 +312,7 @@ const Alerts = () => {
 
   const handleDownloadTemplate = async () => {
     const XLSX = await loadXlsx();
-    const headers = [['النوع', 'الجهة', 'تاريخ الاستحقاق', 'المتبقي (يوم)', 'الأولوية']];
+    const headers = [['النوع', 'الكيان', 'تاريخ الاستحقاق', 'المتبقي (يوم)', 'الأولوية']];
     const ws = XLSX.utils.aoa_to_sheet(headers);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'قالب');
@@ -272,9 +320,6 @@ const Alerts = () => {
   };
 
   const typeOptions = ['all', 'residency', 'insurance', 'authorization', 'probation', 'platform_account'];
-  const urgentCount = filtered.filter(a => a.severity === 'urgent').length;
-  const warningCount = filtered.filter(a => a.severity === 'warning').length;
-  const infoCount = filtered.filter(a => a.severity === 'info').length;
 
   if (!enabled) return null;
 
@@ -290,23 +335,42 @@ const Alerts = () => {
           <div>
             <h1 className="page-title flex items-center gap-2"><Bell size={20} /> التنبيهات التلقائية</h1>
             <p className="page-subtitle">
-              {loading ? 'جارٍ التحميل...' : `${filtered.length} تنبيه نشط — ${urgentCount} عاجل`}
+              {alertsQuery.isLoading ? 'جارٍ التحميل...' : `${filtered.length} تنبيه نشط — ${urgentCount} عاجل`}
             </p>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5 h-9"><Download size={14} /> البيانات ▾</Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => void handleExport()}>📊 تصدير Excel (مرتب حسب الأولوية)</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => void handleDownloadTemplate()}>📋 تحميل القالب</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handlePrint}>🖨️ طباعة الجدول</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+            {alertsQuery.isFetching && !alertsQuery.isLoading && (
+              <span className="text-xs text-muted-foreground animate-pulse">جارٍ التحديث…</span>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5 h-9"><Download size={14} /> البيانات ▾</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => void handleExport()}>📊 تصدير Excel (مرتب حسب الأولوية)</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => void handleDownloadTemplate()}>📥 تحميل القالب</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handlePrint}>🖨️ طباعة التقرير</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => void queryClient.invalidateQueries({ queryKey: ['alerts', uid, iqamaAlertDays] })}>
+                  🔄 تحديث الآن
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
+
+      {/* Error state */}
+      {alertsQuery.isError && !alertsQuery.isLoading && (
+        <QueryErrorRetry
+          error={alertsQuery.error}
+          onRetry={() => void alertsQuery.refetch()}
+          title="تعذر تحميل بيانات التنبيهات"
+          hint="تحقق من الاتصال بالإنترنت أو أعد المحاولة."
+        />
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         <div className="stat-card border-r-4 border-r-destructive cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSeverityFilter(severityFilter === 'urgent' ? 'all' : 'urgent')}>
@@ -322,10 +386,10 @@ const Alerts = () => {
         <div className="stat-card border-r-4 border-r-info cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSeverityFilter(severityFilter === 'info' ? 'all' : 'info')}>
           <p className="text-sm text-muted-foreground">معلومات</p>
           <p className="text-3xl font-bold text-info mt-1">{infoCount}</p>
-          <p className="text-xs text-muted-foreground mt-1">للاطلاع</p>
+          <p className="text-xs text-muted-foreground mt-1">للعلم</p>
         </div>
         <div className="stat-card border-r-4 border-r-success">
-          <p className="text-sm text-muted-foreground">تم حسمه</p>
+          <p className="text-sm text-muted-foreground">تم حسمها</p>
           <p className="text-3xl font-bold text-success mt-1">{resolved.length}</p>
           <p className="text-xs text-muted-foreground mt-1">تنبيهات محسومة</p>
         </div>
@@ -338,7 +402,7 @@ const Alerts = () => {
             <Input placeholder="بحث بالاسم..." className="pr-9" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <div className="flex gap-2 flex-wrap">
-            {[{ v: 'all', l: 'الكل' }, { v: 'urgent', l: '🔴 عاجل' }, { v: 'warning', l: '🟠 تحذير' }, { v: 'info', l: '🔵 معلومات' }].map(s => (
+            {[{ v: 'all', l: 'الكل' }, { v: 'urgent', l: '🔴 عاجل' }, { v: 'warning', l: '🟡 تحذير' }, { v: 'info', l: '🔵 معلومات' }].map(s => (
               <button key={s.v} onClick={() => setSeverityFilter(s.v)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${severityFilter === s.v ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}>
                 {s.l}
@@ -350,7 +414,7 @@ const Alerts = () => {
           {typeOptions.map(t => (
             <button key={t} onClick={() => setTypeFilter(t)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${typeFilter === t ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}>
-              {t === 'all' ? 'كل الأنواع' : `${typeIcons[t] || '📌'} ${alertTypeLabels[t] || t}`}
+              {t === 'all' ? 'كل الأنواع' : `${typeIcons[t] || '🔔'} ${alertTypeLabels[t] || t}`}
             </button>
           ))}
         </div>
@@ -384,8 +448,8 @@ const Alerts = () => {
                 </div>
                 <div className="flex gap-2 text-[10px]">
                   {s.expired > 0 && <span className="text-destructive font-semibold">🔴 {s.expired} منتهية</span>}
-                  {s.urgent > 0 && <span className="text-warning font-semibold">🟠 {s.urgent} قريبة</span>}
-                  {s.expired === 0 && s.urgent === 0 && <span className="text-success">✅ كلها بخير</span>}
+                  {s.urgent > 0 && <span className="text-warning font-semibold">🟡 {s.urgent} قريبة</span>}
+                  {s.expired === 0 && s.urgent === 0 && <span className="text-success">✅ كلها بعيدة</span>}
                 </div>
               </div>
             ))}
@@ -394,15 +458,15 @@ const Alerts = () => {
       )}
 
       <div className="space-y-3">
-        {loading ? (
+        {alertsQuery.isLoading ? (
           <div className="bg-card rounded-xl border border-border/50 p-12 text-center">
             <p className="text-muted-foreground">جارٍ تحميل التنبيهات...</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="bg-card rounded-xl border border-border/50 p-12 text-center">
             <CheckCircle size={40} className="mx-auto text-success mb-3" />
-            <p className="text-muted-foreground">لا توجد تنبيهات مطابقة</p>
-            <p className="text-xs text-muted-foreground mt-1">جميع المستندات سارية المفعول ✅</p>
+            <p className="text-muted-foreground">لا توجد تنبيهات مفعّلة</p>
+            <p className="text-xs text-muted-foreground mt-1">جميع المستندات سارية المفعول ✅.</p>
           </div>
         ) : [...filtered].sort((a, b) => {
           const order: Record<string, number> = { urgent: 0, warning: 1, info: 2 };
@@ -410,7 +474,7 @@ const Alerts = () => {
         }).map(a => (
           <div key={a.id} className={`bg-card rounded-xl border shadow-card p-4 flex items-center gap-4 hover:shadow-md transition-shadow ${a.severity === 'urgent' ? 'border-destructive/30' : a.severity === 'warning' ? 'border-warning/30' : 'border-border/50'}`}>
             <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${a.severity === 'urgent' ? 'bg-destructive/10' : a.severity === 'warning' ? 'bg-warning/10' : 'bg-info/10'}`}>
-              {typeIcons[a.type] || '📌'}
+              {typeIcons[a.type] || '🔔'}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
@@ -444,7 +508,7 @@ const Alerts = () => {
           <div className="space-y-2">
             {resolved.map(a => (
               <div key={a.id} className="bg-muted/30 rounded-xl border border-border/30 p-3 flex items-center gap-3 opacity-60">
-                <span className="text-lg">{typeIcons[a.type] || '📌'}</span>
+                <span className="text-lg">{typeIcons[a.type] || '🔔'}</span>
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground">{alertTypeLabels[a.type] || a.type} — {a.entityName}</p>
                 </div>
@@ -465,7 +529,7 @@ const Alerts = () => {
             </div>
             <div className="space-y-2">
               <Label>ملاحظة (اختياري)</Label>
-              <Textarea placeholder="أدخل ملاحظة..." value={resolveNote} onChange={e => setResolveNote(e.target.value)} rows={3} />
+              <Textarea placeholder="اكتب ملاحظة..." value={resolveNote} onChange={e => setResolveNote(e.target.value)} rows={3} />
             </div>
           </div>
           <DialogFooter className="gap-2">
@@ -495,7 +559,7 @@ const Alerts = () => {
                   </button>
                 ))}
               </div>
-              <Input type="number" value={deferDays} onChange={e => setDeferDays(e.target.value)} placeholder="أو أدخل عدد مخصص" />
+              <Input type="number" value={deferDays} onChange={e => setDeferDays(e.target.value)} placeholder="أو اكتب عدد مخصص" />
             </div>
           </div>
           <DialogFooter className="gap-2">
