@@ -481,23 +481,62 @@ export const salaryService = {
   },
 
   getMonthRecordsForSalaryContext: async (monthYear: string) => {
-    const primarySelect = 'employee_id, is_approved, base_salary, allowances, advance_deduction, net_salary, manual_deduction, attendance_deduction, external_deduction, payment_method, sheet_snapshot';
-    let { data, error } = await supabase
-      .from('salary_records')
-      .select(primarySelect)
-      .eq('month_year', monthYear);
+    // FIX: paginate to bypass Supabase's default 1000-row limit.
+    // Companies with 1000+ employees had approved records silently dropped,
+    // causing them to appear as "pending" on the salary page.
+    const PAGE_SIZE = 1000;
+    type SalaryRecordContextRow = {
+      employee_id: string;
+      is_approved: boolean;
+      base_salary: number | null;
+      allowances: number | null;
+      advance_deduction: number | null;
+      net_salary: number | null;
+      manual_deduction: number | null;
+      attendance_deduction: number | null;
+      external_deduction: number | null;
+      payment_method: string | null;
+      sheet_snapshot: unknown | null;
+    };
 
-    if (error && String(error.message || '').includes('sheet_snapshot')) {
-      const fallback = await supabase
+    const primarySelect = 'employee_id, is_approved, base_salary, allowances, advance_deduction, net_salary, manual_deduction, attendance_deduction, external_deduction, payment_method, sheet_snapshot';
+    const fallbackSelect = 'employee_id, is_approved, base_salary, allowances, advance_deduction, net_salary, manual_deduction, attendance_deduction, external_deduction, payment_method';
+
+    let useFallback = false;
+
+    // Try first page with sheet_snapshot to detect column availability
+    {
+      const { error } = await supabase
         .from('salary_records')
-        .select('employee_id, is_approved, base_salary, allowances, advance_deduction, net_salary, manual_deduction, attendance_deduction, external_deduction, payment_method')
-        .eq('month_year', monthYear);
-      data = (fallback.data ?? []).map(r => ({ ...r, sheet_snapshot: null })) as typeof data;
-      error = fallback.error;
+        .select(primarySelect)
+        .eq('month_year', monthYear)
+        .range(0, 0); // just 1 row to test column existence
+      if (error && String(error.message || '').includes('sheet_snapshot')) {
+        useFallback = true;
+      } else if (error) {
+        handleSupabaseError(error, 'salaryService.getMonthRecordsForSalaryContext');
+      }
     }
 
-    if (error) handleSupabaseError(error, 'salaryService.getMonthRecordsForSalaryContext');
-    return data ?? [];
+    const selectStr = useFallback ? fallbackSelect : primarySelect;
+    const allRows: SalaryRecordContextRow[] = [];
+    let offset = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('salary_records')
+        .select(selectStr)
+        .eq('month_year', monthYear)
+        .range(offset, offset + PAGE_SIZE - 1);
+      if (error) handleSupabaseError(error, 'salaryService.getMonthRecordsForSalaryContext');
+      const rows = useFallback
+        ? ((data ?? []) as Omit<SalaryRecordContextRow, 'sheet_snapshot'>[]).map(r => ({ ...r, sheet_snapshot: null }))
+        : ((data ?? []) as SalaryRecordContextRow[]);
+      allRows.push(...rows);
+      hasMore = (data?.length ?? 0) === PAGE_SIZE;
+      offset += PAGE_SIZE;
+    }
+    return allRows;
   },
 
   getByEmployee: async (employeeId: string) => {

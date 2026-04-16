@@ -187,14 +187,43 @@ export const employeeService = {
   },
 
   async getActiveForSalaryContext() {
-    const { data, error } = await supabase
-      .from('employees')
-      .select(
-        'id, name, job_title, national_id, salary_type, base_salary, iban, city, preferred_language, phone, sponsorship_status, probation_end_date, status'
-      )
-      .order('name');
-    if (error) throw toServiceError(error, 'employeeService.getActiveForSalaryContext');
-    return data ?? [];
+    // FIX: paginate to bypass Supabase's default 1000-row limit.
+    // The salary page needs every employee — companies with 1000+ employees
+    // were silently losing employees beyond row 1000.
+    const PAGE_SIZE = 1000;
+    type EmployeeSalaryContextRow = {
+      id: string;
+      name: string;
+      job_title: string | null;
+      national_id: string | null;
+      salary_type: string | null;
+      base_salary: number | null;
+      iban: string | null;
+      city: string | null;
+      preferred_language: string | null;
+      phone: string | null;
+      sponsorship_status: string | null;
+      probation_end_date: string | null;
+      status: string | null;
+    };
+    const allRows: EmployeeSalaryContextRow[] = [];
+    let offset = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('employees')
+        .select(
+          'id, name, job_title, national_id, salary_type, base_salary, iban, city, preferred_language, phone, sponsorship_status, probation_end_date, status'
+        )
+        .order('name')
+        .range(offset, offset + PAGE_SIZE - 1);
+      if (error) throw toServiceError(error, 'employeeService.getActiveForSalaryContext');
+      const rows = (data ?? []) as EmployeeSalaryContextRow[];
+      allRows.push(...rows);
+      hasMore = rows.length === PAGE_SIZE;
+      offset += PAGE_SIZE;
+    }
+    return allRows;
   },
 
   async getActiveSalarySchemes() {

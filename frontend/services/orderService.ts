@@ -152,13 +152,32 @@ export const orderService = {
     const from = `${year}-${month}-01`;
     const lastDay = new Date(Number(year), Number(month), 0).getDate();
     const to = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
-    const { data, error } = await supabase
-      .from('daily_orders')
-      .select('employee_id, app_id, orders_count, apps(name, id)')
-      .gte('date', from)
-      .lte('date', to);
-    if (error) throw toServiceError(error, 'orderService.getSalaryContextOrdersByMonth');
-    return data ?? [];
+    // FIX: paginate to bypass Supabase's default 1000-row limit.
+    // A month can have 50 employees × 3 apps × 30 days = ~4500 rows.
+    const PAGE_SIZE = 1000;
+    type OrderSalaryContextRow = {
+      employee_id: string;
+      app_id: string;
+      orders_count: number;
+      apps: { name: string; id: string } | null;
+    };
+    const allRows: OrderSalaryContextRow[] = [];
+    let offset = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('daily_orders')
+        .select('employee_id, app_id, orders_count, apps(name, id)')
+        .gte('date', from)
+        .lte('date', to)
+        .range(offset, offset + PAGE_SIZE - 1);
+      if (error) throw toServiceError(error, 'orderService.getSalaryContextOrdersByMonth');
+      const rows = (data ?? []) as OrderSalaryContextRow[];
+      allRows.push(...rows);
+      hasMore = rows.length === PAGE_SIZE;
+      offset += PAGE_SIZE;
+    }
+    return allRows;
   },
 
   getByDate: async (date: string, filters: Pick<OrderFilter, 'employeeId' | 'appId'> = {}) => {
