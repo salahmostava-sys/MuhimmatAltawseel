@@ -135,12 +135,10 @@ const Salaries = () => {
   } = useSalaryData({ selectedMonth, salariesDraftKey });
 
   // Sync fetched data into local state when React Query resolves.
-  // Runs on phase1 finish, phase2 finish, and when real data replaces placeholder.
+  // Runs on phase1 finish AND phase2 finish (rows update silently with preview).
   // rows lives in local state because useSalaryActions mutates it (dirty/approve/etc.)
-  // NOTE: we do NOT update rows when isShowingPlaceholder — those are stale rows
-  // from a previous month and should not be mutated or exported.
   useEffect(() => {
-    if (!loadingData && !isShowingPlaceholder && hydratedRows.length >= 0) {
+    if (!loadingData && hydratedRows.length >= 0) {
       setRows(hydratedRows);
       setEmpPlatformScheme(builtEmpPlatformScheme);
       setSalaryMeta({
@@ -152,7 +150,7 @@ const Salaries = () => {
     }
     // hydratedRows identity changes each query result — intentional dep
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadingData, isShowingPlaceholder, hydratedRows]);
+  }, [loadingData, hydratedRows]);
 
   // Show fetch error in toast (phase 1 errors only — phase 2 errors show inline)
   useEffect(() => {
@@ -306,9 +304,9 @@ const Salaries = () => {
         viewMode={viewMode}
         setViewMode={setViewMode}
         pendingCount={pendingCount}
-        canEdit={permissions.can_edit && !isShowingPlaceholder}
+        canEdit={permissions.can_edit}
         approveAll={actions.approveAll}
-        salaryActionLoading={salaryActionLoading || isShowingPlaceholder}
+        salaryActionLoading={salaryActionLoading}
         salaryToolbarImportRef={salaryToolbarImportRef}
         onSalaryToolbarImportChange={actions.onSalaryToolbarImportChange}
         runExportExcel={actions.runExportExcel}

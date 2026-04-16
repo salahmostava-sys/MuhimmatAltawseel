@@ -35,8 +35,8 @@ import type { SalaryRow, SchemeData, SortDir } from '@modules/salaries/types/sal
 import { getSalaryRowActivityTotals, hasPlatformActivity } from '@modules/salaries/model/salaryUtils';
 
 // ── Style constants ───────────────────────────────────────────────────────────
-const thFrozenBase = "px-3 py-2 text-xs font-semibold text-muted-foreground whitespace-nowrap border border-border/40 bg-muted/60 text-right sticky z-20";
-const thBase = "px-3 py-2 text-xs font-semibold text-muted-foreground whitespace-nowrap border border-border/40 bg-muted/50 text-center";
+const thFrozenBase = "px-3 py-2 text-xs font-semibold text-muted-foreground whitespace-nowrap border border-border/40 bg-card text-right sticky z-20";
+const thBase = "px-3 py-2 text-xs font-semibold text-muted-foreground whitespace-nowrap border border-border/40 bg-card text-center";
 const tdClass = "px-3 py-2 text-xs whitespace-nowrap text-center border border-border/40 text-foreground";
 const tfClass = "px-3 py-2 text-xs font-bold whitespace-nowrap text-center border border-border/40 bg-muted/60 text-foreground";
 const stickyLeft = (offset: number) => ({ left: offset });
@@ -328,7 +328,8 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
     count: filtered.length,
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: () => ROW_HEIGHT,
-    overscan: 8, // render 8 extra rows above/below viewport for smooth scrolling
+    overscan: 5,           // 5 rows above/below — enough for smooth scroll, less DOM work
+    scrollingDelay: 60,    // ms — pause before rendering new rows during fast scroll (reduces jank)
   });
 
   const virtualRows = rowVirtualizer.getVirtualItems();
@@ -354,28 +355,29 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
   return (
     <div className="rounded-xl shadow-card bg-card overflow-hidden">
       {/* Scroll container — useVirtualizer reads its scrollTop */}
-      <div ref={scrollContainerRef} className="overflow-auto" style={{ maxHeight: '75vh' }}>
+      <div ref={scrollContainerRef} className="overflow-auto" style={{ maxHeight: '75vh', contain: 'strict' }}>
         <table className="text-sm border-collapse" style={{ minWidth: 1800 }}>
-          {/* ── Header — sticky at top, always visible ── */}
-          <thead className="sticky top-0 z-30">
-            <tr className="bg-muted/70 border-b border-border/50">
+          {/* ── Header — sticky at top ── */}
+          {/* bg-card is solid (not opacity-based) so it covers rows scrolling beneath */}
+          <thead className="sticky top-0 z-30" style={{ backgroundColor: 'hsl(var(--card))' }}>
+            <tr className="border-b border-border/50" style={{ backgroundColor: 'hsl(var(--card))' }}>
               <th className={`${thFrozenBase} w-10 text-center`} style={stickyLeft(0)}>#</th>
               <th colSpan={3} className={`${thFrozenBase} border-l border-border/50`} style={stickyLeft(40)}>بيانات المندوب</th>
               <th colSpan={3} className="px-3 py-2 text-xs font-semibold text-info whitespace-nowrap border-b border-border/40 bg-info/10 text-center border-l border-border/40">📊 بيانات المندوب الشهرية</th>
               {platforms.length > 0 && (
-                <th colSpan={platforms.length} className="px-3 py-2 text-xs font-semibold text-primary whitespace-nowrap border-b border-border/50 bg-muted/40 text-center border-l border-border/50">
+                <th colSpan={platforms.length} className="px-3 py-2 text-xs font-semibold text-primary whitespace-nowrap border-b border-border/50 text-center border-l border-border/50" style={{ backgroundColor: 'hsl(var(--card))' }}>
                   المنصات (طلبات أو دوام / راتب، ونقر مزدوج لتعديل الطلبات في منصات الطلب فقط)
                 </th>
               )}
               <th colSpan={2} className="px-3 py-2 text-xs font-semibold text-primary whitespace-nowrap border-b border-border/40 bg-primary/10 text-center border-l border-border/40">إجمالي النشاط + الراتب الأساسي</th>
               <th colSpan={4} className="px-3 py-2 text-xs font-semibold text-success whitespace-nowrap border-b border-border/40 bg-success/10 text-center border-l border-border/40">✅ الإضافات</th>
               <th colSpan={dedColCount} className="px-3 py-2 text-xs font-semibold text-destructive whitespace-nowrap border-b border-border/40 bg-destructive/10 text-center border-l border-border/40">🔻 المستقطعات</th>
-              <th colSpan={1} className="px-3 py-2 text-xs font-semibold text-success whitespace-nowrap border-b border-border/40 bg-muted/40 text-center border-l border-border/40">المستحق</th>
-              <th colSpan={2} className="px-3 py-2 text-xs font-semibold text-muted-foreground whitespace-nowrap border-b border-border/40 bg-muted/40 text-center border-l border-border/40">معلومات الصرف</th>
-              <th colSpan={2} className="px-3 py-2 text-xs font-semibold text-muted-foreground whitespace-nowrap border-b border-border/40 bg-muted/40 text-center border-l border-border/40">الفرع وطريقة الصرف</th>
-              <th colSpan={1} className="px-3 py-2 text-xs font-semibold text-muted-foreground whitespace-nowrap border-b border-border/40 bg-muted/40 text-center border-l border-border/40">الإجراءات</th>
+              <th colSpan={1} className="px-3 py-2 text-xs font-semibold text-success whitespace-nowrap border-b border-border/40 text-center border-l border-border/40" style={{ backgroundColor: 'hsl(var(--card))' }}>المستحق</th>
+              <th colSpan={2} className="px-3 py-2 text-xs font-semibold text-muted-foreground whitespace-nowrap border-b border-border/40 text-center border-l border-border/40" style={{ backgroundColor: 'hsl(var(--card))' }}>معلومات الصرف</th>
+              <th colSpan={2} className="px-3 py-2 text-xs font-semibold text-muted-foreground whitespace-nowrap border-b border-border/40 text-center border-l border-border/40" style={{ backgroundColor: 'hsl(var(--card))' }}>الفرع وطريقة الصرف</th>
+              <th colSpan={1} className="px-3 py-2 text-xs font-semibold text-muted-foreground whitespace-nowrap border-b border-border/40 text-center border-l border-border/40" style={{ backgroundColor: 'hsl(var(--card))' }}>الإجراءات</th>
             </tr>
-            <tr className="bg-muted/50">
+            <tr style={{ backgroundColor: 'hsl(var(--card))' }}>
               <th className={`${thFrozenBase} w-10 text-center`} style={stickyLeft(0)}>#</th>
               <th className={`${thFrozenBase} w-32 cursor-pointer hover:text-foreground select-none`} style={stickyLeft(40)} onClick={() => handleSort('employeeName')}>
                 الاسم <SalarySortIcon field="employeeName" sortField={sortField} sortDir={sortDir} />
