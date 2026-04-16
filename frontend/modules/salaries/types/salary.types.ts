@@ -75,18 +75,7 @@ export type OrderWithAppRow = {
   orders_count: number;
   apps?: { name?: string | null } | null;
 };
-
-export const buildOrdersMap = (rows: OrderWithAppRow[] | null | undefined) => {
-  const ordMap: Record<string, Record<string, number>> = {};
-  (rows || []).forEach((r) => {
-    // Supabase returns foreign key relationship as object (not array)
-    const appName = r.apps?.name;
-    if (!appName) return;
-    if (!ordMap[r.employee_id]) ordMap[r.employee_id] = {};
-    ordMap[r.employee_id][appName] = (ordMap[r.employee_id][appName] || 0) + r.orders_count;
-  });
-  return ordMap;
-};
+// buildOrdersMap lives in salaryDomain.ts — do not duplicate here.
 
 export type AppWithSchemeRow = {
   id: string;

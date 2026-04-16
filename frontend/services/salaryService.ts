@@ -525,8 +525,17 @@ export const salaryService = {
       .from('salary_records')
       .upsert(records as never, { onConflict: 'employee_id,month_year' });
 
+    // FIX B5: log a warning when falling back so data loss is visible in monitoring.
+    // The fallback strips sheet_snapshot only when the column genuinely doesn't exist yet
+    // (schema migration pending). If the column exists but data is malformed, the second
+    // upsert will also fail and the error will surface normally.
     if (error && String(error.message || '').includes('sheet_snapshot')) {
-      const fallbackRecords = records.map(({ sheet_snapshot: _sheet_snapshot, ...record }) => record);
+      console.warn(
+        '[salaryService.upsertMany] sheet_snapshot column not found — falling back without it. ' +
+        'Run pending DB migrations to restore full snapshot persistence.',
+        { recordCount: records.length, originalError: error.message }
+      );
+      const fallbackRecords = records.map(({ sheet_snapshot: _s, ...record }) => record);
       ({ error } = await supabase
         .from('salary_records')
         .upsert(fallbackRecords as never, { onConflict: 'employee_id,month_year' }));

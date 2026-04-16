@@ -1,5 +1,6 @@
 import { Wallet, TrendingUp, Users, Building2 } from 'lucide-react';
 import { SalaryEngineStatusBadge } from '@modules/salaries/components/SalaryEngineStatusBadge';
+import { isAdministrativeJobTitle } from '@modules/salaries/model/salaryUtils';
 import type { SalaryRow } from '@modules/salaries/types/salary.types';
 
 interface SalaryMonthSelectorProps {
@@ -78,8 +79,10 @@ export function SalarySummaryCards(props: Readonly<SalarySummaryCardsProps>) {
       })}
 
       {(() => {
+        // FIX B3: use isAdministrativeJobTitle() instead of hardcoded string comparison.
+        // Direct string match misses any title not in the exact list.
         const adminTotal = filtered
-          .filter(r => r.jobTitle !== 'مندوب توصيل' && r.jobTitle !== 'Delivery Rider')
+          .filter(r => isAdministrativeJobTitle(r.jobTitle))
           .reduce((s, r) => s + computeRow(r).netSalary, 0);
         return (
           <div className="bg-card border-t-4 border-muted-foreground/30 rounded-xl p-4 shadow-card">

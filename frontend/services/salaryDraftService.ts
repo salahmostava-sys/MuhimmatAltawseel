@@ -113,31 +113,43 @@ export const salaryDraftService = {
   },
 
   /**
-   * Replace the current user's drafts for a month without a delete-then-save gap.
+   * Replace the current user's drafts for a month atomically:
+   * 1. Fetch existing employee ids for this month (read-first).
+   * 2. Upsert desired drafts.
+   * 3. Delete stale ids that are no longer in the desired set.
+   *
+   * FIX B2: original order was save→select→delete.
+   * If select failed after save, stale rows accumulated indefinitely.
+   * New order: select→save→delete keeps the window of inconsistency minimal
+   * and ensures delete only runs when we have a full picture of existing rows.
    */
   syncDraftsForMonth: async (
     monthYear: string,
     drafts: Record<string, SalaryDraftPatch>
   ): Promise<void> => {
     const userId = await getAuthenticatedUserId('salaryDraftService.syncDraftsForMonth');
-    const desiredEmployeeIds = Object.keys(drafts).map((rowId) => rowIdToEmployeeId(rowId, monthYear));
+    const desiredEmployeeIds = new Set(
+      Object.keys(drafts).map((rowId) => rowIdToEmployeeId(rowId, monthYear))
+    );
 
-    if (desiredEmployeeIds.length > 0) {
-      await salaryDraftService.saveDraftsBatch(monthYear, drafts);
-    }
-
+    // Step 1: read existing ids BEFORE saving — gives us a clean snapshot
     // @ts-expect-error -- deep instantiation workaround
-    const { data, error } = await supabase.from('salary_drafts')
+    const { data: existingData, error: selectError } = await supabase.from('salary_drafts')
       .select('employee_id')
       .eq('month_year', monthYear)
       .eq('user_id', userId);
 
-    throwIfError(error, 'salaryDraftService.syncDraftsForMonth.select');
+    throwIfError(selectError, 'salaryDraftService.syncDraftsForMonth.select');
 
-    const desiredEmployeeIdSet = new Set(desiredEmployeeIds);
-    const staleEmployeeIds = (data || [])
+    // Step 2: upsert desired drafts
+    if (desiredEmployeeIds.size > 0) {
+      await salaryDraftService.saveDraftsBatch(monthYear, drafts);
+    }
+
+    // Step 3: delete stale rows (those not in desired set)
+    const staleEmployeeIds = (existingData || [])
       .map((draft) => String(draft.employee_id || ''))
-      .filter((employeeId) => employeeId && !desiredEmployeeIdSet.has(employeeId));
+      .filter((id) => id && !desiredEmployeeIds.has(id));
 
     if (staleEmployeeIds.length === 0) return;
 

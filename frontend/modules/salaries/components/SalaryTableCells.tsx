@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useState, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { getOrdersCellBackground } from '@modules/salaries/lib/salaryConstants';
 import { getPlatformActivitySummary, getPrimaryPlatformActivityCount } from '@modules/salaries/model/salaryUtils';
 import type { PlatformSalaryMetric, SalaryRow, SchemeData } from '@modules/salaries/types/salary.types';
@@ -133,14 +133,24 @@ export const PlatformOrderCell = ({
   const activitySummary = getPlatformActivitySummary(metric);
   const orders = primaryCount;
 
-  const handleBlur = (value: number) => {
-    updatePlatformOrders(rowId, platformName, value);
+  // FIX B4: store input value in a ref updated on every onChange.
+  // onBlur reads from the ref — not from e.target.value — which can be stale
+  // on some browsers when blur is triggered by Tab/Shift+Tab before the input
+  // has fully committed its value to the DOM.
+  const inputValueRef = useRef<number>(ordersForScheme);
+
+  const handleBlur = () => {
+    updatePlatformOrders(rowId, platformName, inputValueRef.current);
     setEditingCell(null);
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-    if (e.key === 'Escape') setEditingCell(null);
+    if (e.key === 'Escape') {
+      // Revert ref to original value on Escape so blur doesn't commit
+      inputValueRef.current = ordersForScheme;
+      setEditingCell(null);
+    }
   };
 
   let salaryMeta: ReactNode = null;
@@ -180,7 +190,8 @@ export const PlatformOrderCell = ({
           defaultValue={ordersForScheme}
           className="w-16 text-center border rounded px-1 py-0.5 text-xs bg-background"
           style={{ borderColor: pc?.focusBorder }}
-          onBlur={e => handleBlur(Number(e.target.value))}
+          onChange={e => { inputValueRef.current = Number(e.target.value); }}
+          onBlur={handleBlur}
           onKeyDown={handleKeyDown}
         />
       ) : (
