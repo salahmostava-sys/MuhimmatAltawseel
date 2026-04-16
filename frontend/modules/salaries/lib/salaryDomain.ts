@@ -2,7 +2,7 @@ import {
   salaryService,
   type PricingRule,
   type SalaryPreviewPlatformBreakdown,
-  type SalarySchemeTier,
+  type SalarySchemeTier as _SalarySchemeTier,
 } from '@services/salaryService';
 import { salaryDataService } from '@services/salaryDataService';
 import { salaryDraftService } from '@services/salaryDraftService';
@@ -352,10 +352,10 @@ export const buildSalaryRows = ({
   employees,
   selectedMonth,
   platformNames,
-  appNameToId,
+  appNameToId: _appNameToId,
   appWorkTypeMap,
-  rulesMap,
-  appSchemeMap,
+  rulesMap: _rulesMap,
+  appSchemeMap: _appSchemeMap,
   ordMap,
   attendanceDaysMap,
   savedMap,

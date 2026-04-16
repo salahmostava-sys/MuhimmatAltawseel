@@ -16,7 +16,7 @@
  * - Only rows within the scroll viewport are in the DOM
  * - Ctrl+F browser search won't find off-screen rows (acceptable trade-off)
  */
-import { useMemo, useRef, memo, useCallback, type MutableRefObject } from 'react';
+import { useMemo, useRef, memo, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Button } from '@shared/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@shared/components/ui/tooltip';
@@ -81,7 +81,7 @@ const SalaryRowCells = memo(function SalaryRowCells({
   c,
   platforms,
   platformColors,
-  appCustomColumns,
+  appCustomColumns: _appCustomColumns,
   allCustomCols,
   empPlatformScheme,
   editingCell,

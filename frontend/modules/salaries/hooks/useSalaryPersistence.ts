@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+﻿import { useCallback, useState } from 'react';
 import { isEmployeeIdUuid, isValidSalaryMonthYear } from '@shared/lib/salaryValidation';
 import { salaryDataService } from '@services/salaryDataService';
 import { employeeService } from '@services/employeeService';
@@ -12,7 +12,7 @@ import { logError } from '@shared/lib/logger';
 
 import { toast as sonnerToast } from '@shared/components/ui/sonner';
 
-// ─── Params ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Params â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface UseSalaryPersistenceParams {
   rows: SalaryRow[];
@@ -29,11 +29,11 @@ export interface UseSalaryPersistenceParams {
   setEmployeeFieldSaving: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
-// ─── Hook ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Hook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
   const {
-    rows,
+    rows: _rows,
     setRows,
     filtered,
     selectedMonth,
@@ -47,7 +47,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
     setEmployeeFieldSaving,
   } = params;
 
-  const { run } = useSafeAction({ toast, errorTitle: 'حدث خطأ' });
+  const { run } = useSafeAction({ toast, errorTitle: 'Ø­Ø¯Ø« Ø®Ø·Ø£' });
 
   const [approvingRowId, setApprovingRowId] = useState<string | null>(null);
 
@@ -65,7 +65,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
     });
   }, [selectedMonth]);
 
-  // ── Row updater (shared helper) ───────────────────────────────────────────
+  // â”€â”€ Row updater (shared helper) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const updateRow = useCallback(
     (id: string, patch: Partial<SalaryRow>) => {
@@ -99,10 +99,10 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
     [payslipRow, setRows, setPayslipRow],
   );
 
-  // ── Compute server salary ─────────────────────────────────────────────────
+  // â”€â”€ Compute server salary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   // computeServerSalaryForPayment computes manualDeduction ONCE here and returns
-  // it in the result — callers must NOT call getManualDeductionTotal separately
+  // it in the result â€” callers must NOT call getManualDeductionTotal separately
   // (P1: avoid redundant computation on each approve/pay call).
   const computeServerSalaryForPayment = useCallback(
     async (row: SalaryRow, monthYear: string) => {
@@ -136,10 +136,10 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
     [resolveBaseSalaryForPersistence],
   );
 
-  // ── Settle advance installments ───────────────────────────────────────────
+  // â”€â”€ Settle advance installments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // FIX C1: replaced N sequential getAdvanceInstallmentStatuses queries with a
   // single bulk query (getInstallmentsByIds already returns all relevant rows).
-  // We derive per-advance completion from those rows directly — O(1) DB calls.
+  // We derive per-advance completion from those rows directly â€” O(1) DB calls.
 
   const settleAdvanceInstallments = useCallback(async (row: SalaryRow, nowStr: string) => {
     if (row.advanceInstallmentIds.length === 0) return;
@@ -151,10 +151,10 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
     const instData = await salaryDataService.getInstallmentsByIds(row.advanceInstallmentIds);
     if (!instData.length) return;
 
-    // Build a map of advance_id → Set of deducted installment ids we just marked
+    // Build a map of advance_id â†’ Set of deducted installment ids we just marked
     const justDeductedIds = new Set(row.advanceInstallmentIds);
 
-    // Group installments by advance — check if all are now deducted
+    // Group installments by advance â€” check if all are now deducted
     const advanceIdToStatuses = new Map<string, string[]>();
     for (const inst of instData) {
       const effective = justDeductedIds.has(inst.id ?? '') ? 'deducted' : inst.status;
@@ -164,7 +164,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
       advanceIdToStatuses.get(inst.advance_id)!.push(effective as string);
     }
 
-    // Complete any advance where all installments are now deducted — parallel, not serial
+    // Complete any advance where all installments are now deducted â€” parallel, not serial
     const completions = [...advanceIdToStatuses.entries()]
       .filter(([, statuses]) => statuses.every((s) => s === 'deducted'))
       .map(([advId]) => salaryDataService.markAdvanceCompleted(advId));
@@ -172,11 +172,11 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
     if (completions.length > 0) await Promise.all(completions);
   }, []);
 
-  // ── Approve single ────────────────────────────────────────────────────────
+  // â”€â”€ Approve single â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const approveRow = useCallback(
     async (id: string) => {
-      // FIX W6b: guard against double-fire — if already approving any row, bail out.
+      // FIX W6b: guard against double-fire â€” if already approving any row, bail out.
       if (approvingRowId) return;
 
       // FIX W6c: read rows from the state updater to avoid stale closure.
@@ -189,8 +189,8 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
       });
       if (!row) return;
       if (!isEmployeeIdUuid(row.employeeId) || !isValidSalaryMonthYear(selectedMonth)) {
-        toast.error('تعذّر الاعتماد', {
-          description: 'معرف الموظف أو الشهر غير صالح',
+        toast.error('ØªØ¹Ø°Ù‘Ø± Ø§Ù„Ø§Ø¹ØªÙ…Ø§Ø¯', {
+          description: 'Ù…Ø¹Ø±Ù Ø§Ù„Ù…ÙˆØ¸Ù Ø£Ùˆ Ø§Ù„Ø´Ù‡Ø± ØºÙŠØ± ØµØ§Ù„Ø­',
         });
         return;
       }
@@ -198,7 +198,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
       setApprovingRowId(id);
       const calcResult = await run(
         async () => computeServerSalaryForPayment(row, selectedMonth),
-        { errorTitle: 'تعذّر حساب الراتب من الخادم' },
+        { errorTitle: 'ØªØ¹Ø°Ù‘Ø± Ø­Ø³Ø§Ø¨ Ø§Ù„Ø±Ø§ØªØ¨ Ù…Ù† Ø§Ù„Ø®Ø§Ø¯Ù…' },
       );
       if (!calcResult) {
         setApprovingRowId(null);
@@ -232,7 +232,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
           });
           return true;
         },
-        { errorTitle: 'تعذّر حفظ الاعتماد' },
+        { errorTitle: 'ØªØ¹Ø°Ù‘Ø± Ø­ÙØ¸ Ø§Ù„Ø§Ø¹ØªÙ…Ø§Ø¯' },
       );
       if (!saved) {
         setApprovingRowId(null);
@@ -247,20 +247,20 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
 
       updateRow(id, { status: 'approved', isDirty: false, advanceDeduction, externalDeduction });
       setApprovingRowId(null);
-      toast.success('✅ تم اعتماد الراتب');
+      toast.success('âœ… ØªÙ… Ø§Ø¹ØªÙ…Ø§Ø¯ Ø§Ù„Ø±Ø§ØªØ¨');
 
 
     },
-    [rows, selectedMonth, toast, user, run, computeServerSalaryForPayment, updateRow, refreshMonthSnapshot, approvingRowId, setRows],
+    [selectedMonth, toast, user, run, computeServerSalaryForPayment, updateRow, refreshMonthSnapshot, approvingRowId, setRows],
   );
 
-  // ── Mark as paid ──────────────────────────────────────────────────────────
+  // â”€â”€ Mark as paid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const markAsPaid = useCallback(
     async (row: SalaryRow) => {
       if (!isEmployeeIdUuid(row.employeeId) || !isValidSalaryMonthYear(selectedMonth)) {
-        toast.error('تعذّر الصرف', {
-          description: 'معرف الموظف أو الشهر غير صالح',
+        toast.error('ØªØ¹Ø°Ù‘Ø± Ø§Ù„ØµØ±Ù', {
+          description: 'Ù…Ø¹Ø±Ù Ø§Ù„Ù…ÙˆØ¸Ù Ø£Ùˆ Ø§Ù„Ø´Ù‡Ø± ØºÙŠØ± ØµØ§Ù„Ø­',
         });
         return;
       }
@@ -313,30 +313,30 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
             advanceDeduction,
             externalDeduction,
           });
-          toast.success('✅ تم الصرف وحفظ سجل الراتب');
+          toast.success('âœ… ØªÙ… Ø§Ù„ØµØ±Ù ÙˆØ­ÙØ¸ Ø³Ø¬Ù„ Ø§Ù„Ø±Ø§ØªØ¨');
         },
-        { errorTitle: 'خطأ أثناء الصرف' },
+        { errorTitle: 'Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„ØµØ±Ù' },
       );
       setMarkingPaid(null);
     },
     [selectedMonth, toast, user, run, computeServerSalaryForPayment, settleAdvanceInstallments, updateRow, setMarkingPaid, refreshMonthSnapshot],
   );
 
-  // ── Approve all ───────────────────────────────────────────────────────────
+  // â”€â”€ Approve all â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const approveAll = useCallback(async () => {
     const approvalRows = filtered.filter((r) => r.status === 'pending' || r.isDirty);
     if (approvalRows.length === 0) return;
     if (!isValidSalaryMonthYear(selectedMonth)) {
-      toast.error('خطأ', { description: 'الشهر المحدد غير صالح' });
+      toast.error('Ø®Ø·Ø£', { description: 'Ø§Ù„Ø´Ù‡Ø± Ø§Ù„Ù…Ø­Ø¯Ø¯ ØºÙŠØ± ØµØ§Ù„Ø­' });
       return;
     }
 
     const monthCalcData = await run(
       async () => salaryDataService.calculateSalaryForMonth(selectedMonth),
-      { errorTitle: 'خطأ أثناء الحساب من الخادم' },
+      { errorTitle: 'Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø­Ø³Ø§Ø¨ Ù…Ù† Ø§Ù„Ø®Ø§Ø¯Ù…' },
     );
-    // FIX M7: undefined means run() caught an error and showed a toast — abort
+    // FIX M7: undefined means run() caught an error and showed a toast â€” abort
     if (monthCalcData === undefined) return;
 
     // monthCalcData may be empty array if the RPC returned no rows (legitimate).
@@ -397,7 +397,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
         await salaryDataService.upsertSalaryRecords(records);
         return true;
       },
-      { errorTitle: 'خطأ أثناء الاعتماد' },
+      { errorTitle: 'Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø§Ø¹ØªÙ…Ø§Ø¯' },
     );
     if (!saved) return;
 
@@ -424,14 +424,14 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
       )),
     );
     if (skippedRows.length > 0) {
-      toast.warning(`تم تخطي ${skippedRows.length} موظف (لا يوجد حساب من الخادم)`, {
-        description: skippedRows.join('، '),
+      toast.warning(`ØªÙ… ØªØ®Ø·ÙŠ ${skippedRows.length} Ù…ÙˆØ¸Ù (Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø­Ø³Ø§Ø¨ Ù…Ù† Ø§Ù„Ø®Ø§Ø¯Ù…)`, {
+        description: skippedRows.join('ØŒ '),
       });
     }
-    toast.success(`✅ تم اعتماد ${records.length} راتب وحفظها`);
+    toast.success(`âœ… ØªÙ… Ø§Ø¹ØªÙ…Ø§Ø¯ ${records.length} Ø±Ø§ØªØ¨ ÙˆØ­ÙØ¸Ù‡Ø§`);
   }, [filtered, selectedMonth, toast, user, run, setRows, resolveBaseSalaryForPersistence, refreshMonthSnapshot]);
 
-  // ── Persist employee fields ───────────────────────────────────────────────
+  // â”€â”€ Persist employee fields â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const persistEmployeeCity = useCallback(
     async (row: SalaryRow, nextCity: 'makkah' | 'jeddah') => {
@@ -440,13 +440,13 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
       await run(
         async () => {
           await employeeService.updateEmployee(row.employeeId, { city: nextCity });
-          // FIX C4: correct query key — was 'base-context', now 'context' to match useSalaryData
+          // FIX C4: correct query key â€” was 'base-context', now 'context' to match useSalaryData
           await queryClient.invalidateQueries({
             queryKey: ['salaries', uid, 'context', selectedMonth],
           });
-          toast.success('تم تحديث الفرع');
+          toast.success('ØªÙ… ØªØ­Ø¯ÙŠØ« Ø§Ù„ÙØ±Ø¹');
         },
-        { errorTitle: 'فشل تحديث الفرع' },
+        { errorTitle: 'ÙØ´Ù„ ØªØ­Ø¯ÙŠØ« Ø§Ù„ÙØ±Ø¹' },
       );
       setEmployeeFieldSaving(null);
     },
@@ -457,14 +457,14 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
     async (row: SalaryRow, next: 'bank' | 'cash') => {
       if (row.paymentMethod === next) return;
       if (next === 'bank' && !row.hasIban) {
-        toast.error('لا يوجد رقم آيبان', {
-          description: 'أضف رقم الآيبان من ملف الموظف قبل اختيار التحويل البنكي.',
+        toast.error('Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø±Ù‚Ù… Ø¢ÙŠØ¨Ø§Ù†', {
+          description: 'Ø£Ø¶Ù Ø±Ù‚Ù… Ø§Ù„Ø¢ÙŠØ¨Ø§Ù† Ù…Ù† Ù…Ù„Ù Ø§Ù„Ù…ÙˆØ¸Ù Ù‚Ø¨Ù„ Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„ØªØ­ÙˆÙŠÙ„ Ø§Ù„Ø¨Ù†ÙƒÙŠ.',
         });
         return;
       }
       setEmployeeFieldSaving(`${row.employeeId}:payment`);
       updateRow(row.id, { paymentMethod: next });
-      toast.success('تم تحديث طريقة الصرف — اعتمد الراتب لحفظ التغيير نهائياً');
+      toast.success('ØªÙ… ØªØ­Ø¯ÙŠØ« Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„ØµØ±Ù â€” Ø§Ø¹ØªÙ…Ø¯ Ø§Ù„Ø±Ø§ØªØ¨ Ù„Ø­ÙØ¸ Ø§Ù„ØªØºÙŠÙŠØ± Ù†Ù‡Ø§Ø¦ÙŠØ§Ù‹');
       setEmployeeFieldSaving(null);
     },
     [toast, setEmployeeFieldSaving, updateRow],

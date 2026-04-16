@@ -83,7 +83,7 @@ export function useSalaryPrint(params: UseSalaryPrintParams) {
       win.focus();
       setTimeout(() => { win.print(); }, 500);
     }
-  }, [filtered, selectedMonth, platforms, platformColors, projectName, computeRow, toast]);
+  }, [filtered, selectedMonth, platforms, platformColors, projectName, computeRow, toast, getComputedRowsMap]);
 
   // ── Merged PDF ────────────────────────────────────────────────────────────
 
@@ -121,7 +121,7 @@ export function useSalaryPrint(params: UseSalaryPrintParams) {
       setTimeout(() => win.print(), 500);
     }
     toast.success(`📄 تم فتح ملف PDF مدمج لـ ${toPrint.length} مندوب`);
-  }, [filtered, selectedMonth, computeRow, toast]);
+  }, [filtered, selectedMonth, computeRow, toast, getComputedRowsMap]);
 
   // ── Batch ZIP export ──────────────────────────────────────────────────────
 

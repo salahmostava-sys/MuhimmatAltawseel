@@ -59,7 +59,7 @@ const InlineLoader = ({ minHeightClassName = 'min-h-[220px]' }: Readonly<{ minHe
 const Salaries = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { enabled, userId } = useAuthQueryGate();
+  const { enabled: _enabled, userId } = useAuthQueryGate();
   const uid = authQueryUserId(userId);
   const navigate = useNavigate();
   const { permissions } = usePermissions('salaries');
