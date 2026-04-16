@@ -77,7 +77,10 @@ export const buildSalaryDraftPatch = (row: SalaryRow): SalaryDraftPatch => ({
   advanceDeduction: row.advanceDeduction,
   externalDeduction: row.externalDeduction,
   platformIncome: row.platformIncome,
-  engineBaseSalary: row.engineBaseSalary,
+  // FIX Q5: engineBaseSalary is optional on SalaryRow but SalaryDraftPatch stores it.
+  // Coerce undefined → 0 so we never write undefined into the DB JSONB column,
+  // which would cause the field to round-trip as null and lose the user's value.
+  engineBaseSalary: row.engineBaseSalary ?? 0,
   paymentMethod: row.paymentMethod,
 });
 

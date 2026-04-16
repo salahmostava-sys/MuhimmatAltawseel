@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useRef } from 'react';
 import type JSZip from 'jszip';
 import { toast as sonnerToast } from '@shared/components/ui/sonner';
 import { MERGED_PDF_STYLES, buildMergedSalaryPageHtml } from '@modules/salaries/lib/salaryMergedPdf';
@@ -43,12 +43,19 @@ export function useSalaryPrint(params: UseSalaryPrintParams) {
     setBatchMonth,
   } = params;
 
-  // FIX M6: precompute all row results once — avoids double computeRow() calls
-  // when both handlePrintTable and exportMergedPDF are used in the same session
-  const computedRowsMap = useMemo(
-    () => new Map(filtered.map((r) => [r.id, computeRow(r)])),
-    [filtered, computeRow],
-  );
+  // FIX Q3 (replaces M6 useMemo): build the computeRow map lazily at call time,
+  // not eagerly on every filtered change. Printing is rare — computing for all
+  // rows on every scroll/filter is wasteful. The ref caches the last result so
+  // repeated calls within the same filtered snapshot are still O(1).
+  const computedRowsCacheRef = useRef<{ filtered: typeof filtered; map: Map<string, ReturnType<typeof computeRow>> } | null>(null);
+  const getComputedRowsMap = useCallback(() => {
+    if (computedRowsCacheRef.current?.filtered === filtered) {
+      return computedRowsCacheRef.current.map;
+    }
+    const map = new Map(filtered.map((r) => [r.id, computeRow(r)]));
+    computedRowsCacheRef.current = { filtered, map };
+    return map;
+  }, [filtered, computeRow]);
 
   // ── Print table ───────────────────────────────────────────────────────────
 
@@ -59,13 +66,14 @@ export function useSalaryPrint(params: UseSalaryPrintParams) {
       return;
     }
 
+    const map = getComputedRowsMap();
     const html = buildSalaryTablePrintHtml({
       rows: filtered,
       platforms,
       platformColors,
       monthLabel,
       projectName,
-      computeRow: (r) => computedRowsMap.get(r.id) ?? computeRow(r),
+      computeRow: (r) => map.get(r.id) ?? computeRow(r),
     });
 
     const win = globalThis.open('', '_blank', 'width=1100,height=800');
@@ -87,11 +95,12 @@ export function useSalaryPrint(params: UseSalaryPrintParams) {
       return;
     }
 
+    const map = getComputedRowsMap();
     const pages = toPrint
       .map((row, idx) =>
         buildMergedSalaryPageHtml({
           row,
-          computed: computedRowsMap.get(row.id) ?? computeRow(row),
+          computed: map.get(row.id) ?? computeRow(row),
           index: idx,
           monthLabel,
         }),

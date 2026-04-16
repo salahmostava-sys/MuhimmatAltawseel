@@ -83,13 +83,17 @@ export const salaryDraftService = {
   },
 
   /**
-   * Save multiple drafts at once (batch operation)
+   * Save multiple drafts at once (batch operation).
+   * Accepts an optional pre-resolved userId to avoid a redundant auth call
+   * when invoked from syncDraftsForMonth (which already holds the userId).
    */
   saveDraftsBatch: async (
     monthYear: string,
-    drafts: Record<string, SalaryDraftPatch>
+    drafts: Record<string, SalaryDraftPatch>,
+    preResolvedUserId?: string,
   ): Promise<void> => {
-    const userId = await getAuthenticatedUserId('salaryDraftService.saveDraftsBatch');
+    // FIX Q1: accept pre-resolved userId to prevent double auth call from syncDraftsForMonth
+    const userId = preResolvedUserId ?? await getAuthenticatedUserId('salaryDraftService.saveDraftsBatch');
 
     const records = Object.entries(drafts).map(([rowId, draftData]) => {
       const employeeId = rowIdToEmployeeId(rowId, monthYear);
@@ -141,9 +145,9 @@ export const salaryDraftService = {
 
     throwIfError(selectError, 'salaryDraftService.syncDraftsForMonth.select');
 
-    // Step 2: upsert desired drafts
+    // Step 2: upsert desired drafts — pass userId to avoid a second auth call
     if (desiredEmployeeIds.size > 0) {
-      await salaryDraftService.saveDraftsBatch(monthYear, drafts);
+      await salaryDraftService.saveDraftsBatch(monthYear, drafts, userId ?? undefined);
     }
 
     // Step 3: delete stale rows (those not in desired set)
