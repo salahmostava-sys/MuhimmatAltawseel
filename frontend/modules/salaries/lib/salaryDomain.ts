@@ -616,19 +616,15 @@ export const buildAppMaps = (appsWithScheme: AppWithSchemeRow[] | null | undefin
   return { appSchemeMap, appNameToId, appWorkTypeMap };
 };
 
+/**
+ * Fetches pricing rules for all apps in a single DB query.
+ * Previously made N separate queries (one per app) — now one bulk query.
+ */
 export const fetchPricingRulesMap = async (appNameToId: Record<string, string>) => {
   const appIds = Object.values(appNameToId);
-  const rulesByApp = await Promise.all(
-    appIds.map(async (appId) => {
-      const rules = await salaryService.getPricingRules(appId);
-      return { appId, rules: rules || [] };
-    })
-  );
-  const rulesMap: Record<string, PricingRule[]> = {};
-  rulesByApp.forEach(({ appId, rules }) => {
-    rulesMap[appId] = rules;
-  });
-  return rulesMap;
+  if (appIds.length === 0) return {};
+  // Single query instead of Promise.all with N individual calls
+  return salaryService.getPricingRulesForApps(appIds);
 };
 
 export const getManualDeductionTotal = (row: SalaryRow) =>

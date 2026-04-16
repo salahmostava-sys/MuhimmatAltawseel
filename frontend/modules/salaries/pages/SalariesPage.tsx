@@ -116,7 +116,9 @@ const Salaries = () => {
     [user?.id, selectedMonth],
   );
 
-  // ── Data fetching (React Query — replaces useEffect pattern) ──────────────
+  // ── Data fetching (Two-phase React Query) ─────────────────────────────────
+  // Phase 1 (~1-2s): fetches context data → table appears
+  // Phase 2 (~2-3s): fetches preview RPC in background → numbers update silently
   const {
     hydratedRows,
     appNameToId,
@@ -126,13 +128,15 @@ const Salaries = () => {
     builtEmpPlatformScheme,
     previewBackendError,
     isLoading: loadingData,
+    isRefreshingPreview,
     error: salaryDataError,
   } = useSalaryData({ selectedMonth, salariesDraftKey });
 
   // Sync fetched data into local state when React Query resolves.
+  // Runs on both phase 1 finish AND phase 2 finish (rows update silently).
   // rows lives in local state because useSalaryActions mutates it (dirty/approve/etc.)
   useEffect(() => {
-    if (!loadingData) {
+    if (!loadingData && hydratedRows.length >= 0) {
       setRows(hydratedRows);
       setEmpPlatformScheme(builtEmpPlatformScheme);
       setSalaryMeta({
@@ -146,7 +150,7 @@ const Salaries = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadingData, hydratedRows]);
 
-  // Show fetch error in toast
+  // Show fetch error in toast (phase 1 errors only — phase 2 errors show inline)
   useEffect(() => {
     if (salaryDataError) {
       const message = salaryDataError.message || 'حدث خطأ غير متوقع أثناء تحميل الرواتب';
@@ -240,6 +244,7 @@ const Salaries = () => {
       <SalaryMonthSelector
         loadingData={loadingData}
         previewBackendError={previewBackendError}
+        isRefreshingPreview={isRefreshingPreview}
       />
 
       <SalarySummaryCards

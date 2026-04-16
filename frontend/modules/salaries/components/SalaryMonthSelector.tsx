@@ -5,10 +5,11 @@ import type { SalaryRow } from '@modules/salaries/types/salary.types';
 interface SalaryMonthSelectorProps {
   loadingData: boolean;
   previewBackendError: string | null;
+  isRefreshingPreview?: boolean;
 }
 
 export function SalaryMonthSelector(props: Readonly<SalaryMonthSelectorProps>) {
-  const { loadingData, previewBackendError } = props;
+  const { loadingData, previewBackendError, isRefreshingPreview = false } = props;
 
   return (
     <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -20,7 +21,11 @@ export function SalaryMonthSelector(props: Readonly<SalaryMonthSelectorProps>) {
         </nav>
         <h1 className="page-title flex items-center gap-2"><Wallet size={20} /> الرواتب الشهرية</h1>
         <div className="mt-1">
-          <SalaryEngineStatusBadge loadingData={loadingData} previewBackendError={previewBackendError} />
+          <SalaryEngineStatusBadge
+            loadingData={loadingData}
+            previewBackendError={previewBackendError}
+            isRefreshingPreview={isRefreshingPreview}
+          />
         </div>
       </div>
     </div>

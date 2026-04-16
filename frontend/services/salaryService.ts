@@ -255,6 +255,38 @@ export const salaryService = {
     return (data || []) as PricingRule[];
   },
 
+  /**
+   * Bulk fetch pricing rules for multiple apps in a single query.
+   * Use this instead of calling getPricingRules() N times in a loop.
+   *
+   * Returns: { [appId]: PricingRule[] }
+   */
+  getPricingRulesForApps: async (appIds: string[]): Promise<Record<string, PricingRule[]>> => {
+    if (appIds.length === 0) return {};
+
+    const { data, error } = await supabase
+      .from('pricing_rules' as never)
+      .select('id, app_id, min_orders, max_orders, rule_type, rate_per_order, fixed_salary, is_active, priority')
+      .in('app_id', appIds)
+      .eq('is_active', true)
+      .order('priority', { ascending: false })
+      .order('min_orders', { ascending: true });
+
+    if (error) handleSupabaseError(error, 'salaryService.getPricingRulesForApps');
+
+    // Group results by app_id
+    const result: Record<string, PricingRule[]> = {};
+    // Ensure every requested appId has an entry (even if empty)
+    appIds.forEach((id) => { result[id] = []; });
+    (data || []).forEach((rule) => {
+      const r = rule as PricingRule;
+      if (!result[r.app_id]) result[r.app_id] = [];
+      result[r.app_id].push(r);
+    });
+
+    return result;
+  },
+
   getOrderCount: async (employeeId: string, appId: string, monthYear: string) => {
     const [year, month] = monthYear.split('-');
     const from = `${year}-${month}-01`;
