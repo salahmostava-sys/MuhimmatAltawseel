@@ -1,24 +1,27 @@
 /**
- * useSalaryData — Two-phase data loading for the salaries page.
+ * useSalaryData — Two-phase data loading + placeholder cache for the salaries page.
  *
  * ── Phase 1 (fast, ~1-2s) ─────────────────────────────────────────────────
  * Fetches all non-RPC data in parallel:
  *   employees, orders, apps, advances, fuel, saved records, deductions
  * Builds the salary table immediately with saved/stored data.
- * Action buttons (approve, export) are enabled once phase 1 is done.
  *
  * ── Phase 2 (slow, background, ~2-3s) ────────────────────────────────────
  * Calls preview_salary_for_month RPC in the background.
- * Updates salary figures when RPC returns.
- * Action buttons stay ENABLED during phase 2 — numbers are already correct
- * from saved records. The preview just enriches platform breakdowns.
- * A subtle "refreshing" indicator is shown during phase 2.
+ * Updates salary figures silently when RPC returns.
  *
- * This approach saves ~2-3s of perceived load time with zero data integrity risk,
- * because approve/export always reads from the current row state (not RPC directly).
+ * ── Phase 3 — placeholder cache ──────────────────────────────────────────
+ * When the user switches months, we show the previously loaded rows
+ * immediately as a visual placeholder while the new month loads.
+ * A banner "⚠️ تعرض بيانات شهر سابق" is shown until the new data arrives.
+ * This eliminates the blank-table flash when navigating between months.
+ *
+ * Safety: placeholderData is only used for isLoading=true state.
+ * As soon as real data arrives, it replaces the placeholder.
+ * The banner prevents any confusion about which month is shown.
  */
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useMemo, useRef } from 'react';
 import { useAuth } from '@app/providers/AuthContext';
 import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { isValidSalaryMonthYear } from '@shared/lib/salaryValidation';
@@ -35,15 +38,26 @@ interface UseSalaryDataParams {
 }
 
 export interface SalaryDataResult extends PreparedSalaryState {
-  /** Phase 1 loading — table not ready yet */
+  /** Phase 1 loading — table not ready yet (showing placeholder or spinner) */
   isLoading: boolean;
-  /** Phase 2 loading — table is visible, preview updating in background */
+  /** True when showing cached data from a previous month while new month loads */
+  isShowingPlaceholder: boolean;
+  /** Phase 2 loading — table is visible, preview RPC updating in background */
   isRefreshingPreview: boolean;
   error: Error | null;
   previewBackendError: string | null;
 }
 
 const PHASE1_TIMEOUT_MS = 12_000;
+
+const EMPTY_STATE: PreparedSalaryState = {
+  appNameToId: {},
+  rulesMap: {},
+  appsWithoutPricingRules: [],
+  appsWithoutScheme: [],
+  builtEmpPlatformScheme: {},
+  hydratedRows: [],
+};
 
 export function useSalaryData({ selectedMonth, salariesDraftKey }: UseSalaryDataParams): SalaryDataResult {
   const { user } = useAuth();
@@ -56,23 +70,24 @@ export function useSalaryData({ selectedMonth, salariesDraftKey }: UseSalaryData
 
   const isQueryEnabled = enabled && isValidSalaryMonthYear(selectedMonth) && !!user?.id;
 
-  // ── Phase 1 query key: monthly context (fast data) ────────────────────────
+  // ── Query keys ────────────────────────────────────────────────────────────
   const phase1Key = useMemo(
     () => ['salaries', uid, 'context', selectedMonth] as const,
     [uid, selectedMonth],
   );
-
-  // ── Phase 2 query key: RPC preview (slow, background) ────────────────────
   const phase2Key = useMemo(
     () => ['salaries', uid, 'preview', selectedMonth] as const,
     [uid, selectedMonth],
   );
-
-  // ── Full data key (depends on both phases + draft key) ───────────────────
   const fullDataKey = useMemo(
     () => ['salaries', uid, 'full-data', selectedMonth, salariesDraftKey] as const,
     [uid, selectedMonth, salariesDraftKey],
   );
+
+  // ── Track the last successfully loaded month for placeholder ─────────────
+  // When selectedMonth changes, the previous month's data is used as placeholder
+  // until the new month's phase1 completes.
+  const lastLoadedMonthRef = useRef<string | null>(null);
 
   // ── Phase 1: fetch all non-RPC data in parallel ──────────────────────────
   const phase1 = useQuery({
@@ -80,6 +95,8 @@ export function useSalaryData({ selectedMonth, salariesDraftKey }: UseSalaryData
     enabled: isQueryEnabled,
     staleTime: 20_000,
     retry: defaultQueryRetry,
+    // keepPreviousData: show last month's context while new month loads
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(
@@ -87,7 +104,6 @@ export function useSalaryData({ selectedMonth, salariesDraftKey }: UseSalaryData
           PHASE1_TIMEOUT_MS,
         );
       });
-
       return Promise.race([
         salaryDataService.getMonthlyContext(selectedMonth),
         timeoutPromise,
@@ -95,18 +111,15 @@ export function useSalaryData({ selectedMonth, salariesDraftKey }: UseSalaryData
     },
   });
 
-  // ── Phase 2: preview RPC — starts only after phase 1 succeeds ────────────
-  // enabled depends on phase1 success, so it starts automatically in background
+  // ── Phase 2: preview RPC in background ───────────────────────────────────
   const phase2 = useQuery({
     queryKey: phase2Key,
-    // Only start phase 2 once phase 1 data is available
-    enabled: isQueryEnabled && phase1.isSuccess,
+    enabled: isQueryEnabled && phase1.isSuccess && !phase1.isPlaceholderData,
     staleTime: 20_000,
-    retry: 1, // preview RPC failure is non-fatal — only retry once
+    retry: 1,
     queryFn: async () => {
       let previewData: Awaited<ReturnType<typeof salaryDataService.getSalaryPreviewForMonth>> = [];
       let previewBackendError: string | null = null;
-
       try {
         previewData = await salaryDataService.getSalaryPreviewForMonth(selectedMonth);
       } catch (err) {
@@ -116,21 +129,19 @@ export function useSalaryData({ selectedMonth, salariesDraftKey }: UseSalaryData
           : raw;
         previewBackendError = normalized || 'تعذر تحميل معاينة الرواتب من الخادم';
       }
-
       return { previewData: previewData || [], previewBackendError };
     },
   });
 
-  // ── Full state: build rows whenever phase 1 or phase 2 data changes ───────
+  // ── Full state: build rows from real phase1 data (not placeholder) ────────
   const fullDataQuery = useQuery<PreparedSalaryState, Error>({
     queryKey: fullDataKey,
-    // Run when phase 1 is done (phase 2 is optional — we merge what we have)
-    enabled: isQueryEnabled && phase1.isSuccess,
-    staleTime: 0, // always recalculate when inputs change
+    // Only run when phase1 has REAL data for this month (not placeholder from prev month)
+    enabled: isQueryEnabled && phase1.isSuccess && !phase1.isPlaceholderData,
+    staleTime: 0,
     retry: false,
     queryFn: async () => {
       const monthlyContext = phase1.data!;
-      // Use phase 2 data if available, otherwise empty preview (rows show saved data)
       const previewData = phase2.data?.previewData ?? [];
 
       const salaryBaseContext: SalaryBaseContextData = {
@@ -138,25 +149,29 @@ export function useSalaryData({ selectedMonth, salariesDraftKey }: UseSalaryData
         previewData,
       };
 
-      return prepareSalaryState({
+      const result = await prepareSalaryState({
         salaryBaseContext,
         selectedMonth,
         activeEmployeeIdsInMonth,
         salariesDraftKey,
       });
+
+      // Track that we successfully loaded this month
+      lastLoadedMonthRef.current = selectedMonth;
+
+      return result;
     },
   });
 
-  // Re-run fullDataQuery when phase 2 finishes (preview data becomes available)
-  // We do this by invalidating fullDataKey whenever phase2 succeeds
+  // Re-run fullDataQuery when phase2 finishes
   useMemo(() => {
-    if (phase2.isSuccess) {
+    if (phase2.isSuccess && !phase1.isPlaceholderData) {
       void queryClient.invalidateQueries({ queryKey: fullDataKey });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase2.isSuccess, phase2.dataUpdatedAt]);
 
-  // Invalidate everything when daily_orders change (realtime sync)
+  // Invalidate on realtime daily_orders changes
   useRealtimePostgresChanges(
     `salaries-orders-sync-${uid}-${selectedMonth}`,
     ['daily_orders'],
@@ -166,22 +181,27 @@ export function useSalaryData({ selectedMonth, salariesDraftKey }: UseSalaryData
     },
   );
 
-  const empty: PreparedSalaryState = {
-    appNameToId: {},
-    rulesMap: {},
-    appsWithoutPricingRules: [],
-    appsWithoutScheme: [],
-    builtEmpPlatformScheme: {},
-    hydratedRows: [],
-  };
+  // ── Determine if we are showing placeholder (prev month's data) ───────────
+  // isPlaceholderData is true when keepPreviousData is active (month just changed)
+  const isShowingPlaceholder = phase1.isPlaceholderData === true;
+
+  // ── Determine loading state ───────────────────────────────────────────────
+  // isLoading = true only when no data at all (first ever load, no placeholder)
+  const isLoading = phase1.isLoading && !isShowingPlaceholder;
+
+  // ── Determine refreshing state ────────────────────────────────────────────
+  // isRefreshingPreview = phase2 in flight after real phase1 data arrived
+  const isRefreshingPreview =
+    phase1.isSuccess &&
+    !phase1.isPlaceholderData &&
+    (phase2.isLoading || fullDataQuery.isFetching);
 
   return {
-    ...(fullDataQuery.data ?? empty),
+    ...(fullDataQuery.data ?? EMPTY_STATE),
     previewBackendError: phase2.data?.previewBackendError ?? null,
-    // Phase 1 loading = table not ready yet (show full-page spinner)
-    isLoading: phase1.isLoading,
-    // Phase 2 loading = table visible, preview updating in background (show subtle indicator)
-    isRefreshingPreview: phase1.isSuccess && (phase2.isLoading || fullDataQuery.isFetching),
-    error: phase1.error ?? null,
+    isLoading,
+    isShowingPlaceholder,
+    isRefreshingPreview,
+    error: (!isShowingPlaceholder && phase1.error) ? phase1.error as Error : null,
   };
 }

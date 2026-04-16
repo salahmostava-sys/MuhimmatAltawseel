@@ -1,5 +1,5 @@
 import { Suspense, lazy, useState, useMemo, useEffect, useRef } from 'react';
-import { AlertTriangle, Settings2 } from 'lucide-react';
+import { AlertTriangle, Settings2, Clock } from 'lucide-react';
 import { useToast } from '@shared/hooks/use-toast';
 import { useAppColors } from '@shared/hooks/useAppColors';
 import { useAuth } from '@app/providers/AuthContext';
@@ -116,9 +116,10 @@ const Salaries = () => {
     [user?.id, selectedMonth],
   );
 
-  // ── Data fetching (Two-phase React Query) ─────────────────────────────────
+  // ── Data fetching (Two-phase React Query + placeholder cache) ────────────
   // Phase 1 (~1-2s): fetches context data → table appears
   // Phase 2 (~2-3s): fetches preview RPC in background → numbers update silently
+  // Placeholder: when switching months, previous month rows show instantly
   const {
     hydratedRows,
     appNameToId,
@@ -128,15 +129,18 @@ const Salaries = () => {
     builtEmpPlatformScheme,
     previewBackendError,
     isLoading: loadingData,
+    isShowingPlaceholder,
     isRefreshingPreview,
     error: salaryDataError,
   } = useSalaryData({ selectedMonth, salariesDraftKey });
 
   // Sync fetched data into local state when React Query resolves.
-  // Runs on both phase 1 finish AND phase 2 finish (rows update silently).
+  // Runs on phase1 finish, phase2 finish, and when real data replaces placeholder.
   // rows lives in local state because useSalaryActions mutates it (dirty/approve/etc.)
+  // NOTE: we do NOT update rows when isShowingPlaceholder — those are stale rows
+  // from a previous month and should not be mutated or exported.
   useEffect(() => {
-    if (!loadingData && hydratedRows.length >= 0) {
+    if (!loadingData && !isShowingPlaceholder && hydratedRows.length >= 0) {
       setRows(hydratedRows);
       setEmpPlatformScheme(builtEmpPlatformScheme);
       setSalaryMeta({
@@ -148,7 +152,7 @@ const Salaries = () => {
     }
     // hydratedRows identity changes each query result — intentional dep
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadingData, hydratedRows]);
+  }, [loadingData, isShowingPlaceholder, hydratedRows]);
 
   // Show fetch error in toast (phase 1 errors only — phase 2 errors show inline)
   useEffect(() => {
@@ -247,6 +251,27 @@ const Salaries = () => {
         isRefreshingPreview={isRefreshingPreview}
       />
 
+      {/* Placeholder banner — shown when previous month's data is displayed while new month loads */}
+      {isShowingPlaceholder && (
+        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 dark:bg-amber-950/30 dark:border-amber-800/40">
+          <Clock size={16} className="text-amber-600 dark:text-amber-400 flex-shrink-0 animate-pulse" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+              جارٍ تحميل بيانات شهر {monthLabel}…
+            </p>
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+              الأرقام المعروضة حالياً من شهر سابق — لا تُجري أي إجراء حتى تكتمل البيانات
+            </p>
+          </div>
+          <div className="flex-shrink-0">
+            <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+              <span className="h-2 w-2 rounded-full bg-amber-400 animate-ping" />
+              جارٍ التحميل
+            </span>
+          </div>
+        </div>
+      )}
+
       <SalarySummaryCards
         totalNet={totalNet}
         platforms={platforms}
@@ -281,9 +306,9 @@ const Salaries = () => {
         viewMode={viewMode}
         setViewMode={setViewMode}
         pendingCount={pendingCount}
-        canEdit={permissions.can_edit}
+        canEdit={permissions.can_edit && !isShowingPlaceholder}
         approveAll={actions.approveAll}
-        salaryActionLoading={salaryActionLoading}
+        salaryActionLoading={salaryActionLoading || isShowingPlaceholder}
         salaryToolbarImportRef={salaryToolbarImportRef}
         onSalaryToolbarImportChange={actions.onSalaryToolbarImportChange}
         runExportExcel={actions.runExportExcel}
