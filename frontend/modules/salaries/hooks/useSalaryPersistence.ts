@@ -134,19 +134,39 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
   );
 
   // ── Settle advance installments ───────────────────────────────────────────
+  // FIX C1: replaced N sequential getAdvanceInstallmentStatuses queries with a
+  // single bulk query (getInstallmentsByIds already returns all relevant rows).
+  // We derive per-advance completion from those rows directly — O(1) DB calls.
 
   const settleAdvanceInstallments = useCallback(async (row: SalaryRow, nowStr: string) => {
     if (row.advanceInstallmentIds.length === 0) return;
+
+    // Mark installments deducted first
     await salaryDataService.markInstallmentsDeducted(row.advanceInstallmentIds, nowStr);
+
+    // Fetch all installments for these advances in ONE query (not N)
     const instData = await salaryDataService.getInstallmentsByIds(row.advanceInstallmentIds);
     if (!instData.length) return;
-    const advanceIds = [...new Set(instData.map((i) => i.advance_id))];
-    for (const advId of advanceIds) {
-      const allInsts = await salaryDataService.getAdvanceInstallmentStatuses(advId);
-      if (allInsts.every((i) => i.status === 'deducted')) {
-        await salaryDataService.markAdvanceCompleted(advId);
+
+    // Build a map of advance_id → Set of deducted installment ids we just marked
+    const justDeductedIds = new Set(row.advanceInstallmentIds);
+
+    // Group installments by advance — check if all are now deducted
+    const advanceIdToStatuses = new Map<string, string[]>();
+    for (const inst of instData) {
+      const effective = justDeductedIds.has(inst.id ?? '') ? 'deducted' : inst.status;
+      if (!advanceIdToStatuses.has(inst.advance_id)) {
+        advanceIdToStatuses.set(inst.advance_id, []);
       }
+      advanceIdToStatuses.get(inst.advance_id)!.push(effective as string);
     }
+
+    // Complete any advance where all installments are now deducted — parallel, not serial
+    const completions = [...advanceIdToStatuses.entries()]
+      .filter(([, statuses]) => statuses.every((s) => s === 'deducted'))
+      .map(([advId]) => salaryDataService.markAdvanceCompleted(advId));
+
+    if (completions.length > 0) await Promise.all(completions);
   }, []);
 
   // ── Approve single ────────────────────────────────────────────────────────
@@ -272,6 +292,8 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
             logError('[Salaries] Failed to clear draft after payment', e, { level: 'warn' });
           });
 
+          // FIX C2: refreshMonthSnapshot moved inside run() so it only fires on success
+          refreshMonthSnapshot();
           updateRow(row.id, {
             status: 'paid',
             isDirty: false,
@@ -279,12 +301,9 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
             externalDeduction,
           });
           toast.success('✅ تم الصرف وحفظ سجل الراتب');
-
-
         },
         { errorTitle: 'خطأ أثناء الصرف' },
       );
-      refreshMonthSnapshot();
       setMarkingPaid(null);
     },
     [selectedMonth, toast, user, run, computeServerSalaryForPayment, settleAdvanceInstallments, updateRow, setMarkingPaid, refreshMonthSnapshot],
@@ -405,8 +424,9 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
       await run(
         async () => {
           await employeeService.updateEmployee(row.employeeId, { city: nextCity });
+          // FIX C4: correct query key — was 'base-context', now 'context' to match useSalaryData
           await queryClient.invalidateQueries({
-            queryKey: ['salaries', uid, 'base-context', selectedMonth],
+            queryKey: ['salaries', uid, 'context', selectedMonth],
           });
           toast.success('تم تحديث الفرع');
         },

@@ -112,8 +112,9 @@ export function useSalaryIO(params: UseSalaryIOParams) {
             record_id: null,
             meta: { count: parsed.length, month: selectedMonth },
           });
+          // FIX C3: correct query key — was 'base-context', now 'context' to match useSalaryData
           await queryClient.invalidateQueries({
-            queryKey: ['salaries', uid, 'base-context', selectedMonth],
+            queryKey: ['salaries', uid, 'context', selectedMonth],
           });
           toast.success(`تم استيراد ${parsed.length} سجل بنجاح`);
         });
