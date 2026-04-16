@@ -101,6 +101,9 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
 
   // ── Compute server salary ─────────────────────────────────────────────────
 
+  // computeServerSalaryForPayment computes manualDeduction ONCE here and returns
+  // it in the result — callers must NOT call getManualDeductionTotal separately
+  // (P1: avoid redundant computation on each approve/pay call).
   const computeServerSalaryForPayment = useCallback(
     async (row: SalaryRow, monthYear: string) => {
       const manualDeduction = getManualDeductionTotal(row);

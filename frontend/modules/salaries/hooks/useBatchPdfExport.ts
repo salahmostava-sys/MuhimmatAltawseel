@@ -4,6 +4,12 @@ import { months } from '@modules/salaries/lib/salaryMonths';
 import type { SalaryRow } from '@modules/salaries/types/salary.types';
 import type JSZip from 'jszip';
 
+// FIX P4: pre-warm the buildBatchSlipHTML module once at module load time.
+// Previously it was dynamic-imported inside the setTimeout on EVERY iteration,
+// which re-triggers the module resolution pipeline each time (even if cached).
+// A single top-level import lets the bundler tree-shake and the runtime cache it.
+const buildBatchSlipHTMLPromise = import('@modules/salaries/lib/buildBatchSlipHTML');
+
 /**
  * Manages sequential batch PDF generation for salary slips.
  * Generates one PDF per row via iframe + jsPDF, adds to ZIP, then downloads.
@@ -65,7 +71,7 @@ export function useBatchPdfExport(params: {
 
       try {
         const row = batchQueue[batchIndex];
-        const { buildBatchSlipHTML } = await import('@modules/salaries/lib/buildBatchSlipHTML');
+        const { buildBatchSlipHTML } = await buildBatchSlipHTMLPromise;
         const monthLabel = months.find(m => m.v === selectedMonth)?.l || selectedMonth;
         const html = buildBatchSlipHTML(row, monthLabel, projectName);
 

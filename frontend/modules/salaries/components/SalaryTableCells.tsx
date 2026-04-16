@@ -182,9 +182,10 @@ export const PlatformOrderCell = ({
     }
   }
 
+  // FIX P3: removed key from td — keys belong on the element in the .map() call,
+  // not inside the component itself. The caller (SalaryRowCells) sets the key.
   return (
     <td
-      key={`${platformName}-col`}
       className={`${tdClass} text-center border-l border-border/20`}
       style={{ background: noScheme ? 'rgba(234,179,8,0.1)' : rowBg }}
       title={activitySummary !== '—' ? activitySummary : undefined}
