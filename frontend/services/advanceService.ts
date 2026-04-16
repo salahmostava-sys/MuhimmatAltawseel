@@ -171,9 +171,12 @@ export const advanceService = {
   },
 
   getInstallmentsByIds: async (installmentIds: string[]) => {
+    // FIX: include `id` in select — the consumer (settleAdvanceInstallments) builds a
+    // Set of deducted ids via `inst.id`. Without it, inst.id was always undefined,
+    // causing the justDeductedIds check to silently fail and advances to complete prematurely.
     const { data, error } = await supabase
       .from('advance_installments')
-      .select('advance_id, status')
+      .select('id, advance_id, status')
       .in('id', installmentIds);
     if (error) handleSupabaseError(error, 'advanceService.getInstallmentsByIds');
     return data ?? [];

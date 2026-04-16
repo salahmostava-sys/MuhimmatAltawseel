@@ -315,24 +315,37 @@ export const employeeService = {
   },
 
   async replaceEmployeeApps(employeeId: string, appIds: string[]) {
-    const { error: deleteError } = await supabase
+    // FIX: replaced risky delete-then-insert with upsert-then-cleanup.
+    // Old pattern: DELETE ALL → INSERT new. If insert failed (network, RLS, etc.),
+    // the employee lost all app assignments permanently with no rollback.
+    // New pattern: UPSERT desired → DELETE stale. If cleanup fails, the employee
+    // merely has extra (stale) assignments — far safer than losing all of them.
+
+    // Step 1: upsert desired assignments (idempotent — safe to re-run)
+    if (appIds.length > 0) {
+      const rows = appIds.map((appId) => ({
+        employee_id: employeeId,
+        app_id: appId,
+        status: 'active' as const,
+      }));
+      const { error: upsertError } = await supabase
+        .from('employee_apps')
+        .upsert(rows, { onConflict: 'employee_id,app_id' });
+      if (upsertError) throw toServiceError(upsertError, 'employeeService.replaceEmployeeApps.upsert');
+    }
+
+    // Step 2: remove assignments NOT in the desired list
+    // If appIds is empty, this deletes all assignments for the employee.
+    let cleanupQuery = supabase
       .from('employee_apps')
       .delete()
       .eq('employee_id', employeeId);
-    if (deleteError) throw toServiceError(deleteError, 'employeeService.replaceEmployeeApps.delete');
-
-    if (appIds.length === 0) return;
-
-    const rows = appIds.map((appId) => ({
-      employee_id: employeeId,
-      app_id: appId,
-      status: 'active',
-    }));
-
-    const { error: insertError } = await supabase
-      .from('employee_apps')
-      .insert(rows);
-    if (insertError) throw toServiceError(insertError, 'employeeService.replaceEmployeeApps.insert');
+    if (appIds.length > 0) {
+      // Supabase .not().in() requires the filter syntax: not.in.(val1,val2)
+      cleanupQuery = cleanupQuery.filter('app_id', 'not.in', `(${appIds.join(',')})`);
+    }
+    const { error: cleanupError } = await cleanupQuery;
+    if (cleanupError) throw toServiceError(cleanupError, 'employeeService.replaceEmployeeApps.cleanup');
   },
 
   async upsertEmployeeApp(employeeId: string, appId: string) {
