@@ -30,6 +30,8 @@ export function useBatchPdfExport(params: {
     setBatchQueue, setBatchIndex, setBatchZip, toast,
   } = params;
   const batchAbortRef = useRef(false);
+  // FIX W8: track the active iframe at hook level so cleanup can remove it on unmount/abort
+  const activeIframeRef = useRef<HTMLIFrameElement | null>(null);
 
   useEffect(() => {
     batchAbortRef.current = false;
@@ -59,13 +61,14 @@ export function useBatchPdfExport(params: {
     const timer = setTimeout(async () => {
       if (batchAbortRef.current) return;
 
-      // FIX W3: track the iframe in a closure variable so cleanup is guaranteed
-      // even if the component unmounts mid-render (before removeChild is reached).
+      // FIX W3+W8: track iframe in both closure and ref so cleanup works on
+      // unmount (ref) and on normal completion (closure).
       let iframe: HTMLIFrameElement | null = null;
       const safeRemoveIframe = () => {
         if (iframe && iframe.parentNode) {
           try { iframe.parentNode.removeChild(iframe); } catch { /* ignore */ }
           iframe = null;
+          activeIframeRef.current = null;
         }
       };
 
@@ -80,6 +83,7 @@ export function useBatchPdfExport(params: {
 
         iframe = document.createElement('iframe');
         iframe.style.cssText = 'position:fixed;left:-10000px;top:-10000px;width:794px;height:1123px;border:none';
+        activeIframeRef.current = iframe;
         document.body.appendChild(iframe);
         const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
         if (iDoc) {
@@ -116,6 +120,11 @@ export function useBatchPdfExport(params: {
     return () => {
       batchAbortRef.current = true;
       clearTimeout(timer);
+      // FIX W8: remove any lingering iframe left from an in-progress render
+      if (activeIframeRef.current?.parentNode) {
+        try { activeIframeRef.current.parentNode.removeChild(activeIframeRef.current); } catch { /* ignore */ }
+        activeIframeRef.current = null;
+      }
     };
   }, [batchIndex, batchQueue, batchZip, selectedMonth, toast, projectName, setBatchQueue, setBatchIndex, setBatchZip]);
 }

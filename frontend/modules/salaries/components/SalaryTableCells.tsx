@@ -1,4 +1,4 @@
-import { useState, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { useState, useRef, useEffect, type KeyboardEvent, type ReactNode } from 'react';
 import { getOrdersCellBackground } from '@modules/salaries/lib/salaryConstants';
 import { getPlatformActivitySummary, getPrimaryPlatformActivityCount } from '@modules/salaries/model/salaryUtils';
 import type { PlatformSalaryMetric, SalaryRow, SchemeData } from '@modules/salaries/types/salary.types';
@@ -59,6 +59,18 @@ interface SalaryBreakdownProps {
 
 export const SalaryBreakdown = ({ orders, scheme, salary, children }: SalaryBreakdownProps) => {
   const [show, setShow] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // FIX W7: close tooltip on click-outside (touch devices don't fire mouseLeave)
+  useEffect(() => {
+    if (!show) return;
+    const handler = (e: PointerEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) setShow(false);
+    };
+    document.addEventListener('pointerdown', handler);
+    return () => document.removeEventListener('pointerdown', handler);
+  }, [show]);
+
   if (!scheme || orders === 0) return <>{children}</>;
   const tiers = scheme.salary_scheme_tiers || [];
   const explanationLines = getTierSalaryExplanationLines(
@@ -79,7 +91,7 @@ export const SalaryBreakdown = ({ orders, scheme, salary, children }: SalaryBrea
   // onMouseLeave. This way hovering from the trigger onto the tooltip itself
   // doesn't fire onMouseLeave, so the tooltip stays visible.
   return (
-    <div className="relative inline-block" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+    <div ref={containerRef} className="relative inline-block" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
       {children}
       {show && (
         <div

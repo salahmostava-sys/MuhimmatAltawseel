@@ -243,13 +243,7 @@ const Salaries = () => {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-4" dir="rtl">
-      <div>
-        <nav className="page-breadcrumb">
-          <span>الرئيسية</span>
-          <span className="page-breadcrumb-sep">/</span>
-          <span>الرواتب</span>
-        </nav>
-      </div>
+      {/* Breadcrumb is rendered inside SalaryMonthSelector — no duplicate here */}
 
       <SalaryMonthSelector
         loadingData={loadingData}

@@ -10,6 +10,7 @@
  * (sorting, platform-order edits, employee-detail dialog).
  */
 
+import { useRef } from 'react';
 import type React from 'react';
 import type JSZip from 'jszip';
 import { toast as sonnerToast } from '@shared/components/ui/sonner';
@@ -111,6 +112,13 @@ export function useSalaryActions(params: UseSalaryActionsParams) {
     }
   };
 
+  // FIX W6d: updatePlatformOrders performs an OPTIMISTIC local salary calculation
+  // so the user sees immediate feedback. This is intentionally a different code path
+  // from the Supabase RPC (preview_salary_for_month) which is the single source of truth.
+  // The row is marked isDirty=true, and on approve the server recalculates authoritatively.
+  // Additionally, we debounce-invalidate the preview query so the RPC values catch up.
+  const previewInvalidateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const updatePlatformOrders = (id: string, platform: string, value: number) => {
     setRows((prev) =>
       prev.map((r) => {
@@ -152,6 +160,15 @@ export function useSalaryActions(params: UseSalaryActionsParams) {
         };
       }),
     );
+
+    // Debounced server re-sync: after the user stops editing for 3s, invalidate
+    // the preview query so RPC values replace optimistic local calculations.
+    if (previewInvalidateTimer.current) clearTimeout(previewInvalidateTimer.current);
+    previewInvalidateTimer.current = setTimeout(() => {
+      void queryClient.invalidateQueries({
+        queryKey: ['salaries', uid, 'preview', selectedMonth],
+      });
+    }, 3_000);
   };
 
   const openEmployeeDetail = (row: SalaryRow) => {

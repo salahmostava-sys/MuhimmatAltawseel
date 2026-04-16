@@ -114,5 +114,5 @@ export function useSalaryDraft({
     }, DRAFT_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [rows, loadingData, salariesDraftKey, selectedMonth]);
+  }, [rows, loadingData, salariesDraftKey, selectedMonth, userId]);
 }

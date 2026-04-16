@@ -16,7 +16,7 @@
  * - Only rows within the scroll viewport are in the DOM
  * - Ctrl+F browser search won't find off-screen rows (acceptable trade-off)
  */
-import { useMemo, useRef, memo, useCallback } from 'react';
+import { useMemo, useRef, memo, useCallback, type MutableRefObject } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Button } from '@shared/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@shared/components/ui/tooltip';
@@ -288,18 +288,25 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
   // handleSort is passed only to the header <th> elements, not to SalaryRowCells,
   // so it does NOT affect memo effectiveness.
   //
-  // The row-level callbacks below (updateRow, persistEmployeeCity, etc.) do NOT
-  // read sorting state, so they can safely be frozen at mount time.
-  // They are passed from useSalaryPersistence which already wraps them in useCallback,
-  // but SalariesPage re-renders on every state change — these wrappers prevent
-  // unnecessary SalaryRowCells re-renders when unrelated state (e.g. approvingRowId) changes.
-  const stableSetEditingCell = useCallback(setEditingCell, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const stableSetPayslipRow = useCallback(setPayslipRow, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const stableUpdateRow = useCallback(updateRow, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const stableUpdatePlatformOrders = useCallback(updatePlatformOrders, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const stableOpenEmployeeDetail = useCallback(openEmployeeDetail, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const stablePersistCity = useCallback(persistEmployeeCity, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const stablePersistPayment = useCallback(persistEmployeePaymentMethod, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // FIX W6: the original useCallback(fn, []) pattern froze callbacks at mount,
+  // causing stale closures when rows/selectedMonth/user changed. Now we use a
+  // ref-forwarding pattern: the ref always holds the latest function, while the
+  // stable wrapper has a fixed identity for React.memo.
+  const setEditingCellRef = useRef(setEditingCell); setEditingCellRef.current = setEditingCell;
+  const setPayslipRowRef = useRef(setPayslipRow); setPayslipRowRef.current = setPayslipRow;
+  const updateRowRef = useRef(updateRow); updateRowRef.current = updateRow;
+  const updatePlatformOrdersRef = useRef(updatePlatformOrders); updatePlatformOrdersRef.current = updatePlatformOrders;
+  const openEmployeeDetailRef = useRef(openEmployeeDetail); openEmployeeDetailRef.current = openEmployeeDetail;
+  const persistCityRef = useRef(persistEmployeeCity); persistCityRef.current = persistEmployeeCity;
+  const persistPaymentRef = useRef(persistEmployeePaymentMethod); persistPaymentRef.current = persistEmployeePaymentMethod;
+
+  const stableSetEditingCell = useCallback((...args: Parameters<typeof setEditingCell>) => setEditingCellRef.current(...args), []);
+  const stableSetPayslipRow = useCallback((...args: Parameters<typeof setPayslipRow>) => setPayslipRowRef.current(...args), []);
+  const stableUpdateRow = useCallback((...args: Parameters<typeof updateRow>) => updateRowRef.current(...args), []);
+  const stableUpdatePlatformOrders = useCallback((...args: Parameters<typeof updatePlatformOrders>) => updatePlatformOrdersRef.current(...args), []);
+  const stableOpenEmployeeDetail = useCallback((...args: Parameters<typeof openEmployeeDetail>) => openEmployeeDetailRef.current(...args), []);
+  const stablePersistCity = useCallback((...args: Parameters<typeof persistEmployeeCity>) => persistCityRef.current(...args), []);
+  const stablePersistPayment = useCallback((...args: Parameters<typeof persistEmployeePaymentMethod>) => persistPaymentRef.current(...args), []);
 
   // ── Custom columns ────────────────────────────────────────────────────────
   const allCustomCols = useMemo(() => {
@@ -328,10 +335,16 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
     platforms.forEach(p => {
       acc.platformOrders[p] = (acc.platformOrders[p] || 0) + (r.platformMetrics[p]?.ordersCount || 0);
       acc.platformShiftDays[p] = (acc.platformShiftDays[p] || 0) + (r.platformMetrics[p]?.shiftDays || 0);
+      // FIX W9: accumulate per-platform salary totals here instead of re-reducing in footer
+      acc.platformSalariesTotals[p] = (acc.platformSalariesTotals[p] || 0) + (r.platformSalaries[p] || 0);
     });
     acc.totalOrders += activityTotals.orders;
     acc.totalShiftDays += activityTotals.shiftDays;
     acc.platformSalaries += c.totalPlatformSalary;
+    // FIX W9b: accumulate inline totals here to avoid re-reducing in footer
+    acc.platformIncome += r.platformIncome;
+    acc.workDaysSum += r.workDays;
+    acc.fuelCost += r.fuelCost;
     acc.incentives += r.incentives;
     acc.sickAllowance += r.sickAllowance;
     acc.totalAdditions += c.totalAdditions;
@@ -347,8 +360,10 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
   }, {
     platformOrders: {} as Record<string, number>,
     platformShiftDays: {} as Record<string, number>,
+    platformSalariesTotals: {} as Record<string, number>,
     totalOrders: 0, totalShiftDays: 0,
-    platformSalaries: 0, incentives: 0, sickAllowance: 0,
+    platformSalaries: 0, platformIncome: 0, workDaysSum: 0, fuelCost: 0,
+    incentives: 0, sickAllowance: 0,
     totalAdditions: 0, totalWithSalary: 0,
     advance: 0, externalDed: 0, violations: 0,
     totalDed: 0, net: 0, transfer: 0, remaining: 0,
@@ -567,18 +582,18 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
               <td className={tfClass} style={{ position: 'sticky', left: 168, zIndex: 20, backgroundColor: 'hsl(var(--muted))' }}></td>
               <td className={`${tfClass} border-l border-border/30`} style={{ position: 'sticky', left: 264, zIndex: 20, backgroundColor: 'hsl(var(--muted))' }}></td>
               <td className="px-2 py-2 text-xs font-bold text-center border border-border/40 bg-info/10 text-foreground">
-                {filtered.reduce((s, r) => s + r.platformIncome, 0).toLocaleString()}
+                {totals.platformIncome.toLocaleString()}
               </td>
               <td className="px-2 py-2 text-xs font-bold text-center border border-border/40 bg-info/10 text-foreground">
-                {Math.round(filtered.reduce((s, r) => s + r.workDays, 0) / Math.max(filtered.length, 1))}
+                {Math.round(totals.workDaysSum / Math.max(filtered.length, 1))}
               </td>
               <td className="px-2 py-2 text-xs font-bold text-center border border-border/40 bg-info/10 text-foreground">
-                {filtered.reduce((s, r) => s + r.fuelCost, 0).toLocaleString()}
+                {totals.fuelCost.toLocaleString()}
               </td>
               {platforms.map(p => {
                 const totalOrders = totals.platformOrders[p] || 0;
                 const totalShiftDays = totals.platformShiftDays[p] || 0;
-                const totalSal = filtered.reduce((s, r) => s + (r.platformSalaries[p] || 0), 0);
+                const totalSal = totals.platformSalariesTotals[p] || 0;
                 return (
                   <td key={`${p}-col`} className={`${tfClass} border-l border-border/20 text-foreground`}>
                     <div className="flex flex-col items-center leading-tight">

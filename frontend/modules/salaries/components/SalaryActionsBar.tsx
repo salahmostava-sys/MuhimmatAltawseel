@@ -68,7 +68,7 @@ export function SalaryActionsBar(props: Readonly<SalaryActionsBarProps>) {
         <Input placeholder="بحث بالاسم..." className="pr-9 h-9 w-48" value={search} onChange={e => setSearch(e.target.value)} />
       </div>
       <div className="flex gap-1">
-        {[{ v: 'all', l: 'الكل' }, { v: 'approved', l: 'معتمد' }, { v: 'paid', l: 'مصروف' }].map(s => (
+        {[{ v: 'all', l: 'الكل' }, { v: 'pending', l: 'معلّق' }, { v: 'approved', l: 'معتمد' }, { v: 'paid', l: 'مصروف' }].map(s => (
           <button key={s.v} onClick={() => setStatusFilter(s.v)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${statusFilter === s.v ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}>
             {s.l}

@@ -176,7 +176,17 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
 
   const approveRow = useCallback(
     async (id: string) => {
-      const row = rows.find((r) => r.id === id);
+      // FIX W6b: guard against double-fire — if already approving any row, bail out.
+      if (approvingRowId) return;
+
+      // FIX W6c: read rows from the state updater to avoid stale closure.
+      // We call setRows with an identity fn just to read the latest snapshot.
+      const row = await new Promise<SalaryRow | undefined>((resolve) => {
+        setRows((prev) => {
+          resolve(prev.find((r) => r.id === id));
+          return prev; // no mutation
+        });
+      });
       if (!row) return;
       if (!isEmployeeIdUuid(row.employeeId) || !isValidSalaryMonthYear(selectedMonth)) {
         toast.error('تعذّر الاعتماد', {
@@ -241,7 +251,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
 
 
     },
-    [rows, selectedMonth, toast, user, run, computeServerSalaryForPayment, updateRow, refreshMonthSnapshot],
+    [rows, selectedMonth, toast, user, run, computeServerSalaryForPayment, updateRow, refreshMonthSnapshot, approvingRowId, setRows],
   );
 
   // ── Mark as paid ──────────────────────────────────────────────────────────
@@ -454,7 +464,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
       }
       setEmployeeFieldSaving(`${row.employeeId}:payment`);
       updateRow(row.id, { paymentMethod: next });
-      toast.success('تم تحديث طريقة الصرف');
+      toast.success('تم تحديث طريقة الصرف — اعتمد الراتب لحفظ التغيير نهائياً');
       setEmployeeFieldSaving(null);
     },
     [toast, setEmployeeFieldSaving, updateRow],
