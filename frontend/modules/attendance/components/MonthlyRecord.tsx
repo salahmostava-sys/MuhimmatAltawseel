@@ -72,7 +72,7 @@ const MonthlyRecord = ({ selectedMonth, selectedYear }: Props) => {
   const employees = data?.employees ?? [];
   const attendanceRows = data?.attendanceRows ?? [];
 
-  const data = employees.map((emp) => {
+  const tableData = employees.map((emp) => {
     const rows = attendanceRows.filter((r) => r.employee_id === emp.id);
     const presentDays = rows.filter((r) => r.status === "present").length;
     const absentDays = rows.filter((r) => r.status === "absent").length;
@@ -87,7 +87,7 @@ const MonthlyRecord = ({ selectedMonth, selectedYear }: Props) => {
     return { ...emp, presentDays, absentDays, leaveDays, sickDays, lateDays, totalHours, notes };
   });
 
-  const totals = data.reduce(
+  const totals = tableData.reduce(
     (acc, d) => ({
       presentDays: acc.presentDays + d.presentDays,
       absentDays: acc.absentDays + d.absentDays,
@@ -126,7 +126,7 @@ const MonthlyRecord = ({ selectedMonth, selectedYear }: Props) => {
         ))}
       </tr>
     ));
-  } else if (data.length === 0) {
+  } else if (tableData.length === 0) {
     tableBodyRows = (
       <tr>
         <td colSpan={9} className="p-10 text-center text-muted-foreground">
@@ -135,7 +135,7 @@ const MonthlyRecord = ({ selectedMonth, selectedYear }: Props) => {
       </tr>
     );
   } else {
-    tableBodyRows = data.map((row) => (
+    tableBodyRows = tableData.map((row) => (
       <tr key={row.id} className="ta-tr">
         <td className={`ta-td sticky ${stickySideClass} bg-card`}>
           <div className="flex items-center gap-2">
@@ -221,7 +221,7 @@ const MonthlyRecord = ({ selectedMonth, selectedYear }: Props) => {
             <tbody>
               {tableBodyRows}
             </tbody>
-            {!loading && data.length > 0 && (
+            {!loading && tableData.length > 0 && (
               <tfoot>
                 <tr className="bg-muted/40 font-semibold border-t-2 border-border">
                   <td className={`ta-td sticky ${stickySideClass} bg-muted/40 text-foreground`}>
