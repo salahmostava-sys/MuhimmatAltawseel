@@ -139,6 +139,12 @@ const Salaries = () => {
   // Runs on phase1 finish AND phase2 finish (rows update silently with preview).
   // rows lives in local state so useSalaryActions can mutate it (dirty/approve/etc.)
   //
+  // TECH DEBT (ISSUE #7): This useEffect→useState sync is an anti-pattern. Ideally,
+  // rows should be derived directly from React Query data with mutations going through
+  // queryClient.setQueryData. This would eliminate the sync window where local state
+  // is stale while query data is fresh. Refactoring to useReducer or useImmer would
+  // also work. For now, the ref identity guard below keeps the window minimal.
+  //
   // FIX: we do NOT list hydratedRows as dep — it's a new array reference on every
   // render. Instead we sync whenever loadingData transitions false→false (i.e. new
   // data arrived). We detect this by checking hydratedRows identity against a ref.
@@ -289,6 +295,18 @@ const Salaries = () => {
               تم إيقاف الحساب المحلي حفاظاً على الدقة. {previewBackendError}
             </p>
           </div>
+          {/* FIX #8: retry button for phase 2 preview failures */}
+          <button
+            type="button"
+            className="flex-shrink-0 text-xs font-medium text-destructive hover:underline px-3 py-1.5 rounded-lg border border-destructive/30 hover:bg-destructive/10 transition-colors"
+            onClick={() => {
+              void queryClient.invalidateQueries({
+                queryKey: ['salaries', uid, 'preview', selectedMonth],
+              });
+            }}
+          >
+            إعادة المحاولة
+          </button>
         </div>
       )}
 
@@ -339,6 +357,7 @@ const Salaries = () => {
             markAsPaid={actions.markAsPaid}
             markingPaid={markingPaid}
             setPayslipRow={setPayslipRow}
+            canEdit={permissions.can_edit}
           />
         </Suspense>
       )}
@@ -369,6 +388,7 @@ const Salaries = () => {
           persistEmployeePaymentMethod={actions.persistEmployeePaymentMethod}
           employeeFieldSaving={employeeFieldSaving}
           openEmployeeDetail={actions.openEmployeeDetail}
+          canEdit={permissions.can_edit}
         />
       )}
 

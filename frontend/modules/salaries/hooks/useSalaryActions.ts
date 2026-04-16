@@ -77,6 +77,12 @@ export function useSalaryActions(params: UseSalaryActionsParams) {
     setDetailRow,
   } = params;
 
+  // FIX #3: keep refs to pricing data so updatePlatformOrders always reads fresh values.
+  // These change when the admin updates schemes/rules while the page is open.
+  const appIdByNameRef = useRef(appIdByName); appIdByNameRef.current = appIdByName;
+  const pricingRulesByAppIdRef = useRef(pricingRulesByAppId); pricingRulesByAppIdRef.current = pricingRulesByAppId;
+  const empPlatformSchemeRef = useRef(empPlatformScheme); empPlatformSchemeRef.current = empPlatformScheme;
+
   // ── Delegate to specialised hooks ─────────────────────────────────────────
 
   const io = useSalaryIO({
@@ -126,12 +132,13 @@ export function useSalaryActions(params: UseSalaryActionsParams) {
         const currentMetric = r.platformMetrics[platform];
         if (currentMetric && currentMetric.workType !== 'orders') return r;
         const newOrders = { ...r.platformOrders, [platform]: value };
-        const appId = appIdByName[platform];
-        const appRules = appId ? (pricingRulesByAppId[appId] || []) : [];
+        // FIX #3: read from refs to avoid stale closure
+        const appId = appIdByNameRef.current[platform];
+        const appRules = appId ? (pricingRulesByAppIdRef.current[appId] || []) : [];
         const ruleResult = salaryService.applyPricingRules(appRules, value);
         let salary = Math.round(ruleResult.salary || 0);
         if (!ruleResult.matchedRule) {
-          const scheme = empPlatformScheme?.[r.employeeId]?.[platform];
+          const scheme = empPlatformSchemeRef.current?.[r.employeeId]?.[platform];
           if (scheme?.salary_scheme_tiers) {
             salary = salaryService.calculateTierSalary(
               value,

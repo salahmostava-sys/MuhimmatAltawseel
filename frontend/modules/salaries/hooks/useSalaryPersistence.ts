@@ -325,7 +325,16 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
   // â”€â”€ Approve all â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const approveAll = useCallback(async () => {
-    const approvalRows = filtered.filter((r) => r.status === 'pending' || r.isDirty);
+    // FIX #1: read fresh rows from state to prevent stale closure data.
+    // filtered comes from a closure and may be outdated if rows changed since render.
+    // We read fresh rows via setRows identity updater, then re-filter using filtered ids.
+    const filteredIds = new Set(filtered.map((r) => r.id));
+    const freshRows = await new Promise<SalaryRow[]>((resolve) => {
+      setRows((prev) => { resolve(prev); return prev; });
+    });
+    const approvalRows = freshRows
+      .filter((r) => filteredIds.has(r.id))
+      .filter((r) => r.status === 'pending' || r.isDirty);
     if (approvalRows.length === 0) return;
     if (!isValidSalaryMonthYear(selectedMonth)) {
       toast.error('Ø®Ø·Ø£', { description: 'Ø§Ù„Ø´Ù‡Ø± Ø§Ù„Ù…Ø­Ø¯Ø¯ ØºÙŠØ± ØµØ§Ù„Ø­' });

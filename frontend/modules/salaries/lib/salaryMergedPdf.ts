@@ -1,5 +1,6 @@
 import { escapeHtml } from '@shared/lib/security';
 import { getManualDeductionTotal } from '@modules/salaries/lib/salaryDomain';
+import { getPlatformActivitySummary } from '@modules/salaries/model/salaryUtils';
 import type { MergedPdfComputed, SalaryRow } from '@modules/salaries/types/salary.types';
 
 export const MERGED_PDF_STYLES = `
@@ -38,11 +39,14 @@ export function buildMergedPlatformsRowsHtml(row: SalaryRow): string {
   if (row.registeredApps.length === 0) {
     return `<tr><td colspan="3" style="text-align:center;color:#999">لا توجد منصات مسجلة</td></tr>`;
   }
+  // FIX #13: use getPlatformActivitySummary so shift-based platforms show
+  // "X دوام" instead of showing 0 orders under a misleading "طلبات" column.
   return row.registeredApps
     .map((app) => {
-      const orders = row.platformOrders[app] || 0;
+      const metric = row.platformMetrics[app];
+      const activityLabel = getPlatformActivitySummary(metric);
       const salary = row.platformSalaries[app] || 0;
-      return `<tr><td class="label">${escapeHtml(app)}</td><td style="text-align:center">${orders.toLocaleString()}</td><td class="val-blue" style="text-align:center">${salary.toLocaleString()} ر.س</td></tr>`;
+      return `<tr><td class="label">${escapeHtml(app)}</td><td style="text-align:center">${activityLabel}</td><td class="val-blue" style="text-align:center">${salary.toLocaleString()} ر.س</td></tr>`;
     })
     .join('');
 }
@@ -125,10 +129,10 @@ export function buildMergedSalaryPageHtml({
         <div class="info-row"><span class="info-label">تكلفة البنزين</span><span class="info-value">${Number(row.fuelCost ?? 0).toLocaleString()} ر.س</span></div>
         <div class="info-row"><span class="info-label">دخل المنصات</span><span class="info-value">${Number(row.platformIncome ?? 0).toLocaleString()} ر.س</span></div>
       </div>
-      <h3>الطلبات والراتب حسب المنصة</h3>
+      <h3>النشاط والراتب حسب المنصة</h3>
       <table>
         <tr><td class="label" style="background:#e0e7ff;color:#4338ca;font-weight:700">المنصة</td>
-            <td style="background:#e0e7ff;color:#4338ca;font-weight:700;text-align:center">الطلبات</td>
+            <td style="background:#e0e7ff;color:#4338ca;font-weight:700;text-align:center">النشاط</td>
             <td style="background:#e0e7ff;color:#4338ca;font-weight:700;text-align:center">الراتب</td></tr>
         ${buildMergedPlatformsRowsHtml(row)}
         <tr class="total-row"><td class="label">إجمالي الراتب الأساسي</td><td></td><td class="val-blue" style="text-align:center">${computed.totalPlatformSalary.toLocaleString()} ر.س</td></tr>

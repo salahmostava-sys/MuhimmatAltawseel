@@ -88,14 +88,9 @@ export function buildSlipFieldsFromRow(
       }
     });
   }
-  if ((row as Record<string, unknown>).customEarnings) {
-    Object.entries((row as Record<string, unknown>).customEarnings as Record<string, number>).forEach(([key, val]) => {
-      if (val > 0) {
-        const label = key.split('___').slice(1).join('___') || key;
-        fields.push({ key: `custom_earning_${key}`, label, value: val, type: 'earning', color: 'green' });
-      }
-    });
-  }
+  // NOTE: customEarnings is not part of SalaryRow type yet.
+  // When this feature is implemented, add customEarnings to SalaryRow type
+  // and remove the unsafe cast. See ISSUE #12 in the salary audit report.
 
   if (row.advanceRemaining > 0) {
     fields.push({ key: 'advanceRemaining', label: t.advanceBalance, value: row.advanceRemaining, type: 'deduction', color: 'orange' });

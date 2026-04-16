@@ -627,10 +627,22 @@ export async function prepareSalaryState({
     savedRecords as Array<{ employee_id: string } & SavedSalaryRecord> | null | undefined,
   );
   const previewMap = buildPreviewMap((previewData || []) as Array<Record<string, unknown>>);
-  const { advInstIds, deductedInstIds, advRemainingMap } = await buildAdvanceInstallmentMaps(
-    selectedMonth,
-    (allAdvances as Array<{ id: string; employee_id: string }> | null | undefined) || []
-  );
+  // FIX #10: wrap subsidiary async calls in try/catch so a failure in
+  // advance installments doesn't crash the entire salary page.
+  let advInstIds: Record<string, string[]> = {};
+  let deductedInstIds: Record<string, string[]> = {};
+  let advRemainingMap: Record<string, number> = {};
+  try {
+    const advResult = await buildAdvanceInstallmentMaps(
+      selectedMonth,
+      (allAdvances as Array<{ id: string; employee_id: string }> | null | undefined) || []
+    );
+    advInstIds = advResult.advInstIds;
+    deductedInstIds = advResult.deductedInstIds;
+    advRemainingMap = advResult.advRemainingMap;
+  } catch (e) {
+    logError('[Salaries] Failed to load advance installments — continuing without advance data', e, { level: 'warn' });
+  }
 
   const monthStartIso = `${selectedMonth}-01`;
   const attendanceDaysMap = buildAttendanceDaysMap(attendanceRows as Array<{ employee_id: string }> | null | undefined);

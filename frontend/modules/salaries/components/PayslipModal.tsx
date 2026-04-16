@@ -7,6 +7,7 @@ import { logError } from '@shared/lib/logger';
 import { months } from '@modules/salaries/lib/salaryMonths';
 import { buildSalarySlipHTML } from '@modules/salaries/lib/buildSalarySlipHTML';
 import { buildSlipFieldsFromRow, buildSlipPlatformRows, buildSlipEmployeeInfo } from '@modules/salaries/lib/buildSalarySlipFields';
+import { getDisplayedBaseSalary } from '@modules/salaries/model/salaryUtils';
 import { previewSlipInIframe, printSlipHTML, exportSlipPDF } from '@modules/salaries/lib/salarySlipActions';
 import { aiService, type SalaryAnalysisResponse } from '@services/aiService';
 import { salarySlipTemplateService, type SalarySlipTemplate } from '@services/salarySlipTemplateService';
@@ -34,8 +35,10 @@ export function PayslipModal({ row, onClose, onApprove, selectedMonth, companyNa
   const monthLabel = months.find((m) => m.v === selectedMonth)?.l || selectedMonth;
 
   // Build dynamic fields from row data
+  // FIX #4: use getDisplayedBaseSalary so admin employees with engineBaseSalary
+  // but no platform orders get the correct salary on the payslip.
   const platforms = buildSlipPlatformRows(row);
-  const totalPlatformSalary = platforms.reduce((s, r) => s + r.salary, 0);
+  const totalPlatformSalary = getDisplayedBaseSalary(row);
   const totalEarnings = totalPlatformSalary + row.incentives + row.sickAllowance;
   const totalOrders = platforms.reduce((s, p) => s + p.orders, 0);
   const totalBonus = row.incentives + row.sickAllowance;

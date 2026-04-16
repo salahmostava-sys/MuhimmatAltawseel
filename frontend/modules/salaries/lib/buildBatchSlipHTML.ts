@@ -1,6 +1,7 @@
 import { getSlipTranslations } from '@shared/lib/salarySlipTranslations';
 import { buildSalarySlipHTML } from '@modules/salaries/lib/buildSalarySlipHTML';
 import { buildSlipFieldsFromRow, buildSlipEmployeeInfo } from '@modules/salaries/lib/buildSalarySlipFields';
+import { getDisplayedBaseSalary } from '@modules/salaries/model/salaryUtils';
 import type { SalaryRow } from '@modules/salaries/types/salary.types';
 
 export function buildBatchSlipHTML(row: SalaryRow, batchMonth: string, projectName: string): string {
@@ -14,7 +15,9 @@ export function buildBatchSlipHTML(row: SalaryRow, batchMonth: string, projectNa
       salary: row.platformSalaries[app] || 0,
     }));
 
-  const totalPlatformSalary = platformRows.reduce((sum, platform) => sum + platform.salary, 0);
+  // FIX #5: use getDisplayedBaseSalary so admin employees with engineBaseSalary
+  // but no platform orders get the correct salary in batch PDF export.
+  const totalPlatformSalary = getDisplayedBaseSalary(row);
   const totalEarnings = totalPlatformSalary + row.incentives + row.sickAllowance;
   const allDeductionVals = [
     row.advanceDeduction,

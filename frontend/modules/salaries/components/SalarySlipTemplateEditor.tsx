@@ -75,8 +75,26 @@ export function SalarySlipTemplateEditor() {
   const previewRef = useRef<HTMLDivElement>(null);
   const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // FIX #11: use cancellation flag to prevent setState on unmounted component
   useEffect(() => {
-    loadTemplates();
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const data = await salarySlipTemplateService.getAll();
+        if (cancelled) return;
+        setTemplates(data);
+        if (data.length > 0) {
+          const def = data.find(t => t.is_default) || data[0];
+          setCurrentTemplate(def);
+        }
+      } catch {
+        if (!cancelled) toast.error('فشل تحميل القوالب');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const loadTemplates = async () => {

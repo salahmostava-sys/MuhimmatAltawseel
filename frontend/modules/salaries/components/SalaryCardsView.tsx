@@ -12,10 +12,12 @@ interface SalaryCardsViewProps {
   markAsPaid: (row: SalaryRow) => void;
   markingPaid: string | null;
   setPayslipRow: React.Dispatch<React.SetStateAction<SalaryRow | null>>;
+  /** FIX #6: gate approve/pay actions behind permission */
+  canEdit: boolean;
 }
 
 export function SalaryCardsView(props: Readonly<SalaryCardsViewProps>) {
-  const { loadingData, filtered, computeRow, approveRow, approvingRowId, markAsPaid, markingPaid, setPayslipRow } = props;
+  const { loadingData, filtered, computeRow, approveRow, approvingRowId, markAsPaid, markingPaid, setPayslipRow, canEdit } = props;
 
   return (
     <div>
@@ -79,12 +81,12 @@ export function SalaryCardsView(props: Readonly<SalaryCardsViewProps>) {
                   <span className="text-base font-black text-success">{c.netSalary.toLocaleString()} ر.س</span>
                 </div>
                 <div className="flex gap-2">
-                  {needsApproval && (
+                  {needsApproval && canEdit && (
                     <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1 text-success border-success/30 hover:bg-success/10" onClick={() => approveRow(r.id)} disabled={approvingRowId === r.id}>
                       {approvingRowId === r.id ? '...' : <><CheckCircle size={11} /> اعتماد</>}
                     </Button>
                   )}
-                  {r.status === 'approved' && !r.isDirty && (
+                  {r.status === 'approved' && !r.isDirty && canEdit && (
                     <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1 text-primary border-primary/30 hover:bg-primary/10"
                       onClick={() => markAsPaid(r)} disabled={markingPaid === r.id}>
                       {markingPaid === r.id ? '...' : '✅ تم الصرف'}

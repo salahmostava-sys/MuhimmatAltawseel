@@ -70,6 +70,8 @@ interface SalaryTableProps {
   persistEmployeePaymentMethod: (row: SalaryRow, next: 'bank' | 'cash') => void;
   employeeFieldSaving: string | null;
   openEmployeeDetail: (row: SalaryRow) => void;
+  /** FIX #6: gate approve/pay actions behind permission */
+  canEdit: boolean;
 }
 
 // ── Row renderer — memoized to prevent re-renders on scroll ──────────────────
@@ -119,6 +121,7 @@ const SalaryRowCells = memo(function SalaryRowCells({
   persistEmployeePaymentMethod: SalaryTableProps['persistEmployeePaymentMethod'];
   employeeFieldSaving: SalaryTableProps['employeeFieldSaving'];
   openEmployeeDetail: SalaryTableProps['openEmployeeDetail'];
+  canEdit: boolean;
 }) {
   const canEditManualBaseSalary = !Object.values(r.platformMetrics || {}).some((metric) => hasPlatformActivity(metric));
   const needsApproval = r.status === 'pending' || !!r.isDirty;
@@ -246,12 +249,12 @@ const SalaryRowCells = memo(function SalaryRowCells({
       </td>
       <td className={`${tdClass} border-l border-border`}>
         <div className="flex items-center justify-center gap-1.5">
-          {needsApproval && (
+          {needsApproval && canEdit && (
             <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1 text-success border-success/40 hover:bg-success/10" onClick={() => approveRow(r.id)} disabled={approvingRowId === r.id}>
               {approvingRowId === r.id ? <Loader2 size={11} className="animate-spin" /> : <><CheckCircle size={11} /> اعتماد</>}
             </Button>
           )}
-          {r.status === 'approved' && !r.isDirty && (
+          {r.status === 'approved' && !r.isDirty && canEdit && (
             <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1 text-primary border-primary/40 hover:bg-primary/10" onClick={() => void markAsPaid(r)} disabled={markingPaid === r.id}>
               {markingPaid === r.id ? <Loader2 size={11} className="animate-spin" /> : <>✅ تم الصرف</>}
             </Button>
@@ -556,6 +559,7 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
                     persistEmployeePaymentMethod={stablePersistPayment}
                     employeeFieldSaving={employeeFieldSaving}
                     openEmployeeDetail={stableOpenEmployeeDetail}
+                    canEdit={props.canEdit}
                   />
                 </tr>
               );

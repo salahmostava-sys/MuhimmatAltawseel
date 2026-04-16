@@ -239,4 +239,39 @@ describe('salaryService', () => {
   it('calculateFixedMonthlySalary returns 0 for zero amount', () => {
     expect(salaryService.calculateFixedMonthlySalary(0, 20)).toBe(0);
   });
+
+  // ISSUE #2: verify the specific test cases from the audit
+  // These match a mixed scheme: per_order_band for low ranges, fixed_amount for mid, base_plus_incremental for top
+  describe('audit-requested calculation cases (150→450, 301→1204, 460→2500, 500→2600)', () => {
+    const auditTiers = [
+      { from_orders: 1, to_orders: 300, price_per_order: 3, tier_order: 1, tier_type: 'per_order_band' as const },
+      { from_orders: 301, to_orders: 450, price_per_order: 4, tier_order: 2, tier_type: 'per_order_band' as const },
+      { from_orders: 451, to_orders: 460, price_per_order: 2500, tier_order: 3, tier_type: 'fixed_amount' as const },
+      {
+        from_orders: 461,
+        to_orders: null,
+        price_per_order: 2500,
+        tier_order: 4,
+        tier_type: 'base_plus_incremental' as const,
+        incremental_threshold: 460,
+        incremental_price: 2.5,
+      },
+    ];
+
+    it('150 orders → 450 (per_order_band: 150 × 3)', () => {
+      expect(salaryService.calculateTierSalary(150, auditTiers, null, null)).toBe(450);
+    });
+
+    it('301 orders → 1204 (per_order_band: 301 × 4)', () => {
+      expect(salaryService.calculateTierSalary(301, auditTiers, null, null)).toBe(1204);
+    });
+
+    it('460 orders → 2500 (fixed_amount)', () => {
+      expect(salaryService.calculateTierSalary(460, auditTiers, null, null)).toBe(2500);
+    });
+
+    it('500 orders → 2600 (base_plus_incremental: 2500 + (500-460) × 2.5)', () => {
+      expect(salaryService.calculateTierSalary(500, auditTiers, null, null)).toBe(2600);
+    });
+  });
 });
