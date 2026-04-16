@@ -3,6 +3,7 @@ import { validateUploadFile } from '@shared/lib/validation';
 import { authService } from '@services/authService';
 import { toServiceError } from '@services/serviceError';
 import { createPagedResult } from '@shared/types/pagination';
+import { sanitizeLikeQuery } from '@shared/lib/security';
 import { sanitizeStoragePath } from '@shared/lib/storagePath';
 
 const EXPORT_TABLE_ALLOWLIST = new Set([
@@ -37,7 +38,8 @@ export const settingsHubService = {
     if (filterAction !== 'all') query = query.eq('action', filterAction);
     if (filterTable !== 'all') query = query.eq('table_name', filterTable);
     if (search.trim()) {
-      query = query.or(`table_name.ilike.%${search}%,action.ilike.%${search}%,record_id.ilike.%${search}%`);
+      const sq = sanitizeLikeQuery(search.trim());
+      query = query.or(`table_name.ilike.%${sq}%,action.ilike.%${sq}%,record_id.ilike.%${sq}%`);
     }
 
     const { data, error, count } = await query;

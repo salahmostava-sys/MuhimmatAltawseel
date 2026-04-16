@@ -108,6 +108,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     redirectToLoginIfNeeded();
   }, [redirectToLoginIfNeeded, user?.id]);
 
+  // FIX: cache the fetched role per userId to prevent redundant DB calls on every
+  // tab focus, visibility change, and token refresh. The role almost never changes
+  // during a session. Cache is invalidated on user switch (different userId).
+  const cachedRoleRef = useRef<{ userId: string; role: AppRole | null } | null>(null);
+
   /**
    * Shared helper: checks if a user is still active, then applies the session to state.
    * Returns false and calls forceSignOut() if the user is deactivated.
@@ -134,11 +139,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       setSession(sessionToApply);
       setUser(sessionToApply.user);
-      const r = await withTimeout(
-        fetchRole(userId),
-        AUTH_ACTIVE_CHECK_TIMEOUT_MS,
-        'authService.fetchUserRole',
-      );
+      // Use cached role if same user — avoids redundant DB/RPC call on every tab focus
+      let r: AppRole | null;
+      if (cachedRoleRef.current?.userId === userId) {
+        r = cachedRoleRef.current.role;
+      } else {
+        r = await withTimeout(
+          fetchRole(userId),
+          AUTH_ACTIVE_CHECK_TIMEOUT_MS,
+          'authService.fetchUserRole',
+        );
+        cachedRoleRef.current = { userId, role: r };
+      }
       setRole(r);
       return true;
     } catch (e) {

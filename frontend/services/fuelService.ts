@@ -2,6 +2,7 @@ import { supabase } from '@services/supabase/client';
 import { handleSupabaseError } from '@services/serviceError';
 import { createPagedResult } from '@shared/types/pagination';
 import { filterOperationallyVisibleEmployees } from '@shared/lib/employeeVisibility';
+import { sanitizeLikeQuery } from '@shared/lib/security';
 export interface MileageDailyPayload {
   employee_id: string;
   date: string;
@@ -136,8 +137,8 @@ export const fuelService = {
     if (filters.employeeId) query = query.eq('employee_id', filters.employeeId);
     if (filters.branch) query = query.eq('employees.city', filters.branch);
     if (filters.search?.trim()) {
-      const q = filters.search.trim();
-      query = query.ilike('employees.name', `%${q}%`);
+      const sq = sanitizeLikeQuery(filters.search.trim());
+      query = query.ilike('employees.name', `%${sq}%`);
     }
 
     const { data, error, count } = await query;

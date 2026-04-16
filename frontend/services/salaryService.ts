@@ -9,6 +9,7 @@
 import { supabase } from '@services/supabase/client';
 import { isEmployeeIdUuid, isValidSalaryMonthYear } from '@shared/lib/salaryValidation';
 import { handleSupabaseError } from '@services/serviceError';
+import { sanitizeLikeQuery } from '@shared/lib/security';
 import { createPagedResult } from '@shared/types/pagination';
 import type { WorkType } from '@shared/types/shifts';
 
@@ -441,8 +442,8 @@ export const salaryService = {
     if (filters.approved === 'approved') query = query.eq('is_approved', true);
     if (filters.approved === 'pending') query = query.eq('is_approved', false);
     if (filters.search?.trim()) {
-      const q = filters.search.trim();
-      query = query.or(`employees.name.ilike.%${q}%,employees.national_id.ilike.%${q}%`);
+      const sq = sanitizeLikeQuery(filters.search.trim());
+      query = query.or(`employees.name.ilike.%${sq}%,employees.national_id.ilike.%${sq}%`);
     }
 
     const { data, error, count } = await query;

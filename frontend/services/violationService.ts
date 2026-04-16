@@ -1,5 +1,6 @@
 import { supabase } from '@services/supabase/client';
 import { toServiceError } from '@services/serviceError';
+import { sanitizeLikeQuery } from '@shared/lib/security';
 import type { TablesInsert } from '@services/supabase/types';
 
 export const violationService = {
@@ -19,7 +20,7 @@ export const violationService = {
     const { data, error } = await supabase
       .from('vehicles')
       .select('id, plate_number, plate_number_en, brand, type')
-      .or(`plate_number.ilike.%${q}%,plate_number_en.ilike.%${q}%`)
+      .or(`plate_number.ilike.%${sanitizeLikeQuery(q)}%,plate_number_en.ilike.%${sanitizeLikeQuery(q)}%`)
       .eq('status', 'active')
       .limit(8);
     if (error) throw toServiceError(error, 'violationService.findVehiclesByPlateQuery');
@@ -27,7 +28,7 @@ export const violationService = {
   },
 
   findVehicleIdsByPlate: async (plate: string) => {
-    const { data, error } = await supabase.from('vehicles').select('id').ilike('plate_number', `%${plate}%`).limit(5);
+    const { data, error } = await supabase.from('vehicles').select('id').ilike('plate_number', `%${sanitizeLikeQuery(plate)}%`).limit(5);
     if (error) throw toServiceError(error, 'violationService.findVehicleIdsByPlate');
     return data ?? [];
   },

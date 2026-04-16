@@ -212,13 +212,22 @@ export const advanceService = {
 
   getPendingInstallmentsForAdvances: async (advanceIds: string[]) => {
     if (!advanceIds.length) return [];
-    const { data, error } = await supabase
-      .from('advance_installments')
-      .select('advance_id, amount, status')
-      .in('status', ['pending', 'deferred'])
-      .in('advance_id', advanceIds);
-    if (error) handleSupabaseError(error, 'advanceService.getPendingInstallmentsForAdvances');
-    return data ?? [];
+    // FIX: chunk advanceIds to avoid HTTP 414 (URI Too Long) when Supabase's
+    // .in() filter generates a URL exceeding browser/server limits (~300+ items).
+    const CHUNK_SIZE = 200;
+    type InstallmentRow = { advance_id: string; amount: number; status: string };
+    const allRows: InstallmentRow[] = [];
+    for (let i = 0; i < advanceIds.length; i += CHUNK_SIZE) {
+      const chunk = advanceIds.slice(i, i + CHUNK_SIZE);
+      const { data, error } = await supabase
+        .from('advance_installments')
+        .select('advance_id, amount, status')
+        .in('status', ['pending', 'deferred'])
+        .in('advance_id', chunk);
+      if (error) handleSupabaseError(error, 'advanceService.getPendingInstallmentsForAdvances');
+      allRows.push(...((data ?? []) as InstallmentRow[]));
+    }
+    return allRows;
   },
 
   getActiveByEmployee: async (employeeId: string) => {

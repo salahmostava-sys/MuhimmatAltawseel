@@ -13,6 +13,7 @@ import { supabase } from '@services/supabase/client';
 import { ServiceError, toServiceError } from '@services/serviceError';
 import { createPagedResult } from '@shared/types/pagination';
 import { sanitizeStoragePath } from '@shared/lib/storagePath';
+import { sanitizeLikeQuery } from '@shared/lib/security';
 import type { TablesInsert } from '@services/supabase/types';
 
 export type EmployeeAppOption = {
@@ -104,12 +105,12 @@ export const employeeService = {
     if (filters.branch) query = query.eq('city', filters.branch);
     if (filters.status) query = query.eq('status', filters.status);
     if (filters.search?.trim()) {
-      const q = filters.search.trim();
+      const sq = sanitizeLikeQuery(filters.search.trim());
       query = query.or(
         [
-          `name.ilike.%${q}%`,
-          `national_id.ilike.%${q}%`,
-          `phone.ilike.%${q}%`,
+          `name.ilike.%${sq}%`,
+          `national_id.ilike.%${sq}%`,
+          `phone.ilike.%${sq}%`,
         ].join(',')
       );
     }

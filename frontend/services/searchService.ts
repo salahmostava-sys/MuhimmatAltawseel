@@ -1,5 +1,6 @@
 import { supabase } from '@services/supabase/client';
 import { throwIfError } from '@services/serviceError';
+import { sanitizeLikeQuery } from '@shared/lib/security';
 
 type EmployeeSearchRow = {
   id: string;
@@ -19,18 +20,18 @@ type VehicleSearchRow = {
 
 export const searchService = {
   searchEmployeesAndVehicles: async (query: string) => {
-    const term = `%${query}%`;
+    const safeTerm = `%${sanitizeLikeQuery(query)}%`;
     const [employeesRes, vehiclesRes] = await Promise.all([
       supabase
         .from('employees')
         .select('id, name, name_en, phone, status')
-        .or(`name.ilike.${term},name_en.ilike.${term},phone.ilike.${term},national_id.ilike.${term}`)
+        .or(`name.ilike.${safeTerm},name_en.ilike.${safeTerm},phone.ilike.${safeTerm},national_id.ilike.${safeTerm}`)
         .eq('status', 'active')
         .limit(5),
       supabase
         .from('vehicles')
         .select('id, plate_number, brand, model, status')
-        .ilike('plate_number', term)
+        .ilike('plate_number', safeTerm)
         .limit(3),
     ]);
     throwIfError(employeesRes.error, 'searchService.searchEmployeesAndVehicles.employees');

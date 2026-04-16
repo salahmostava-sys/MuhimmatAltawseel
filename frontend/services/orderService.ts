@@ -9,6 +9,7 @@ import { supabase } from '@services/supabase/client';
 import { toServiceError } from '@services/serviceError';
 import { authService } from '@services/authService';
 import { createPagedResult } from '@shared/types/pagination';
+import { sanitizeLikeQuery } from '@shared/lib/security';
 
 export interface DailyOrder {
   id: string;
@@ -254,8 +255,8 @@ export const orderService = {
     }
     if (filters.branch) query = query.eq('employees.city', filters.branch);
     if (filters.search?.trim()) {
-      const q = filters.search.trim();
-      query = query.ilike('employees.name', `%${q}%`);
+      const sq = sanitizeLikeQuery(filters.search.trim());
+      query = query.ilike('employees.name', `%${sq}%`);
     }
 
     const { data, error, count } = await query;

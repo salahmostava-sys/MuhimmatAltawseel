@@ -2,6 +2,7 @@ import { supabase } from '@services/supabase/client';
 import { handleSupabaseError } from '@services/serviceError';
 import { createPagedResult } from '@shared/types/pagination';
 import { filterOperationallyVisibleEmployees } from '@shared/lib/employeeVisibility';
+import { sanitizeLikeQuery } from '@shared/lib/security';
 
 export interface PlatformApp {
   id: string;
@@ -107,13 +108,13 @@ export const platformAccountService = {
     if (filters.status) query = query.eq('status', filters.status);
     if (filters.branch) query = query.eq('employees.city', filters.branch);
     if (filters.search?.trim()) {
-      const q = filters.search.trim();
+      const sq = sanitizeLikeQuery(filters.search.trim());
       query = query.or(
         [
-          `account_username.ilike.%${q}%`,
-          `account_id_on_platform.ilike.%${q}%`,
-          `iqama_number.ilike.%${q}%`,
-          `employees.name.ilike.%${q}%`,
+          `account_username.ilike.%${sq}%`,
+          `account_id_on_platform.ilike.%${sq}%`,
+          `iqama_number.ilike.%${sq}%`,
+          `employees.name.ilike.%${sq}%`,
         ].join(',')
       );
     }
