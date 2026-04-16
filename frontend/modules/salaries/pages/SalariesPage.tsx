@@ -136,9 +136,15 @@ const Salaries = () => {
 
   // Sync fetched data into local state when React Query resolves.
   // Runs on phase1 finish AND phase2 finish (rows update silently with preview).
-  // rows lives in local state because useSalaryActions mutates it (dirty/approve/etc.)
+  // rows lives in local state so useSalaryActions can mutate it (dirty/approve/etc.)
+  //
+  // FIX: we do NOT list hydratedRows as dep — it's a new array reference on every
+  // render. Instead we sync whenever loadingData transitions false→false (i.e. new
+  // data arrived). We detect this by checking hydratedRows identity against a ref.
+  const lastHydratedRowsRef = useRef<typeof hydratedRows | null>(null);
   useEffect(() => {
-    if (!loadingData && hydratedRows.length >= 0) {
+    if (!loadingData && hydratedRows !== lastHydratedRowsRef.current) {
+      lastHydratedRowsRef.current = hydratedRows;
       setRows(hydratedRows);
       setEmpPlatformScheme(builtEmpPlatformScheme);
       setSalaryMeta({
@@ -148,7 +154,6 @@ const Salaries = () => {
         appsWithoutScheme,
       });
     }
-    // hydratedRows identity changes each query result — intentional dep
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadingData, hydratedRows]);
 
@@ -229,8 +234,6 @@ const Salaries = () => {
   });
 
   const monthLabel = months.find((m) => m.v === selectedMonth)?.l || selectedMonth;
-
-  void enabled; // used implicitly via useSalaryData
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (

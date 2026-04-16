@@ -2,28 +2,26 @@
  * useSalaryData — Two-phase data loading for the salaries page.
  *
  * ── Phase 1 (fast, ~1-2s) ─────────────────────────────────────────────────
- * Fetches all non-RPC data in parallel (employees, orders, apps, advances…)
- * Builds the salary table immediately with saved/stored data.
+ * Fetches all non-RPC data in parallel (employees, orders, apps, advances…).
  *
  * ── Phase 2 (slow, background, ~2-3s) ────────────────────────────────────
- * Calls preview_salary_for_month RPC in the background after Phase 1 succeeds.
- * Updates salary figures silently when RPC returns.
+ * Calls preview_salary_for_month RPC after Phase 1 succeeds.
+ * When it finishes, fullDataQuery is invalidated to rebuild rows with preview.
  *
- * ── Placeholder / month-switch ────────────────────────────────────────────
- * When the user switches months:
- *   - Phase 1 for the NEW month fires immediately.
- *   - While it loads, isShowingPlaceholder=true → the page shows an amber
- *     banner. The table stays blank (rows=[]) — we deliberately do NOT show
- *     stale rows from the previous month to avoid confusion.
- *   - As soon as Phase 1 finishes, rows appear and isShowingPlaceholder=false.
+ * ── fullDataQuery ─────────────────────────────────────────────────────────
+ * Merges phase1 + phase2 data into PreparedSalaryState (rows, schemes, rules).
+ * Runs once after phase1, then once more after phase2 finishes.
+ * prepareSalaryState is heavy — we avoid calling it more than necessary.
  *
- * NOTE: keepPreviousData was removed. The placeholder rows caused the
- * "data only appears after switching months" bug because fullDataQuery was
- * blocked while isPlaceholderData=true, then the staleTime prevented a fresh
- * run when the real data finally arrived.
+ * ── Month-switch behaviour ────────────────────────────────────────────────
+ * - isLoading = true while phase1 is in-flight (first load or new month).
+ * - isShowingPlaceholder = true only when phase1 is loading AND the page
+ *   has already shown data before (i.e. not the very first load).
+ *   This prevents the amber banner from flashing on initial page open.
+ * - No keepPreviousData — avoids isPlaceholderData blocking bugs.
  */
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '@app/providers/AuthContext';
 import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { isValidSalaryMonthYear } from '@shared/lib/salaryValidation';
@@ -40,11 +38,15 @@ interface UseSalaryDataParams {
 }
 
 export interface SalaryDataResult extends PreparedSalaryState {
-  /** Phase 1 loading — table not ready yet */
+  /** True while Phase 1 is loading (table not ready) */
   isLoading: boolean;
-  /** True while new month's Phase 1 is in-flight (table shows empty/banner) */
+  /**
+   * True when switching months and Phase 1 is in-flight,
+   * but only after the very first load has completed.
+   * Used to show the amber banner on month-switch (not on initial open).
+   */
   isShowingPlaceholder: boolean;
-  /** Phase 2 loading — table visible, preview numbers updating in background */
+  /** True while Phase 2 RPC or fullDataQuery rebuild is in-flight */
   isRefreshingPreview: boolean;
   error: Error | null;
   previewBackendError: string | null;
@@ -72,6 +74,9 @@ export function useSalaryData({ selectedMonth, salariesDraftKey }: UseSalaryData
 
   const isQueryEnabled = enabled && isValidSalaryMonthYear(selectedMonth) && !!user?.id;
 
+  // Track whether we've ever finished loading (to distinguish first-load from month-switch)
+  const hasEverLoadedRef = useRef(false);
+
   // ── Query keys ────────────────────────────────────────────────────────────
   const phase1Key = useMemo(
     () => ['salaries', uid, 'context', selectedMonth] as const,
@@ -81,9 +86,6 @@ export function useSalaryData({ selectedMonth, salariesDraftKey }: UseSalaryData
     () => ['salaries', uid, 'preview', selectedMonth] as const,
     [uid, selectedMonth],
   );
-  // fullDataKey does NOT include salariesDraftKey — draft changes trigger
-  // invalidation via queryClient.invalidateQueries in useSalaryDraft.
-  // Including it in the key caused needless re-fetches on every draft save.
   const fullDataKey = useMemo(
     () => ['salaries', uid, 'full-data', selectedMonth] as const,
     [uid, selectedMonth],
@@ -95,7 +97,6 @@ export function useSalaryData({ selectedMonth, salariesDraftKey }: UseSalaryData
     enabled: isQueryEnabled,
     staleTime: 20_000,
     retry: defaultQueryRetry,
-    // No keepPreviousData — avoids the isPlaceholderData blocking bug
     queryFn: async () => {
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(
@@ -110,7 +111,7 @@ export function useSalaryData({ selectedMonth, salariesDraftKey }: UseSalaryData
     },
   });
 
-  // ── Phase 2: preview RPC in background ───────────────────────────────────
+  // ── Phase 2: preview RPC — runs after phase1, in background ──────────────
   const phase2 = useQuery({
     queryKey: phase2Key,
     enabled: isQueryEnabled && phase1.isSuccess,
@@ -132,15 +133,20 @@ export function useSalaryData({ selectedMonth, salariesDraftKey }: UseSalaryData
     },
   });
 
-  // ── Full state: build rows whenever phase1 or phase2 data changes ─────────
+  // ── Full state: build rows from phase1 + (optionally) phase2 ─────────────
+  // Runs once after phase1 (with previewData=[]).
+  // Runs again after phase2 finishes (invalidated below) with real preview data.
+  // prepareSalaryState is CPU-heavy — we avoid extra runs by tracking
+  // phase2.dataUpdatedAt instead of depending on the previewData array itself.
   const fullDataQuery = useQuery<PreparedSalaryState, Error>({
     queryKey: fullDataKey,
     enabled: isQueryEnabled && phase1.isSuccess,
-    // staleTime: 0 — always rebuild when invalidated (phase2 finish, realtime)
-    staleTime: 0,
+    staleTime: 0,        // always fresh — we control invalidation manually
+    gcTime: 5 * 60_000, // keep in memory 5 min after unmount
     retry: false,
     queryFn: async () => {
       const monthlyContext = phase1.data!;
+      // Use current phase2 data if available, otherwise empty (phase1-only pass)
       const previewData = phase2.data?.previewData ?? [];
 
       const salaryBaseContext: SalaryBaseContextData = {
@@ -148,16 +154,22 @@ export function useSalaryData({ selectedMonth, salariesDraftKey }: UseSalaryData
         previewData,
       };
 
-      return prepareSalaryState({
+      const result = await prepareSalaryState({
         salaryBaseContext,
         selectedMonth,
         activeEmployeeIdsInMonth,
         salariesDraftKey,
       });
+
+      // Mark that we've successfully loaded at least once
+      hasEverLoadedRef.current = true;
+
+      return result;
     },
   });
 
-  // Re-run fullDataQuery when phase2 finishes (preview data becomes available)
+  // ── Trigger fullDataQuery rebuild when phase2 finishes ───────────────────
+  // useEffect on dataUpdatedAt (a number) — stable dep, fires exactly once per phase2 result
   useEffect(() => {
     if (phase2.isSuccess) {
       void queryClient.invalidateQueries({ queryKey: fullDataKey });
@@ -165,7 +177,7 @@ export function useSalaryData({ selectedMonth, salariesDraftKey }: UseSalaryData
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase2.dataUpdatedAt]);
 
-  // Invalidate everything when daily_orders change (realtime sync)
+  // ── Realtime: invalidate on daily_orders changes ──────────────────────────
   useRealtimePostgresChanges(
     `salaries-orders-sync-${uid}-${selectedMonth}`,
     ['daily_orders'],
@@ -175,13 +187,13 @@ export function useSalaryData({ selectedMonth, salariesDraftKey }: UseSalaryData
     },
   );
 
-  // isShowingPlaceholder: phase1 is loading (no data yet for this month)
-  const isShowingPlaceholder = phase1.isLoading;
-
-  // isLoading: same as isShowingPlaceholder — table not ready
+  // ── Derived flags ─────────────────────────────────────────────────────────
   const isLoading = phase1.isLoading;
 
-  // isRefreshingPreview: phase1 done, phase2 or rebuild in-flight
+  // Show placeholder banner only on month-switch (not on very first page open)
+  const isShowingPlaceholder = phase1.isLoading && hasEverLoadedRef.current;
+
+  // Refreshing = after table is visible, phase2 or fullData rebuild in progress
   const isRefreshingPreview =
     phase1.isSuccess && (phase2.isLoading || fullDataQuery.isFetching);
 

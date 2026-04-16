@@ -16,7 +16,7 @@
  * - Only rows within the scroll viewport are in the DOM
  * - Ctrl+F browser search won't find off-screen rows (acceptable trade-off)
  */
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, memo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Button } from '@shared/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@shared/components/ui/tooltip';
@@ -72,8 +72,10 @@ interface SalaryTableProps {
   openEmployeeDetail: (row: SalaryRow) => void;
 }
 
-// ── Row renderer — extracted to keep the main component readable ──────────────
-function SalaryRowCells({
+// ── Row renderer — memoized to prevent re-renders on scroll ──────────────────
+// Wrapped in React.memo so a row only re-renders when its own data changes,
+// not when a sibling row scrolls into/out of view.
+const SalaryRowCells = memo(function SalaryRowCells({
   r,
   rowIdx,
   c,
@@ -261,7 +263,7 @@ function SalaryRowCells({
       </td>
     </>
   );
-}
+});
 
 // ── Main component ────────────────────────────────────────────────────────────
 export function SalaryTable(props: Readonly<SalaryTableProps>) {
@@ -290,9 +292,16 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
 
   const dedColCount = 2 + allCustomCols.length + 1;
 
+  // ── Precompute all row results once — shared between virtual rows and totals ──
+  // Avoids calling computeRow twice per row (once in the map, once in reduce).
+  const computedRows = useMemo(
+    () => new Map(filtered.map((r) => [r.id, computeRow(r)])),
+    [filtered, computeRow],
+  );
+
   // ── Totals (computed from all filtered rows, not just visible ones) ────────
   const totals = useMemo(() => filtered.reduce((acc, r) => {
-    const c = computeRow(r);
+    const c = computedRows.get(r.id)!;
     const activityTotals = getSalaryRowActivityTotals(r);
     platforms.forEach(p => {
       acc.platformOrders[p] = (acc.platformOrders[p] || 0) + (r.platformMetrics[p]?.ordersCount || 0);
@@ -321,7 +330,7 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
     totalAdditions: 0, totalWithSalary: 0,
     advance: 0, externalDed: 0, violations: 0,
     totalDed: 0, net: 0, transfer: 0, remaining: 0,
-  }), [filtered, computeRow, platforms]);
+  }), [filtered, computedRows, platforms]);
 
   // ── Virtual rows — only renders rows visible in the scroll container ───────
   const rowVirtualizer = useVirtualizer({
@@ -337,17 +346,42 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
 
   // ── Empty / loading states ────────────────────────────────────────────────
   if (loadingData) {
+    // Skeleton — shows column structure while loading so the page doesn't feel empty
     return (
-      <div className="rounded-xl shadow-card bg-card h-48 flex items-center justify-center text-muted-foreground">
-        جارٍ تحميل بيانات الرواتب...
+      <div className="rounded-xl shadow-card bg-card overflow-hidden">
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-border/40">
+          <div className="h-3 w-32 rounded bg-muted animate-pulse" />
+          <div className="h-3 w-24 rounded bg-muted animate-pulse" />
+          <div className="h-3 w-20 rounded bg-muted animate-pulse" />
+        </div>
+        <div className="divide-y divide-border/30">
+          {Array.from({ length: 8 }, (_, i) => (
+            <div key={i} className="flex items-center gap-3 px-6 py-3">
+              <div className="h-3 w-6 rounded bg-muted/60 animate-pulse" />
+              <div className="h-3 w-28 rounded bg-muted/60 animate-pulse" />
+              <div className="h-3 w-20 rounded bg-muted/50 animate-pulse" />
+              <div className="h-3 w-16 rounded bg-muted/50 animate-pulse" />
+              <div className="h-3 w-16 rounded bg-muted/40 animate-pulse flex-1" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
-  if (!loadingData && rows.length === 0) {
+  // rows = local state that persists across month switches.
+  // Use filtered.length (not rows.length) to detect truly empty data,
+  // because rows may still hold the previous month's data while new month loads.
+  if (!loadingData && filtered.length === 0) {
+    const isEmpty = rows.length === 0;
     return (
-      <div className="rounded-xl shadow-card bg-card h-48 flex items-center justify-center text-muted-foreground">
-        لا يوجد موظفون نشطون أو بيانات لهذا الشهر
+      <div className="rounded-xl shadow-card bg-card h-48 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+        <span className="text-2xl">{isEmpty ? '📭' : '🔍'}</span>
+        <p className="text-sm">
+          {isEmpty
+            ? 'لا يوجد موظفون نشطون أو بيانات لهذا الشهر'
+            : 'لا توجد نتائج تطابق البحث أو الفلتر'}
+        </p>
       </div>
     );
   }
@@ -355,7 +389,8 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
   return (
     <div className="rounded-xl shadow-card bg-card overflow-hidden">
       {/* Scroll container — useVirtualizer reads its scrollTop */}
-      <div ref={scrollContainerRef} className="overflow-auto" style={{ maxHeight: '75vh', contain: 'strict' }}>
+      {/* contain:layout paint — isolates repaints without breaking sticky positioning */}
+      <div ref={scrollContainerRef} className="overflow-auto" style={{ maxHeight: '75vh', contain: 'layout paint' }}>
         <table className="text-sm border-collapse" style={{ minWidth: 1800 }}>
           {/* ── Header — sticky at top ── */}
           {/* bg-card is solid (not opacity-based) so it covers rows scrolling beneath */}
@@ -451,7 +486,7 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
             )}
             {virtualRows.map((virtualRow) => {
               const r = filtered[virtualRow.index];
-              const c = computeRow(r);
+              const c = computedRows.get(r.id);
               if (!c) return null;
 
               return (
