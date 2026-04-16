@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import type JSZip from 'jszip';
 import { toast as sonnerToast } from '@shared/components/ui/sonner';
 import { MERGED_PDF_STYLES, buildMergedSalaryPageHtml } from '@modules/salaries/lib/salaryMergedPdf';
@@ -43,6 +43,13 @@ export function useSalaryPrint(params: UseSalaryPrintParams) {
     setBatchMonth,
   } = params;
 
+  // FIX M6: precompute all row results once — avoids double computeRow() calls
+  // when both handlePrintTable and exportMergedPDF are used in the same session
+  const computedRowsMap = useMemo(
+    () => new Map(filtered.map((r) => [r.id, computeRow(r)])),
+    [filtered, computeRow],
+  );
+
   // ── Print table ───────────────────────────────────────────────────────────
 
   const handlePrintTable = useCallback(() => {
@@ -58,7 +65,7 @@ export function useSalaryPrint(params: UseSalaryPrintParams) {
       platformColors,
       monthLabel,
       projectName,
-      computeRow,
+      computeRow: (r) => computedRowsMap.get(r.id) ?? computeRow(r),
     });
 
     const win = globalThis.open('', '_blank', 'width=1100,height=800');
@@ -84,7 +91,7 @@ export function useSalaryPrint(params: UseSalaryPrintParams) {
       .map((row, idx) =>
         buildMergedSalaryPageHtml({
           row,
-          computed: computeRow(row),
+          computed: computedRowsMap.get(row.id) ?? computeRow(row),
           index: idx,
           monthLabel,
         }),

@@ -16,7 +16,7 @@
  * - Only rows within the scroll viewport are in the DOM
  * - Ctrl+F browser search won't find off-screen rows (acceptable trade-off)
  */
-import { useMemo, useRef, memo } from 'react';
+import { useMemo, useRef, memo, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Button } from '@shared/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@shared/components/ui/tooltip';
@@ -279,6 +279,23 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
   // ── Scroll container ref — required by useVirtualizer ─────────────────────
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // ── FIX M3: stable callbacks for SalaryRowCells.memo to work ─────────────
+  // React.memo only prevents re-renders when props are reference-equal.
+  // The functions passed to SalaryRowCells come from useSalaryActions (via SalariesPage)
+  // and are already useCallback-wrapped there, but they still change identity when
+  // the parent re-renders with new state (e.g. approvingRowId). We wrap them here
+  // in useCallback with the actual dep that changes so memo gets a stable ref.
+  // Note: we deliberately keep approveRow/markAsPaid as pass-through (no wrap)
+  // because they depend on closures from the parent that need fresh row data.
+  const stableHandleSort = useCallback(handleSort, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const stableSetEditingCell = useCallback(setEditingCell, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const stableSetPayslipRow = useCallback(setPayslipRow, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const stableUpdateRow = useCallback(updateRow, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const stableUpdatePlatformOrders = useCallback(updatePlatformOrders, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const stableOpenEmployeeDetail = useCallback(openEmployeeDetail, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const stablePersistCity = useCallback(persistEmployeeCity, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const stablePersistPayment = useCallback(persistEmployeePaymentMethod, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Custom columns ────────────────────────────────────────────────────────
   const allCustomCols = useMemo(() => {
     const cols: { appName: string; key: string; label: string; fullKey: string }[] = [];
@@ -413,7 +430,8 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
               <th colSpan={1} className="px-3 py-2 text-xs font-semibold text-muted-foreground whitespace-nowrap border-b border-border/40 text-center border-l border-border/40" style={{ backgroundColor: 'hsl(var(--card))' }}>الإجراءات</th>
             </tr>
             <tr style={{ backgroundColor: 'hsl(var(--card))' }}>
-              <th className={`${thFrozenBase} w-10 text-center`} style={stickyLeft(0)}>#</th>
+              {/* FIX I1: was duplicating # header — second row just needs spacer */}
+              <th className={`${thFrozenBase} w-10 text-center`} style={stickyLeft(0)} aria-hidden="true"></th>
               <th className={`${thFrozenBase} w-32 cursor-pointer hover:text-foreground select-none`} style={stickyLeft(40)} onClick={() => handleSort('employeeName')}>
                 الاسم <SalarySortIcon field="employeeName" sortField={sortField} sortDir={sortDir} />
               </th>
@@ -506,18 +524,18 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
                     allCustomCols={allCustomCols}
                     empPlatformScheme={empPlatformScheme}
                     editingCell={editingCell}
-                    setEditingCell={setEditingCell}
-                    updateRow={updateRow}
-                    updatePlatformOrders={updatePlatformOrders}
+                    setEditingCell={stableSetEditingCell}
+                    updateRow={stableUpdateRow}
+                    updatePlatformOrders={stableUpdatePlatformOrders}
                     approveRow={approveRow}
                     approvingRowId={approvingRowId}
                     markAsPaid={markAsPaid}
                     markingPaid={markingPaid}
-                    setPayslipRow={setPayslipRow}
-                    persistEmployeeCity={persistEmployeeCity}
-                    persistEmployeePaymentMethod={persistEmployeePaymentMethod}
+                    setPayslipRow={stableSetPayslipRow}
+                    persistEmployeeCity={stablePersistCity}
+                    persistEmployeePaymentMethod={stablePersistPayment}
                     employeeFieldSaving={employeeFieldSaving}
-                    openEmployeeDetail={openEmployeeDetail}
+                    openEmployeeDetail={stableOpenEmployeeDetail}
                   />
                 </tr>
               );
@@ -535,12 +553,14 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
           </tbody>
 
           {/* ── Totals footer — always rendered, outside virtual list ── */}
-          <tfoot className="sticky bottom-0 z-20">
-            <tr className="bg-muted/60 border-t-2 border-border">
-              <td className={`${tfClass} sticky text-center`} style={{ left: 0, zIndex: 20, background: 'hsl(var(--muted) / 0.6)' }}>—</td>
-              <td className={`${tfClass} sticky text-center border-l border-border/30`} style={{ left: 40, zIndex: 20, background: 'hsl(var(--muted) / 0.6)' }}>الإجمالي</td>
-              <td className={tfClass} style={{ position: 'sticky', left: 168, zIndex: 20, background: 'hsl(var(--muted) / 0.6)' }}></td>
-              <td className={`${tfClass} border-l border-border/30`} style={{ position: 'sticky', left: 264, zIndex: 20, background: 'hsl(var(--muted) / 0.6)' }}></td>
+          {/* FIX M1: bg-muted/60 is semi-transparent and lets rows show through when sticky.
+               Use a solid inline background so rows scrolling behind the footer are hidden. */}
+          <tfoot className="sticky bottom-0 z-20" style={{ backgroundColor: 'hsl(var(--muted))' }}>
+            <tr className="border-t-2 border-border">
+              <td className={`${tfClass} sticky text-center`} style={{ left: 0, zIndex: 20, backgroundColor: 'hsl(var(--muted))' }}>—</td>
+              <td className={`${tfClass} sticky text-center border-l border-border/30`} style={{ left: 40, zIndex: 20, backgroundColor: 'hsl(var(--muted))' }}>الإجمالي</td>
+              <td className={tfClass} style={{ position: 'sticky', left: 168, zIndex: 20, backgroundColor: 'hsl(var(--muted))' }}></td>
+              <td className={`${tfClass} border-l border-border/30`} style={{ position: 'sticky', left: 264, zIndex: 20, backgroundColor: 'hsl(var(--muted))' }}></td>
               <td className="px-2 py-2 text-xs font-bold text-center border border-border/40 bg-info/10 text-foreground">
                 {filtered.reduce((s, r) => s + r.platformIncome, 0).toLocaleString()}
               </td>

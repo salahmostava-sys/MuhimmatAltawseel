@@ -80,7 +80,8 @@ const Salaries = () => {
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [cityFilter] = useState('all');
+  // cityFilter is not exposed in the UI yet — kept as constant for future use
+  const cityFilter = 'all';
   const [payslipRow, setPayslipRow] = useState<SalaryRow | null>(null);
   const [salaryActionLoading, setSalaryActionLoading] = useState(false);
   const [sortField, setSortField] = useState<string | null>(null);
@@ -224,7 +225,11 @@ const Salaries = () => {
     setDetailRow,
   });
 
-  const totalNet = filtered.reduce((s, r) => s + computeRow(r).netSalary, 0);
+  // FIX M5: useMemo so totalNet isn't recomputed on every render cycle
+  const totalNet = useMemo(
+    () => filtered.reduce((s, r) => s + computeRow(r).netSalary, 0),
+    [filtered, computeRow],
+  );
   const pendingCount = filtered.filter((r) => r.status === 'pending' || r.isDirty).length;
 
   // ── Batch ZIP export ──────────────────────────────────────────────────────

@@ -12,6 +12,8 @@ interface SalaryActionsBarProps {
   viewMode: 'table' | 'cards';
   setViewMode: (v: 'table' | 'cards') => void;
   pendingCount: number;
+  /** FIX I5: canEdit was passed but ignored — now gates approve-all and import */
+  canEdit: boolean;
   approveAll: () => void;
   salaryActionLoading: boolean;
   salaryToolbarImportRef: React.RefObject<HTMLInputElement | null>;
@@ -36,6 +38,7 @@ export function SalaryActionsBar(props: Readonly<SalaryActionsBarProps>) {
     viewMode,
     setViewMode,
     pendingCount,
+    canEdit,
     approveAll,
     salaryActionLoading,
     salaryToolbarImportRef,
@@ -87,7 +90,7 @@ export function SalaryActionsBar(props: Readonly<SalaryActionsBarProps>) {
             <LayoutGrid size={13} /> بطاقات
           </button>
         </div>
-        {pendingCount > 0 && (
+        {pendingCount > 0 && canEdit && (
           <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={approveAll}>
             <CheckCircle size={13} /> اعتماد الكل ({pendingCount})
           </Button>
@@ -103,7 +106,7 @@ export function SalaryActionsBar(props: Readonly<SalaryActionsBarProps>) {
             <DropdownMenuItem onClick={() => void downloadSalaryTemplate()} disabled={salaryActionLoading}>
               📋 تحميل قالب الاستيراد
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={openSalaryToolbarImport} disabled={salaryActionLoading}>
+            <DropdownMenuItem onClick={openSalaryToolbarImport} disabled={salaryActionLoading || !canEdit}>
               ⬆️ استيراد Excel
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => void runPrintTable()} disabled={salaryActionLoading}>

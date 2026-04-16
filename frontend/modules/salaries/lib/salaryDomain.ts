@@ -31,78 +31,9 @@ import type {
 } from '@modules/salaries/types/salary.types';
 import type { WorkType } from '@shared/types/shifts';
 
-export const wasFixedSchemeAlreadyCalculated = (
-  platformNames: string[],
-  appSchemeMap: Record<string, SchemeData | null>,
-  platformSalaries: Record<string, number>,
-  currentPlatform: string,
-  schemeId: string
-) => {
-  return platformNames.some(
-    (prev) =>
-      prev !== currentPlatform &&
-      appSchemeMap[prev]?.id === schemeId &&
-      platformSalaries[prev] !== undefined
-  );
-};
-
-export const calculatePlatformSalary = ({
-  platformName,
-  orders,
-  attendanceDays,
-  platformNames,
-  appNameToId,
-  rulesMap,
-  appSchemeMap,
-  platformSalaries,
-}: {
-  platformName: string;
-  orders: number;
-  attendanceDays: number;
-  platformNames: string[];
-  appNameToId: Record<string, string>;
-  rulesMap: Record<string, PricingRule[]>;
-  appSchemeMap: Record<string, SchemeData | null>;
-  platformSalaries: Record<string, number>;
-}) => {
-  const appId = appNameToId[platformName];
-  const appRules = appId ? rulesMap[appId] || [] : [];
-  const ruleResult = salaryService.applyPricingRules(appRules, orders);
-  if (ruleResult.matchedRule) {
-    return Math.round(ruleResult.salary);
-  }
-
-  const scheme = appSchemeMap[platformName];
-  if (!scheme) {
-    return 0;
-  }
-
-  if (scheme.scheme_type === 'fixed_monthly') {
-    const alreadyCalculated = wasFixedSchemeAlreadyCalculated(
-      platformNames,
-      appSchemeMap,
-      platformSalaries,
-      platformName,
-      scheme.id
-    );
-    if (alreadyCalculated) return 0;
-    return salaryService.calculateFixedMonthlySalary(scheme.monthly_amount || 0, attendanceDays);
-  }
-
-  if (orders === 0) {
-    return 0;
-  }
-  if (!scheme.salary_scheme_tiers) {
-    return 0;
-  }
-  const calculatedSalary = salaryService.calculateTierSalary(
-    orders,
-    scheme.salary_scheme_tiers as SalarySchemeTier[],
-    scheme.target_orders,
-    scheme.target_bonus
-  );
-  return calculatedSalary;
-};
+// NOTE: calculatePlatformSalary and wasFixedSchemeAlreadyCalculated were removed.
+// All salary calculation now lives exclusively in the Supabase RPC (preview_salary_for_month).
+// Local fallback calculation was removed to ensure single source of truth.
 
 type SavedSalaryRecord = {
   is_approved: boolean;

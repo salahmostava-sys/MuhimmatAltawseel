@@ -15,7 +15,9 @@ export const EditableCell = ({
 
   const commit = () => {
     const n = Number.parseFloat(local);
-    onChange(Number.isNaN(n) ? 0 : Math.max(min, n));
+    const next = Number.isNaN(n) ? 0 : Math.max(min, n);
+    // FIX I7: skip onChange if value didn't change — avoids unnecessary re-renders
+    if (next !== value) onChange(next);
     setEditing(false);
   };
 

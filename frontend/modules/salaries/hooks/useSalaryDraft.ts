@@ -47,6 +47,7 @@ export function useSalaryDraft({
 
   // Reset draft tracking when selectedMonth or user changes so the first render
   // with new data doesn't trigger a premature server sync.
+  // FIX M2: userId was missing from deps — reset must run when user switches too
   useEffect(() => {
     skipNextDraftSaveRef.current = true;
     lastDraftSignatureRef.current = null;

@@ -323,8 +323,11 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
       async () => salaryDataService.calculateSalaryForMonth(selectedMonth),
       { errorTitle: 'خطأ أثناء الحساب من الخادم' },
     );
+    // FIX M7: undefined means run() caught an error and showed a toast — abort
     if (monthCalcData === undefined) return;
 
+    // monthCalcData may be empty array if the RPC returned no rows (legitimate).
+    // We handle rows with no server calc gracefully below via skippedRows.
     const monthCalcMap = new Map<string, Record<string, number>>(
       (Array.isArray(monthCalcData) ? monthCalcData : []).map((item) => [
         String((item as Record<string, unknown>).employee_id),
