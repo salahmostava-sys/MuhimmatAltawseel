@@ -437,7 +437,16 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
           </thead>
 
           {/* ── Virtualized tbody ── */}
-          <tbody style={{ position: 'relative', height: totalVirtualHeight }}>
+          {/* paddingTop/Bottom technique: rows stay in flow (no absolute positioning),
+              so position:sticky on td cells continues to work correctly.
+              We push spacer rows at the top and bottom to represent off-screen rows. */}
+          <tbody>
+            {/* Top spacer: represents rows above the visible window */}
+            {virtualRows.length > 0 && virtualRows[0].start > 0 && (
+              <tr style={{ height: virtualRows[0].start }} aria-hidden="true">
+                <td colSpan={999} />
+              </tr>
+            )}
             {virtualRows.map((virtualRow) => {
               const r = filtered[virtualRow.index];
               const c = computeRow(r);
@@ -448,14 +457,7 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
                   key={r.id}
                   data-index={virtualRow.index}
                   className="border-b border-border hover:bg-muted/25 transition-colors"
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: `${ROW_HEIGHT}px`,
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
+                  style={{ height: `${ROW_HEIGHT}px` }}
                 >
                   <SalaryRowCells
                     r={r}
@@ -483,6 +485,16 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
                 </tr>
               );
             })}
+            {/* Bottom spacer: represents rows below the visible window */}
+            {virtualRows.length > 0 && (() => {
+              const lastRow = virtualRows[virtualRows.length - 1];
+              const bottomPad = totalVirtualHeight - lastRow.end;
+              return bottomPad > 0 ? (
+                <tr style={{ height: bottomPad }} aria-hidden="true">
+                  <td colSpan={999} />
+                </tr>
+              ) : null;
+            })()}
           </tbody>
 
           {/* ── Totals footer — always rendered, outside virtual list ── */}
