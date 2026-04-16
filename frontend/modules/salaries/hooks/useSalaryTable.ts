@@ -37,6 +37,10 @@ export function useSalaryFilteredRows(
 
   const filtered = useMemo(() => {
     if (!sortField || !sortDir) return filteredBase;
+
+    // FIX W2: pre-compute sort values once per row outside the comparator.
+    // Previously, computeRow() was called inside the sort comparator — O(n log n) calls.
+    // Now we compute once per row — O(n) — then sort on cached values.
     const getSortValue = (row: SalaryRow) => {
       const computed = computeRow(row);
       switch (sortField) {
@@ -66,13 +70,14 @@ export function useSalaryFilteredRows(
       }
     };
 
-    return [...filteredBase].sort((a, b) => {
-      const va = getSortValue(a);
-      const vb = getSortValue(b);
-      if (va < vb) return sortDir === 'asc' ? -1 : 1;
-      if (va > vb) return sortDir === 'asc' ? 1 : -1;
+    // Cache sort values — O(n) — then sort on cached pairs — O(n log n) comparisons, O(1) each
+    const withValues = filteredBase.map((row) => ({ row, val: getSortValue(row) }));
+    withValues.sort((a, b) => {
+      if (a.val < b.val) return sortDir === 'asc' ? -1 : 1;
+      if (a.val > b.val) return sortDir === 'asc' ? 1 : -1;
       return 0;
     });
+    return withValues.map((x) => x.row);
   }, [filteredBase, sortField, sortDir, computeRow, platforms]);
 
   return { filtered, filteredBase, computeRow };

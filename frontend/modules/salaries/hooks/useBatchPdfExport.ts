@@ -52,6 +52,17 @@ export function useBatchPdfExport(params: {
     // Process one slip at a time
     const timer = setTimeout(async () => {
       if (batchAbortRef.current) return;
+
+      // FIX W3: track the iframe in a closure variable so cleanup is guaranteed
+      // even if the component unmounts mid-render (before removeChild is reached).
+      let iframe: HTMLIFrameElement | null = null;
+      const safeRemoveIframe = () => {
+        if (iframe && iframe.parentNode) {
+          try { iframe.parentNode.removeChild(iframe); } catch { /* ignore */ }
+          iframe = null;
+        }
+      };
+
       try {
         const row = batchQueue[batchIndex];
         const { buildBatchSlipHTML } = await import('@modules/salaries/lib/buildBatchSlipHTML');
@@ -61,7 +72,7 @@ export function useBatchPdfExport(params: {
         const JsPdf = await loadJsPdf();
         const pdf = new JsPdf({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-        const iframe = document.createElement('iframe');
+        iframe = document.createElement('iframe');
         iframe.style.cssText = 'position:fixed;left:-10000px;top:-10000px;width:794px;height:1123px;border:none';
         document.body.appendChild(iframe);
         const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
@@ -73,7 +84,7 @@ export function useBatchPdfExport(params: {
 
         await new Promise(resolve => setTimeout(resolve, 200));
         if (batchAbortRef.current) {
-          try { document.body.removeChild(iframe); } catch { /* ignore */ }
+          safeRemoveIframe();
           return;
         }
 
@@ -82,7 +93,7 @@ export function useBatchPdfExport(params: {
           await pdf.html(container, { x: 5, y: 5, width: 190, windowWidth: 700 });
         }
 
-        try { document.body.removeChild(iframe); } catch { /* ignore */ }
+        safeRemoveIframe();
 
         if (batchAbortRef.current) return;
         const pdfBlob = pdf.output('blob');
@@ -91,6 +102,7 @@ export function useBatchPdfExport(params: {
         batchZip.file(`كشف_راتب_${safeName}_${m}_${y}.pdf`, pdfBlob);
         setBatchIndex(i => i + 1);
       } catch {
+        safeRemoveIframe();
         if (!batchAbortRef.current) setBatchIndex(i => i + 1);
       }
     }, 150);

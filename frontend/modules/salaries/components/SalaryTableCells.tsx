@@ -75,11 +75,20 @@ export const SalaryBreakdown = ({ orders, scheme, salary, children }: SalaryBrea
     scheme.target_orders ?? null,
     scheme.target_bonus ?? null,
   );
+  // FIX W4: wrap both trigger and tooltip in a single container that handles
+  // onMouseLeave. This way hovering from the trigger onto the tooltip itself
+  // doesn't fire onMouseLeave, so the tooltip stays visible.
   return (
     <div className="relative inline-block" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
       {children}
       {show && (
-        <div className="absolute bottom-full mb-1 right-0 z-50 bg-popover border border-border rounded-xl shadow-xl p-3 text-xs w-64 text-right" dir="rtl">
+        <div
+          className="absolute bottom-full mb-1 right-0 z-50 bg-popover border border-border rounded-xl shadow-xl p-3 text-xs w-64 text-right"
+          dir="rtl"
+          // Prevent the tooltip's own mouse events from bubbling to parent onMouseLeave
+          onMouseEnter={() => setShow(true)}
+          onMouseLeave={() => setShow(false)}
+        >
           <p className="font-bold text-foreground mb-2 border-b border-border/50 pb-1">{scheme.name}</p>
           <p className="text-muted-foreground mb-1">الطلبات: <span className="font-semibold text-foreground">{orders}</span></p>
           <div className="space-y-0.5 mb-2">

@@ -85,7 +85,23 @@ export function useSalaryDraft({
     // ── Skip if nothing changed ───────────────────────────────────────────
     if (lastDraftSignatureRef.current === serializedDraft) return;
 
-    // ── Debounced server sync ─────────────────────────────────────────────
+    // FIX W1: if draft is now empty (e.g. after approve/pay cleared isDirty),
+    // sync immediately — do not debounce. This ensures the server draft is
+    // cleared even if a previous 2s timer was cancelled mid-flight by approve.
+    const draftIsEmpty = Object.keys(draft).length === 0;
+    if (draftIsEmpty) {
+      lastDraftSignatureRef.current = serializedDraft;
+      void (async () => {
+        try {
+          await salaryDraftService.syncDraftsForMonth(selectedMonth, draft);
+        } catch (e) {
+          logError('[SalaryDraft] Failed to clear server drafts after approve', e, { level: 'warn' });
+        }
+      })();
+      return;
+    }
+
+    // ── Debounced server sync (dirty rows) ────────────────────────────────
     const timer = setTimeout(() => {
       void (async () => {
         try {

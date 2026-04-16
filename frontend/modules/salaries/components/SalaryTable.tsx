@@ -279,15 +279,20 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
   // ── Scroll container ref — required by useVirtualizer ─────────────────────
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // ── FIX M3: stable callbacks for SalaryRowCells.memo to work ─────────────
-  // React.memo only prevents re-renders when props are reference-equal.
-  // The functions passed to SalaryRowCells come from useSalaryActions (via SalariesPage)
-  // and are already useCallback-wrapped there, but they still change identity when
-  // the parent re-renders with new state (e.g. approvingRowId). We wrap them here
-  // in useCallback with the actual dep that changes so memo gets a stable ref.
-  // Note: we deliberately keep approveRow/markAsPaid as pass-through (no wrap)
-  // because they depend on closures from the parent that need fresh row data.
-  const stableHandleSort = useCallback(handleSort, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // ── Stable callbacks for SalaryRowCells.memo ─────────────────────────────
+  // React.memo only skips re-renders when ALL props are reference-equal.
+  //
+  // FIX W5: handleSort MUST NOT be frozen — it closes over sortField/sortDir
+  // state and needs a fresh reference on every render to see current state.
+  // Freezing it caused sort clicks to operate on stale sortField/sortDir values.
+  // handleSort is passed only to the header <th> elements, not to SalaryRowCells,
+  // so it does NOT affect memo effectiveness.
+  //
+  // The row-level callbacks below (updateRow, persistEmployeeCity, etc.) do NOT
+  // read sorting state, so they can safely be frozen at mount time.
+  // They are passed from useSalaryPersistence which already wraps them in useCallback,
+  // but SalariesPage re-renders on every state change — these wrappers prevent
+  // unnecessary SalaryRowCells re-renders when unrelated state (e.g. approvingRowId) changes.
   const stableSetEditingCell = useCallback(setEditingCell, []); // eslint-disable-line react-hooks/exhaustive-deps
   const stableSetPayslipRow = useCallback(setPayslipRow, []); // eslint-disable-line react-hooks/exhaustive-deps
   const stableUpdateRow = useCallback(updateRow, []); // eslint-disable-line react-hooks/exhaustive-deps
