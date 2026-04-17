@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { addMonths, format, parse, subMonths } from 'date-fns';
+import { addMonths, endOfMonth, format, parse, subMonths } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import {
   LineChart,
@@ -11,19 +11,50 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
 } from 'recharts';
-import { TrendingUp, Brain } from 'lucide-react';
+import { TrendingUp, Brain, MessageCircle, Users, Target, AlertTriangle } from 'lucide-react';
 import { PageSection } from '@shared/components/layout/PageScaffold';
 import { dashboardService } from '@services/dashboardService';
+import { performanceService, type PerformanceAlert } from '@services/performanceService';
 import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { useAuth } from '@app/providers/AuthContext';
+import { useTemporalContext } from '@app/providers/TemporalContext';
 import { defaultQueryRetry } from '@shared/lib/query';
 import { QueryErrorRetry } from '@shared/components/QueryErrorRetry';
 import { Skeleton } from '@shared/components/ui/skeleton';
+import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card';
+import { Badge } from '@shared/components/ui/badge';
 import { predictOrders } from '@shared/lib/predictOrders';
 import { AIDashboard } from '@modules/ai-dashboard';
 
 const MONTHS_BACK = 8;
+
+const DIST_LABELS: Record<string, string> = {
+  excellent: 'ممتاز',
+  good: 'جيد',
+  average: 'متوسط',
+  weak: 'يحتاج دعم',
+};
+
+const ALERT_TYPE_LABELS: Record<PerformanceAlert['alertType'], string> = {
+  declining: 'تراجع في الأداء',
+  inactive_recently: 'خمول حديث',
+  below_target: 'أقل من المستهدف',
+  low_consistency: 'تذبذب في الإنتاجية',
+};
+
+const SEVERITY_BADGE: Record<PerformanceAlert['severity'], 'destructive' | 'secondary' | 'outline'> = {
+  high: 'destructive',
+  medium: 'secondary',
+  low: 'outline',
+};
+
+const PIE_COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))'];
 
 type ChartRow = {
   month: string;
@@ -33,33 +64,85 @@ type ChartRow = {
 
 const AiAnalyticsPage = () => {
   const { user } = useAuth();
+  const { selectedMonth } = useTemporalContext();
   const { enabled, userId } = useAuthQueryGate();
   const uid = authQueryUserId(user?.id ?? userId);
-  const currentDaysPassed = new Date().getDate();
+
+  const selectedMonthDate = useMemo(
+    () => parse(`${selectedMonth}-01`, 'yyyy-MM-dd', new Date()),
+    [selectedMonth],
+  );
+  const selectedMonthLabel = useMemo(
+    () => format(selectedMonthDate, 'MMMM yyyy', { locale: ar }),
+    [selectedMonthDate],
+  );
+  const isViewingCurrentMonth = selectedMonth === format(new Date(), 'yyyy-MM');
+  const daysPassedForForecast = isViewingCurrentMonth
+    ? new Date().getDate()
+    : endOfMonth(selectedMonthDate).getDate();
 
   const monthKeys = useMemo(() => {
     const keys: string[] = [];
     for (let i = MONTHS_BACK - 1; i >= 0; i--) {
-      keys.push(format(subMonths(new Date(), i), 'yyyy-MM'));
+      keys.push(format(subMonths(selectedMonthDate, i), 'yyyy-MM'));
     }
     return keys;
-  }, []);
+  }, [selectedMonthDate]);
 
   const q = useQuery({
     queryKey: ['ai-analytics', 'orders-trend', uid, monthKeys],
     enabled,
     retry: defaultQueryRetry,
     queryFn: async () => {
-      // Fetch all months in parallel instead of sequentially
       const totals = await Promise.all(
-        monthKeys.map((my) => dashboardService.getMonthOrdersCount(my))
+        monthKeys.map((my) => dashboardService.getMonthOrdersCount(my)),
       );
       return { totals, monthKeys };
     },
   });
 
+  const perfQ = useQuery({
+    queryKey: ['ai-analytics', 'performance-dashboard', uid, selectedMonth],
+    enabled,
+    retry: defaultQueryRetry,
+    queryFn: () => performanceService.getDashboard(selectedMonth),
+  });
+
   const { isLoading, isError, error, refetch, isFetching, data: queryData } = q;
   const currentMonthOrders = queryData?.totals[queryData.totals.length - 1] ?? null;
+  const perf = perfQ.data;
+
+  const pieData = useMemo(() => {
+    const d = perf?.distribution;
+    if (!d) return [];
+    return (
+      [
+        { key: 'excellent', value: d.excellent },
+        { key: 'good', value: d.good },
+        { key: 'average', value: d.average },
+        { key: 'weak', value: d.weak },
+      ] as const
+    )
+      .filter((row) => row.value > 0)
+      .map((row) => ({
+        name: DIST_LABELS[row.key] ?? row.key,
+        value: row.value,
+      }));
+  }, [perf?.distribution]);
+
+  const barData = useMemo(() => {
+    const rows = perf?.ordersByApp ?? [];
+    return [...rows]
+      .sort((a, b) => b.orders - a.orders)
+      .slice(0, 10)
+      .map((r) => ({
+        name: r.appName || '—',
+        orders: r.orders,
+        fill: r.brandColor && /^#/.test(r.brandColor) ? r.brandColor : 'hsl(var(--primary))',
+      }));
+  }, [perf?.ordersByApp]);
+
+  const alerts = perf?.alerts ?? [];
 
   const { chartData, forecast } = useMemo(() => {
     if (!queryData?.totals.length) {
@@ -96,19 +179,212 @@ const AiAnalyticsPage = () => {
     return { chartData: rows, forecast: fc };
   }, [queryData]);
 
+  const growthPct = perf?.comparison?.month?.growthPct;
+  const targetPct = perf?.targets?.targetAchievementPct;
+
   return (
     <div className="space-y-4" dir="rtl">
-      <nav className="page-breadcrumb"><span>الرئيسية</span><span className="page-breadcrumb-sep">/</span><span>تحليلات ذكية</span></nav>
-      {/* AI-Powered Dashboard */}
+      <nav className="page-breadcrumb">
+        <span>الرئيسية</span>
+        <span className="page-breadcrumb-sep">/</span>
+        <span>تحليلات ذكية</span>
+      </nav>
+
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="flex flex-wrap items-start gap-3 py-4">
+          <MessageCircle className="h-5 w-5 shrink-0 text-primary mt-0.5" />
+          <div className="space-y-1 text-sm">
+            <p className="font-medium text-foreground">مساعد الذكاء الاصطناعي</p>
+            <p className="text-muted-foreground leading-relaxed">
+              يمكنك طرح أسئلة على البيانات من أيقونة الدردشة في الشريط الجانبي بعد تسجيل الدخول — نفس السياق
+              يدعم تحليلات هذه الصفحة.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       <PageSection title="لوحة القرارات الذكية">
         <div className="flex items-center gap-2 mb-4">
           <Brain className="h-5 w-5 text-primary" />
           <span className="text-sm font-semibold text-muted-foreground">تحليلات الذكاء الاصطناعي</span>
+          <Badge variant="outline" className="mr-auto text-xs">
+            {selectedMonthLabel}
+          </Badge>
         </div>
-        <AIDashboard
-          currentOrders={currentMonthOrders}
-          daysPassed={currentDaysPassed}
-        />
+        <AIDashboard currentOrders={currentMonthOrders} daysPassed={daysPassedForForecast} />
+      </PageSection>
+
+      <PageSection title={`مؤشرات الأداء — ${selectedMonthLabel}`}>
+        {perfQ.isLoading ? (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 w-full rounded-xl" />
+            ))}
+          </div>
+        ) : perfQ.isError ? (
+          <QueryErrorRetry
+            error={perfQ.error}
+            onRetry={() => void perfQ.refetch()}
+            isFetching={perfQ.isFetching}
+            title="تعذر تحميل لوحة الأداء"
+            hint="تأكد من صلاحياتك والاتصال ثم أعد المحاولة."
+          />
+        ) : (
+          <div className="space-y-6">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    إجمالي الطلبات
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold tabular-nums">
+                    {(perf?.summary?.totalOrders ?? 0).toLocaleString('ar-SA')}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    مناديب نشطون
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold tabular-nums">
+                    {(perf?.summary?.activeRiders ?? 0).toLocaleString('ar-SA')}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs font-medium text-muted-foreground">نمو الطلبات (شهر)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold tabular-nums">
+                    {growthPct === undefined || Number.isNaN(growthPct)
+                      ? '—'
+                      : `${growthPct >= 0 ? '+' : ''}${growthPct.toFixed(1)}٪`}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                    <Target className="h-4 w-4" />
+                    تحقيق المستهدف
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold tabular-nums">
+                    {targetPct === undefined || Number.isNaN(targetPct)
+                      ? '—'
+                      : `${targetPct.toFixed(1)}٪`}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {alerts.length > 0 && (
+              <Card className="border-amber-500/30 bg-amber-500/5">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    تنبيهات ذكية من النظام
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {alerts.slice(0, 8).map((a, idx) => (
+                    <div
+                      key={`${a.employeeId ?? 'org'}-${a.alertType}-${idx}`}
+                      className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-card px-3 py-2 text-sm"
+                    >
+                      <Badge variant={SEVERITY_BADGE[a.severity]}>
+                        {a.severity === 'high' ? 'عالٍ' : a.severity === 'medium' ? 'متوسط' : 'منخفض'}
+                      </Badge>
+                      <span className="text-muted-foreground">{ALERT_TYPE_LABELS[a.alertType]}</span>
+                      {a.employeeName && (
+                        <span className="font-medium text-foreground">{a.employeeName}</span>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">توزيع أداء المناديب</CardTitle>
+                </CardHeader>
+                <CardContent className="h-[280px]">
+                  {pieData.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-12">لا توجد بيانات توزيع لهذا الشهر.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={90}
+                          label={({ name, percent }) =>
+                            `${name} ${((percent ?? 0) * 100).toFixed(0)}٪`
+                          }
+                        >
+                          {pieData.map((_, i) => (
+                            <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(v: number) => v.toLocaleString('ar-SA')}
+                          contentStyle={{ direction: 'rtl' }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">الطلبات حسب التطبيق (أعلى 10)</CardTitle>
+                </CardHeader>
+                <CardContent className="h-[280px]">
+                  {barData.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-12">لا توجد بيانات تطبيقات.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={barData} layout="vertical" margin={{ left: 8, right: 16 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
+                        <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => Number(v).toLocaleString('ar-SA')} />
+                        <YAxis
+                          type="category"
+                          dataKey="name"
+                          width={100}
+                          tick={{ fontSize: 10 }}
+                        />
+                        <Tooltip
+                          formatter={(v: number) => [v.toLocaleString('ar-SA'), 'طلبات']}
+                          contentStyle={{ direction: 'rtl' }}
+                        />
+                        <Bar dataKey="orders" radius={[0, 4, 4, 0]}>
+                          {barData.map((entry, i) => (
+                            <Cell key={entry.name + String(i)} fill={entry.fill} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
       </PageSection>
 
       <PageSection title="ملخص التنبؤ">
@@ -162,7 +438,7 @@ const AiAnalyticsPage = () => {
                 <Tooltip
                   formatter={(value: number | undefined, name: string) => {
                     const label = name === 'actual' ? 'فعلي' : 'تنبؤ';
-                    return [value !== null ? value.toLocaleString('ar-SA') : '—', label];
+                    return [value !== null && value !== undefined ? value.toLocaleString('ar-SA') : '—', label];
                   }}
                   contentStyle={{ direction: 'rtl' }}
                 />

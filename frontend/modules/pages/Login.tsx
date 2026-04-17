@@ -7,6 +7,8 @@ import { dashboardService } from '@services/dashboardService';
 import { loadRememberedEmail, persistRememberedEmail } from '@shared/lib/loginRememberStorage';
 import { logError } from '@shared/lib/logger';
 import { brandLogoSrc } from '@shared/lib/brandLogo';
+import { Checkbox } from '@shared/components/ui/checkbox';
+import { Label } from '@shared/components/ui/label';
 
 interface SystemSettings {
   project_name_ar: string;
@@ -153,7 +155,7 @@ const Login = () => {
       </section>
 
       {/* ── Right: Login Form (45%) ── */}
-      <section className="w-full lg:w-[45%] flex flex-col justify-center items-center p-8 sm:p-12 lg:p-20 bg-background relative">
+      <section className="w-full lg:w-[45%] flex flex-col justify-center items-center p-8 sm:p-12 lg:p-20 bg-background relative min-h-screen lg:min-h-0">
         {/* Theme toggle */}
         <button
           type="button"
@@ -198,6 +200,7 @@ const Login = () => {
                 </div>
                 <input
                   id="login-email"
+                  name="email"
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
@@ -206,7 +209,8 @@ const Login = () => {
                   dir="ltr"
                   autoComplete="email"
                   autoFocus={!email}
-                  className="block w-full pr-12 pl-4 py-4 bg-muted/30 border border-border/50 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all outline-none text-foreground placeholder:text-muted-foreground/50"
+                  aria-invalid={!!loginError}
+                  className="block w-full pr-12 pl-4 py-4 bg-muted/30 border border-border/50 rounded-xl focus-visible:ring-4 focus-visible:ring-primary/15 focus-visible:border-primary transition-all outline-none text-foreground placeholder:text-muted-foreground/50 dark:bg-muted/20"
                 />
               </div>
             </div>
@@ -220,6 +224,7 @@ const Login = () => {
                 </div>
                 <input
                   id="login-password"
+                  name="password"
                   type={showPw ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
@@ -228,7 +233,8 @@ const Login = () => {
                   required
                   autoComplete="current-password"
                   autoFocus={!!email}
-                  className="block w-full pr-12 pl-12 py-4 bg-muted/30 border border-border/50 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all outline-none text-foreground placeholder:text-muted-foreground/50"
+                  aria-invalid={!!loginError}
+                  className="block w-full pr-12 pl-12 py-4 bg-muted/30 border border-border/50 rounded-xl focus-visible:ring-4 focus-visible:ring-primary/15 focus-visible:border-primary transition-all outline-none text-foreground placeholder:text-muted-foreground/50 dark:bg-muted/20"
                 />
                 <button
                   type="button"
@@ -248,16 +254,15 @@ const Login = () => {
 
             {/* Remember Me */}
             <div className="flex items-center gap-3 px-1">
-              <input
+              <Checkbox
                 id="remember-me"
-                type="checkbox"
                 checked={rememberMe}
-                onChange={e => setRememberMe(e.target.checked)}
-                className="w-5 h-5 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                onCheckedChange={(v) => setRememberMe(v === true)}
+                className="h-5 w-5"
               />
-              <label htmlFor="remember-me" className="text-sm text-muted-foreground cursor-pointer select-none">
+              <Label htmlFor="remember-me" className="text-sm text-muted-foreground font-normal cursor-pointer select-none leading-none">
                 تذكرني في المرة القادمة
-              </label>
+              </Label>
             </div>
 
             {/* Error */}
@@ -272,7 +277,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 px-6 text-white font-bold rounded-xl shadow-lg hover:shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+              className="w-full py-4 px-6 text-white font-bold rounded-xl shadow-lg hover:shadow-primary/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               style={{ background: 'linear-gradient(225deg, #00288e 0%, #1e40af 100%)' }}
             >
               {loading ? (
