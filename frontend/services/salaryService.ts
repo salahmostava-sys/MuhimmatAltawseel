@@ -571,7 +571,6 @@ export const salaryService = {
     // upsert will also fail and the error will surface normally.
     if (error && String(error.message || '').includes('sheet_snapshot')) {
       if (import.meta.env.DEV) {
-        // eslint-disable-next-line no-console
         console.warn(
           '[salaryService.upsertMany] sheet_snapshot column not found — falling back without it. ' +
           'Run pending DB migrations to restore full snapshot persistence.',
