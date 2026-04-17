@@ -99,6 +99,7 @@ const SalaryRowCells = memo(function SalaryRowCells({
   persistEmployeePaymentMethod,
   employeeFieldSaving,
   openEmployeeDetail,
+  canEdit,
 }: {
   r: SalaryRow;
   rowIdx: number;
@@ -378,7 +379,6 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 5,           // 5 rows above/below — enough for smooth scroll, less DOM work
-    scrollingDelay: 60,    // ms — pause before rendering new rows during fast scroll (reduces jank)
   });
 
   const virtualRows = rowVirtualizer.getVirtualItems();

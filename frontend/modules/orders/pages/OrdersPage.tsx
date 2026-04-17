@@ -24,7 +24,7 @@ class OrdersErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    logError('[OrdersPage] Error boundary caught', error, { componentStack: info.componentStack });
+    logError('[OrdersPage] Error boundary caught', error, { meta: { componentStack: info.componentStack } });
   }
 
   render() {

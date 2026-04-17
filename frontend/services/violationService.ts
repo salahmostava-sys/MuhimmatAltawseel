@@ -62,7 +62,7 @@ export const violationService = {
   },
 
   updateViolation: async (id: string, payload: Record<string, unknown>) => {
-    const { error } = await supabase.from('external_deductions').update(payload).eq('id', id);
+    const { error } = await supabase.from('external_deductions').update(payload as never).eq('id', id);
     if (error) throw toServiceError(error, 'violationService.updateViolation');
   },
 

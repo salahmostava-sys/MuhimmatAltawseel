@@ -531,8 +531,8 @@ export const salaryService = {
         .range(offset, offset + PAGE_SIZE - 1);
       if (error) handleSupabaseError(error, 'salaryService.getMonthRecordsForSalaryContext');
       const rows = useFallback
-        ? ((data ?? []) as Omit<SalaryRecordContextRow, 'sheet_snapshot'>[]).map(r => ({ ...r, sheet_snapshot: null }))
-        : ((data ?? []) as SalaryRecordContextRow[]);
+        ? ((data ?? []) as unknown as Omit<SalaryRecordContextRow, 'sheet_snapshot'>[]).map((r) => ({ ...r, sheet_snapshot: null }))
+        : ((data ?? []) as unknown as SalaryRecordContextRow[]);
       allRows.push(...rows);
       hasMore = (data?.length ?? 0) === PAGE_SIZE;
       offset += PAGE_SIZE;
@@ -553,7 +553,7 @@ export const salaryService = {
   upsert: async (payload: SalaryRecordPayload) => {
     const { data, error } = await supabase
       .from('salary_records')
-      .upsert(payload, { onConflict: 'employee_id,month_year' })
+      .upsert(payload as never, { onConflict: 'employee_id,month_year' })
       .select()
       .single();
     if (error) handleSupabaseError(error, 'salaryService.upsert');
@@ -589,7 +589,7 @@ export const salaryService = {
   update: async (id: string, payload: Partial<SalaryRecordPayload>) => {
     const { data, error } = await supabase
       .from('salary_records')
-      .update(payload)
+      .update(payload as never)
       .eq('id', id)
       .select()
       .single();

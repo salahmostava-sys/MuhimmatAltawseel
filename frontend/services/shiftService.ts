@@ -50,7 +50,7 @@ export const shiftService = {
       .upsert(
         { 
           employee_id: employeeId, 
-          date: date, 
+          date,
           app_id: appId, 
           hours_worked: hoursWorked,
           notes: notes || null
@@ -70,12 +70,12 @@ export const shiftService = {
     let saved = 0;
     const failed: string[] = [];
     for (let i = 0; i < rows.length; i += chunkSize) {
-      const chunk = rows.slice(i, i + chunkSize).map(r => ({
+      const chunk = rows.slice(i, i + chunkSize).map((r) => ({
         employee_id: r.employee_id,
         app_id: r.app_id,
         date: r.date,
         hours_worked: r.hours_worked,
-        notes: r.notes || null,
+        notes: r.notes ?? null,
       }));
       const { error } = await supabase
         .from('daily_shifts')

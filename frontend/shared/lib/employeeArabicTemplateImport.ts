@@ -1,3 +1,5 @@
+import * as XLSX from '@e965/xlsx';
+import type { WorkBook } from '@e965/xlsx';
 import { parseExcelDate } from '@shared/lib/excelDateParse';
 import { employeeService } from '@services/employeeService';
 import { EMPLOYEE_IMPORT_COLUMNS } from '@shared/constants/excelSchemas';
@@ -143,7 +145,7 @@ export function parseEmployeeArabicWorkbook(buffer: ArrayBuffer): {
   headerErrors: string[];
 } {
   const headerErrors: string[] = [];
-  let wb: XLSX.WorkBook;
+  let wb: WorkBook;
   try {
     wb = XLSX.read(buffer, { type: 'array', cellDates: false });
   } catch {

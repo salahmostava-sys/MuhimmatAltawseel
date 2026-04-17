@@ -1,3 +1,5 @@
+import * as XLSX from '@e965/xlsx';
+import type { WorkBook } from '@e965/xlsx';
 import { isEmployeeIdUuid, isValidSalaryMonthYear, parseSalaryAmount } from '@shared/lib/salaryValidation';
 
 export const SALARY_IO_COLUMNS = [
@@ -152,7 +154,7 @@ export function parseSalaryImportWorkbook(
   options: { defaultMonthYear?: string }
 ): { rows: SalaryImportRowResult[]; parseErrors: string[] } {
   const parseErrors: string[] = [];
-  let wb: XLSX.WorkBook;
+  let wb: WorkBook;
   try {
     wb = XLSX.read(buffer, { type: 'array', cellDates: false });
   } catch {

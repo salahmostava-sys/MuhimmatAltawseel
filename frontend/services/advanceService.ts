@@ -65,7 +65,7 @@ export const advanceService = {
   update: async (id: string, payload: Partial<AdvancePayload>) => {
     const { error } = await supabase
       .from('advances')
-      .update(payload as Record<string, unknown>)
+      .update(payload as never)
       .eq('id', id);
     if (error) handleSupabaseError(error, 'advanceService.update');
   },
@@ -73,7 +73,7 @@ export const advanceService = {
   updateStatus: async (id: string, status: string) => {
     const { error } = await supabase
       .from('advances')
-      .update({ status } as Record<string, unknown>)
+      .update({ status } as never)
       .eq('id', id);
     if (error) handleSupabaseError(error, 'advanceService.updateStatus');
   },
@@ -99,7 +99,7 @@ export const advanceService = {
         is_written_off: true,
         written_off_at: new Date().toISOString(),
         written_off_reason: reason,
-      } as Record<string, unknown>)
+      } as never)
       .in('id', ids);
     if (error) handleSupabaseError(error, 'advanceService.writeOffMany');
   },
@@ -111,7 +111,7 @@ export const advanceService = {
         is_written_off: false,
         written_off_at: null,
         written_off_reason: null,
-      } as Record<string, unknown>)
+      } as never)
       .in('id', ids);
     if (error) handleSupabaseError(error, 'advanceService.restoreWrittenOffMany');
   },
@@ -134,7 +134,7 @@ export const advanceService = {
   updateInstallment: async (id: string, payload: InstallmentUpdate) => {
     const { error } = await supabase
       .from('advance_installments')
-      .update(payload as Record<string, unknown>)
+      .update(payload as never)
       .eq('id', id);
     if (error) handleSupabaseError(error, 'advanceService.updateInstallment');
   },

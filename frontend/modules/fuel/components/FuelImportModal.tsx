@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import * as XLSX from '@e965/xlsx';
 import { X, Check } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Label } from '@shared/components/ui/label';

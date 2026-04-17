@@ -137,7 +137,6 @@ export const salaryDraftService = {
     );
 
     // Step 1: read existing ids BEFORE saving — gives us a clean snapshot
-    // @ts-expect-error -- deep instantiation workaround
     const { data: existingData, error: selectError } = await supabase.from('salary_drafts')
       .select('employee_id')
       .eq('month_year', monthYear)

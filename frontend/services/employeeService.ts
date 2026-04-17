@@ -296,7 +296,7 @@ export const employeeService = {
   async updateEmployeeDocumentPaths(employeeId: string, updates: Record<string, string>) {
     const { error } = await supabase
       .from('employees')
-      .update(updates)
+      .update(updates as never)
       .eq('id', employeeId);
     if (error) throw toServiceError(error, 'employeeService.updateEmployeeDocumentPaths');
   },

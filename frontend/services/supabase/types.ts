@@ -261,6 +261,7 @@ export type Database = {
           custom_columns: Json | null
           id: string
           is_active: boolean
+          is_archived: boolean
           logo_url: string | null
           name: string
           name_en: string | null
@@ -274,6 +275,7 @@ export type Database = {
           custom_columns?: Json | null
           id?: string
           is_active?: boolean
+          is_archived?: boolean
           logo_url?: string | null
           name: string
           name_en?: string | null
@@ -287,6 +289,7 @@ export type Database = {
           custom_columns?: Json | null
           id?: string
           is_active?: boolean
+          is_archived?: boolean
           logo_url?: string | null
           name?: string
           name_en?: string | null
@@ -347,6 +350,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      attendance_status_configs: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
       }
       audit_log: {
         Row: {
@@ -828,6 +852,57 @@ export type Database = {
           },
         ]
       }
+      finance_transactions: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          created_by: string | null
+          date: string
+          description: string | null
+          id: string
+          is_auto: boolean
+          month_year: string
+          notes: string | null
+          reference_id: string | null
+          reference_type: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          is_auto?: boolean
+          month_year: string
+          notes?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          is_auto?: boolean
+          month_year?: string
+          notes?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       locked_months: {
         Row: {
           id: string
@@ -1268,6 +1343,7 @@ export type Database = {
           created_at: string
           default_language: string
           id: string
+          iqama_alert_days: number
           logo_url: string | null
           project_name_ar: string
           project_name_en: string
@@ -1280,6 +1356,7 @@ export type Database = {
           created_at?: string
           default_language?: string
           id?: string
+          iqama_alert_days?: number
           logo_url?: string | null
           project_name_ar?: string
           project_name_en?: string
@@ -1292,6 +1369,7 @@ export type Database = {
           created_at?: string
           default_language?: string
           id?: string
+          iqama_alert_days?: number
           logo_url?: string | null
           project_name_ar?: string
           project_name_en?: string
@@ -1558,31 +1636,31 @@ export type Database = {
         Row: {
           app_id: string
           created_at: string
+          date: string
           employee_id: string
           hours_worked: number
           id: string
           notes: string | null
-          shift_date: string
           updated_at: string
         }
         Insert: {
           app_id: string
           created_at?: string
+          date: string
           employee_id: string
           hours_worked: number
           id?: string
           notes?: string | null
-          shift_date: string
           updated_at?: string
         }
         Update: {
           app_id?: string
           created_at?: string
+          date?: string
           employee_id?: string
           hours_worked?: number
           id?: string
           notes?: string | null
-          shift_date?: string
           updated_at?: string
         }
         Relationships: [
@@ -1850,27 +1928,39 @@ export type Database = {
           id: string
           min_stock_alert: number | null
           name_ar: string
+          notes: string | null
+          part_number: string | null
           stock_quantity: number
+          supplier: string | null
           unit: string | null
           unit_cost: number | null
+          updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
           min_stock_alert?: number | null
           name_ar: string
+          notes?: string | null
+          part_number?: string | null
           stock_quantity?: number
+          supplier?: string | null
           unit?: string | null
           unit_cost?: number | null
+          updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
           min_stock_alert?: number | null
           name_ar?: string
+          notes?: string | null
+          part_number?: string | null
           stock_quantity?: number
+          supplier?: string | null
           unit?: string | null
           unit_cost?: number | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1919,30 +2009,33 @@ export type Database = {
       salary_drafts: {
         Row: {
           created_at: string
-          draft_data: Json | null
+          draft_data: Json
           employee_id: string
           id: string
           month_year: string
           status: string | null
           updated_at: string
+          user_id: string
         }
         Insert: {
           created_at?: string
-          draft_data?: Json | null
+          draft_data: Json
           employee_id: string
           id?: string
           month_year: string
           status?: string | null
           updated_at?: string
+          user_id: string
         }
         Update: {
           created_at?: string
-          draft_data?: Json | null
+          draft_data?: Json
           employee_id?: string
           id?: string
           month_year?: string
           status?: string | null
           updated_at?: string
+          user_id?: string
         }
         Relationships: [
           {
@@ -1992,30 +2085,27 @@ export type Database = {
           action: string
           created_at: string
           id: string
-          new_value: Json | null
-          old_value: Json | null
+          meta: Json
           record_id: string | null
-          table_name: string
+          table_name: string | null
           user_id: string | null
         }
         Insert: {
           action: string
           created_at?: string
           id?: string
-          new_value?: Json | null
-          old_value?: Json | null
+          meta?: Json
           record_id?: string | null
-          table_name: string
+          table_name?: string | null
           user_id?: string | null
         }
         Update: {
           action?: string
           created_at?: string
           id?: string
-          new_value?: Json | null
-          old_value?: Json | null
+          meta?: Json
           record_id?: string | null
-          table_name?: string
+          table_name?: string | null
           user_id?: string | null
         }
         Relationships: []

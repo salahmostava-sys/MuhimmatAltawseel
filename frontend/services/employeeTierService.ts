@@ -19,7 +19,7 @@ export const employeeTierService = {
     return data ?? [];
   },
   updateTier: async (id: string, payload: Record<string, unknown>) => {
-    const { data, error } = await supabase.from('employee_tiers').update(payload).eq('id', id);
+    const { data, error } = await supabase.from('employee_tiers').update(payload as never).eq('id', id);
     throwIfError(error, 'employeeTierService.updateTier');
     return data ?? [];
   },

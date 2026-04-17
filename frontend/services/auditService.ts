@@ -1,4 +1,5 @@
 import { supabase } from '@services/supabase/client';
+import type { Json } from '@services/supabase/types';
 import { toServiceError } from '@services/serviceError';
 import { authService } from '@services/authService';
 
@@ -18,7 +19,7 @@ export const auditService = {
       action: payload.action,
       table_name: payload.table_name ?? null,
       record_id: payload.record_id ?? null,
-      meta: payload.meta ?? {},
+      meta: (payload.meta ?? {}) as Json,
     });
     if (error) throw toServiceError(error, 'auditService.logAdminAction');
   },

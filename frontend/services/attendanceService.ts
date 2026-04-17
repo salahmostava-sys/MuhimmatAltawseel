@@ -185,7 +185,7 @@ export const attendanceService = {
   /** Fetch custom attendance status configs (e.g. إجازة خاصة). */
   getStatusConfigs: async () => {
     const { data, error } = await supabase
-      .from('attendance_status_configs' as string)
+      .from('attendance_status_configs')
       .select('id, name, color')
       .order('created_at');
     if (error) handleSupabaseError(error, 'attendanceService.getStatusConfigs');
@@ -195,7 +195,7 @@ export const attendanceService = {
   /** Add a new custom attendance status. */
   addStatusConfig: async (name: string, color = '#6366f1') => {
     const { error } = await supabase
-      .from('attendance_status_configs' as string)
+      .from('attendance_status_configs')
       .insert({ name, color });
     if (error) handleSupabaseError(error, 'attendanceService.addStatusConfig');
   },

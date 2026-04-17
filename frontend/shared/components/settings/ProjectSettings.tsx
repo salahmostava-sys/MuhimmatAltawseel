@@ -17,6 +17,7 @@ import { settingsHubService } from '@services/settingsHubService';
 import { brandLogoSrc } from '@shared/lib/brandLogo';
 import { getErrorMessage } from '@shared/lib/query';
 import { logError } from '@shared/lib/logger';
+import * as XLSX from '@e965/xlsx';
 
 export default function ProjectSettings() {
   const { isRTL } = useLanguage();

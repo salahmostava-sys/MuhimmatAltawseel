@@ -17,7 +17,7 @@ import { logger } from '@shared/lib/logger';
 import type { WorkType } from '@shared/types/shifts';
 import { appsPageService } from '@modules/apps/services/appsPageService';
 import { appsRootQueryKey, appsOverviewQueryKey, appEmployeesQueryKey } from '@modules/apps/queryKeys';
-import { toAppUpsertPayload } from '@modules/apps/lib/appsModel';
+import { normalizeCustomColumns, toAppUpsertPayload } from '@modules/apps/lib/appsModel';
 import type { AppData, AppFormValues } from '@modules/apps/types';
 
 export const useAppsPage = () => {
@@ -151,7 +151,17 @@ export const useAppsPage = () => {
 
   const handleWorkTypeChange = async (app: AppData, workType: WorkType) => {
     try {
-      await appService.update(app.id, { ...app, work_type: workType });
+      await appService.update(app.id, {
+        ...toAppUpsertPayload({
+          name: app.name,
+          name_en: app.name_en ?? '',
+          brand_color: app.brand_color,
+          text_color: app.text_color,
+          is_active: app.is_active,
+          custom_columns: normalizeCustomColumns(app.custom_columns),
+        }),
+        work_type: workType,
+      });
       await queryClient.invalidateQueries({ queryKey: ['apps'] });
       toast.success('تم تحديث نوع العمل');
     } catch (err: unknown) {

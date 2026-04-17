@@ -91,7 +91,7 @@ export const settingsHubService = {
   },
   getAvatarPublicUrl: (path: string) => supabase.storage.from('avatars').getPublicUrl(path),
   updateProfileByUserId: async (userId: string, payload: Record<string, unknown>) => {
-    const { error } = await supabase.from('profiles').update(payload).eq('id', userId);
+    const { error } = await supabase.from('profiles').update(payload as never).eq('id', userId);
     if (error) throw toServiceError(error, 'settingsHubService.updateProfileByUserId');
   },
   updatePassword: async (password: string) => authService.updatePassword(password),
@@ -157,7 +157,7 @@ export const settingsHubService = {
     if (error) throw toServiceError(error, 'settingsHubService.updateSystemLogo');
   },
   updateTradeRegister: async (recordId: string, payload: Record<string, unknown>) => {
-    const { error } = await supabase.from('trade_registers').update(payload).eq('id', recordId);
+    const { error } = await supabase.from('trade_registers').update(payload as never).eq('id', recordId);
     if (error) throw toServiceError(error, 'settingsHubService.updateTradeRegister');
   },
   createTradeRegister: async (payload: Record<string, unknown>) => {

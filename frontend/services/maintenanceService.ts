@@ -144,7 +144,7 @@ export async function updateSparePart(id: string, data: Partial<SparePart>): Pro
   delete rest.id;
   const { data: row, error } = await supabase
     .from('spare_parts')
-    .update(rest as Record<string, unknown>)
+    .update(rest as never)
     .eq('id', id)
     .select()
     .single();
