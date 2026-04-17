@@ -66,7 +66,12 @@ export function useSalaryFilteredRows(
           return row.status;
         default:
           if (platforms.includes(sortField)) return row.platformOrders[sortField] || 0;
-          return toComparableSortValue((row as unknown as Record<string, unknown>)[sortField]);
+          // Fallback: check known numeric fields on SalaryRow
+          if (sortField in row) {
+            const val = (row as unknown as Record<string, unknown>)[sortField];
+            return typeof val === 'number' ? val : toComparableSortValue(val);
+          }
+          return 0;
       }
     };
 

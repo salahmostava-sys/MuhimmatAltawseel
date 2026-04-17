@@ -11,6 +11,7 @@
  */
 import { useEffect, useRef } from 'react';
 import { logError } from '@shared/lib/logger';
+import { toast } from '@shared/components/ui/sonner';
 import { salaryDraftService } from '@services/salaryDraftService';
 import { buildSalaryDraftPatch } from '@modules/salaries/lib/salaryDomain';
 import type { SalaryRow } from '@modules/salaries/types/salary.types';
@@ -96,6 +97,7 @@ export function useSalaryDraft({
           await salaryDraftService.syncDraftsForMonth(selectedMonth, draft);
         } catch (e) {
           logError('[SalaryDraft] Failed to clear server drafts after approve', e, { level: 'warn' });
+          toast.error('فشل مسح المسودات من الخادم بعد الاعتماد');
         }
       })();
       return;
@@ -109,6 +111,7 @@ export function useSalaryDraft({
           lastDraftSignatureRef.current = serializedDraft;
         } catch (e) {
           logError('[SalaryDraft] Failed to auto-save drafts to server', e, { level: 'warn' });
+          toast.error('فشل حفظ المسودات تلقائياً — سيتم إعادة المحاولة');
         }
       })();
     }, DRAFT_DEBOUNCE_MS);
