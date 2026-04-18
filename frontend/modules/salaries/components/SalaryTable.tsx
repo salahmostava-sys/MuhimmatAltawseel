@@ -303,6 +303,8 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
   const openEmployeeDetailRef = useRef(openEmployeeDetail); openEmployeeDetailRef.current = openEmployeeDetail;
   const persistCityRef = useRef(persistEmployeeCity); persistCityRef.current = persistEmployeeCity;
   const persistPaymentRef = useRef(persistEmployeePaymentMethod); persistPaymentRef.current = persistEmployeePaymentMethod;
+  const approveRowRef = useRef(approveRow); approveRowRef.current = approveRow;
+  const markAsPaidRef = useRef(markAsPaid); markAsPaidRef.current = markAsPaid;
 
   const stableSetEditingCell = useCallback((...args: Parameters<typeof setEditingCell>) => setEditingCellRef.current(...args), []);
   const stableSetPayslipRow = useCallback((...args: Parameters<typeof setPayslipRow>) => setPayslipRowRef.current(...args), []);
@@ -311,6 +313,8 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
   const stableOpenEmployeeDetail = useCallback((...args: Parameters<typeof openEmployeeDetail>) => openEmployeeDetailRef.current(...args), []);
   const stablePersistCity = useCallback((...args: Parameters<typeof persistEmployeeCity>) => persistCityRef.current(...args), []);
   const stablePersistPayment = useCallback((...args: Parameters<typeof persistEmployeePaymentMethod>) => persistPaymentRef.current(...args), []);
+  const stableApproveRow = useCallback((...args: Parameters<typeof approveRow>) => approveRowRef.current(...args), []);
+  const stableMarkAsPaid = useCallback((...args: Parameters<typeof markAsPaid>) => markAsPaidRef.current(...args), []);
 
   // ── Custom columns ────────────────────────────────────────────────────────
   const allCustomCols = useMemo(() => {
@@ -339,13 +343,15 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
     platforms.forEach(p => {
       acc.platformOrders[p] = (acc.platformOrders[p] || 0) + (r.platformMetrics[p]?.ordersCount || 0);
       acc.platformShiftDays[p] = (acc.platformShiftDays[p] || 0) + (r.platformMetrics[p]?.shiftDays || 0);
-      // FIX W9: accumulate per-platform salary totals here instead of re-reducing in footer
       acc.platformSalariesTotals[p] = (acc.platformSalariesTotals[p] || 0) + (r.platformSalaries[p] || 0);
+    });
+    // Accumulate custom column deduction totals here — avoids per-column reduce in footer JSX
+    Object.keys(r.customDeductions || {}).forEach(key => {
+      acc.customColTotals[key] = (acc.customColTotals[key] || 0) + (r.customDeductions?.[key] || 0);
     });
     acc.totalOrders += activityTotals.orders;
     acc.totalShiftDays += activityTotals.shiftDays;
     acc.platformSalaries += c.totalPlatformSalary;
-    // FIX W9b: accumulate inline totals here to avoid re-reducing in footer
     acc.platformIncome += r.platformIncome;
     acc.workDaysSum += r.workDays;
     acc.fuelCost += r.fuelCost;
@@ -365,6 +371,7 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
     platformOrders: {} as Record<string, number>,
     platformShiftDays: {} as Record<string, number>,
     platformSalariesTotals: {} as Record<string, number>,
+    customColTotals: {} as Record<string, number>,
     totalOrders: 0, totalShiftDays: 0,
     platformSalaries: 0, platformIncome: 0, workDaysSum: 0, fuelCost: 0,
     incentives: 0, sickAllowance: 0,
@@ -550,9 +557,9 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
                     setEditingCell={stableSetEditingCell}
                     updateRow={stableUpdateRow}
                     updatePlatformOrders={stableUpdatePlatformOrders}
-                    approveRow={approveRow}
+                    approveRow={stableApproveRow}
                     approvingRowId={approvingRowId}
-                    markAsPaid={markAsPaid}
+                    markAsPaid={stableMarkAsPaid}
                     markingPaid={markingPaid}
                     setPayslipRow={stableSetPayslipRow}
                     persistEmployeeCity={stablePersistCity}
@@ -622,7 +629,7 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
               <td className={`${tfClass} text-foreground`}>{totals.advance.toLocaleString()}</td>
               <td className={`${tfClass} text-foreground`}>{totals.violations.toLocaleString()}</td>
               {allCustomCols.map(col => {
-                const colTotal = filtered.reduce((s, r) => s + (r.customDeductions?.[col.fullKey] || 0), 0);
+                const colTotal = totals.customColTotals[col.fullKey] || 0;
                 return <td key={col.fullKey} className={`${tfClass} text-foreground`}>{colTotal > 0 ? colTotal.toLocaleString() : '—'}</td>;
               })}
               <td className={`${tfClass} text-foreground border-l border-border/30`}>{totals.totalDed.toLocaleString()}</td>

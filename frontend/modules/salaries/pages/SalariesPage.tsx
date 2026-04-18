@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState, useMemo, useEffect, useRef } from 'react';
+import { Suspense, lazy, useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { AlertTriangle, Settings2, Clock } from 'lucide-react';
 import { useToast } from '@shared/hooks/use-toast';
 import { useAppColors } from '@shared/hooks/useAppColors';
@@ -101,13 +101,14 @@ const Salaries = () => {
   const batchIndex = batch.index;
   const batchZip = batch.zip;
   const batchMonth = batch.month;
-  const setBatchQueue = (v: React.SetStateAction<SalaryRow[]>) =>
-    setBatch((b) => ({ ...b, queue: typeof v === 'function' ? v(b.queue) : v }));
-  const setBatchIndex = (v: React.SetStateAction<number>) =>
-    setBatch((b) => ({ ...b, index: typeof v === 'function' ? v(b.index) : v }));
-  const setBatchZip = (v: React.SetStateAction<JSZip | null>) =>
-    setBatch((b) => ({ ...b, zip: typeof v === 'function' ? v(b.zip) : v }));
-  const setBatchMonth = (v: string) => setBatch((b) => ({ ...b, month: v }));
+  // Stable setters — useCallback with [] deps so children don't re-render on every page render
+  const setBatchQueue = useCallback((v: React.SetStateAction<SalaryRow[]>) =>
+    setBatch((b) => ({ ...b, queue: typeof v === 'function' ? v(b.queue) : v })), []);
+  const setBatchIndex = useCallback((v: React.SetStateAction<number>) =>
+    setBatch((b) => ({ ...b, index: typeof v === 'function' ? v(b.index) : v })), []);
+  const setBatchZip = useCallback((v: React.SetStateAction<JSZip | null>) =>
+    setBatch((b) => ({ ...b, zip: typeof v === 'function' ? v(b.zip) : v })), []);
+  const setBatchMonth = useCallback((v: string) => setBatch((b) => ({ ...b, month: v })), []);
 
   const salaryToolbarImportRef = useRef<HTMLInputElement | null>(null);
 
@@ -231,7 +232,11 @@ const Salaries = () => {
     () => filtered.reduce((s, r) => s + computeRow(r).netSalary, 0),
     [filtered, computeRow],
   );
-  const pendingCount = filtered.filter((r) => r.status === 'pending' || r.isDirty).length;
+  // Memoized — avoids re-filtering on every render when nothing changed
+  const pendingCount = useMemo(
+    () => filtered.filter((r) => r.status === 'pending' || r.isDirty).length,
+    [filtered],
+  );
 
   // ── Batch ZIP export ──────────────────────────────────────────────────────
   useBatchPdfExport({
