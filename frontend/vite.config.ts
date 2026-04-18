@@ -9,6 +9,13 @@ export default defineConfig({
     hmr: {
       overlay: false,
     },
+    proxy: {
+      "/ai": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ai/, ""),
+      },
+    },
   },
   plugins: [react()],
   resolve: {

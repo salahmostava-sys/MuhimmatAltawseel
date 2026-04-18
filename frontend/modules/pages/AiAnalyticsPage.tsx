@@ -211,7 +211,12 @@ const AiAnalyticsPage = () => {
             {selectedMonthLabel}
           </Badge>
         </div>
-        <AIDashboard currentOrders={currentMonthOrders} daysPassed={daysPassedForForecast} />
+        <AIDashboard
+          currentOrders={currentMonthOrders}
+          daysPassed={daysPassedForForecast}
+          topPerformers={perf?.rankings?.topPerformers ?? []}
+          monthlyTrend={perf?.monthlyTrend ?? []}
+        />
       </PageSection>
 
       <PageSection title={`مؤشرات الأداء — ${selectedMonthLabel}`}>
