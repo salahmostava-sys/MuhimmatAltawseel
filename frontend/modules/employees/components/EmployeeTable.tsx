@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Eye, Edit, Trash2 } from "lucide-react";
 import { Button } from "@shared/components/ui/button";
 import { EmployeeTablePagination } from "@modules/employees/components/EmployeeTablePagination";
@@ -55,6 +55,35 @@ import {
   type ColumnDef,
 } from "@modules/employees/types/employee.types";
 
+// Module-level constant — not recreated on every render
+const DATE_FILTER_KEYS = new Set([
+  "join_date",
+  "birth_date",
+  "probation_end_date",
+  "residency_combined",
+  "health_insurance_expiry",
+  "license_expiry",
+]);
+
+const SPONSORSHIP_OPTIONS = [
+  { value: "sponsored", label: "على الكفالة" },
+  { value: "not_sponsored", label: "ليس على الكفالة" },
+  { value: "absconded", label: "هروب" },
+  { value: "terminated", label: "انتهاء الخدمة" },
+] as const;
+
+const LICENSE_OPTIONS = [
+  { value: "has_license", label: "لديه رخصة" },
+  { value: "no_license", label: "ليس لديه رخصة" },
+  { value: "applied", label: "تم التقديم" },
+] as const;
+
+const STATUS_OPTIONS = [
+  { value: "active", label: "نشط" },
+  { value: "inactive", label: "غير نشط" },
+  { value: "ended", label: "منتهي" },
+] as const;
+
 type EmployeeDetailedTableProps = {
   activeCols: ColumnDef[];
   colFilters: Record<string, string>;
@@ -108,7 +137,7 @@ type EmployeeDetailedTableProps = {
   onRowEditEnd?: () => void;
 };
 
-export function EmployeeDetailedTable({
+function EmployeeDetailedTableInner({
   activeCols,
   colFilters,
   sortField,
@@ -145,37 +174,16 @@ export function EmployeeDetailedTable({
     <span className="text-muted-foreground/40">{EMPTY_DATA_PLACEHOLDER}</span>
   );
   const cellText = (value?: string | null) => value || EMPTY_DATA_PLACEHOLDER;
-  const cityOptions = Array.from(
-    new Set([...DEFAULT_EMPLOYEE_CITY_OPTIONS, ...uniqueVals.city]),
-  ).map((value) => ({ value, label: cityLabel(value, value) }));
-  const sponsorshipOptions = [
-    { value: "sponsored", label: "على الكفالة" },
-    { value: "not_sponsored", label: "ليس على الكفالة" },
-    { value: "absconded", label: "هروب" },
-    { value: "terminated", label: "انتهاء الخدمة" },
-  ] as const;
-  const licenseOptions = [
-    { value: "has_license", label: "لديه رخصة" },
-    { value: "no_license", label: "ليس لديه رخصة" },
-    { value: "applied", label: "تم التقديم" },
-  ] as const;
-  const statusOptions = [
-    { value: "active", label: "نشط" },
-    { value: "inactive", label: "غير نشط" },
-    { value: "ended", label: "منتهي" },
-  ] as const;
+  const cityOptions = useMemo(
+    () =>
+      Array.from(new Set([...DEFAULT_EMPLOYEE_CITY_OPTIONS, ...uniqueVals.city]))
+        .map((value) => ({ value, label: cityLabel(value, value) })),
+    [uniqueVals.city],
+  );
   const buildTextOptions = (values: string[], currentValue?: string | null) =>
     Array.from(new Set([...values, currentValue || ""].filter(Boolean))).map(
       (value) => ({ value, label: value }),
     );
-  const dateFilterKeys = new Set([
-    "join_date",
-    "birth_date",
-    "probation_end_date",
-    "residency_combined",
-    "health_insurance_expiry",
-    "license_expiry",
-  ]);
   const formatDateCell = (value?: string | null) =>
     value ? format(parseISO(value), "yyyy/MM/dd") : EMPTY_DATA_PLACEHOLDER;
   const getDateInputValue = (value?: string | null) =>
@@ -383,7 +391,7 @@ export function EmployeeDetailedTable({
                       </div>
                     );
                   }
-                  if (dateFilterKeys.has(col.key)) {
+                  if (DATE_FILTER_KEYS.has(col.key)) {
                     // Range filter: "from..to" stored as single string
                     const rangeVal = colFilters[col.key] || "";
                     const [rangeFrom = "", rangeTo = ""] = rangeVal.includes("..") ? rangeVal.split("..") : [rangeVal, ""];
@@ -445,7 +453,7 @@ export function EmployeeDetailedTable({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">الكل</SelectItem>
-                          {statusOptions.map((option) => (
+                          {STATUS_OPTIONS.map((option) => (
                             <SelectItem key={option.value} value={option.value}>
                               {option.label}
                             </SelectItem>
@@ -905,7 +913,7 @@ export function EmployeeDetailedTable({
                                   value={
                                     emp.sponsorship_status || "not_sponsored"
                                   }
-                                  options={sponsorshipOptions.map((option) => ({
+                                  options={SPONSORSHIP_OPTIONS.map((option) => ({
                                     value: option.value,
                                     label: option.label,
                                   }))}
@@ -954,7 +962,7 @@ export function EmployeeDetailedTable({
                               {permissions.can_edit ? (
                                 <InlineSelectEditor
                                   value={emp.status || "active"}
-                                  options={statusOptions.map((option) => ({
+                                  options={STATUS_OPTIONS.map((option) => ({
                                     value: option.value,
                                     label: option.label,
                                   }))}
@@ -1097,7 +1105,7 @@ export function EmployeeDetailedTable({
                               {permissions.can_edit ? (
                                 <InlineSelectEditor
                                   value={emp.license_status || "no_license"}
-                                  options={licenseOptions.map((option) => ({
+                                  options={LICENSE_OPTIONS.map((option) => ({
                                     value: option.value,
                                     label: option.label,
                                   }))}
@@ -1268,3 +1276,5 @@ export function EmployeeDetailedTable({
     </div>
   );
 }
+
+export const EmployeeDetailedTable = React.memo(EmployeeDetailedTableInner);
