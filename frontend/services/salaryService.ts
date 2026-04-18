@@ -11,6 +11,7 @@ import { isEmployeeIdUuid, isValidSalaryMonthYear } from '@shared/lib/salaryVali
 import { handleSupabaseError } from '@services/serviceError';
 import { sanitizeLikeQuery } from '@shared/lib/security';
 import { createPagedResult } from '@shared/types/pagination';
+import { logError } from '@shared/lib/logger';
 import type { WorkType } from '@shared/types/shifts';
 
 export interface SalaryRecordPayload {
@@ -570,13 +571,11 @@ export const salaryService = {
     // (schema migration pending). If the column exists but data is malformed, the second
     // upsert will also fail and the error will surface normally.
     if (error && String(error.message || '').includes('sheet_snapshot')) {
-      if (import.meta.env.DEV) {
-        console.warn(
-          '[salaryService.upsertMany] sheet_snapshot column not found — falling back without it. ' +
-          'Run pending DB migrations to restore full snapshot persistence.',
-          { recordCount: records.length, originalError: error.message }
-        );
-      }
+      logError(
+        '[salaryService.upsertMany] sheet_snapshot column missing — falling back without it. Run pending DB migrations.',
+        error,
+        { level: 'warn', meta: { recordCount: records.length } },
+      );
       const fallbackRecords = records.map(({ sheet_snapshot: _s, ...record }) => record);
       ({ error } = await supabase
         .from('salary_records')
