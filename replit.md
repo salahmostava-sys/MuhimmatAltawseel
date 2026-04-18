@@ -35,3 +35,11 @@ A delivery operations management platform with a React frontend and a FastAPI AI
 - `ai-backend/main.py` — FastAPI app entrypoint
 - `ai-backend/model.py` — ML model functions
 - `ai-backend/requirements.txt` — Python dependencies
+
+## UI/UX Improvements (Post-Migration)
+
+- Tailwind keyframes added: `slide-up`, `scale-in`, `page-enter`, `float-slow`, `float-medium`, `pulse-ring`, `shimmer`
+- CSS utilities in `index.css`: `page-enter`, `card-lift`, `stagger-1…6`
+- **Login page**: staggered entrance animations, floating decorative circles in branding panel, glassmorphism feature cards, animated submit button with shimmer, caps-lock warning, security badge
+- **AppLayout**: smooth `page-enter` animation on route change via `pageKey` state
+- **AI Dashboard**: connected to real data (salary forecast, best employees, active riders count)
