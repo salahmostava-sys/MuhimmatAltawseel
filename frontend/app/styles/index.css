@@ -96,6 +96,13 @@
     --ds-secondary:         #3549db;
     --ds-error:             #ba1a1a;
 
+    /* ── shadcn chart palette (accessible & brand-aligned) ──── */
+    --chart-1: 232 77% 52%;   /* brand blue */
+    --chart-2: 152 65% 36%;   /* green  */
+    --chart-3: 38  92% 50%;   /* amber  */
+    --chart-4: 280 65% 55%;   /* purple */
+    --chart-5: 199 89% 48%;   /* sky    */
+
     /* ── Header glass background ─────────────────────────────── */
     --header-glass-bg: rgba(249, 249, 251, 0.88);
 
@@ -168,6 +175,13 @@
 
     /* ── Header glass background — dark ─────────────────────── */
     --header-glass-bg: rgba(12, 17, 25, 0.88);
+
+    /* ── shadcn chart palette — dark overrides ───────────────── */
+    --chart-1: 232 85% 68%;   /* brighter blue */
+    --chart-2: 152 60% 42%;   /* green  */
+    --chart-3: 38  88% 55%;   /* amber  */
+    --chart-4: 280 55% 58%;   /* purple */
+    --chart-5: 199 82% 52%;   /* sky    */
   }
 }
 
@@ -489,6 +503,16 @@
   .ds-btn-primary:disabled { opacity: 0.45; pointer-events: none; }
 
   /* ─── Page transition ────────────────────────────────────────── */
+  @keyframes page-enter {
+    from {
+      opacity: 0;
+      transform: translateX(-12px); /* RTL: slides in from right → left */
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
   .page-enter {
     animation: page-enter 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
@@ -533,5 +557,14 @@
   }
   #nprogress .peg {
     box-shadow: 0 0 12px var(--ds-primary), 0 0 6px var(--ds-primary) !important;
+  }
+
+  /* ─── RTL-friendly fade-in (no horizontal shift) ──────────────── */
+  @keyframes fade-in-rtl {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .animate-fade-in-rtl {
+    animation: fade-in-rtl 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 }

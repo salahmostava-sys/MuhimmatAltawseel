@@ -11,6 +11,7 @@ import PublicLayout from "@app/layout/PublicLayout";
 import "@app/i18n";
 import { ErrorContextSync } from "@app/components/ErrorContextSync";
 import { ProgressBar } from "@shared/components/ProgressBar";
+import { KeyboardShortcuts } from "@shared/components/KeyboardShortcuts";
 import { TooltipProvider } from "@shared/components/ui/tooltip";
 import ErrorBoundary from "@shared/components/ErrorBoundary";
 import Loading from "@shared/components/Loading";
@@ -87,6 +88,7 @@ const AppProvidersShell = () => (
   <AuthProvider>
     <ErrorContextSync />
     <ProgressBar />
+    <KeyboardShortcuts />
     <LanguageProvider>
       <TemporalProvider>
         <SystemSettingsProvider>
