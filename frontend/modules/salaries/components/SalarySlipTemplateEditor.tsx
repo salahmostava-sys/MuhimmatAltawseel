@@ -153,8 +153,14 @@ export function SalarySlipTemplateEditor() {
     }
   };
 
+  const getSelectedColumns = (): string[] => {
+    const cols = currentTemplate.selected_columns;
+    if (Array.isArray(cols)) return cols as string[];
+    return [];
+  };
+
   const toggleColumn = (key: string) => {
-    const cols = (currentTemplate.selected_columns || []) as string[];
+    const cols = getSelectedColumns();
     if (cols.includes(key)) {
       setCurrentTemplate({ ...currentTemplate, selected_columns: cols.filter(c => c !== key) });
     } else {
@@ -171,7 +177,7 @@ export function SalarySlipTemplateEditor() {
           template: {
             header_html: currentTemplate.header_html,
             footer_html: currentTemplate.footer_html,
-            selected_columns: currentTemplate.selected_columns as string[],
+            selected_columns: getSelectedColumns(),
           },
         });
         previewSlipInIframe(previewRef.current, html);
@@ -260,7 +266,7 @@ export function SalarySlipTemplateEditor() {
                   <div key={col.key} className="flex items-center gap-2">
                     <Checkbox
                       id={`col-${col.key}`}
-                      checked={(currentTemplate.selected_columns as string[] | null)?.includes(col.key)}
+                      checked={getSelectedColumns().includes(col.key)}
                       onCheckedChange={() => toggleColumn(col.key)}
                     />
                     <label htmlFor={`col-${col.key}`} className="text-sm cursor-pointer select-none">

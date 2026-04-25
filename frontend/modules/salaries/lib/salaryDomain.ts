@@ -60,9 +60,9 @@ const normalizePaymentMethod = (
 };
 
 const readSavedSnapshot = (value: unknown): Partial<SalaryRowSnapshot> | null =>
-  isRecordObject(value) ? (value as Partial<SalaryRowSnapshot>) : null;
+  isRecordObject(value) ? (value as unknown as Partial<SalaryRowSnapshot>) : null;
 
-const getFallbackSavedCustomDeductions = (manualDeduction: number) => {
+const getFallbackSavedCustomDeductions = (manualDeduction: number): Record<string, number> => {
   if (manualDeduction <= 0) return {};
   return { 'saved___خصم يدوي محفوظ': manualDeduction };
 };
@@ -117,9 +117,10 @@ const valuesMatch = (left: unknown, right: unknown) => {
 };
 
 const rowDiffersFromDraft = (row: SalaryRow, patch: SalaryDraftPatch) =>
-  Object.entries(patch).some(([key, value]) =>
-    !valuesMatch((row as unknown as Record<string, unknown>)[key], value),
-  );
+  Object.entries(patch).some(([key, value]) => {
+    const rowValue = (row as unknown as Record<string, unknown>)[key];
+    return !valuesMatch(rowValue, value);
+  });
 
 export const buildSavedMap = (savedRecords: Array<{ employee_id: string } & SavedSalaryRecord> | null | undefined) => {
   const savedMap: Record<string, SavedSalaryRecord> = {};
@@ -157,7 +158,8 @@ const normalizePreviewPlatformBreakdown = (value: unknown) => {
   const breakdown: Record<string, PlatformSalaryMetric> = {};
   if (!Array.isArray(value)) return breakdown;
 
-  (value as SalaryPreviewPlatformBreakdown[]).forEach((item) => {
+  const typedValue = value as unknown as SalaryPreviewPlatformBreakdown[];
+  typedValue.forEach((item) => {
     const appName = String(item.app_name || '').trim();
     if (!appName) return;
 
@@ -210,7 +212,8 @@ export const buildOrdersMap = (rows: OrderWithAppRow[] | null | undefined) => {
   const ordMap: Record<string, Record<string, number>> = {};
   (rows || []).forEach((r) => {
     // Supabase returns foreign key relationship as object (not array)
-    const appName = r.apps?.name;
+    const typedR = r as OrderWithAppRow;
+    const appName = typedR.apps?.name;
     if (!appName) return;
     if (!ordMap[r.employee_id]) ordMap[r.employee_id] = {};
     ordMap[r.employee_id][appName] = (ordMap[r.employee_id][appName] || 0) + r.orders_count;
@@ -432,10 +435,11 @@ export const buildSalaryRows = ({
     const deductedInstallmentsCount = (deductedInstIds[employeeId] || []).length;
     const status = resolveRowStatus(saved, pendingInstallmentsCount, deductedInstallmentsCount);
     const hasIban = !!emp.iban;
-    const rawCity = (emp.city as string | null | undefined) ?? null;
+    const typedEmp = emp as Record<string, unknown>;
+    const rawCity = (typedEmp.city as string | null | undefined) ?? null;
     const cityKey: 'makkah' | 'jeddah' | null = rawCity === 'makkah' || rawCity === 'jeddah' ? rawCity : null;
-    const preferredLanguage = (emp as { preferred_language?: SlipLanguage | null }).preferred_language || 'ar';
-    const phone = (emp as { phone?: string | null }).phone || null;
+    const preferredLanguage = (typedEmp.preferred_language as SlipLanguage | null | undefined) ?? 'ar';
+    const phone = (typedEmp.phone as string | null | undefined) ?? null;
     const workDays = Math.max(attendanceDays, preview.total_shift_days || 0);
     const fallbackPaymentMethod = hasIban ? 'bank' : 'cash';
     const baseRow: SalaryRow = {
@@ -505,9 +509,16 @@ const readLocalSalaryDraftMap = (storageKey?: string): Record<string, SalaryDraf
   try {
     const raw = localStorage.getItem(storageKey);
     if (!raw) return {};
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== 'object') return {};
-    return parsed as Record<string, SalaryDraftPatch>;
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || parsed === null) return {};
+    const typedParsed = parsed as Record<string, unknown>;
+    const result: Record<string, SalaryDraftPatch> = {};
+    for (const [key, value] of Object.entries(typedParsed)) {
+      if (isRecordObject(value)) {
+        result[key] = value as unknown as SalaryDraftPatch;
+      }
+    }
+    return result;
   } catch (e) {
     logError('[Salaries] Failed to read drafts from localStorage', e, { level: 'warn' });
     return {};
@@ -624,9 +635,9 @@ export async function prepareSalaryState({
   const { monthlyContext, previewData } = salaryBaseContext;
   const { employees: empRows, orders, appsWithSchemeRes, attendanceRows, fuelRes, savedRecords, allAdvances } = monthlyContext;
   const savedMap = buildSavedMap(
-    savedRecords as Array<{ employee_id: string } & SavedSalaryRecord> | null | undefined,
+    savedRecords as unknown as Array<{ employee_id: string } & SavedSalaryRecord> | null | undefined,
   );
-  const previewMap = buildPreviewMap((previewData || []) as Array<Record<string, unknown>>);
+  const previewMap = buildPreviewMap((previewData || []) as unknown as Array<Record<string, unknown>>);
   // FIX #10: wrap subsidiary async calls in try/catch so a failure in
   // advance installments doesn't crash the entire salary page.
   let advInstIds: Record<string, string[]> = {};
@@ -635,7 +646,7 @@ export async function prepareSalaryState({
   try {
     const advResult = await buildAdvanceInstallmentMaps(
       selectedMonth,
-      (allAdvances as Array<{ id: string; employee_id: string }> | null | undefined) || []
+      (allAdvances as unknown as Array<{ id: string; employee_id: string }> | null | undefined) || []
     );
     advInstIds = advResult.advInstIds;
     deductedInstIds = advResult.deductedInstIds;
@@ -645,12 +656,12 @@ export async function prepareSalaryState({
   }
 
   const monthStartIso = `${selectedMonth}-01`;
-  const attendanceDaysMap = buildAttendanceDaysMap(attendanceRows as Array<{ employee_id: string }> | null | undefined);
-  const fuelCostMap = buildFuelCostMap(fuelRes as Array<{ employee_id: string; fuel_cost: number | string }> | null | undefined);
-  const ordMap = buildOrdersMap(orders as OrderWithAppRow[] | null);
+  const attendanceDaysMap = buildAttendanceDaysMap(attendanceRows as unknown as Array<{ employee_id: string }> | null | undefined);
+  const fuelCostMap = buildFuelCostMap(fuelRes as unknown as Array<{ employee_id: string; fuel_cost: number | string }> | null | undefined);
+  const ordMap = buildOrdersMap(orders as unknown as OrderWithAppRow[] | null);
   const savedEmployeeIds = new Set(Object.keys(savedMap));
   const visibleEmployees = filterRetainedEmployeesForSalaryMonth(
-    (empRows || []) as {
+    (empRows || []) as unknown as {
       id: string;
       status?: string | null;
       job_title?: string | null;
@@ -667,13 +678,13 @@ export async function prepareSalaryState({
     previewMap,
     savedEmployeeIds,
   );
-  const appsFromApi = (appsWithSchemeRes as AppWithSchemeRow[] | null) || [];
+  const appsFromApi = (appsWithSchemeRes as unknown as AppWithSchemeRow[] | null) || [];
   const { appSchemeMap, appNameToId, appWorkTypeMap } = buildAppMaps(appsFromApi);
   const platformNames = appsFromApi.map((a) => a.name);
   const rulesMap = await fetchPricingRulesMap(appNameToId);
   const builtEmpPlatformScheme = buildEmpPlatformSchemeMap(employees.map((emp) => emp.id), platformNames, appSchemeMap);
   const newRows = buildSalaryRows({
-    employees: employees as Array<Record<string, unknown>>,
+    employees: employees as unknown as Array<Record<string, unknown>>,
     selectedMonth,
     platformNames,
     appNameToId,

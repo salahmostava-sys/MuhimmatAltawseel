@@ -278,16 +278,24 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
       license_expiry: editEmployee?.license_expiry || '',
       probation_end_date: editEmployee?.probation_end_date || '',
       probation_days: '',
-      license_status: (editEmployee?.license_status as EmployeeFormValues['license_status']) || 'no_license',
-      sponsorship_status: (editEmployee?.sponsorship_status as EmployeeFormValues['sponsorship_status']) || 'not_sponsored',
-      status: (editEmployee?.status as EmployeeFormValues['status']) || 'active',
-      preferred_language: (editEmployee?.preferred_language as EmployeeFormValues['preferred_language']) || 'ar',
+      license_status: (['has_license', 'no_license', 'applied'].includes(editEmployee?.license_status || '')
+        ? editEmployee?.license_status
+        : 'no_license') as EmployeeFormValues['license_status'],
+      sponsorship_status: (['sponsored', 'not_sponsored', 'absconded', 'terminated'].includes(editEmployee?.sponsorship_status || '')
+        ? editEmployee?.sponsorship_status
+        : 'not_sponsored') as EmployeeFormValues['sponsorship_status'],
+      status: (['active', 'inactive', 'ended'].includes(editEmployee?.status || '')
+        ? editEmployee?.status
+        : 'active') as EmployeeFormValues['status'],
+      preferred_language: (['ar', 'en'].includes(editEmployee?.preferred_language || '')
+        ? editEmployee?.preferred_language
+        : 'ar') as EmployeeFormValues['preferred_language'],
     },
     mode: 'onBlur',
   });
 
   const { trigger, setValue, getValues, watch, formState } = formApi;
-  const errors = formState.errors as Record<string, { message?: string }>;
+  const errors: Record<string, { message?: string }> = formState.errors as unknown as Record<string, { message?: string }>;
   const form = watch();
   const selectedCities = form.cities ?? [];
   const { recordNames: commercialRecordNames } = useCommercialRecords();
@@ -318,19 +326,14 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
     });
   }, [editEmployee?.personal_photo_url, editEmployee?.id_photo_url, editEmployee?.iqama_photo_url, editEmployee?.license_photo_url]);
 
-  const uploadedFilesCount = ['personal', 'id', 'iqama', 'license'].filter((k) => {
-    const key = k as 'personal' | 'id' | 'iqama' | 'license';
-    return uploadState[key].status === 'uploaded';
+  const uploadedFilesCount = (['personal', 'id', 'iqama', 'license'] as const).filter((k) => {
+    return uploadState[k].status === 'uploaded';
   }).length;
   const totalUploadSlots = 4;
   const uploadProgressPct = Math.round((uploadedFilesCount / totalUploadSlots) * 100);
 
-  const setField = useCallback((k: keyof EmployeeFormValues, v: EmployeeFormFieldValue) => {
-    setValue(
-      k as FieldPath<EmployeeFormValues>,
-      v as FieldPathValue<EmployeeFormValues, FieldPath<EmployeeFormValues>>,
-      { shouldDirty: true }
-    );
+  const setField = useCallback(<K extends FieldPath<EmployeeFormValues>>(k: K, v: FieldPathValue<EmployeeFormValues, K>) => {
+    setValue(k, v, { shouldDirty: true });
   }, [setValue]);
 
   const upsertCity = useCallback((value: string) => {
@@ -473,7 +476,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
         await employeeService.deleteEmployeeDocuments(pathsToDelete).catch((e) => {
           logError('[AddEmployeeModal] failed to delete removed documents from storage', e, { level: 'warn' });
         });
-        await employeeService.updateEmployeeDocumentPaths(empId, fieldsToNull as unknown as Record<string, string>).catch((e) => {
+        await employeeService.updateEmployeeDocumentPaths(empId, fieldsToNull).catch((e) => {
           logError('[AddEmployeeModal] failed to clear removed document paths', e, { level: 'warn' });
         });
       }

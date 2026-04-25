@@ -14,7 +14,7 @@ import { ServiceError, toServiceError } from '@services/serviceError';
 import { createPagedResult } from '@shared/types/pagination';
 import { sanitizeStoragePath } from '@shared/lib/storagePath';
 import { sanitizeLikeQuery } from '@shared/lib/security';
-import type { TablesInsert } from '@services/supabase/types';
+import type { TablesInsert, TablesUpdate } from '@services/supabase/types';
 
 export type EmployeeAppOption = {
   id: string;
@@ -293,10 +293,13 @@ export const employeeService = {
     return data;
   },
 
-  async updateEmployeeDocumentPaths(employeeId: string, updates: Record<string, string>) {
+  async updateEmployeeDocumentPaths(
+    employeeId: string,
+    updates: Partial<TablesUpdate<'employees'>>,
+  ) {
     const { error } = await supabase
       .from('employees')
-      .update(updates as never)
+      .update(updates)
       .eq('id', employeeId);
     if (error) throw toServiceError(error, 'employeeService.updateEmployeeDocumentPaths');
   },
