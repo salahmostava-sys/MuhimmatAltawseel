@@ -54,9 +54,9 @@ export function getCorsHeaders(requestOrigin: string | null): Record<string, str
 
 export function handleCorsPreflight(requestOrigin: string | null): Response {
   const headers = getCorsHeaders(requestOrigin);
-  return new Response("ok", { 
+  return new Response(null, { 
     headers,
-    status: 200 
+    status: 204 
   });
 }
 
