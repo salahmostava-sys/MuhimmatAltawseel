@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState, useCallback } from "react";
 import { ChunkRecoveryBootstrap } from "@app/components/ChunkRecoveryBootstrap";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "@app/providers/AuthContext";
@@ -12,6 +12,9 @@ import "@app/i18n";
 import { ErrorContextSync } from "@app/components/ErrorContextSync";
 import { ProgressBar } from "@shared/components/ProgressBar";
 import { KeyboardShortcuts } from "@shared/components/KeyboardShortcuts";
+import { OfflineIndicator } from "@shared/components/OfflineIndicator";
+import { EmployeeQuickView } from "@shared/components/EmployeeQuickView";
+import { useFaviconBadge } from "@shared/hooks/useFaviconBadge";
 import { TooltipProvider } from "@shared/components/ui/tooltip";
 import ErrorBoundary from "@shared/components/ErrorBoundary";
 import Loading from "@shared/components/Loading";
@@ -89,6 +92,8 @@ const AppProvidersShell = () => (
     <ErrorContextSync />
     <ProgressBar />
     <KeyboardShortcuts />
+    <OfflineIndicator />
+    <AlertsFaviconBadge />
     <LanguageProvider>
       <TemporalProvider>
         <SystemSettingsProvider>

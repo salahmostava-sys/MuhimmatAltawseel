@@ -1,0 +1,154 @@
+import { useEffect, useState, useCallback } from 'react';
+import { X, User, Phone, MapPin, Briefcase, Calendar, Bike } from 'lucide-react';
+import { employeeService } from '@services/employeeService';
+import { cn } from '@shared/lib/utils';
+import { Skeleton } from '@shared/components/ui/skeleton';
+
+type EmployeeInfo = {
+  id: string;
+  name: string;
+  phone: string;
+  city: string;
+  tier: string;
+  work_type: string;
+  join_date: string;
+  vehicle_name: string;
+};
+
+type Props = {
+  employeeId: string | null;
+  open: boolean;
+  onClose: () => void;
+};
+
+/**
+ * EmployeeQuickView — لوحة جانبية تنزلق من اليمين لعرض بيانات الموظف بسرعة.
+ */
+export function EmployeeQuickView({ employeeId, open, onClose }: Props) {
+  const [data, setData] = useState<EmployeeInfo | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchEmployee = useCallback(async () => {
+    if (!employeeId) return;
+    setLoading(true);
+    try {
+      const result = await employeeService.getById(employeeId);
+      // TypeScript: extract needed fields
+      setData({
+        id: (result as any).id ?? employeeId,
+        name: (result as any).name ?? (result as any).full_name ?? '',
+        phone: (result as any).phone ?? '',
+        city: (result as any).city ?? '',
+        tier: (result as any).tier ?? '',
+        work_type: (result as any).work_type ?? '',
+        join_date: (result as any).join_date ?? (result as any).created_at ?? '',
+        vehicle_name: (result as any).vehicle_name ?? (result as any).plate_number ?? '',
+      });
+    } catch {
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [employeeId]);
+
+  useEffect(() => {
+    if (open && employeeId) {
+      void fetchEmployee();
+    } else {
+      setData(null);
+    }
+  }, [open, employeeId, fetchEmployee]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-50 bg-black/30 transition-opacity"
+        onClick={onClose}
+        aria-hidden
+      />
+
+      {/* Drawer */}
+      <div
+        className={cn(
+          'fixed top-0 right-0 z-50 h-full w-full max-w-sm bg-card shadow-2xl transition-transform duration-300',
+          'flex flex-col border-l border-border',
+          open ? 'translate-x-0' : 'translate-x-full'
+        )}
+        dir="rtl"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <h3 className="text-base font-bold text-foreground">
+            {loading ? 'تحميل...' : data?.name ?? 'بيانات الموظف'}
+          </h3>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            aria-label="إغلاق"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          {loading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-6 w-full rounded-lg" />
+              ))}
+            </div>
+          ) : data ? (
+            <div className="space-y-4">
+              <InfoRow icon={<User size={15} />} label="الاسم" value={data.name} />
+              <InfoRow icon={<Phone size={15} />} label="الهاتف" value={data.phone || '—'} />
+              <InfoRow icon={<MapPin size={15} />} label="المدينة" value={data.city || '—'} />
+              <InfoRow icon={<Briefcase size={15} />} label="الدرجة" value={data.tier || '—'} />
+              <InfoRow icon={<Calendar size={15} />} label="نوع العمل" value={data.work_type || '—'} />
+              <InfoRow icon={<Bike size={15} />} label="المركبة" value={data.vehicle_name || '—'} />
+              <InfoRow
+                icon={<Calendar size={15} />}
+                label="تاريخ الانضمام"
+                value={
+                  data.join_date
+                    ? new Date(data.join_date).toLocaleDateString('ar-SA')
+                    : '—'
+                }
+              />
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              تعذر تحميل بيانات الموظف
+            </p>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** A single info row inside the drawer */
+function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
+      <span className="text-muted-foreground flex-shrink-0">{icon}</span>
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] text-muted-foreground">{label}</p>
+        <p className="text-sm font-medium text-foreground truncate">{value}</p>
+      </div>
+    </div>
+  );
+}

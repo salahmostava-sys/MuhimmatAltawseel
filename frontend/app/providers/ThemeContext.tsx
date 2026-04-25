@@ -20,18 +20,32 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     }
   });
 
+  const [transitioning, setTransitioning] = useState(false);
+
   useEffect(() => {
     const root = document.documentElement;
+    // Add smooth transition class for the color switch
+    root.classList.add('theme-transitioning');
+    setTransitioning(true);
+
     if (theme === 'dark') {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
     }
+
+    const timer = setTimeout(() => {
+      root.classList.remove('theme-transitioning');
+      setTransitioning(false);
+    }, 400);
+
     try {
       localStorage.setItem('theme', theme);
     } catch {
-      // Ignore localStorage errors (e.g., private browsing)
+      // Ignore localStorage errors
     }
+
+    return () => clearTimeout(timer);
   }, [theme]);
 
   const toggleTheme = useCallback(() => {
