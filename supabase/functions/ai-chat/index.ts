@@ -1,9 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
 
 const SYSTEM_PROMPT = `
 أنت مساعد إداري ذكي لنظام "مهمات التوصيل" اللوجستي.
@@ -657,8 +653,9 @@ async function groqChat(
 // ── Main handler ──────────────────────────────────────────────
 
 Deno.serve(async (req) => {
+  const requestOrigin = req.headers.get('origin');
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return handleCorsPreflight(requestOrigin);
   }
 
   try {
@@ -668,7 +665,7 @@ Deno.serve(async (req) => {
     if (!groqKey) {
       return new Response(
         JSON.stringify({ error: 'GROQ_API_KEY not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { status: 500, headers: { ...getCorsHeaders(requestOrigin), 'Content-Type': 'application/json' } },
       );
     }
 
@@ -677,7 +674,7 @@ Deno.serve(async (req) => {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...getCorsHeaders(requestOrigin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -692,7 +689,7 @@ Deno.serve(async (req) => {
       console.error('Auth error:', authError);
       return new Response(JSON.stringify({ error: `Auth Error: ${authError?.message}` }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...getCorsHeaders(requestOrigin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -705,7 +702,7 @@ Deno.serve(async (req) => {
     if (!Array.isArray(clientMessages) || clientMessages.length === 0) {
       return new Response(JSON.stringify({ error: 'messages array required' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...getCorsHeaders(requestOrigin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -745,19 +742,19 @@ Deno.serve(async (req) => {
       const finalResponseMessage = await groqChat(conversation, groqKey);
       return new Response(
         JSON.stringify({ message: finalResponseMessage.content ?? '' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { headers: { ...getCorsHeaders(requestOrigin), 'Content-Type': 'application/json' } },
       );
     }
 
     return new Response(
       JSON.stringify({ message: responseMessage.content ?? '' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      { headers: { ...getCorsHeaders(requestOrigin), 'Content-Type': 'application/json' } },
     );
   } catch (e) {
     console.error('[ai-chat] error:', e);
     return new Response(
       JSON.stringify({ error: (e as Error).message || 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      { status: 500, headers: { ...getCorsHeaders(requestOrigin), 'Content-Type': 'application/json' } },
     );
   }
 });

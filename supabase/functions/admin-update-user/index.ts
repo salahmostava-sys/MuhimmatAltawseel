@@ -1,10 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Credentials': 'true',
-};
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
 
 const isUuid = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -25,14 +20,15 @@ const logError = (message: string, meta: Record<string, unknown> = {}) => {
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
 
+  const requestOrigin = req.headers.get('origin');
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return handleCorsPreflight(requestOrigin);
   }
 
   try {
     if (req.method !== 'POST') {
       return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...getCorsHeaders(requestOrigin), 'Content-Type': 'application/json' },
         status: 405,
       });
     }
@@ -41,7 +37,7 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'No authorization header' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...getCorsHeaders(requestOrigin), 'Content-Type': 'application/json' },
         status: 401,
       });
     }
@@ -55,7 +51,7 @@ Deno.serve(async (req) => {
     const { data: { user: callerUser } } = await supabaseClient.auth.getUser();
     if (!callerUser) {
       return new Response(JSON.stringify({ error: 'Not authenticated' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...getCorsHeaders(requestOrigin), 'Content-Type': 'application/json' },
         status: 401,
       });
     }
@@ -69,7 +65,7 @@ Deno.serve(async (req) => {
 
     if (roleData?.role !== 'admin') {
       return new Response(JSON.stringify({ error: 'Only admins can update users' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...getCorsHeaders(requestOrigin), 'Content-Type': 'application/json' },
         status: 403,
       });
     }
@@ -122,7 +118,7 @@ Deno.serve(async (req) => {
         target_user_id: user_id,
       });
       return new Response(JSON.stringify({ error: 'Too many requests. Please retry shortly.' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...getCorsHeaders(requestOrigin), 'Content-Type': 'application/json' },
         status: 429,
       });
     }
@@ -198,7 +194,7 @@ Deno.serve(async (req) => {
       }
 
       return new Response(JSON.stringify({ success: true, user_id: createdUserId }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...getCorsHeaders(requestOrigin), 'Content-Type': 'application/json' },
         status: 200,
       });
     }
@@ -233,7 +229,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...getCorsHeaders(requestOrigin), 'Content-Type': 'application/json' },
       status: 200,
     });
   } catch (err: unknown) {
@@ -243,7 +239,7 @@ Deno.serve(async (req) => {
       error: message,
     });
     return new Response(JSON.stringify({ error: message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...getCorsHeaders(requestOrigin), 'Content-Type': 'application/json' },
       status: 400,
     });
   }

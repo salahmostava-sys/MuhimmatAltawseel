@@ -1,9 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
 
 type SalaryEngineRequest =
   | {
@@ -40,7 +36,8 @@ Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
 
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    const origin = req.headers.get('origin');
+    return handleCorsPreflight(origin);
   }
 
   try {
@@ -133,8 +130,9 @@ Deno.serve(async (req) => {
       } as Record<string, unknown>);
 
       if (error) throw new Error(error.message || JSON.stringify(error));
+      const successOrigin = req.headers.get('origin');
       return new Response(JSON.stringify({ data }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...getCorsHeaders(successOrigin), 'Content-Type': 'application/json' },
         status: 200,
       });
     }
@@ -146,8 +144,9 @@ Deno.serve(async (req) => {
       } as Record<string, unknown>);
 
       if (error) throw new Error(error.message || JSON.stringify(error));
+      const monthOrigin = req.headers.get('origin');
       return new Response(JSON.stringify({ data }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...getCorsHeaders(monthOrigin), 'Content-Type': 'application/json' },
         status: 200,
       });
     }
@@ -158,8 +157,9 @@ Deno.serve(async (req) => {
       } as Record<string, unknown>);
 
       if (error) throw new Error(error.message || JSON.stringify(error));
+      const previewOrigin = req.headers.get('origin');
       return new Response(JSON.stringify({ data }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...getCorsHeaders(previewOrigin), 'Content-Type': 'application/json' },
         status: 200,
       });
     }
@@ -199,8 +199,9 @@ Deno.serve(async (req) => {
 
     const statusCode = isAuthzError ? 403 : isClientError ? 400 : 500;
 
+    const origin = req.headers.get('origin');
     return new Response(JSON.stringify({ error: message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...getCorsHeaders(origin), 'Content-Type': 'application/json' },
       status: statusCode,
     });
   }

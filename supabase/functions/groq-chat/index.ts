@@ -8,20 +8,16 @@
  * - GROQ_API_KEY is never exposed to the browser
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
 
 const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') ?? '';
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const DEFAULT_MODEL = Deno.env.get('GROQ_MODEL') ?? 'llama3-8b-8192';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-const jsonResponse = (body: unknown, status: number) =>
+const jsonResponse = (body: unknown, status: number, origin: string | null) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...getCorsHeaders(origin), 'Content-Type': 'application/json' },
   });
 
 const logInfo = (message: string, meta: Record<string, unknown> = {}) => {
@@ -33,9 +29,10 @@ const logError = (message: string, meta: Record<string, unknown> = {}) => {
 };
 
 Deno.serve(async (req) => {
+  const requestOrigin = req.headers.get('origin');
   // CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return handleCorsPreflight(requestOrigin);
   }
 
   const requestId = crypto.randomUUID();
@@ -43,19 +40,19 @@ Deno.serve(async (req) => {
   try {
     // ── 1. Method guard ──────────────────────────────────────────────────────
     if (req.method !== 'POST') {
-      return jsonResponse({ error: 'Method not allowed' }, 405);
+      return jsonResponse({ error: 'Method not allowed' }, 405, requestOrigin);
     }
 
     // ── 2. Server-side API key check ─────────────────────────────────────────
     if (!GROQ_API_KEY) {
       logError('GROQ_API_KEY not configured', { request_id: requestId });
-      return jsonResponse({ error: 'AI service is not configured on the server' }, 500);
+      return jsonResponse({ error: 'AI service is not configured on the server' }, 500, requestOrigin);
     }
 
     // ── 3. Auth: require valid Supabase JWT ──────────────────────────────────
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return jsonResponse({ error: 'No authorization header' }, 401);
+      return jsonResponse({ error: 'No authorization header' }, 401, requestOrigin);
     }
 
     const callerClient = createClient(
@@ -66,7 +63,7 @@ Deno.serve(async (req) => {
 
     const { data: { user: callerUser } } = await callerClient.auth.getUser();
     if (!callerUser) {
-      return jsonResponse({ error: 'Not authenticated' }, 401);
+      return jsonResponse({ error: 'Not authenticated' }, 401, requestOrigin);
     }
 
     // ── 4. Rate limiting: 20 requests per user per 60 seconds ────────────────
@@ -92,7 +89,7 @@ Deno.serve(async (req) => {
 
       if (rate && !rate.allowed) {
         logError('Rate limit exceeded', { request_id: requestId, user_id: callerUser.id });
-        return jsonResponse({ error: 'Too many requests. Please retry shortly.' }, 429);
+        return jsonResponse({ error: 'Too many requests. Please retry shortly.' }, 429, requestOrigin);
       }
     }
 
@@ -101,13 +98,13 @@ Deno.serve(async (req) => {
     try {
       body = await req.json();
     } catch {
-      return jsonResponse({ error: 'Invalid JSON body' }, 400);
+      return jsonResponse({ error: 'Invalid JSON body' }, 400, requestOrigin);
     }
 
     const { messages, model, temperature, max_tokens } = body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
-      return jsonResponse({ error: 'messages must be a non-empty array' }, 400);
+      return jsonResponse({ error: 'messages must be a non-empty array' }, 400, requestOrigin);
     }
 
     // ── 6. Call Groq API ──────────────────────────────────────────────────────
@@ -135,16 +132,16 @@ Deno.serve(async (req) => {
     if (!groqResponse.ok) {
       const errText = await groqResponse.text();
       logError('Groq API error', { request_id: requestId, status: groqResponse.status, body: errText });
-      return jsonResponse({ error: `AI service error (${groqResponse.status})` }, 502);
+      return jsonResponse({ error: `AI service error (${groqResponse.status})` }, 502, requestOrigin);
     }
 
     const data = await groqResponse.json();
     const message = data.choices?.[0]?.message?.content ?? '';
 
-    return jsonResponse({ message }, 200);
+    return jsonResponse({ message }, 200, requestOrigin);
   } catch (e) {
     const errMsg = e instanceof Error ? e.message : String(e);
     logError('groq-chat unhandled error', { request_id: requestId, error: errMsg });
-    return jsonResponse({ error: 'Internal server error' }, 500);
+    return jsonResponse({ error: 'Internal server error' }, 500, requestOrigin);
   }
 });
