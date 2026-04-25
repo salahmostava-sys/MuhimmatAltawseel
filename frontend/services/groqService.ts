@@ -4,6 +4,9 @@
  */
 import { supabase } from '@services/supabase/client';
 
+/** Cached result of {@link groqService.checkConfiguration}. */
+let _configured: boolean | null = null;
+
 export interface GroqMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
@@ -26,7 +29,32 @@ async function callGroqEdgeFunction(messages: GroqMessage[]): Promise<string> {
 }
 
 export const groqService = {
-  isConfigured: (): boolean => true,
+  /**
+   * Checks whether the Groq chat service is likely reachable.
+   * Relies on the Supabase client being configured with a valid URL.
+   * For a definitive answer, call {@link checkConfiguration}.
+   */
+  isConfigured: (): boolean => {
+    const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+    return Boolean(url && url.startsWith('https'));
+  },
+
+  /**
+   * Performs a lightweight probe to confirm the groq-chat edge function
+   * is deployed and reachable. Result is cached for the session.
+   */
+  checkConfiguration: async (): Promise<boolean> => {
+    if (_configured !== null) return _configured;
+    try {
+      const { error } = await supabase.functions.invoke('groq-chat', {
+        body: { messages: [{ role: 'user', content: 'ping' }] },
+      });
+      _configured = !error;
+    } catch {
+      _configured = false;
+    }
+    return _configured;
+  },
 
   chat: async (message: string, systemPrompt?: string): Promise<string> => {
     const messages: GroqMessage[] = [];

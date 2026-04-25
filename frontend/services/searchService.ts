@@ -20,7 +20,11 @@ type VehicleSearchRow = {
 
 export const searchService = {
   searchEmployeesAndVehicles: async (query: string) => {
-    const safeTerm = `%${sanitizeLikeQuery(query)}%`;
+    const sq = sanitizeLikeQuery(query);
+    if (!sq) {
+      return { employees: [], vehicles: [], employeeError: null, vehicleError: null };
+    }
+    const safeTerm = `%${sq}%`;
     const [employeesRes, vehiclesRes] = await Promise.all([
       supabase
         .from('employees')

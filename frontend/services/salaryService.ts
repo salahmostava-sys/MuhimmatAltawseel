@@ -562,24 +562,19 @@ export const salaryService = {
   },
 
   upsertMany: async (records: Record<string, unknown>[]) => {
-    let { error } = await supabase
+    const { error } = await supabase
       .from('salary_records')
       .upsert(records as never, { onConflict: 'employee_id,month_year' });
 
-    // FIX B5: log a warning when falling back so data loss is visible in monitoring.
-    // The fallback strips sheet_snapshot only when the column genuinely doesn't exist yet
-    // (schema migration pending). If the column exists but data is malformed, the second
-    // upsert will also fail and the error will surface normally.
+    // If the sheet_snapshot column doesn't exist (migration pending),
+    // fail loudly instead of silently dropping data.
+    // The migration should be run before deploying code that uses this column.
     if (error && String(error.message || '').includes('sheet_snapshot')) {
       logError(
-        '[salaryService.upsertMany] sheet_snapshot column missing — falling back without it. Run pending DB migrations.',
+        '[salaryService.upsertMany] CRITICAL: sheet_snapshot column missing from salary_records. ' +
+        'Run the pending DB migration before using this feature.',
         error,
-        { level: 'warn', meta: { recordCount: records.length } },
       );
-      const fallbackRecords = records.map(({ sheet_snapshot: _s, ...record }) => record);
-      ({ error } = await supabase
-        .from('salary_records')
-        .upsert(fallbackRecords as never, { onConflict: 'employee_id,month_year' }));
     }
 
     if (error) handleSupabaseError(error, 'salaryService.upsertMany');

@@ -58,8 +58,8 @@ export function useViolationTable() {
     queryKey: ['violation-resolver', uid, 'violations'],
     enabled,
     queryFn: async () => {
-      const rows = await violationService.getViolations();
-      return ((rows as ViolationDataRow[]) || []).map((v) => ({
+      const rows: ViolationDataRow[] = await violationService.getViolations();
+      return (rows || []).map((v) => ({
         id: v.id,
         employee_id: v.employee_id,
         employee_name: v.employees?.name || '—',
@@ -70,7 +70,7 @@ export function useViolationTable() {
         apply_month: v.apply_month,
         status: v.approval_status,
         linked_advance_id: v.linked_advance_id ?? null,
-      })) as ViolationRecord[];
+      }));
     },
     retry: defaultQueryRetry,
     staleTime: 60_000,
@@ -212,9 +212,10 @@ export function useViolationTable() {
 
     const violationTime = new Date(violationTs).getTime();
 
-    let matched = assignments.filter((a) => {
-      const start = assignmentStartMs(a as VehicleAssignmentForViolation);
-      const end = assignmentEndMs(a as VehicleAssignmentForViolation);
+    const typedAssignments: VehicleAssignmentForViolation[] = assignments;
+    let matched = typedAssignments.filter((a) => {
+      const start = assignmentStartMs(a);
+      const end = assignmentEndMs(a);
       return violationTime >= start && violationTime <= end;
     });
 
@@ -222,9 +223,9 @@ export function useViolationTable() {
     if (!matched.length && !form.use_time) {
       const dayStart = new Date(dateVal + 'T00:00:00').getTime();
       const dayEnd = new Date(dateVal + 'T23:59:59').getTime();
-      matched = assignments.filter((a) => {
-        const start = assignmentStartMs(a as VehicleAssignmentForViolation);
-        const end = assignmentEndMs(a as VehicleAssignmentForViolation);
+      matched = typedAssignments.filter((a) => {
+        const start = assignmentStartMs(a);
+        const end = assignmentEndMs(a);
         return start <= dayEnd && end >= dayStart;
       });
     }
@@ -243,14 +244,14 @@ export function useViolationTable() {
     const existingDeduction = await violationService.getExistingFineDeductions(empIds, violationDate, applyMonth);
 
     const recordedByEmployee = new Map<string, { id: string; amount: number }>();
-    (existingDeduction as DeductionRow[] || []).forEach((d) => {
+    (existingDeduction as unknown as DeductionRow[] || []).forEach((d) => {
       const amt = Number(d.amount) || 0;
       if (amt === enteredAmount && !recordedByEmployee.has(d.employee_id)) {
         recordedByEmployee.set(d.employee_id, { id: d.id, amount: amt });
       }
     });
 
-    const rows: ResultRow[] = (matched as AssignmentJoinRow[]).map((a) => {
+    const rows: ResultRow[] = matched.map((a) => {
       const vehiclePlate = a.vehicles?.plate_number || plate;
       const violationDetails = [
         vehiclePlate ? `لوحة: ${vehiclePlate}` : null,

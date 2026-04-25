@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
 
 const SYSTEM_PROMPT = `
@@ -696,6 +696,29 @@ Deno.serve(async (req) => {
     // Pass supabaseClient instead of admin to executeTool if we want RLS,
     // but tools are passing supabaseAdmin. So let's keep a serviceRoleKey client for tools.
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
+    // ── Rate limiting: 15 requests per user per 60 seconds ──────────────────
+    const rateLimitKey = `ai-chat:${user.id}`;
+    const { data: rateRows, error: rateLimitError } = await supabaseAdmin.rpc('enforce_rate_limit', {
+      p_key: rateLimitKey,
+      p_limit: 15,
+      p_window_seconds: 60,
+    } as Record<string, unknown>);
+
+    if (rateLimitError) {
+      console.error('Rate limit RPC failed:', rateLimitError);
+      // Fail open on rate-limit RPC error to avoid blocking legitimate users
+    } else {
+      const rate = Array.isArray(rateRows)
+        ? (rateRows[0] as { allowed?: boolean; remaining?: number } | undefined)
+        : undefined;
+      if (rate && !rate.allowed) {
+        return new Response(JSON.stringify({ error: 'Too many requests. Please retry shortly.' }), {
+          status: 429,
+          headers: { ...getCorsHeaders(requestOrigin), 'Content-Type': 'application/json' },
+        });
+      }
+    }
 
     // Parse request
     const { messages: clientMessages } = await req.json() as { messages: ChatMessage[] };

@@ -10,7 +10,19 @@ const DENY_ALL: PagePermission = {
   can_delete: false,
 };
 
-// Default permissions per role per page
+/**
+ * DEFAULT_PERMISSIONS — UI-only permission fallbacks.
+ *
+ * هذه الصلاحيات تُستخدم فقط لتحديد ظهور/اختفاء الأزرار والعناصر في الواجهة.
+ * الصلاحيات الحقيقية تُفرض على مستوى:
+ * 1. قاعدة البيانات عبر RLS Policies (supabase/migrations/*_rls_*.sql)
+ * 2. Edge Functions عبر role-checking في الدوال الخلفية
+ *
+ * إذا تعارضت هذه القيم مع RLS/Edge، فالـ backend هو الحَكَم النهائي.
+ *
+ * @see supabase/migrations/ — RLS policy definitions
+ * @see supabase/functions/ — Edge Function role checks
+ */
 const DEFAULT_PERMISSIONS: Record<AppRole, Record<string, PagePermission>> = {
   admin: {
     employees: { can_view: true, can_edit: true, can_delete: true },

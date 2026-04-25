@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
 
 type SalaryEngineRequest =
@@ -102,8 +102,9 @@ Deno.serve(async (req) => {
         mode,
         month_year: payload.month_year,
       });
+      const rateLimitOrigin = req.headers.get('origin');
       return new Response(JSON.stringify({ error: 'Too many requests. Please retry shortly.' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...getCorsHeaders(rateLimitOrigin), 'Content-Type': 'application/json' },
         status: 429,
       });
     }

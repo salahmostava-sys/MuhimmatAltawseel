@@ -7,7 +7,7 @@
  * - Rate-limited per user: 20 requests / 60 seconds via enforce_rate_limit RPC
  * - GROQ_API_KEY is never exposed to the browser
  */
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
 
 const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') ?? '';

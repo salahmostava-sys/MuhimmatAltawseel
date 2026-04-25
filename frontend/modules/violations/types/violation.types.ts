@@ -76,10 +76,14 @@ export type ViolationSortFieldKey =
   | 'advance_status';
 
 export type VehicleAssignmentForViolation = {
+  id: string;
+  employee_id: string;
   start_at?: string | null;
   start_date: string;
   returned_at?: string | null;
   end_date?: string | null;
+  vehicles?: { plate_number: string } | null;
+  employees?: { name: string; national_id?: string | null } | null;
 };
 
 export type ViolationAdvanceStatusCellProps = Readonly<{

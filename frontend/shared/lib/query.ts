@@ -1,5 +1,6 @@
 import { toast } from '@shared/components/ui/sonner';
 import { TOAST_ERROR_GENERIC } from '@shared/lib/toastMessages';
+import { getErrorMessage } from '@services/serviceError';
 import { logError } from '@shared/lib/logger';
 
 /**
@@ -12,20 +13,6 @@ export function defaultQueryRetry(failureCount: number, error: unknown): boolean
   const status = (error as { status?: number }).status;
   if (status === 401 || status === 403) return false;
   return failureCount < 2;
-}
-
-export function getErrorMessage(err: unknown, fallback = 'حدث خطأ غير متوقع'): string {
-  if (!err) return fallback;
-  if (typeof err === 'string') return err;
-  if (err instanceof Error) return err.message || fallback;
-  try {
-    const anyErr = err as { message?: unknown; error?: unknown };
-    if (typeof anyErr.message === 'string' && anyErr.message.trim()) return anyErr.message;
-    if (typeof anyErr.error === 'string' && anyErr.error.trim()) return anyErr.error;
-  } catch (e) {
-    logError('[getErrorMessage] unexpected error shape', e, { level: 'warn' });
-  }
-  return fallback;
 }
 
 export type ToastQueryErrorOptions = {

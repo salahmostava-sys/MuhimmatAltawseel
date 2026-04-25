@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
 
 const isUuid = (value: string) =>
@@ -233,14 +233,31 @@ Deno.serve(async (req) => {
       status: 200,
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
+    const rawMessage = err instanceof Error ? err.message : String(err ?? 'Unknown error');
     logError('Admin update user request failed', {
       request_id: requestId,
-      error: message,
+      error: rawMessage,
     });
-    return new Response(JSON.stringify({ error: message }), {
+
+    // Distinguish client errors (bad input) from internal server failures.
+    // Never leak internal DB/auth error details to the caller.
+    const clientPhrases = [
+      'Invalid', 'required', 'must be', 'cannot delete',
+      'email is required', 'password is required',
+      'name is required', 'action is required',
+    ];
+    const isClientError = clientPhrases.some((p) => rawMessage.toLowerCase().includes(p.toLowerCase()));
+    const isAuthError = rawMessage.includes('Only admins') || rawMessage.includes('Not authenticated');
+    const isNotFound = rawMessage.includes('user_id is required') || rawMessage.includes('Invalid user_id');
+
+    const status = isAuthError ? 403 : isNotFound ? 404 : isClientError ? 400 : 500;
+    const safeMessage = (isClientError || isAuthError || isNotFound)
+      ? rawMessage
+      : 'Internal server error';
+
+    return new Response(JSON.stringify({ error: safeMessage }), {
       headers: { ...getCorsHeaders(requestOrigin), 'Content-Type': 'application/json' },
-      status: 400,
+      status,
     });
   }
 });
