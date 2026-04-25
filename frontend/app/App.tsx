@@ -10,6 +10,7 @@ import DashboardLayout from "@app/layout/DashboardLayout";
 import PublicLayout from "@app/layout/PublicLayout";
 import "@app/i18n";
 import { ErrorContextSync } from "@app/components/ErrorContextSync";
+import { ProgressBar } from "@shared/components/ProgressBar";
 import { TooltipProvider } from "@shared/components/ui/tooltip";
 import ErrorBoundary from "@shared/components/ErrorBoundary";
 import Loading from "@shared/components/Loading";
@@ -85,6 +86,7 @@ const DashboardRouteShell = () => (
 const AppProvidersShell = () => (
   <AuthProvider>
     <ErrorContextSync />
+    <ProgressBar />
     <LanguageProvider>
       <TemporalProvider>
         <SystemSettingsProvider>

@@ -525,4 +525,13 @@
   .bg-amber-500 {
     color: #000000 !important;
   }
+
+  /* ─── NProgress bar — matches brand primary ──────────────────── */
+  #nprogress .bar {
+    background: linear-gradient(90deg, var(--ds-primary), var(--ds-primary-container)) !important;
+    height: 3px !important;
+  }
+  #nprogress .peg {
+    box-shadow: 0 0 12px var(--ds-primary), 0 0 6px var(--ds-primary) !important;
+  }
 }
