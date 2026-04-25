@@ -1,6 +1,8 @@
 import { toast } from '@shared/components/ui/sonner';
 import { TOAST_ERROR_GENERIC } from '@shared/lib/toastMessages';
 import { getErrorMessage } from '@services/serviceError';
+// Re-export so existing consumers don't break
+export { getErrorMessage };
 import { logError } from '@shared/lib/logger';
 
 /**

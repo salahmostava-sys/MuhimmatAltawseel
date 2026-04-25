@@ -36,7 +36,7 @@ export function isEmployeeVisibleInMonth(
 ): boolean {
   if (!isExcludedSponsorshipStatus(employee.sponsorship_status ?? null)) return true;
   /** أثناء تحميل نشاط الشهر لا نخفي المستبعدين لتفادي قائمة فارغة مؤقتاً */
-  if (activeEmployeeIdsInMonth === undefined) return true;
+  if (activeEmployeeIdsInMonth === undefined || activeEmployeeIdsInMonth === null) return true;
   return !!activeEmployeeIdsInMonth.has(employee.id);
 }
 

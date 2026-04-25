@@ -27,6 +27,7 @@ export function useRealtimePostgresChanges(
   onEventRef.current = onEvent;
 
   useEffect(() => {
+    if (tables.length === 0) return;
     return realtimeService.subscribeToTables(channelName, tables, () => onEventRef.current());
   }, [channelName, tables]);
 }

@@ -35,6 +35,6 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Lint, test, and build (verify)
+      - name: Lint, test, and build (verify — strict)
         working-directory: frontend
-        run: npm run verify
+        run: npm run lint:strict && npm run test && npm run build
