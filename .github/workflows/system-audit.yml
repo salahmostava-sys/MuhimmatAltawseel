@@ -47,7 +47,7 @@ jobs:
         run: python -m pip install --upgrade pip && pip install -r ai-backend/requirements.txt
 
       - name: Run AI backend smoke tests
-        run: pwsh -File scripts/system-audit.ps1 -SkipFrontend -SkipSupabase
+        run: node scripts/system-audit.mjs --skip-frontend --skip-supabase
 
   supabase-audit:
     name: Supabase audit files
