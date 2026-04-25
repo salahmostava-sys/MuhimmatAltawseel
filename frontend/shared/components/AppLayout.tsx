@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import AppSidebar from './AppSidebar';
 import { useLanguage } from '@app/providers/LanguageContext';
 import { useAuth } from '@app/providers/AuthContext';
@@ -52,12 +52,21 @@ const AppLayoutInner = ({ children }: AppLayoutProps) => { // NOSONAR: layout wi
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => localStorage.getItem('sidebar_collapsed') === 'true'
   );
+  const [pageKey, setPageKey] = useState(0);
+  const prevPathRef = useRef(location.pathname);
 
   useEffect(() => {
     const onStorage = () => setSidebarCollapsed(localStorage.getItem('sidebar_collapsed') === 'true');
     globalThis.addEventListener('storage', onStorage);
     return () => { globalThis.removeEventListener('storage', onStorage); };
   }, []);
+
+  useEffect(() => {
+    if (prevPathRef.current !== location.pathname) {
+      prevPathRef.current = location.pathname;
+      setPageKey(k => k + 1);
+    }
+  }, [location.pathname]);
 
   const manifestRoute = getRouteByPathname(location.pathname);
   const pageTitle = manifestRoute?.titleAr ?? t('dashboard');
@@ -309,7 +318,8 @@ const AppLayoutInner = ({ children }: AppLayoutProps) => { // NOSONAR: layout wi
 
         {/* ── Page content ─────────────────────────────────── */}
         <div
-          className="flex-1 overflow-auto p-4 sm:p-5 lg:p-6 xl:p-8 min-h-0 flex flex-col"
+          key={pageKey}
+          className="flex-1 overflow-auto p-4 sm:p-5 lg:p-6 xl:p-8 min-h-0 flex flex-col page-enter"
           style={{ background: 'var(--ds-surface)' }}
         >
           {children}

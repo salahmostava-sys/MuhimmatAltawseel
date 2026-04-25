@@ -9,6 +9,18 @@ export default defineConfig({
     hmr: {
       overlay: false,
     },
+    proxy: {
+      "/ai": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ai/, ""),
+        // Inject the shared internal key so the AI backend can verify requests
+        // originated from our proxy and not from the public internet.
+        headers: {
+          "X-Internal-Key": process.env.AI_INTERNAL_KEY ?? "",
+        },
+      },
+    },
   },
   plugins: [react()],
   resolve: {

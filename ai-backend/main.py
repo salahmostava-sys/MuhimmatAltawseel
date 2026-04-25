@@ -9,13 +9,24 @@ Endpoints:
   POST /top-platform      → Rank platforms by order volume & growth
   POST /smart-alerts      → Generate operational alerts from data patterns
   POST /detect-anomalies  → Detect salary, order, and deduction anomalies
-  GET  /health            → Liveness check
+  GET  /health            → Liveness check (no auth required)
+
+Security:
+  - API key auth via X-Internal-Key header (when AI_INTERNAL_KEY env var is set)
+  - In-memory per-IP rate limiting: MAX_REQUESTS_PER_WINDOW per RATE_LIMIT_WINDOW_SECS
+  - Request size capped at 2 MB by Uvicorn (--limit-max-requests)
+  - CORS restricted to configured origins
 """
 
-from fastapi import FastAPI
+import os
+import time
+import hashlib
+import threading
+from collections import defaultdict
+
+from fastapi import FastAPI, Depends, Request, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-import os
 
 from model import (
     predict_orders,
@@ -28,7 +39,93 @@ from model import (
     analyze_salary,
 )
 
-app = FastAPI(title="Muhimmat AI Engine", version="2.0.0")
+# ─── Configuration ────────────────────────────────────────────────────────────
+
+# If set, every protected endpoint MUST include this value in X-Internal-Key.
+# When unset (dev default), auth is SKIPPED and a warning is printed at startup.
+AI_INTERNAL_KEY: str | None = os.getenv("AI_INTERNAL_KEY")
+
+# Rate limiting: max N requests per IP per window (seconds)
+MAX_REQUESTS_PER_WINDOW: int = int(os.getenv("RATE_LIMIT_MAX", "60"))
+RATE_LIMIT_WINDOW_SECS: int = int(os.getenv("RATE_LIMIT_WINDOW", "60"))
+
+if AI_INTERNAL_KEY:
+    _masked = AI_INTERNAL_KEY[:4] + "****"
+    print(f"[security] API key auth ENABLED (key={_masked})")
+else:
+    print(
+        "[security] WARNING: AI_INTERNAL_KEY is not set — "
+        "endpoint authentication is DISABLED. Set this variable in production."
+    )
+
+# ─── Rate Limiter ─────────────────────────────────────────────────────────────
+
+_rate_lock = threading.Lock()
+# { ip_hash: (window_start_ts, request_count) }
+_rate_store: dict[str, tuple[float, int]] = defaultdict(lambda: (0.0, 0))
+
+
+def _get_client_ip(request: Request) -> str:
+    """Extract real client IP, honouring X-Forwarded-For (proxy/Replit)."""
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def check_rate_limit(request: Request) -> None:
+    """Raise 429 if the caller exceeds the configured rate limit."""
+    ip = _get_client_ip(request)
+    # Hash IP so we never store raw PII in memory.
+    ip_key = hashlib.sha256(ip.encode()).hexdigest()[:16]
+
+    now = time.monotonic()
+    with _rate_lock:
+        window_start, count = _rate_store[ip_key]
+        if now - window_start >= RATE_LIMIT_WINDOW_SECS:
+            # New window
+            _rate_store[ip_key] = (now, 1)
+        else:
+            count += 1
+            if count > MAX_REQUESTS_PER_WINDOW:
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"Too many requests. Limit: {MAX_REQUESTS_PER_WINDOW} per {RATE_LIMIT_WINDOW_SECS}s.",
+                    headers={"Retry-After": str(RATE_LIMIT_WINDOW_SECS)},
+                )
+            _rate_store[ip_key] = (window_start, count)
+
+
+def verify_internal_key(x_internal_key: str | None = Header(default=None)) -> None:
+    """Validate the shared internal API key (only when configured)."""
+    if not AI_INTERNAL_KEY:
+        return  # Auth disabled — dev/test mode
+    if not x_internal_key:
+        raise HTTPException(status_code=401, detail="Missing X-Internal-Key header.")
+    # Constant-time comparison to prevent timing attacks
+    expected = AI_INTERNAL_KEY.encode()
+    provided = x_internal_key.encode()
+    if len(expected) != len(provided) or not all(
+        a == b for a, b in zip(expected, provided)
+    ):
+        raise HTTPException(status_code=403, detail="Invalid X-Internal-Key.")
+
+
+# Combined dependency: rate limit first, then key check
+def _security(request: Request, x_internal_key: str | None = Header(default=None)) -> None:
+    check_rate_limit(request)
+    verify_internal_key(x_internal_key)
+
+
+# ─── App ──────────────────────────────────────────────────────────────────────
+
+app = FastAPI(
+    title="Muhimmat AI Engine",
+    version="2.0.0",
+    # Hide schema docs in production to reduce attack surface
+    docs_url=None if AI_INTERNAL_KEY else "/docs",
+    redoc_url=None if AI_INTERNAL_KEY else "/redoc",
+)
 
 # Get allowed origins from environment or use safe defaults
 ALLOWED_ORIGINS = os.getenv(
@@ -41,7 +138,7 @@ app.add_middleware(
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
+    allow_headers=["Authorization", "Content-Type", "X-Requested-With", "X-Internal-Key"],
     max_age=600,
 )
 
@@ -58,7 +155,7 @@ class DayRecord(BaseModel):
 
 
 class PredictOrdersRequest(BaseModel):
-    history: list[DayRecord] = Field(..., min_length=1)
+    history: list[DayRecord] = Field(..., min_length=1, max_length=1000)
     forecast_days: int = Field(7, ge=1, le=90)
 
 
@@ -71,7 +168,7 @@ class PredictOrdersResponse(BaseModel):
 
 
 class BestDriverRequest(BaseModel):
-    history: list[DayRecord] = Field(..., min_length=1)
+    history: list[DayRecord] = Field(..., min_length=1, max_length=1000)
     top_n: int = Field(5, ge=1, le=50)
 
 
@@ -90,7 +187,7 @@ class BestDriverResponse(BaseModel):
 
 
 class TopPlatformRequest(BaseModel):
-    history: list[DayRecord] = Field(..., min_length=1)
+    history: list[DayRecord] = Field(..., min_length=1, max_length=1000)
 
 
 class PlatformRank(BaseModel):
@@ -106,7 +203,7 @@ class TopPlatformResponse(BaseModel):
 
 
 class SmartAlertsRequest(BaseModel):
-    history: list[DayRecord] = Field(..., min_length=7)
+    history: list[DayRecord] = Field(..., min_length=7, max_length=1000)
     thresholds: dict = Field(default_factory=lambda: {
         "low_demand_drop_percent": -20,
         "high_demand_spike_percent": 30,
@@ -127,9 +224,9 @@ class SmartAlertsResponse(BaseModel):
 
 
 class SalaryAnalysisRequest(BaseModel):
-    base_salary: float = Field(..., ge=0)
-    orders: int = Field(..., ge=0)
-    bonus: float = Field(0, ge=0)
+    base_salary: float = Field(..., ge=0, le=1_000_000)
+    orders: int = Field(..., ge=0, le=100_000)
+    bonus: float = Field(0, ge=0, le=1_000_000)
 
 
 class SalaryAnalysisResponse(BaseModel):
@@ -142,10 +239,10 @@ class SalaryAnalysisResponse(BaseModel):
 
 
 class SalaryForecastRequest(BaseModel):
-    current_orders: int = Field(..., ge=0, description="Orders completed so far this month")
+    current_orders: int = Field(..., ge=0, le=100_000, description="Orders completed so far this month")
     days_passed: int = Field(..., ge=1, le=31, description="Days passed in current month")
-    avg_order_value: float = Field(5.0, ge=0, description="Average earnings per order")
-    base_salary: float = Field(0, ge=0, description="Fixed base salary component")
+    avg_order_value: float = Field(5.0, ge=0, le=10_000, description="Average earnings per order")
+    base_salary: float = Field(0, ge=0, le=1_000_000, description="Fixed base salary component")
     working_days_per_month: int = Field(30, ge=1, le=31)
 
 
@@ -159,18 +256,18 @@ class SalaryForecastResponse(BaseModel):
 
 
 class EmployeeRecord(BaseModel):
-    employee_id: str
-    employee_name: str
-    total_orders: int = Field(0, ge=0)
-    attendance_days: int = Field(0, ge=0)
-    error_count: int = Field(0, ge=0)
-    late_days: int = Field(0, ge=0)
-    salary: float = Field(0, ge=0)
-    avg_orders_per_day: float = Field(0, ge=0)
+    employee_id: str = Field(..., max_length=200)
+    employee_name: str = Field(..., max_length=200)
+    total_orders: int = Field(0, ge=0, le=100_000)
+    attendance_days: int = Field(0, ge=0, le=366)
+    error_count: int = Field(0, ge=0, le=10_000)
+    late_days: int = Field(0, ge=0, le=366)
+    salary: float = Field(0, ge=0, le=1_000_000)
+    avg_orders_per_day: float = Field(0, ge=0, le=10_000)
 
 
 class BestEmployeeRequest(BaseModel):
-    employees: list[EmployeeRecord] = Field(..., min_length=1)
+    employees: list[EmployeeRecord] = Field(..., min_length=1, max_length=500)
     top_n: int = Field(5, ge=1, le=50)
 
 
@@ -191,14 +288,14 @@ class BestEmployeeResponse(BaseModel):
 
 
 class AnomalyDetectionRequest(BaseModel):
-    employee_id: str
-    employee_name: str
-    current_salary: float
+    employee_id: str = Field(..., max_length=200)
+    employee_name: str = Field(..., max_length=200)
+    current_salary: float = Field(..., ge=0, le=1_000_000)
     expected_salary_range: tuple[float, float] = Field(..., description="(min, max) expected salary")
-    monthly_orders: int
-    previous_month_orders: int
-    deductions: float = Field(0, ge=0)
-    deduction_reasons: list[str] = Field(default_factory=list)
+    monthly_orders: int = Field(..., ge=0, le=100_000)
+    previous_month_orders: int = Field(..., ge=0, le=100_000)
+    deductions: float = Field(0, ge=0, le=1_000_000)
+    deduction_reasons: list[str] = Field(default_factory=list, max_length=50)
 
 
 class Anomaly(BaseModel):
@@ -221,69 +318,58 @@ class AnomalyDetectionResponse(BaseModel):
 
 @app.get("/health")
 def health():
+    """Liveness check — no auth required."""
     return {"status": "ok", "version": "2.0.0"}
 
 
-@app.post("/predict-orders", response_model=PredictOrdersResponse)
+@app.post("/predict-orders", response_model=PredictOrdersResponse, dependencies=[Depends(_security)])
 def api_predict_orders(req: PredictOrdersRequest):
     rows = [d.model_dump() for d in req.history]
-    result = predict_orders(rows, req.forecast_days)
-    return result
+    return predict_orders(rows, req.forecast_days)
 
 
-@app.post("/best-driver", response_model=BestDriverResponse)
+@app.post("/best-driver", response_model=BestDriverResponse, dependencies=[Depends(_security)])
 def api_best_driver(req: BestDriverRequest):
     rows = [d.model_dump() for d in req.history]
-    result = find_best_driver(rows, req.top_n)
-    return result
+    return find_best_driver(rows, req.top_n)
 
 
-@app.post("/top-platform", response_model=TopPlatformResponse)
+@app.post("/top-platform", response_model=TopPlatformResponse, dependencies=[Depends(_security)])
 def api_top_platform(req: TopPlatformRequest):
     rows = [d.model_dump() for d in req.history]
-    result = rank_platforms(rows)
-    return result
+    return rank_platforms(rows)
 
 
-@app.post("/smart-alerts", response_model=SmartAlertsResponse)
+@app.post("/smart-alerts", response_model=SmartAlertsResponse, dependencies=[Depends(_security)])
 def api_smart_alerts(req: SmartAlertsRequest):
     rows = [d.model_dump() for d in req.history]
-    result = generate_smart_alerts(rows, req.thresholds)
-    return result
+    return generate_smart_alerts(rows, req.thresholds)
 
 
-@app.post("/analyze", response_model=SalaryAnalysisResponse)
+@app.post("/analyze", response_model=SalaryAnalysisResponse, dependencies=[Depends(_security)])
 def api_analyze_salary(req: SalaryAnalysisRequest):
-    result = analyze_salary(req.base_salary, req.orders, req.bonus)
-    return result
+    return analyze_salary(req.base_salary, req.orders, req.bonus)
 
 
-# ─── New AI Systems Endpoints ─────────────────────────────────────────────────
-
-
-@app.post("/predict-salary", response_model=SalaryForecastResponse)
+@app.post("/predict-salary", response_model=SalaryForecastResponse, dependencies=[Depends(_security)])
 def api_predict_salary(req: SalaryForecastRequest):
     """Predict monthly salary based on current performance."""
-    result = predict_salary_forecast(
+    return predict_salary_forecast(
         current_orders=req.current_orders,
         days_passed=req.days_passed,
         avg_order_value=req.avg_order_value,
         base_salary=req.base_salary,
         working_days_per_month=req.working_days_per_month,
     )
-    return result
 
 
-@app.post("/best-employee", response_model=BestEmployeeResponse)
+@app.post("/best-employee", response_model=BestEmployeeResponse, dependencies=[Depends(_security)])
 def api_best_employee(req: BestEmployeeRequest):
     """Rank employees by composite performance score."""
-    employees_data = [e.model_dump() for e in req.employees]
-    result = rank_employees(employees_data, req.top_n)
-    return result
+    return rank_employees([e.model_dump() for e in req.employees], req.top_n)
 
 
-@app.post("/detect-anomalies", response_model=AnomalyDetectionResponse)
+@app.post("/detect-anomalies", response_model=AnomalyDetectionResponse, dependencies=[Depends(_security)])
 def api_detect_anomalies(req: AnomalyDetectionRequest):
     """Detect anomalies in salary, orders, and deductions."""
-    result = detect_anomalies(req.model_dump())
-    return result
+    return detect_anomalies(req.model_dump())

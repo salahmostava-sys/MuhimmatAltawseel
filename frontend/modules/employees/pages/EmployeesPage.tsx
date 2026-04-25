@@ -202,10 +202,16 @@ const Employees = () => {
     tableRef, colFilters, setColFilters,
   });
 
-  const activeCols = ALL_COLUMNS.filter(c => visibleCols.has(c.key));
+  const activeCols = useMemo(
+    () => ALL_COLUMNS.filter(c => visibleCols.has(c.key)),
+    [visibleCols],
+  );
   const hasActiveFilters = Object.keys(colFilters).length > 0;
   const isTableLoading = loading;
   const hasNoPaginatedRows = paginated.length === 0;
+
+  const handleRowEditStart = useCallback((rowId: string) => void presence.trackRow(rowId), [presence.trackRow]);
+  const handleRowEditEnd = useCallback(() => void presence.trackRow(null), [presence.trackRow]);
 
   // ── Clear selectedEmployee if no longer visible in current month ──
   // (moved out of render body into an effect to avoid setState during render)
@@ -314,8 +320,8 @@ const Employees = () => {
         tableRef={tableRef}
         refetchEmployees={refetchEmployees}
         presenceActiveRows={presence.activeRows}
-        onRowEditStart={(rowId) => void presence.trackRow(rowId)}
-        onRowEditEnd={() => void presence.trackRow(null)}
+        onRowEditStart={handleRowEditStart}
+        onRowEditEnd={handleRowEditEnd}
       />
 
       {/* Modals */}

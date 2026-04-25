@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { todayISO } from '@shared/lib/formatters';
 import { cycleSortState } from '@shared/lib/sortTableIndicators';
 import { employeeService, EMPLOYEE_DELETE_BLOCKED_MESSAGE } from '@services/employeeService';
@@ -59,14 +59,18 @@ export function useEmployeeActions(params: {
     tableRef, setColFilters,
   } = params;
 
-  const handleSort = (field: string) => {
+  // Keep a stable ref to data so saveField doesn't need data as a dep
+  const dataRef = useRef(data);
+  useEffect(() => { dataRef.current = data; }, [data]);
+
+  const handleSort = useCallback((field: string) => {
     const next = cycleSortState(sortField, sortDir, field);
     setSortField(next.sortField);
     setSortDir(next.sortDir);
-  };
+  }, [sortField, sortDir, setSortField, setSortDir]);
 
   const saveField = useCallback(async (id: string, field: string, value: string, extraFields?: Record<string, unknown>) => {
-    const prev = data.find(e => e.id === id);
+    const prev = dataRef.current.find(e => e.id === id);
     const updatePatch = { [field]: value, ...(extraFields ?? {}) };
     setData(d => d.map(e => e.id === id ? { ...e, ...updatePatch } : e));
     try {
@@ -76,7 +80,7 @@ export function useEmployeeActions(params: {
       setData(d => d.map(e => e.id === id ? (prev ?? e) : e));
       toast({ title: 'خطأ في الحفظ', description: message, variant: 'destructive' });
     }
-  }, [data, setData, toast]);
+  }, [setData, toast]);
 
   const handleSaveStatusWithDate = async () => {
     if (!statusDateDialog) return;
@@ -119,14 +123,14 @@ export function useEmployeeActions(params: {
     setDeleteEmployee(null);
   }, [deleteEmployee, setData, setDeleteEmployee, setDeleting, toast]);
 
-  const setColFilter = (key: string, value: string) => {
+  const setColFilter = useCallback((key: string, value: string) => {
     setColFilters(prev => {
       const next = { ...prev };
       if (!value || value === 'all') delete next[key];
       else next[key] = value;
       return next;
     });
-  };
+  }, [setColFilters]);
 
   const handleExport = async () => {
     const XLSX = await loadXlsx();
