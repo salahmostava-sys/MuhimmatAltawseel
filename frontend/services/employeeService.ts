@@ -32,28 +32,12 @@ export type SalarySchemeOption = {
 export const EMPLOYEE_DELETE_BLOCKED_MESSAGE =
   'لا يمكن حذف المندوب لوجود طلبات أو عمليات مسجلة باسمه. يمكنك فقط تغيير حالته إلى (إنهاء خدمات / هروب).';
 
-const OPERATIONAL_TABLES_FOR_DELETE_GUARD = [
-  'daily_orders',
-  'advances',
-  'attendance',
-  'vehicle_assignments',
-  'platform_accounts',
-  'salary_records',
-] as const;
-
 async function employeeHasBlockingOperationalRecords(employeeId: string): Promise<boolean> {
-  const checks = await Promise.all(
-    OPERATIONAL_TABLES_FOR_DELETE_GUARD.map((table) =>
-      supabase.from(table).select('id', { count: 'exact', head: true }).eq('employee_id', employeeId)
-    )
-  );
-  for (let i = 0; i < checks.length; i++) {
-    const res = checks[i];
-    const table = OPERATIONAL_TABLES_FOR_DELETE_GUARD[i];
-    if (res.error) throw toServiceError(res.error, `employeeService.blockingCheck.${table}`);
-    if ((res.count ?? 0) > 0) return true;
-  }
-  return false;
+  const { data, error } = await supabase.rpc('check_employee_operational_records', {
+    p_employee_id: employeeId,
+  });
+  if (error) throw toServiceError(error, 'employeeService.blockingCheck');
+  return data === true;
 }
 
 export const employeeService = {

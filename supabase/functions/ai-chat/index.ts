@@ -171,9 +171,9 @@ const tools = [
 
 // ── Tool Implementations ──────────────────────────────────────
 
-type SupabaseAdmin = ReturnType<typeof createClient>;
+type DbClient = ReturnType<typeof createClient>;
 
-async function getEmployeeStats(sb: SupabaseAdmin) {
+async function getEmployeeStats(sb: DbClient) {
   const { data, error } = await sb.from('employees').select('sponsorship_status, status');
   if (error) throw error;
   const rows = data ?? [];
@@ -193,7 +193,7 @@ async function getEmployeeStats(sb: SupabaseAdmin) {
   };
 }
 
-async function getVehicleStatus(sb: SupabaseAdmin) {
+async function getVehicleStatus(sb: DbClient) {
   const { data, error } = await sb.from('vehicles').select('status');
   if (error) throw error;
   const rows = data ?? [];
@@ -205,7 +205,7 @@ async function getVehicleStatus(sb: SupabaseAdmin) {
   return { total: rows.length, by_status: byStatus };
 }
 
-async function getOrdersSummary(sb: SupabaseAdmin, period: string = 'today') {
+async function getOrdersSummary(sb: DbClient, period: string = 'today') {
   const now = new Date();
   let from: string;
   let to: string;
@@ -245,7 +245,7 @@ async function getOrdersSummary(sb: SupabaseAdmin, period: string = 'today') {
   };
 }
 
-async function getSalarySummary(sb: SupabaseAdmin) {
+async function getSalarySummary(sb: DbClient) {
   const now = new Date();
   const monthYear = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
@@ -269,7 +269,7 @@ async function getSalarySummary(sb: SupabaseAdmin) {
   return { month: monthYear, paid, pending, total_records: rows.length, total_amount: totalAmount };
 }
 
-async function getAdvancesSummary(sb: SupabaseAdmin) {
+async function getAdvancesSummary(sb: DbClient) {
   const { data, error } = await sb
     .from('advances')
     .select('id, amount')
@@ -281,7 +281,7 @@ async function getAdvancesSummary(sb: SupabaseAdmin) {
   return { count: rows.length, total_amount: totalAmount };
 }
 
-async function getTopRiders(sb: SupabaseAdmin) {
+async function getTopRiders(sb: DbClient) {
   const now = new Date();
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, '0');
@@ -311,7 +311,7 @@ async function getTopRiders(sb: SupabaseAdmin) {
   };
 }
 
-async function getAttendanceSummary(sb: SupabaseAdmin, period: string = 'today') {
+async function getAttendanceSummary(sb: DbClient, period: string = 'today') {
   const now = new Date();
   let from: string;
   let to: string;
@@ -343,7 +343,7 @@ async function getAttendanceSummary(sb: SupabaseAdmin, period: string = 'today')
   return { period: period === 'this_month' ? 'الشهر الحالي' : 'اليوم', total_records: rows.length, by_status: byStatus };
 }
 
-async function getAlertsSummary(sb: SupabaseAdmin) {
+async function getAlertsSummary(sb: DbClient) {
   const now = new Date();
   const threshold = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
 
@@ -367,7 +367,7 @@ async function getAlertsSummary(sb: SupabaseAdmin) {
   };
 }
 
-async function getEmployeeDetails(sb: SupabaseAdmin, name: string) {
+async function getEmployeeDetails(sb: DbClient, name: string) {
   const { data, error } = await sb
     .from('employees')
     .select('id, name, national_id, phone, city, cities, status, sponsorship_status, job_title, join_date, residency_expiry, commercial_record, salary_type, base_salary')
@@ -378,7 +378,7 @@ async function getEmployeeDetails(sb: SupabaseAdmin, name: string) {
   return { found: true, employees: data };
 }
 
-async function getPlatformAccounts(sb: SupabaseAdmin) {
+async function getPlatformAccounts(sb: DbClient) {
   const { data, error } = await sb
     .from('platform_accounts')
     .select('status, app_id, apps(name)')
@@ -392,7 +392,7 @@ async function getPlatformAccounts(sb: SupabaseAdmin) {
   return { total_active: (data ?? []).length, by_platform: byApp };
 }
 
-async function getFuelSummary(sb: SupabaseAdmin) {
+async function getFuelSummary(sb: DbClient) {
   const now = new Date();
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, '0');
@@ -411,7 +411,7 @@ async function getFuelSummary(sb: SupabaseAdmin) {
   return { month: `${y}-${m}`, records: rows.length, total_cost: totalCost, total_liters: totalLiters };
 }
 
-async function getMaintenanceSummary(sb: SupabaseAdmin) {
+async function getMaintenanceSummary(sb: DbClient) {
   const now = new Date();
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, '0');
@@ -431,7 +431,7 @@ async function getMaintenanceSummary(sb: SupabaseAdmin) {
   return { month: `${y}-${m}`, records: rows.length, total_cost: totalCost, by_status: byStatus };
 }
 
-async function getRiderOrdersBreakdown(sb: SupabaseAdmin, name: string) {
+async function getRiderOrdersBreakdown(sb: DbClient, name: string) {
   const { data: emps } = await sb.from('employees').select('id, name').ilike('name', `%${name}%`).limit(1);
   if (!emps || emps.length === 0) return { found: false, message: `لم يُعثر على مندوب باسم "${name}"` };
   const emp = emps[0];
@@ -463,7 +463,7 @@ async function getRiderOrdersBreakdown(sb: SupabaseAdmin, name: string) {
   return { found: true, employee: emp.name, month: `${y}-${m}`, total_orders: total, by_platform: byApp, daily: days.slice(-10) };
 }
 
-async function getBottomRiders(sb: SupabaseAdmin) {
+async function getBottomRiders(sb: DbClient) {
   const now = new Date();
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, '0');
@@ -488,7 +488,7 @@ async function getBottomRiders(sb: SupabaseAdmin) {
   return { month: `${y}-${m}`, bottom_riders: sorted.map((r, i) => ({ rank: i + 1, name: r.name, orders: r.total })) };
 }
 
-async function getAppsOverview(sb: SupabaseAdmin) {
+async function getAppsOverview(sb: DbClient) {
   const { data: apps } = await sb.from('apps').select('id, name, work_type, is_active').eq('is_active', true);
   const now = new Date();
   const y = now.getFullYear();
@@ -514,7 +514,7 @@ async function getAppsOverview(sb: SupabaseAdmin) {
   };
 }
 
-async function getRiderMonthlyAverage(sb: SupabaseAdmin, name: string) {
+async function getRiderMonthlyAverage(sb: DbClient, name: string) {
   if (!name) return { error: 'يرجى تحديد اسم المندوب' };
   const { data: emp } = await sb.from('employees').select('id, name').ilike('name', `%${name}%`).limit(1).maybeSingle();
   if (!emp) return { error: `لم يتم العثور على مندوب باسم "${name}"` };
@@ -571,7 +571,26 @@ async function getRiderMonthlyAverage(sb: SupabaseAdmin, name: string) {
   };
 }
 
-async function executeTool(sb: SupabaseAdmin, name: string, args: Record<string, unknown>) {
+async function executeTool(
+  sb: DbClient,
+  userRole: string | null,
+  name: string,
+  args: Record<string, unknown>,
+) {
+  // ── Sensitive tools gated by role ────────────────────────────────────
+  const sensitiveTools = new Set(['get_salary_summary', 'get_advances_summary']);
+  if (sensitiveTools.has(name)) {
+    if (userRole !== 'admin' && userRole !== 'finance') {
+      return {
+        error:
+          'عذراً، بيانات الرواتب والسلف مقصورة على المدير والمحاسب فقط. إذا كنت تحتاج هذه البيانات، يرجى التواصل مع المدير.',
+      };
+    }
+  }
+
+  // All tool implementations below receive the RLS-enforced client.
+  // They CANNOT bypass RLS — the database enforces access based on the
+  // authenticated user's row-level security policies.
   switch (name) {
     case 'get_employee_stats':
       return await getEmployeeStats(sb);
@@ -693,13 +712,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Pass supabaseClient instead of admin to executeTool if we want RLS,
-    // but tools are passing supabaseAdmin. So let's keep a serviceRoleKey client for tools.
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+    // Create admin client for rate-limiting only (needs service_role to access the
+    // rate-limit table). DO NOT use for data queries — those must go through the
+    // RLS-enforced caller client below.
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     // ── Rate limiting: 15 requests per user per 60 seconds ──────────────────
     const rateLimitKey = `ai-chat:${user.id}`;
-    const { data: rateRows, error: rateLimitError } = await supabaseAdmin.rpc('enforce_rate_limit', {
+    const { data: rateRows, error: rateLimitError } = await adminClient.rpc('enforce_rate_limit', {
       p_key: rateLimitKey,
       p_limit: 15,
       p_window_seconds: 60,
@@ -718,6 +738,15 @@ Deno.serve(async (req) => {
           headers: { ...getCorsHeaders(requestOrigin), 'Content-Type': 'application/json' },
         });
       }
+    }
+
+    // ── Fetch caller role for tool gating ───────────────────────────────────
+    let userRole: string | null = null;
+    try {
+      const { data: role } = await supabaseClient.rpc('get_my_role');
+      userRole = (role as string) ?? null;
+    } catch {
+      // Non-blocking — if role fetch fails, sensitive tools will deny access
     }
 
     // Parse request
@@ -750,7 +779,12 @@ Deno.serve(async (req) => {
 
         let result: unknown = {};
         try {
-          result = await executeTool(supabaseAdmin, toolCall.function.name, fnArgs);
+          // ═══════════════════════════════════════════════════════════════
+          // Use the RLS-enforced caller client for ALL data access.
+          // adminClient is ONLY used for rate-limiting above.
+          // Sensitive tools (salary/advances) are gated by role check inside executeTool.
+          // ═══════════════════════════════════════════════════════════════
+          result = await executeTool(supabaseClient, userRole, toolCall.function.name, fnArgs);
         } catch (e) {
           result = { error: `Tool error: ${(e as Error).message}` };
         }
