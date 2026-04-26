@@ -15,14 +15,12 @@ import { Menu, ChevronLeft, ChevronRight, LogOut, Settings, User, ChevronDown } 
 import { ThemeToggle } from '@shared/components/ThemeToggle';
 import NotificationCenter from '@shared/components/NotificationCenter';
 import GlobalSearch from '@shared/components/GlobalSearch';
-import { FaviconBadge } from '@shared/components/FaviconBadge';
 import { cn } from '@shared/lib/utils';
 import { brandLogoSrc } from '@shared/lib/brandLogo';
 import { logError } from '@shared/lib/logger';
 import { profileService } from '@services/profileService';
 import { AiChatWidget } from '@shared/components/AiChatWidget';
 import GlobalMonthPicker from '@shared/components/Temporal/GlobalMonthPicker';
-import { useAlerts } from '@shared/hooks/useAlerts';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -56,10 +54,6 @@ const AppLayoutInner = ({ children }: AppLayoutProps) => { // NOSONAR: layout wi
   );
   const [pageKey, setPageKey] = useState(0);
   const prevPathRef = useRef(location.pathname);
-
-  // Get notification count for favicon badge
-  const { data: alertsData = [] } = useAlerts();
-  const unreadAlertsCount = alertsData.length;
 
   useEffect(() => {
     const onStorage = () => setSidebarCollapsed(localStorage.getItem('sidebar_collapsed') === 'true');
@@ -121,9 +115,6 @@ const AppLayoutInner = ({ children }: AppLayoutProps) => { // NOSONAR: layout wi
       dir={isRTL ? 'rtl' : 'ltr'}
       style={{ background: 'var(--ds-surface)' }}
     >
-      {/* Favicon Badge for notifications */}
-      <FaviconBadge count={unreadAlertsCount} enabled={unreadAlertsCount > 0} />
-
       <AppSidebar />
 
       <main className={cn(

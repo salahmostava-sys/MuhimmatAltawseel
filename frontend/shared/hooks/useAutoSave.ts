@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-type AutoSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+export type AutoSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 type AutoSaveOptions<T> = {
   /** The data to save */
