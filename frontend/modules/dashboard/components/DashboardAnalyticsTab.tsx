@@ -214,7 +214,7 @@ function buildRiderMetrics(
       const lastMonth = monthlyOrders.at(-2) ?? 0;
       const thisMonth = monthlyOrders.at(-1) ?? 0;
 
-      return {
+      const riderMonthly: RiderMonthly = {
         id: employeeId,
         name: employeeMap[employeeId] || '—',
         months: monthlyOrders,
@@ -222,7 +222,9 @@ function buildRiderMetrics(
         trend: getRiderTrend(lastMonth, thisMonth),
         lastMonth,
         thisMonth,
-      } satisfies RiderMonthly;
+      };
+
+      return riderMonthly;
     });
 }
 

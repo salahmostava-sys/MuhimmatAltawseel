@@ -49,7 +49,7 @@ export interface SlipTranslations {
   close: string;
 }
 
-const SLIP_KEYS = [
+const SLIP_KEYS: readonly (keyof SlipTranslations)[] = [
   'title',
   'subtitle',
   'sectionEmployee',
@@ -91,7 +91,7 @@ const SLIP_KEYS = [
   'printPdf',
   'approve',
   'close',
-] as const satisfies readonly (keyof SlipTranslations)[];
+];
 
 const toSlipTranslations = (values: readonly string[]): SlipTranslations => {
   if (values.length !== SLIP_KEYS.length) {
