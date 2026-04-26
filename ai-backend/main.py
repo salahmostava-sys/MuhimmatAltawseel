@@ -18,6 +18,7 @@ Security:
   - CORS restricted to configured origins
 """
 
+import hmac
 import os
 import time
 import hashlib
@@ -103,11 +104,7 @@ def verify_internal_key(x_internal_key: str | None = Header(default=None)) -> No
     if not x_internal_key:
         raise HTTPException(status_code=401, detail="Missing X-Internal-Key header.")
     # Constant-time comparison to prevent timing attacks
-    expected = AI_INTERNAL_KEY.encode()
-    provided = x_internal_key.encode()
-    if len(expected) != len(provided) or not all(
-        a == b for a, b in zip(expected, provided)
-    ):
+    if not hmac.compare_digest(AI_INTERNAL_KEY, x_internal_key):
         raise HTTPException(status_code=403, detail="Invalid X-Internal-Key.")
 
 
