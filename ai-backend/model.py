@@ -13,7 +13,6 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor
 
 
 # ─── 1. Predict Orders ───────────────────────────────────────────────────────
@@ -29,11 +28,10 @@ def predict_orders(rows: list[dict], forecast_days: int = 7) -> dict:
     X = daily[["day_idx"]].values
     y = daily["orders"].values
 
-    # Use RandomForest if enough data, fallback to linear
-    if len(daily) >= 14:
-        model = RandomForestRegressor(n_estimators=50, random_state=42, max_depth=5)
-    else:
-        model = LinearRegression()
+    # This forecast only uses a single time-index feature, so a linear trend is
+    # much cheaper than re-training a random forest on every request and more
+    # stable for extrapolation.
+    model = LinearRegression()
     model.fit(X, y)
 
     # Forecast

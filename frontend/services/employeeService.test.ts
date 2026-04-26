@@ -54,4 +54,22 @@ describe('employeeService', () => {
 
     await expect(employeeService.getAll()).rejects.toThrow('employeeService.getAll: db down');
   });
+
+  it('fetches more than the first 1000 employees page', async () => {
+    const firstPage = Array.from({ length: 1000 }, (_, idx) => ({
+      id: `e-${idx}`,
+      name: `Employee ${idx}`,
+    }));
+    const secondPage = [{ id: 'e-1000', name: 'Employee 1000' }];
+
+    fromMock
+      .mockImplementationOnce(() => createQueryBuilder({ data: firstPage, error: null }))
+      .mockImplementationOnce(() => createQueryBuilder({ data: secondPage, error: null }));
+
+    const rows = await employeeService.getAll();
+
+    expect(rows).toHaveLength(1001);
+    expect(rows.at(-1)).toMatchObject({ id: 'e-1000', platform_apps: [] });
+    expect(fromMock).toHaveBeenCalledTimes(2);
+  });
 });

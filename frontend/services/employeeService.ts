@@ -42,14 +42,33 @@ async function employeeHasBlockingOperationalRecords(employeeId: string): Promis
 
 export const employeeService = {
   async getAll() {
-    const { data, error } = await supabase
-      .from('employees')
-      .select('*, employee_apps(app_id, apps(id, name, brand_color))')
-      .order('name', { ascending: true });
-    if (error) throw toServiceError(error, 'employeeService.getAll');
-    
+    const PAGE_SIZE = 1000;
+    type EmployeeRow = Record<string, unknown> & {
+      employee_apps?: Array<{
+        apps?: { id: string; name: string; brand_color?: string | null } | null;
+      }> | null;
+    };
+
+    const allRows: EmployeeRow[] = [];
+    let offset = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('employees')
+        .select('*, employee_apps(app_id, apps(id, name, brand_color))')
+        .order('name', { ascending: true })
+        .range(offset, offset + PAGE_SIZE - 1);
+      if (error) throw toServiceError(error, 'employeeService.getAll');
+
+      const pageRows = (data ?? []) as EmployeeRow[];
+      allRows.push(...pageRows);
+      hasMore = pageRows.length === PAGE_SIZE;
+      offset += PAGE_SIZE;
+    }
+
     // Transform employee_apps to platform_apps
-    const transformed = (data ?? []).map(emp => ({
+    const transformed = allRows.map(emp => ({
       ...emp,
       platform_apps: (emp.employee_apps || []).map((ea: { apps: { id: string; name: string; brand_color?: string } }) => ea.apps).filter(Boolean)
     }));

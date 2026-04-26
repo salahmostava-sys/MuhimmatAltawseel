@@ -12,7 +12,16 @@ if (import.meta.env.VITE_SENTRY_DSN) {
     // Setting this option to true will send default PII data to Sentry.
     // For example, automatic IP address collection on events
     sendDefaultPii: false,
-    integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
+    integrations: [
+      Sentry.browserTracingIntegration(),
+      Sentry.replayIntegration({
+        // This app renders employee, salary, and banking data in the DOM.
+        // Keep Replay masked by default unless a future screen is explicitly unmasked.
+        maskAllText: true,
+        maskAllInputs: true,
+        blockAllMedia: true,
+      }),
+    ],
     tracesSampleRate: import.meta.env.PROD ? 0.1 : 0,
     environment: import.meta.env.MODE,
     replaysSessionSampleRate: 0.1,

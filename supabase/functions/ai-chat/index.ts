@@ -172,6 +172,31 @@ const tools = [
 // ── Tool Implementations ──────────────────────────────────────
 
 type DbClient = ReturnType<typeof createClient>;
+type AppRole = 'admin' | 'hr' | 'finance' | 'operations' | 'viewer';
+
+const TOOL_PERMISSIONS: Partial<Record<string, AppRole[]>> = {
+  get_salary_summary: ['admin', 'finance'],
+  get_advances_summary: ['admin', 'finance'],
+  get_employee_details: ['admin', 'hr', 'finance'],
+  get_rider_orders_breakdown: ['admin', 'hr', 'operations'],
+};
+
+function canAccessTool(userRole: AppRole | null, toolName: string): boolean {
+  const allowedRoles = TOOL_PERMISSIONS[toolName];
+  if (!allowedRoles) return true;
+  return !!userRole && allowedRoles.includes(userRole);
+}
+
+function toolAccessError(toolName: string) {
+  if (toolName === 'get_salary_summary' || toolName === 'get_advances_summary') {
+    return {
+      error:
+        'عذراً، بيانات الرواتب والسلف مقصورة على المدير والمحاسب فقط. إذا كنت تحتاج هذه البيانات، يرجى التواصل مع المدير.',
+    };
+  }
+
+  return { error: 'لا تملك صلاحية الوصول إلى هذه البيانات.' };
+}
 
 async function getEmployeeStats(sb: DbClient) {
   const { data, error } = await sb.from('employees').select('sponsorship_status, status');
@@ -367,10 +392,28 @@ async function getAlertsSummary(sb: DbClient) {
   };
 }
 
-async function getEmployeeDetails(sb: DbClient, name: string) {
+async function getEmployeeDetails(sb: DbClient, name: string, userRole: AppRole | null) {
+  const canViewSalaryFields = userRole === 'admin' || userRole === 'finance';
+  const selectFields = [
+    'id',
+    'name',
+    'national_id',
+    'phone',
+    'city',
+    'cities',
+    'status',
+    'sponsorship_status',
+    'job_title',
+    'join_date',
+    'residency_expiry',
+    'commercial_record',
+    'salary_type',
+    ...(canViewSalaryFields ? ['base_salary'] : []),
+  ].join(', ');
+
   const { data, error } = await sb
     .from('employees')
-    .select('id, name, national_id, phone, city, cities, status, sponsorship_status, job_title, join_date, residency_expiry, commercial_record, salary_type, base_salary')
+    .select(selectFields)
     .ilike('name', `%${name}%`)
     .limit(5);
   if (error) throw error;
@@ -573,18 +616,20 @@ async function getRiderMonthlyAverage(sb: DbClient, name: string) {
 
 async function executeTool(
   sb: DbClient,
-  userRole: string | null,
+  userRole: AppRole | null,
   name: string,
   args: Record<string, unknown>,
 ) {
   // ── Sensitive tools gated by role ────────────────────────────────────
-  const sensitiveTools = new Set(['get_salary_summary', 'get_advances_summary']);
+  const sensitiveTools = new Set([
+    'get_salary_summary',
+    'get_advances_summary',
+    'get_employee_details',
+    'get_rider_orders_breakdown',
+  ]);
   if (sensitiveTools.has(name)) {
-    if (userRole !== 'admin' && userRole !== 'finance') {
-      return {
-        error:
-          'عذراً، بيانات الرواتب والسلف مقصورة على المدير والمحاسب فقط. إذا كنت تحتاج هذه البيانات، يرجى التواصل مع المدير.',
-      };
+    if (!canAccessTool(userRole, name)) {
+      return toolAccessError(name);
     }
   }
 
@@ -609,7 +654,7 @@ async function executeTool(
     case 'get_alerts_summary':
       return await getAlertsSummary(sb);
     case 'get_employee_details':
-      return await getEmployeeDetails(sb, (args.name as string) ?? '');
+      return await getEmployeeDetails(sb, (args.name as string) ?? '', userRole);
     case 'get_platform_accounts':
       return await getPlatformAccounts(sb);
     case 'get_fuel_summary':
@@ -741,10 +786,10 @@ Deno.serve(async (req) => {
     }
 
     // ── Fetch caller role for tool gating ───────────────────────────────────
-    let userRole: string | null = null;
+    let userRole: AppRole | null = null;
     try {
       const { data: role } = await supabaseClient.rpc('get_my_role');
-      userRole = (role as string) ?? null;
+      userRole = (role as AppRole) ?? null;
     } catch {
       // Non-blocking — if role fetch fails, sensitive tools will deny access
     }

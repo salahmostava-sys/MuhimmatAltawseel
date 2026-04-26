@@ -19,6 +19,44 @@ interface SystemSettings {
   updated_at?: string | null;
 }
 
+const DEACTIVATED_LOGIN_MESSAGE = 'هذا الحساب معطّل. تواصل مع المسؤول.';
+
+function getFriendlyLoginErrorMessage(message: string): string {
+  const normalized = message.toLowerCase();
+
+  if (message === DEACTIVATED_LOGIN_MESSAGE || normalized.includes('معط')) {
+    return DEACTIVATED_LOGIN_MESSAGE;
+  }
+  if (normalized.includes('invalid login credentials')) {
+    return 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
+  }
+  if (
+    normalized.includes('rate limit') ||
+    normalized.includes('too many requests') ||
+    normalized.includes('over_email_send_rate_limit') ||
+    normalized.includes('429')
+  ) {
+    return 'محاولات كثيرة، انتظر دقيقة ثم حاول مرة أخرى';
+  }
+  if (
+    normalized.includes(':timeout') ||
+    normalized.includes('timed out') ||
+    normalized.includes('failed to fetch') ||
+    normalized.includes('network') ||
+    normalized.includes('مهلة')
+  ) {
+    return 'تعذّر الاتصال بالخادم. تحقّق من الإنترنت ثم حاول مرة أخرى';
+  }
+  if (
+    normalized.includes('email not confirmed') ||
+    normalized.includes('email_not_confirmed')
+  ) {
+    return 'يجب تأكيد البريد الإلكتروني أولاً';
+  }
+
+  return 'تعذّر تسجيل الدخول حالياً. حاول مرة أخرى لاحقاً';
+}
+
 const FEATURES = [
   { icon: 'dashboard_customize', title: 'لوحة تحكم ذكية', desc: 'متابعة فورية لجميع العمليات والمؤشرات الحيوية بلمحة واحدة.' },
   { icon: 'local_shipping', title: 'إدارة المناديب', desc: 'تتبع وإدارة فريق التوصيل بالكامل مع تحليل الأداء.' },
@@ -90,8 +128,7 @@ const Login = () => {
       setLoading(false);
     }
     if (error) {
-      const deactivatedMsg = 'هذا الحساب معطّل. تواصل مع المسؤول.';
-      setLoginError(error.message === deactivatedMsg ? deactivatedMsg : 'البريد الإلكتروني أو كلمة المرور غير صحيحة');
+      setLoginError(getFriendlyLoginErrorMessage(error.message));
     } else {
       try { await persistRememberedEmail(email.trim(), rememberMe); } catch (e) { logError('[Login] persist failed', e); }
       navigate('/', { replace: true });

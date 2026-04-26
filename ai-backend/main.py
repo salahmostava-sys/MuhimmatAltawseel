@@ -49,6 +49,7 @@ AI_INTERNAL_KEY: str | None = os.getenv("AI_INTERNAL_KEY")
 # Rate limiting: max N requests per IP per window (seconds)
 MAX_REQUESTS_PER_WINDOW: int = int(os.getenv("RATE_LIMIT_MAX", "60"))
 RATE_LIMIT_WINDOW_SECS: int = int(os.getenv("RATE_LIMIT_WINDOW", "60"))
+RATE_LIMIT_CLEANUP_EVERY_SECS: int = int(os.getenv("RATE_LIMIT_CLEANUP_EVERY", "300"))
 
 if AI_INTERNAL_KEY:
     _masked = AI_INTERNAL_KEY[:4] + "****"
@@ -64,6 +65,7 @@ else:
 _rate_lock = threading.Lock()
 # { ip_hash: (window_start_ts, request_count) }
 _rate_store: dict[str, tuple[float, int]] = defaultdict(lambda: (0.0, 0))
+_last_rate_cleanup = 0.0
 
 
 def _get_client_ip(request: Request) -> str:
@@ -74,6 +76,24 @@ def _get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
+def _cleanup_rate_store(now: float) -> None:
+    """Drop expired buckets so the in-memory rate-limit store does not grow forever."""
+    global _last_rate_cleanup
+
+    if now - _last_rate_cleanup < RATE_LIMIT_CLEANUP_EVERY_SECS:
+        return
+
+    expiry_cutoff = now - RATE_LIMIT_WINDOW_SECS
+    stale_keys = [
+        ip_key for ip_key, (window_start, _count) in _rate_store.items()
+        if window_start < expiry_cutoff
+    ]
+    for ip_key in stale_keys:
+        _rate_store.pop(ip_key, None)
+
+    _last_rate_cleanup = now
+
+
 def check_rate_limit(request: Request) -> None:
     """Raise 429 if the caller exceeds the configured rate limit."""
     ip = _get_client_ip(request)
@@ -82,6 +102,7 @@ def check_rate_limit(request: Request) -> None:
 
     now = time.monotonic()
     with _rate_lock:
+        _cleanup_rate_store(now)
         window_start, count = _rate_store[ip_key]
         if now - window_start >= RATE_LIMIT_WINDOW_SECS:
             # New window
