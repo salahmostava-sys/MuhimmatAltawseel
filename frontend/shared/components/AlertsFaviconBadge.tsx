@@ -4,7 +4,9 @@ import { useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { useFaviconBadge } from '@shared/hooks/useFaviconBadge';
 
 /**
- * AlertsFaviconBadge — يحدّث أيقونة المتصفح بعدد التنبيهات النشطة.
+ * AlertsFaviconBadge — يحدّث أيقونة المتصفح وعنوان الصفحة بعدد التنبيهات النشطة.
+ *
+ * يتحدث كل دقيقة تلقائياً ويعيد الجلب عند التركيز على النافذة.
  */
 export function AlertsFaviconBadge() {
   const { enabled } = useAuthQueryGate();
@@ -13,6 +15,8 @@ export function AlertsFaviconBadge() {
     queryKey: ['alerts', 'badge'],
     enabled,
     staleTime: 60_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const alerts = await alertsService.getAll();
       return alerts.filter((a) => a.status === 'active' || a.status === 'pending').length;

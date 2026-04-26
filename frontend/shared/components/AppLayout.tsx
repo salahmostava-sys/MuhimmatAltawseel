@@ -2,7 +2,6 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 import AppSidebar from './AppSidebar';
 import { useLanguage } from '@app/providers/LanguageContext';
 import { useAuth } from '@app/providers/AuthContext';
-import { useTheme } from '@app/providers/ThemeContext';
 import { useSystemSettings } from '@app/providers/SystemSettingsContext';
 import { useMobileSidebar, MobileSidebarProvider } from '@app/providers/MobileSidebarContext';
 import { useTranslation } from 'react-i18next';
@@ -12,7 +11,8 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@shared/components/ui/dropdown-menu';
-import { Sun, Moon, Menu, ChevronLeft, ChevronRight, LogOut, Settings, User, ChevronDown } from 'lucide-react';
+import { Menu, ChevronLeft, ChevronRight, LogOut, Settings, User, ChevronDown } from 'lucide-react';
+import { ThemeToggle } from '@shared/components/ThemeToggle';
 import NotificationCenter from '@shared/components/NotificationCenter';
 import GlobalSearch from '@shared/components/GlobalSearch';
 import { FaviconBadge } from '@shared/components/FaviconBadge';
@@ -44,7 +44,7 @@ const roleBadgeClass: Record<string, string> = {
 const AppLayoutInner = ({ children }: AppLayoutProps) => { // NOSONAR: layout wiring for route/theme/sidebar states
   const { isRTL } = useLanguage();
   const { signOut, role, user } = useAuth();
-  const { toggleTheme, isDark } = useTheme();
+
   const { projectName, projectSubtitle, settings } = useSystemSettings();
   const { toggle } = useMobileSidebar();
   const { t } = useTranslation();
@@ -200,17 +200,7 @@ const AppLayoutInner = ({ children }: AppLayoutProps) => { // NOSONAR: layout wi
             </div>
             <NotificationCenter />
 
-            <button
-              onClick={toggleTheme}
-              type="button"
-              className="h-9 w-9 flex items-center justify-center rounded-full border border-border/60 bg-card/80 text-muted-foreground hover:bg-muted transition-colors flex-shrink-0"
-              title={isDark ? 'Light mode' : 'Dark mode'}
-            >
-              {isDark
-                ? <Sun size={16} className="text-warning" />
-                : <Moon size={16} />
-              }
-            </button>
+            <ThemeToggle />
 
             <div
               className="hidden md:flex items-center gap-1.5 text-[11px] min-w-0 max-w-[220px] lg:max-w-[280px] px-2.5 py-1 rounded-lg bg-muted/50 border border-border/50"

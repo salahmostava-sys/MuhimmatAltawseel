@@ -7,13 +7,29 @@ type FaviconBadgeProps = {
 
 /**
  * FaviconBadge - يعرض رقم بجانب الأيقونة بعدد التنبيهات الجديدة
- * 
+ * ويحدّث عنوان الصفحة بعدد التنبيهات.
+ *
  * مثال:
  *   <FaviconBadge count={5} />
  */
 export function FaviconBadge({ count, enabled = true }: FaviconBadgeProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const originalFaviconRef = useRef<string>('');
+  const originalTitleRef = useRef<string>('');
+
+  useEffect(() => {
+    // حفظ العنوان الأصلي مرة واحدة
+    if (!originalTitleRef.current) {
+      originalTitleRef.current = document.title.replace(/^\(\d+\+?\)\s*/, '');
+    }
+
+    if (!enabled || count <= 0) {
+      document.title = originalTitleRef.current;
+    } else {
+      const badge = count > 99 ? '99+' : String(count);
+      document.title = `(${badge}) ${originalTitleRef.current}`;
+    }
+  }, [count, enabled]);
 
   useEffect(() => {
     if (!enabled) {
@@ -40,6 +56,7 @@ export function FaviconBadge({ count, enabled = true }: FaviconBadgeProps) {
 
     return () => {
       resetFavicon();
+      document.title = originalTitleRef.current;
     };
   }, [count, enabled]);
 
@@ -62,9 +79,15 @@ export function FaviconBadge({ count, enabled = true }: FaviconBadgeProps) {
       // رسم الـ badge
       const badgeText = badgeCount > 99 ? '99+' : String(badgeCount);
       const badgeSize = badgeText.length > 2 ? 14 : 12;
-      
-      // دائرة الخلفية
-      ctx.fillStyle = '#ef4444'; // أحمر
+
+      // خلفية بيضاء للتباين
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(32 - badgeSize / 2 - 2, badgeSize / 2 + 2, badgeSize / 2 + 1, 0, Math.PI * 2);
+      ctx.fill();
+
+      // دائرة الخلفية الحمراء
+      ctx.fillStyle = '#ef4444';
       ctx.beginPath();
       ctx.arc(32 - badgeSize / 2 - 2, badgeSize / 2 + 2, badgeSize / 2, 0, Math.PI * 2);
       ctx.fill();
@@ -120,11 +143,4 @@ export function FaviconBadge({ count, enabled = true }: FaviconBadgeProps) {
   };
 
   return null; // هذا المكون لا يعرض شيء في DOM
-}
-
-/**
- * hook لاستخدام FaviconBadge
- */
-export function useFaviconBadge(count: number, enabled = true) {
-  return { FaviconBadge: () => <FaviconBadge count={count} enabled={enabled} /> };
 }
