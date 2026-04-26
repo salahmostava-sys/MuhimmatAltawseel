@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Printer } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { cn } from '@shared/lib/utils';
@@ -31,8 +31,6 @@ export function PrintReport({
   logoUrl,
   refNumber,
 }: PrintReportProps) {
-  const contentRef = useRef<HTMLDivElement>(null);
-
   const timestamp = useMemo(() => {
     const now = new Date();
     return {
@@ -119,7 +117,7 @@ export function PrintReport({
       </div>
 
       {/* Report Content */}
-      <div ref={contentRef} className="print-content">
+      <div className="print-content">
         {children}
       </div>
 
