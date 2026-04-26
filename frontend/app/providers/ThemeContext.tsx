@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo, useRef } from 'react';
 
 type Theme = 'light' | 'dark';
 
@@ -6,7 +6,11 @@ interface ThemeContextType {
   theme: Theme;
   toggleTheme: () => void;
   isDark: boolean;
+  /** true while the 400ms colour transition is running */
+  isTransitioning: boolean;
 }
+
+const TRANSITION_MS = 400;
 
 const ThemeContext = createContext<ThemeContextType>({} as ThemeContextType);
 
@@ -20,10 +24,23 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     }
   });
 
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const isFirstRender = useRef(true);
+
   useEffect(() => {
     const root = document.documentElement;
+
+    // Skip the transition on initial mount so the page loads without a flash
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      if (theme === 'dark') root.classList.add('dark');
+      try { localStorage.setItem('theme', theme); } catch { /* ignore */ }
+      return;
+    }
+
     // Add smooth transition class for the color switch
     root.classList.add('theme-transitioning');
+    setIsTransitioning(true);
 
     if (theme === 'dark') {
       root.classList.add('dark');
@@ -33,7 +50,8 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
     const timer = setTimeout(() => {
       root.classList.remove('theme-transitioning');
-    }, 400);
+      setIsTransitioning(false);
+    }, TRANSITION_MS);
 
     try {
       localStorage.setItem('theme', theme);
@@ -47,9 +65,10 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const toggleTheme = useCallback(() => {
     setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
   }, []);
+
   const value = useMemo<ThemeContextType>(
-    () => ({ theme, toggleTheme, isDark: theme === 'dark' }),
-    [theme, toggleTheme]
+    () => ({ theme, toggleTheme, isDark: theme === 'dark', isTransitioning }),
+    [theme, toggleTheme, isTransitioning]
   );
 
   return (

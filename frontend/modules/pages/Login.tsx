@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@app/providers/AuthContext';
-import { useTheme } from '@app/providers/ThemeContext';
+import { ThemeToggle } from '@shared/components/ThemeToggle';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { dashboardService } from '@services/dashboardService';
 import { loadRememberedEmail, persistRememberedEmail } from '@shared/lib/loginRememberStorage';
@@ -66,7 +66,6 @@ const FEATURES = [
 
 const Login = () => {
   const { signIn } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
@@ -226,16 +225,7 @@ const Login = () => {
       <section className="w-full lg:w-[45%] flex flex-col justify-center items-center p-8 sm:p-12 lg:p-20 bg-background relative min-h-screen lg:min-h-0">
 
         {/* Theme toggle */}
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className="absolute top-5 left-5 w-10 h-10 rounded-full flex items-center justify-center bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted border border-border/50 transition-all duration-200 hover:scale-105 active:scale-95"
-          title={isDark ? 'الوضع الفاتح' : 'الوضع الداكن'}
-        >
-          {isDark
-            ? <span className="material-symbols-outlined text-xl text-yellow-400">light_mode</span>
-            : <span className="material-symbols-outlined text-xl">dark_mode</span>}
-        </button>
+        <ThemeToggle className="absolute top-5 left-5 w-10 h-10 hover:scale-105 active:scale-95" />
 
         {/* Mobile logo */}
         <div
