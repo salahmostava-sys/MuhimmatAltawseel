@@ -1,8 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
-import { X, User, Phone, MapPin, Briefcase, Calendar, Bike } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { X, User, Phone, MapPin, Briefcase, Calendar, Bike, ExternalLink, Hash } from 'lucide-react';
 import { employeeService } from '@services/employeeService';
 import { cn } from '@shared/lib/utils';
 import { Skeleton } from '@shared/components/ui/skeleton';
+import { Button } from '@shared/components/ui/button';
+import { Badge } from '@shared/components/ui/badge';
 
 type EmployeeInfo = {
   id: string;
@@ -13,6 +16,8 @@ type EmployeeInfo = {
   work_type: string;
   join_date: string;
   vehicle_name: string;
+  status: string;
+  employee_id: string;
 };
 
 type Props = {
@@ -21,8 +26,16 @@ type Props = {
   onClose: () => void;
 };
 
+const STATUS_MAP: Record<string, { label: string; className: string }> = {
+  active: { label: 'نشط', className: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' },
+  inactive: { label: 'غير نشط', className: 'bg-gray-500/15 text-gray-600 dark:text-gray-400 border-gray-500/30' },
+  suspended: { label: 'موقوف', className: 'bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30' },
+  on_leave: { label: 'إجازة', className: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' },
+};
+
 /**
  * EmployeeQuickView — لوحة جانبية تنزلق من اليمين لعرض بيانات الموظف بسرعة.
+ * تتضمن رابط للملف الكامل وبادج الحالة.
  */
 export function EmployeeQuickView({ employeeId, open, onClose }: Props) {
   const [data, setData] = useState<EmployeeInfo | null>(null);
@@ -44,6 +57,8 @@ export function EmployeeQuickView({ employeeId, open, onClose }: Props) {
         work_type: (employee.work_type as string) ?? '',
         join_date: (employee.join_date as string) ?? (employee.created_at as string) ?? '',
         vehicle_name: (employee.vehicle_name as string) ?? (employee.plate_number as string) ?? '',
+        status: (employee.status as string) ?? 'active',
+        employee_id: (employee.employee_id as string) ?? '',
       });
     } catch {
       setData(null);
@@ -72,11 +87,13 @@ export function EmployeeQuickView({ employeeId, open, onClose }: Props) {
 
   if (!open) return null;
 
+  const statusInfo = STATUS_MAP[data?.status ?? ''] ?? STATUS_MAP.active;
+
   return (
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-50 bg-black/30 transition-opacity"
+        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[2px] transition-opacity animate-in fade-in-0 duration-200"
         onClick={onClose}
         aria-hidden
       />
@@ -92,9 +109,16 @@ export function EmployeeQuickView({ employeeId, open, onClose }: Props) {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <h3 className="text-base font-bold text-foreground">
-            {loading ? 'تحميل...' : data?.name ?? 'بيانات الموظف'}
-          </h3>
+          <div className="flex items-center gap-2 min-w-0">
+            <h3 className="text-base font-bold text-foreground truncate">
+              {loading ? 'تحميل...' : data?.name ?? 'بيانات الموظف'}
+            </h3>
+            {!loading && data ? (
+              <Badge variant="outline" className={cn('text-[10px] shrink-0', statusInfo.className)}>
+                {statusInfo.label}
+              </Badge>
+            ) : null}
+          </div>
           <button
             onClick={onClose}
             className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
@@ -108,12 +132,15 @@ export function EmployeeQuickView({ employeeId, open, onClose }: Props) {
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {loading ? (
             <div className="space-y-4">
-              {Array.from({ length: 6 }).map((_, i) => (
+              {Array.from({ length: 7 }).map((_, i) => (
                 <Skeleton key={i} className="h-6 w-full rounded-lg" />
               ))}
             </div>
           ) : data ? (
             <div className="space-y-4">
+              {data.employee_id ? (
+                <InfoRow icon={<Hash size={15} />} label="رقم الموظف" value={data.employee_id} />
+              ) : null}
               <InfoRow icon={<User size={15} />} label="الاسم" value={data.name} />
               <InfoRow icon={<Phone size={15} />} label="الهاتف" value={data.phone || '—'} />
               <InfoRow icon={<MapPin size={15} />} label="المدينة" value={data.city || '—'} />
@@ -136,6 +163,18 @@ export function EmployeeQuickView({ employeeId, open, onClose }: Props) {
             </p>
           )}
         </div>
+
+        {/* Footer — link to full profile */}
+        {!loading && data ? (
+          <div className="px-5 py-3 border-t border-border">
+            <Button variant="outline" size="sm" className="w-full gap-2" asChild>
+              <Link to={`/employees?profile=${data.id}`} onClick={onClose}>
+                <ExternalLink size={14} />
+                فتح الملف الكامل
+              </Link>
+            </Button>
+          </div>
+        ) : null}
       </div>
     </>
   );
