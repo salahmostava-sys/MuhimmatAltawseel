@@ -1,7 +1,6 @@
 import { CheckCircle2, CloudOff, Loader2, Save } from 'lucide-react';
 import { cn } from '@shared/lib/utils';
-
-type AutoSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+import type { AutoSaveStatus } from '@shared/hooks/useAutoSave';
 
 interface FormAutoSaveIndicatorProps {
   status: AutoSaveStatus;
