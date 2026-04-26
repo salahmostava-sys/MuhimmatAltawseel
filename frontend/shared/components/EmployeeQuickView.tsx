@@ -33,16 +33,17 @@ export function EmployeeQuickView({ employeeId, open, onClose }: Props) {
     setLoading(true);
     try {
       const result = await employeeService.getById(employeeId);
-      // TypeScript: extract needed fields
+      // TypeScript: extract needed fields with proper typing
+      const employee = result as Record<string, unknown>;
       setData({
-        id: (result as any).id ?? employeeId,
-        name: (result as any).name ?? (result as any).full_name ?? '',
-        phone: (result as any).phone ?? '',
-        city: (result as any).city ?? '',
-        tier: (result as any).tier ?? '',
-        work_type: (result as any).work_type ?? '',
-        join_date: (result as any).join_date ?? (result as any).created_at ?? '',
-        vehicle_name: (result as any).vehicle_name ?? (result as any).plate_number ?? '',
+        id: (employee.id as string) ?? employeeId,
+        name: (employee.name as string) ?? (employee.full_name as string) ?? '',
+        phone: (employee.phone as string) ?? '',
+        city: (employee.city as string) ?? '',
+        tier: (employee.tier as string) ?? '',
+        work_type: (employee.work_type as string) ?? '',
+        join_date: (employee.join_date as string) ?? (employee.created_at as string) ?? '',
+        vehicle_name: (employee.vehicle_name as string) ?? (employee.plate_number as string) ?? '',
       });
     } catch {
       setData(null);

@@ -8,7 +8,6 @@ import {
   Wrench,
   Settings,
   Search,
-  LogOut,
 } from 'lucide-react';
 import {
   Dialog,

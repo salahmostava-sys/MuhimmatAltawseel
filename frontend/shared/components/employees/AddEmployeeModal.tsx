@@ -249,7 +249,6 @@ const employeeFormSchema = z
   });
 
 type EmployeeFormValues = z.infer<typeof employeeFormSchema>;
-type EmployeeFormFieldValue = EmployeeFormValues[keyof EmployeeFormValues];
 
 const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
   const isEdit = !!editEmployee;

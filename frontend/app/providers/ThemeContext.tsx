@@ -20,13 +20,10 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     }
   });
 
-  const [transitioning, setTransitioning] = useState(false);
-
   useEffect(() => {
     const root = document.documentElement;
     // Add smooth transition class for the color switch
     root.classList.add('theme-transitioning');
-    setTransitioning(true);
 
     if (theme === 'dark') {
       root.classList.add('dark');
@@ -36,7 +33,6 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
     const timer = setTimeout(() => {
       root.classList.remove('theme-transitioning');
-      setTransitioning(false);
     }, 400);
 
     try {

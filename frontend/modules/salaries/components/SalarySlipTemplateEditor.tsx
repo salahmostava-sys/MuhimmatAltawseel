@@ -168,6 +168,7 @@ export function SalarySlipTemplateEditor() {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const updatePreview = useCallback(() => {
     if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
     previewTimerRef.current = setTimeout(() => {

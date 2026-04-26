@@ -210,7 +210,9 @@ const Employees = () => {
   const isTableLoading = loading;
   const hasNoPaginatedRows = paginated.length === 0;
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowEditStart = useCallback((rowId: string) => void presence.trackRow(rowId), [presence.trackRow]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowEditEnd = useCallback(() => void presence.trackRow(null), [presence.trackRow]);
 
   // ── Clear selectedEmployee if no longer visible in current month ──

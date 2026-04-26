@@ -7,7 +7,6 @@ import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGat
 import { defaultQueryRetry } from '@shared/lib/query';
 import type {
   VehicleSuggestion,
-  AssignmentJoinRow,
   DeductionRow,
   ViolationDataRow,
   ResultRow,

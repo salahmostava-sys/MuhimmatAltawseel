@@ -3,7 +3,6 @@ import { TOAST_ERROR_GENERIC } from '@shared/lib/toastMessages';
 import { getErrorMessage } from '@services/serviceError';
 // Re-export so existing consumers don't break
 export { getErrorMessage };
-import { logError } from '@shared/lib/logger';
 
 /**
  * Default React Query `retry` — do not retry on auth failures; cap other retries (Sonar / TanStack v5).
