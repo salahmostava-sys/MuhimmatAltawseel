@@ -4,7 +4,7 @@ type EmployeeCityDefinition = {
   aliases?: string[];
 };
 
-const EMPLOYEE_CITY_DEFINITIONS = [
+const EMPLOYEE_CITY_DEFINITIONS: readonly EmployeeCityDefinition[] = [
   { value: 'riyadh', label: 'الرياض' },
   { value: 'alkharj', label: 'الخرج', aliases: ['kharj'] },
   { value: 'majmaah', label: 'المجمعة', aliases: ['majmaa', 'majma'] },
@@ -82,7 +82,7 @@ const EMPLOYEE_CITY_DEFINITIONS = [
   { value: 'baljurashi', label: 'بلجرشي' },
   { value: 'alaqiq', label: 'العقيق' },
   { value: 'almandaq', label: 'المندق', aliases: ['mandaq'] },
-] as const satisfies readonly EmployeeCityDefinition[];
+];
 
 function normalizeCityAlias(value: string): string {
   return String(value)

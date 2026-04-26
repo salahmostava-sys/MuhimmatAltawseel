@@ -6,17 +6,19 @@ import { ErrorBoundary } from "@shared/components/ErrorBoundary";
 import { installGlobalErrorMonitoring } from "@shared/lib/logger";
 import { isLikelyStaleChunkReason, reloadOnceForStaleChunk } from "@shared/lib/chunkLoadRecovery";
 
-Sentry.init({
-  dsn: import.meta.env.VITE_SENTRY_DSN,
-  // Setting this option to true will send default PII data to Sentry.
-  // For example, automatic IP address collection on events
-  sendDefaultPii: false,
-  integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
-  tracesSampleRate: import.meta.env.PROD ? 0.1 : 0,
-  environment: import.meta.env.MODE,
-  replaysSessionSampleRate: 0.1,
-  replaysOnErrorSampleRate: 1,
-});
+if (import.meta.env.VITE_SENTRY_DSN) {
+  Sentry.init({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    // Setting this option to true will send default PII data to Sentry.
+    // For example, automatic IP address collection on events
+    sendDefaultPii: false,
+    integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
+    tracesSampleRate: import.meta.env.PROD ? 0.1 : 0,
+    environment: import.meta.env.MODE,
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1,
+  });
+}
 
 const SentryFallback = () => (
   <div dir="rtl" className="min-h-screen w-full bg-background px-4">

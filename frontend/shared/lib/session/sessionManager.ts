@@ -135,14 +135,16 @@ export class SessionManager {
   /** Notify other tabs that the user is active here. */
   private broadcastActivity(): void {
     try {
-      this.channel?.postMessage({ type: 'SESSION_ACTIVITY' } satisfies BroadcastPayload);
+      const payload: BroadcastPayload = { type: 'SESSION_ACTIVITY' };
+      this.channel?.postMessage(payload);
     } catch { /* channel may be closed */ }
   }
 
   /** Notify other tabs that logout happened here. */
   broadcastLogout(): void {
     try {
-      this.channel?.postMessage({ type: 'SESSION_LOGOUT' } satisfies BroadcastPayload);
+      const payload: BroadcastPayload = { type: 'SESSION_LOGOUT' };
+      this.channel?.postMessage(payload);
     } catch { /* channel may be closed */ }
   }
 
