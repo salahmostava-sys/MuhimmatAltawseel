@@ -179,6 +179,7 @@ const TOOL_PERMISSIONS: Partial<Record<string, AppRole[]>> = {
   get_advances_summary: ['admin', 'finance'],
   get_employee_details: ['admin', 'hr', 'finance'],
   get_rider_orders_breakdown: ['admin', 'hr', 'operations'],
+  get_rider_monthly_average: ['admin', 'hr', 'operations'],
 };
 
 function canAccessTool(userRole: AppRole | null, toolName: string): boolean {
@@ -196,6 +197,12 @@ function toolAccessError(toolName: string) {
   }
 
   return { error: 'لا تملك صلاحية الوصول إلى هذه البيانات.' };
+}
+
+function buildNameSearchPattern(name: string): string | null {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+  return `%${trimmed.replace(/[\\%_]/g, '\\$&')}%`;
 }
 
 async function getEmployeeStats(sb: DbClient) {
@@ -394,6 +401,8 @@ async function getAlertsSummary(sb: DbClient) {
 
 async function getEmployeeDetails(sb: DbClient, name: string, userRole: AppRole | null) {
   const canViewSalaryFields = userRole === 'admin' || userRole === 'finance';
+  const namePattern = buildNameSearchPattern(name);
+  if (!namePattern) return { found: false, message: 'يرجى تحديد اسم الموظف.' };
   const selectFields = [
     'id',
     'name',
@@ -414,7 +423,7 @@ async function getEmployeeDetails(sb: DbClient, name: string, userRole: AppRole 
   const { data, error } = await sb
     .from('employees')
     .select(selectFields)
-    .ilike('name', `%${name}%`)
+    .ilike('name', namePattern)
     .limit(5);
   if (error) throw error;
   if (!data || data.length === 0) return { found: false, message: `لم يُعثر على موظف باسم "${name}"` };
@@ -475,7 +484,9 @@ async function getMaintenanceSummary(sb: DbClient) {
 }
 
 async function getRiderOrdersBreakdown(sb: DbClient, name: string) {
-  const { data: emps } = await sb.from('employees').select('id, name').ilike('name', `%${name}%`).limit(1);
+  const namePattern = buildNameSearchPattern(name);
+  if (!namePattern) return { found: false, message: 'يرجى تحديد اسم المندوب.' };
+  const { data: emps } = await sb.from('employees').select('id, name').ilike('name', namePattern).limit(1);
   if (!emps || emps.length === 0) return { found: false, message: `لم يُعثر على مندوب باسم "${name}"` };
   const emp = emps[0];
   const now = new Date();
@@ -558,8 +569,10 @@ async function getAppsOverview(sb: DbClient) {
 }
 
 async function getRiderMonthlyAverage(sb: DbClient, name: string) {
+  name = name.trim();
+  const namePattern = buildNameSearchPattern(name);
   if (!name) return { error: 'يرجى تحديد اسم المندوب' };
-  const { data: emp } = await sb.from('employees').select('id, name').ilike('name', `%${name}%`).limit(1).maybeSingle();
+  const { data: emp } = await sb.from('employees').select('id, name').ilike('name', namePattern!).limit(1).maybeSingle();
   if (!emp) return { error: `لم يتم العثور على مندوب باسم "${name}"` };
 
   const now = new Date();
@@ -626,6 +639,7 @@ async function executeTool(
     'get_advances_summary',
     'get_employee_details',
     'get_rider_orders_breakdown',
+    'get_rider_monthly_average',
   ]);
   if (sensitiveTools.has(name)) {
     if (!canAccessTool(userRole, name)) {

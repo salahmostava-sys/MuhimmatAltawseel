@@ -113,6 +113,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // during a session. Cache is invalidated on user switch (different userId).
   const cachedRoleRef = useRef<{ userId: string; role: AppRole | null } | null>(null);
 
+  const verifyCurrentUserActive = useCallback(async (
+    userId: string,
+    context: string,
+  ): Promise<boolean> => {
+    try {
+      const active = await withTimeout(
+        authService.fetchIsActive(userId),
+        AUTH_ACTIVE_CHECK_TIMEOUT_MS,
+        'authService.fetchIsActive',
+      );
+      if (!active) {
+        await forceSignOut();
+        return false;
+      }
+      return true;
+    } catch (e) {
+      logError(`[Auth] verifyCurrentUserActive failed (${context})`, e);
+      return false;
+    }
+  }, [forceSignOut]);
+
   /**
    * Shared helper: checks if a user is still active, then applies the session to state.
    * Returns false and calls forceSignOut() if the user is deactivated.
@@ -128,13 +149,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   ): Promise<boolean> => {
     const userId = sessionToApply.user.id;
     try {
-      const active = await withTimeout(
-        authService.fetchIsActive(userId),
-        AUTH_ACTIVE_CHECK_TIMEOUT_MS,
-        'authService.fetchIsActive',
-      );
+      const active = await verifyCurrentUserActive(userId, context);
       if (!active) {
-        await forceSignOut();
         return false;
       }
       setSession(sessionToApply);
@@ -157,7 +173,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       logError(`[Auth] checkActiveAndApplySession failed (${context})`, e);
       return false;
     }
-  }, [forceSignOut]);
+  }, [verifyCurrentUserActive]);
 
   const recoverSessionSilently = useCallback(async (opts?: { refetchActiveQueries?: boolean }) => {
     if (recoverInFlightRef.current !== null) return recoverInFlightRef.current;
@@ -275,6 +291,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       lastRefreshAt = now;
       const recovered = await recoverSessionSilently({ refetchActiveQueries: false });
       if (recovered) {
+        const currentSession = await authService.getSession();
+        if (currentSession?.user) {
+          const active = await verifyCurrentUserActive(currentSession.user.id, 'wake_recheck');
+          if (!active) return;
+        }
         void queryClient.refetchQueries({ type: 'active' });
       }
     };
@@ -290,7 +311,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       globalThis.removeEventListener('focus', onFocus);
       globalThis.removeEventListener('online', onOnline);
     };
-  }, [queryClient, recoverSessionSilently]);
+  }, [queryClient, recoverSessionSilently, verifyCurrentUserActive]);
 
   // ── Realtime: profile.is_active changes ──────────────────────────────────
   useEffect(() => {
@@ -308,16 +329,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [forceSignOut, user]);
 
   // ── Periodic is_active polling (narrows deactivation window) ─────────────
-  useEffect(() => {
-    if (!user?.id) return;
-    const tick = async () => {
-      if (document.visibilityState !== 'visible') return;
-      const active = await authService.fetchIsActive(user.id);
-      if (!active) await forceSignOut();
-    };
-    const id = setInterval(tick, 120_000);
-    return () => clearInterval(id);
-  }, [forceSignOut, user?.id]);
 
   // ── Sign in ───────────────────────────────────────────────────────────────
   const signIn = useCallback(async (email: string, password: string) => {
