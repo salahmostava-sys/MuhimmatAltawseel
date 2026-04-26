@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 type FaviconBadgeProps = {
   count: number;
@@ -17,50 +17,23 @@ export function FaviconBadge({ count, enabled = true }: FaviconBadgeProps) {
   const originalFaviconRef = useRef<string>('');
   const originalTitleRef = useRef<string>('');
 
-  useEffect(() => {
-    // حفظ العنوان الأصلي مرة واحدة
-    if (!originalTitleRef.current) {
-      originalTitleRef.current = document.title.replace(/^\(\d+\+?\)\s*/, '');
+  const updateFavicon = useCallback((dataUrl: string) => {
+    let link = document.querySelector("link[rel='icon']") as HTMLLinkElement;
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.head.appendChild(link);
     }
+    link.href = dataUrl;
+  }, []);
 
-    if (!enabled || count <= 0) {
-      document.title = originalTitleRef.current;
-    } else {
-      const badge = count > 99 ? '99+' : String(count);
-      document.title = `(${badge}) ${originalTitleRef.current}`;
+  const resetFavicon = useCallback(() => {
+    if (originalFaviconRef.current) {
+      updateFavicon(originalFaviconRef.current);
     }
-  }, [count, enabled]);
+  }, [updateFavicon]);
 
-  useEffect(() => {
-    if (!enabled) {
-      resetFavicon();
-      return;
-    }
-
-    // حفظ الأيقونة الأصلية
-    if (!originalFaviconRef.current) {
-      const faviconLink = document.querySelector("link[rel='icon']") as HTMLLinkElement;
-      if (faviconLink) {
-        originalFaviconRef.current = faviconLink.href;
-      } else {
-        // إذا لم توجد أيقونة، استخدم أيقونة افتراضية
-        originalFaviconRef.current = '/favicon.ico';
-      }
-    }
-
-    if (count > 0) {
-      drawFaviconWithBadge(count);
-    } else {
-      resetFavicon();
-    }
-
-    return () => {
-      resetFavicon();
-      document.title = originalTitleRef.current;
-    };
-  }, [count, enabled]);
-
-  const drawFaviconWithBadge = (badgeCount: number) => {
+  const drawFaviconWithBadge = useCallback((badgeCount: number) => {
     const canvas = document.createElement('canvas');
     canvas.width = 32;
     canvas.height = 32;
@@ -124,23 +97,50 @@ export function FaviconBadge({ count, enabled = true }: FaviconBadgeProps) {
     };
 
     img.src = originalFaviconRef.current;
-  };
+  }, [updateFavicon]);
 
-  const updateFavicon = (dataUrl: string) => {
-    let link = document.querySelector("link[rel='icon']") as HTMLLinkElement;
-    if (!link) {
-      link = document.createElement('link');
-      link.rel = 'icon';
-      document.head.appendChild(link);
+  useEffect(() => {
+    // حفظ العنوان الأصلي مرة واحدة
+    if (!originalTitleRef.current) {
+      originalTitleRef.current = document.title.replace(/^\(\d+\+?\)\s*/, '');
     }
-    link.href = dataUrl;
-  };
 
-  const resetFavicon = () => {
-    if (originalFaviconRef.current) {
-      updateFavicon(originalFaviconRef.current);
+    if (!enabled || count <= 0) {
+      document.title = originalTitleRef.current;
+    } else {
+      const badge = count > 99 ? '99+' : String(count);
+      document.title = `(${badge}) ${originalTitleRef.current}`;
     }
-  };
+  }, [count, enabled]);
+
+  useEffect(() => {
+    if (!enabled) {
+      resetFavicon();
+      return;
+    }
+
+    // حفظ الأيقونة الأصلية
+    if (!originalFaviconRef.current) {
+      const faviconLink = document.querySelector("link[rel='icon']") as HTMLLinkElement;
+      if (faviconLink) {
+        originalFaviconRef.current = faviconLink.href;
+      } else {
+        // إذا لم توجد أيقونة، استخدم أيقونة افتراضية
+        originalFaviconRef.current = '/favicon.ico';
+      }
+    }
+
+    if (count > 0) {
+      drawFaviconWithBadge(count);
+    } else {
+      resetFavicon();
+    }
+
+    return () => {
+      resetFavicon();
+      document.title = originalTitleRef.current;
+    };
+  }, [count, enabled, drawFaviconWithBadge, resetFavicon]);
 
   return null; // هذا المكون لا يعرض شيء في DOM
 }
