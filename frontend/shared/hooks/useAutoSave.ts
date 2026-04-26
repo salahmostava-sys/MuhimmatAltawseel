@@ -36,6 +36,7 @@ export function useAutoSave<T>({
   const [status, setStatus] = useState<AutoSaveStatus>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveRef = useRef<() => Promise<void>>();
 
   const save = useCallback(async () => {
     const prev = previousRef.current;
@@ -59,6 +60,9 @@ export function useAutoSave<T>({
     }
   }, [data, savedDuration]);
 
+  // Keep a stable ref so the unmount effect always calls the latest save
+  saveRef.current = save;
+
   useEffect(() => {
     if (!enabled) {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -72,12 +76,11 @@ export function useAutoSave<T>({
     };
   }, [enabled, interval, save]);
 
-  // Also save on unmount
+  // Also save on unmount — use ref so we always call the latest closure
   useEffect(() => {
     return () => {
-      void save();
+      void saveRef.current?.();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Clean up saved timer on unmount
