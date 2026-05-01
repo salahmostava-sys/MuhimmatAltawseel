@@ -312,9 +312,9 @@ const Salaries = () => {
         <div className="flex items-center gap-3 bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3">
           <AlertTriangle size={18} className="text-destructive flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-foreground">المعاينة الخلفية غير متاحة</p>
+            <p className="text-sm font-semibold text-foreground">تعذّر تحميل معاينة الرواتب</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              تم إيقاف الحساب المحلي حفاظاً على الدقة. {previewBackendError}
+              فشل كلٌّ من محرك الرواتب وقاعدة البيانات. {previewBackendError}
             </p>
           </div>
           {/* FIX #8: retry button for phase 2 preview failures */}

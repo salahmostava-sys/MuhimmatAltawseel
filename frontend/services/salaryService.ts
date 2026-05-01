@@ -383,24 +383,37 @@ export const salaryService = {
     if (!isValidSalaryMonthYear(my)) {
       return [] as SalaryPreviewRow[];
     }
-    const res = await supabase.functions.invoke('salary-engine', {
-      body: {
-        mode: 'month_preview',
-        month_year: my,
-      },
-    });
-    const data = res.data;
-    const error = res.error;
-    if (error) {
-       let errorText = '';
-       if (error.context && typeof error.context.text === 'function') {
-         errorText = await error.context.clone().text().catch(() => '');
-       }
-       if (errorText) throw new Error(`[Edge Error] ${errorText}`);
-       handleSupabaseError(error, 'salaryService.getSalaryPreviewForMonth');
+
+    // --- Try Edge Function first ---
+    try {
+      const res = await supabase.functions.invoke('salary-engine', {
+        body: { mode: 'month_preview', month_year: my },
+      });
+      const edgeError = res.error;
+      if (!edgeError) {
+        const payload = ((res.data as { data?: unknown } | null)?.data ?? res.data) as SalaryPreviewRow[] | null;
+        return payload || [];
+      }
+      // Log the edge error and fall through to RPC fallback
+      let edgeErrorText = '';
+      if (edgeError.context && typeof edgeError.context.text === 'function') {
+        edgeErrorText = await edgeError.context.clone().text().catch(() => '');
+      }
+      logError('salary-engine edge function failed, falling back to RPC', {
+        error: edgeErrorText || edgeError.message,
+      });
+    } catch (edgeCaughtErr) {
+      logError('salary-engine edge function threw, falling back to RPC', {
+        error: edgeCaughtErr instanceof Error ? edgeCaughtErr.message : String(edgeCaughtErr),
+      });
     }
-    const payload = ((data as { data?: unknown } | null)?.data ?? data) as SalaryPreviewRow[] | null;
-    return payload || [];
+
+    // --- Fallback: call preview_salary_for_month RPC directly ---
+    const { data: rpcData, error: rpcError } = await supabase.rpc('preview_salary_for_month', {
+      p_month_year: my,
+    });
+    if (rpcError) handleSupabaseError(rpcError, 'salaryService.getSalaryPreviewForMonth.rpc_fallback');
+    return (rpcData as SalaryPreviewRow[] | null) || [];
   },
 
   getByMonth: async (monthYear: string) => {
