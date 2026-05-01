@@ -11,47 +11,32 @@ type AiChatResponse = {
   error?: string;
 };
 
-async function formatInvokeError(error: unknown): Promise<string> {
-  const base = 'عذرًا، حدث خطأ في الاتصال. حاول مرة أخرى.';
-  const err = error as { message?: string; context?: Response };
-
-  if (err.context instanceof Response) {
-    try {
-      const data = (await err.context.clone().json()) as { error?: string };
-      const responseError = data.error ?? '';
-
-      if (responseError.includes('OPENAI_API_KEY') || responseError.includes('GROQ_API_KEY')) {
-        return 'المساعد غير مهيأ على الخادم. راجع إعدادات المشروع.';
-      }
-      if (responseError) {
-        return `خطأ من الخادم (${err.context.status}): ${responseError}`;
-      }
-      if (responseError.length > 0 && responseError.length < 200) {
-        return `تعذر إكمال الطلب: ${responseError}`;
-      }
-    } catch {
-      // Ignore malformed error bodies and fall back to the generic message.
-    }
-  }
-
-  if ((error as Error)?.message?.includes('Failed to fetch')) {
-    return 'تعذر الاتصال بالخادم. تحقق من الشبكة.';
-  }
-
-  return base;
+async function getAuthHeader(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  return token ? `Bearer ${token}` : null;
 }
 
 export const aiChatService = {
   sendMessage: async (messages: AiChatMessage[]): Promise<string> => {
-    const { data, error } = await supabase.functions.invoke<AiChatResponse>('ai-chat', {
-      body: { messages },
-    });
-
-    if (error) {
-      const message = await formatInvokeError(error);
-      throw toServiceError(new Error(message), 'aiChatService.sendMessage');
+    const authHeader = await getAuthHeader();
+    if (!authHeader) {
+      throw toServiceError(new Error('Not authenticated'), 'aiChatService.sendMessage');
     }
 
-    return data?.message ?? data?.error ?? 'لا يوجد رد';
+    const res = await fetch('/api/functions/ai-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+      body: JSON.stringify({ messages }),
+    });
+
+    const data = await res.json() as AiChatResponse;
+
+    if (!res.ok) {
+      const msg = data.error ?? 'عذرًا، حدث خطأ في الاتصال. حاول مرة أخرى.';
+      throw toServiceError(new Error(msg), 'aiChatService.sendMessage');
+    }
+
+    return data.message ?? data.error ?? 'لا يوجد رد';
   },
 };

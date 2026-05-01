@@ -11,16 +11,19 @@ export default defineConfig({
   server: {
     host: "0.0.0.0",
     port: 5000,
+    allowedHosts: true,
     hmr: {
       overlay: false,
     },
     proxy: {
+      "/api/functions": {
+        target: "http://localhost:3001",
+        changeOrigin: true,
+      },
       "/ai": {
         target: "http://localhost:8000",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/ai/, ""),
-        // Inject the shared internal key so the AI backend can verify requests
-        // originated from our proxy and not from the public internet.
         headers: {
           "X-Internal-Key": process.env.AI_INTERNAL_KEY ?? "",
         },

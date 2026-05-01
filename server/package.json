@@ -1,0 +1,14 @@
+{
+  "name": "muhimmat-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.97.0",
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  }
+}

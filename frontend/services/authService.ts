@@ -143,23 +143,33 @@ export const authService = {
     if (!userId) {
       throw new Error("authService.revokeSession: userId is required");
     }
-    const { error } = await supabase.functions.invoke("admin-update-user", {
-      body: { user_id: userId, action: "revoke_session" },
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) throw new Error("authService.revokeSession: not authenticated");
+    const res = await fetch("/api/functions/admin-update-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify({ user_id: userId, action: "revoke_session" }),
     });
-    throwIfError(error, "authService.revokeSession");
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({})) as { error?: string };
+      throwIfError({ message: json.error ?? "revokeSession failed" }, "authService.revokeSession");
+    }
   },
 
   createManagedUser: async (input: AdminCreateUserInput): Promise<AdminCreateUserResult> => {
-    const { data, error } = await supabase.functions.invoke("admin-update-user", {
-      body: {
-        action: "create_user",
-        email: input.email,
-        password: input.password,
-        name: input.name,
-        role: input.role,
-      },
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) throw new Error("authService.createManagedUser: not authenticated");
+    const res = await fetch("/api/functions/admin-update-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify({ action: "create_user", email: input.email, password: input.password, name: input.name, role: input.role }),
     });
-    throwIfError(error, "authService.createManagedUser");
+    const data = await res.json() as AdminCreateUserResult & { error?: string } | null;
+    if (!res.ok) {
+      throwIfError({ message: (data as { error?: string } | null)?.error ?? "createManagedUser failed" }, "authService.createManagedUser");
+    }
     const result = data as AdminCreateUserResult | null;
     if (!result?.user_id) {
       throw new Error("authService.createManagedUser: missing user_id");
@@ -171,9 +181,17 @@ export const authService = {
     if (!userId) {
       throw new Error("authService.deleteManagedUser: userId is required");
     }
-    const { error } = await supabase.functions.invoke("admin-update-user", {
-      body: { user_id: userId, action: "delete_user" },
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) throw new Error("authService.deleteManagedUser: not authenticated");
+    const res = await fetch("/api/functions/admin-update-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify({ user_id: userId, action: "delete_user" }),
     });
-    throwIfError(error, "authService.deleteManagedUser");
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({})) as { error?: string };
+      throwIfError({ message: json.error ?? "deleteManagedUser failed" }, "authService.deleteManagedUser");
+    }
   },
 };

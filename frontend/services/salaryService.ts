@@ -347,18 +347,17 @@ export const salaryService = {
     if (!isEmployeeIdUuid(employeeId) || !isValidSalaryMonthYear(monthYear)) {
       handleSupabaseError(new Error('Invalid employee_id or month_year'), 'salaryService.calculateSalaryForEmployeeMonth');
     }
-    const { data, error } = await supabase.functions.invoke('salary-engine', {
-      body: {
-        mode: 'employee',
-        employee_id: employeeId,
-        month_year: monthYear,
-        payment_method: paymentMethod,
-        manual_deduction: manualDeduction,
-        manual_deduction_note: manualDeductionNote,
-      },
+    const { data: session } = await supabase.auth.getSession();
+    const token = session.session?.access_token;
+    if (!token) handleSupabaseError(new Error('Not authenticated'), 'salaryService.calculateSalaryForEmployeeMonth');
+    const res = await fetch('/api/functions/salary-engine', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ mode: 'employee', employee_id: employeeId, month_year: monthYear, payment_method: paymentMethod, manual_deduction: manualDeduction, manual_deduction_note: manualDeductionNote }),
     });
-    if (error) handleSupabaseError(error, 'salaryService.calculateSalaryForEmployeeMonth.edge_function');
-    const payload = ((data as { data?: unknown } | null)?.data ?? data);
+    const json = await res.json() as { data?: unknown; error?: string };
+    if (!res.ok) handleSupabaseError(new Error(json.error ?? 'salary-engine error'), 'salaryService.calculateSalaryForEmployeeMonth');
+    const payload = (json as { data?: unknown })?.data ?? json;
     return payload;
   },
 
@@ -366,15 +365,17 @@ export const salaryService = {
     if (!isValidSalaryMonthYear(monthYear)) {
       handleSupabaseError(new Error('Invalid month_year'), 'salaryService.calculateSalaryForMonth');
     }
-    const { data, error } = await supabase.functions.invoke('salary-engine', {
-      body: {
-        mode: 'month',
-        month_year: monthYear,
-        payment_method: paymentMethod,
-      },
+    const { data: session } = await supabase.auth.getSession();
+    const token = session.session?.access_token;
+    if (!token) handleSupabaseError(new Error('Not authenticated'), 'salaryService.calculateSalaryForMonth');
+    const res = await fetch('/api/functions/salary-engine', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ mode: 'month', month_year: monthYear, payment_method: paymentMethod }),
     });
-    if (error) handleSupabaseError(error, 'salaryService.calculateSalaryForMonth.edge_function');
-    const payload = ((data as { data?: unknown } | null)?.data ?? data);
+    const json = await res.json() as { data?: unknown; error?: string };
+    if (!res.ok) handleSupabaseError(new Error(json.error ?? 'salary-engine error'), 'salaryService.calculateSalaryForMonth');
+    const payload = (json as { data?: unknown })?.data ?? json;
     return payload;
   },
 
@@ -384,27 +385,27 @@ export const salaryService = {
       return [] as SalaryPreviewRow[];
     }
 
-    // --- Try Edge Function first ---
+    // --- Try server route first ---
     try {
-      const res = await supabase.functions.invoke('salary-engine', {
-        body: { mode: 'month_preview', month_year: my },
-      });
-      const edgeError = res.error;
-      if (!edgeError) {
-        const payload = ((res.data as { data?: unknown } | null)?.data ?? res.data) as SalaryPreviewRow[] | null;
-        return payload || [];
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (token) {
+        const res = await fetch('/api/functions/salary-engine', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ mode: 'month_preview', month_year: my }),
+        });
+        if (res.ok) {
+          const json = await res.json() as { data?: unknown };
+          const payload = (json?.data ?? json) as SalaryPreviewRow[] | null;
+          return payload || [];
+        }
+        const errJson = await res.json().catch(() => ({})) as { error?: string };
+        logError('salary-engine server route failed, falling back to RPC', { error: errJson.error });
       }
-      // Log the edge error and fall through to RPC fallback
-      let edgeErrorText = '';
-      if (edgeError.context && typeof edgeError.context.text === 'function') {
-        edgeErrorText = await edgeError.context.clone().text().catch(() => '');
-      }
-      logError('salary-engine edge function failed, falling back to RPC', {
-        error: edgeErrorText || edgeError.message,
-      });
-    } catch (edgeCaughtErr) {
-      logError('salary-engine edge function threw, falling back to RPC', {
-        error: edgeCaughtErr instanceof Error ? edgeCaughtErr.message : String(edgeCaughtErr),
+    } catch (err) {
+      logError('salary-engine server route threw, falling back to RPC', {
+        error: err instanceof Error ? err.message : String(err),
       });
     }
 
