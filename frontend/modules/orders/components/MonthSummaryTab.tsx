@@ -1,5 +1,6 @@
 import React from 'react';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Wallet } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { OrdersMonthNavigator } from '@shared/components/orders/OrdersMonthNavigator';
 import { OrdersSummaryTable } from '@shared/components/orders/OrdersSummaryTable';
 import { useAppColors } from '@shared/hooks/useAppColors';
@@ -7,10 +8,12 @@ import { useMonthSummaryTab } from '@modules/orders/hooks/useMonthSummaryTab';
 import { monthLabel } from '@modules/orders/utils/dateMonth';
 import { shortName } from '@modules/orders/utils/text';
 import { MonthSummaryStats } from '@modules/orders/components/MonthSummaryStats';
+import { Button } from '@shared/components/ui/button';
 
 export const MonthSummaryTab = React.memo(() => {
   const m = useMonthSummaryTab();
   const { apps: appColorsList } = useAppColors();
+  const navigate = useNavigate();
 
   return (
     <div className="space-y-4">
@@ -19,7 +22,18 @@ export const MonthSummaryTab = React.memo(() => {
           <TrendingUp size={14} className="text-primary" />
           <span className="text-sm font-semibold text-foreground">ملخص الشهر</span>
         </div>
-        <OrdersMonthNavigator label={monthLabel(m.year, m.month)} onPrev={m.prevMonth} onNext={m.nextMonth} />
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5 h-8 text-xs border-primary/40 text-primary hover:bg-primary/5"
+            onClick={() => navigate('/salaries')}
+          >
+            <Wallet size={13} />
+            احسب الرواتب
+          </Button>
+          <OrdersMonthNavigator label={monthLabel(m.year, m.month)} onPrev={m.prevMonth} onNext={m.nextMonth} />
+        </div>
       </div>
 
       <MonthSummaryStats
