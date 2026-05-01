@@ -4,7 +4,7 @@ import {
   Bike, FileDown, Bell, Smartphone,
   Fuel, Settings2, X, FileWarning,
   Layers, ChevronsLeft, ChevronsRight, ShieldCheck, Sparkles, Wrench,
-  ChevronDown,
+  ChevronDown, CalendarDays, FileText, Star,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState, type ComponentType } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@shared/components/ui/collapsible';
@@ -103,6 +103,9 @@ const iconByRouteId: Record<string, ComponentType<{ size?: string | number; clas
   employee_tiers: Layers,
   platform_accounts: ShieldCheck,
   settings: Settings2,
+  leaves: CalendarDays,
+  documents: FileText,
+  performance_reviews: Star,
 };
 
 function setHoverStylesIf(

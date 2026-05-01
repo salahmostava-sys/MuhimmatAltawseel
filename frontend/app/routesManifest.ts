@@ -36,6 +36,9 @@ export const routesManifest: AppRouteManifestItem[] = [
 
   { id: 'employees', titleAr: 'الموظفون', group: 'hr', path: '/employees', permission: routePermission('employees'), sidebar: true },
   { id: 'attendance', titleAr: 'الحضور والانصراف', group: 'hr', path: '/attendance', permission: routePermission('attendance'), sidebar: true },
+  { id: 'leaves', titleAr: 'إدارة الإجازات', group: 'hr', path: '/leaves', permission: routePermission('leaves'), sidebar: true },
+  { id: 'documents', titleAr: 'متابعة الوثائق', group: 'hr', path: '/documents', permission: routePermission('documents'), sidebar: true },
+  { id: 'performance_reviews', titleAr: 'تقييم الأداء', group: 'hr', path: '/performance-reviews', permission: routePermission('performance_reviews'), sidebar: true },
   { id: 'alerts', titleAr: 'التنبيهات', group: 'hr', path: '/alerts', permission: routePermission('alerts'), sidebar: true },
   { id: 'apps', titleAr: 'التطبيقات', group: 'hr', path: '/apps', permission: routePermission('apps'), sidebar: true },
   { id: 'apps_settings', titleAr: 'إعدادات المنصات', group: 'hr', path: '/apps/settings', permission: routePermission('apps'), sidebar: false },
