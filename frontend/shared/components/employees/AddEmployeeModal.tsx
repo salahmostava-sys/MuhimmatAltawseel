@@ -568,7 +568,34 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                 <Input value={form.name_en} onChange={e => setField('name_en', e.target.value)} dir="ltr" />
               </F>
               <F label="المسمى الوظيفي">
-                <Input value={form.job_title} onChange={e => setField('job_title', e.target.value)} />
+                <Input
+                  value={form.job_title}
+                  onChange={e => setField('job_title', e.target.value)}
+                  placeholder="مثال: مندوب توصيل، محاسب، مشرف..."
+                />
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {[
+                    { label: '🛵 مندوب توصيل', value: 'مندوب توصيل' },
+                    { label: '🚗 سائق', value: 'سائق' },
+                    { label: '📊 محاسب', value: 'محاسب' },
+                    { label: '🏢 مشرف', value: 'مشرف' },
+                    { label: '📋 موظف إداري', value: 'موظف إداري' },
+                    { label: '👔 مدير', value: 'مدير' },
+                  ].map(({ label, value }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setField('job_title', value)}
+                      className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+                        form.job_title === value
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border bg-muted/40 text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </F>
               <F label="رقم الهاتف" required error={errors.phone?.message}>
                 <Input
