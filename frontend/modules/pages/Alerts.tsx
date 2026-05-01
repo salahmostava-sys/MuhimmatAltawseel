@@ -435,28 +435,6 @@ const Alerts = () => {
         )}
       </div>
 
-      {/* Residency summary per commercial record */}
-      {residencySummary.length > 0 && (
-        <div className="bg-card rounded-xl border border-border/50 p-4">
-          <h3 className="text-sm font-bold text-foreground mb-3">🪪 ملخص الإقامات حسب السجل التجاري</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {residencySummary.map(s => (
-              <div key={s.cr} className="bg-muted/30 rounded-lg p-3 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => { setCrFilter(s.cr); setTypeFilter('residency'); }}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-foreground">📋 {s.cr}</span>
-                  <span className="text-xs font-bold text-primary">{s.total} إقامة</span>
-                </div>
-                <div className="flex gap-2 text-[10px]">
-                  {s.expired > 0 && <span className="text-destructive font-semibold">🔴 {s.expired} منتهية</span>}
-                  {s.urgent > 0 && <span className="text-warning font-semibold">🟡 {s.urgent} قريبة</span>}
-                  {s.expired === 0 && s.urgent === 0 && <span className="text-success">✅ كلها بعيدة</span>}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       <div className="space-y-3">
         {alertsQuery.isLoading ? (
           <div className="bg-card rounded-xl border border-border/50 p-12 text-center">
