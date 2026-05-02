@@ -232,7 +232,7 @@ const Alerts = () => {
     localAlerts
       .map(a => { const m = a.entityName.match(/سجل: (.+?)(?:$| —)/); return m?.[1] ?? null; })
       .filter(Boolean) as string[]
-  )].sort();
+  )].sort((a, b) => a.localeCompare(b));
 
   const filtered = localAlerts.filter(a => {
     const matchType = typeFilter === 'all' || a.type === typeFilter;
@@ -366,17 +366,50 @@ const Alerts = () => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <div className="stat-card border-r-4 border-r-destructive cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSeverityFilter(severityFilter === 'urgent' ? 'all' : 'urgent')}>
+        <div
+          className="stat-card border-r-4 border-r-destructive cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setSeverityFilter(severityFilter === 'urgent' ? 'all' : 'urgent')}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              setSeverityFilter(severityFilter === 'urgent' ? 'all' : 'urgent');
+            }
+          }}
+          role="button"
+          tabIndex={0}
+        >
           <p className="text-sm text-muted-foreground">عاجل</p>
           <p className="text-3xl font-bold text-destructive mt-1">{urgentCount}</p>
           <p className="text-xs text-muted-foreground mt-1">يتطلب تدخل فوري</p>
         </div>
-        <div className="stat-card border-r-4 border-r-warning cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSeverityFilter(severityFilter === 'warning' ? 'all' : 'warning')}>
+        <div
+          className="stat-card border-r-4 border-r-warning cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setSeverityFilter(severityFilter === 'warning' ? 'all' : 'warning')}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              setSeverityFilter(severityFilter === 'warning' ? 'all' : 'warning');
+            }
+          }}
+          role="button"
+          tabIndex={0}
+        >
           <p className="text-sm text-muted-foreground">تحذير</p>
           <p className="text-3xl font-bold text-warning mt-1">{warningCount}</p>
           <p className="text-xs text-muted-foreground mt-1">خلال 30-60 يوم</p>
         </div>
-        <div className="stat-card border-r-4 border-r-info cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSeverityFilter(severityFilter === 'info' ? 'all' : 'info')}>
+        <div
+          className="stat-card border-r-4 border-r-info cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setSeverityFilter(severityFilter === 'info' ? 'all' : 'info')}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              setSeverityFilter(severityFilter === 'info' ? 'all' : 'info');
+            }
+          }}
+          role="button"
+          tabIndex={0}
+        >
           <p className="text-sm text-muted-foreground">معلومات</p>
           <p className="text-3xl font-bold text-info mt-1">{infoCount}</p>
           <p className="text-xs text-muted-foreground mt-1">للعلم</p>

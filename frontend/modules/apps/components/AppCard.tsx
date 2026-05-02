@@ -36,6 +36,14 @@ export const AppCard = ({
   return (
     <div
       onClick={() => isActiveInMonth && onSelect(app)}
+      onKeyDown={(event) => {
+        if (isActiveInMonth && (event.key === 'Enter' || event.key === ' ')) {
+          event.preventDefault();
+          onSelect(app);
+        }
+      }}
+      role="button"
+      tabIndex={isActiveInMonth ? 0 : -1}
       className={`group relative cursor-pointer overflow-hidden rounded-2xl border text-center transition-all ${
         !isActiveInMonth
           ? 'border-white/20 opacity-50 grayscale hover:grayscale-0'
@@ -48,6 +56,8 @@ export const AppCard = ({
           <div
             className="absolute left-2 top-2 z-10 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity"
             onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+            role="presentation"
           >
             <button
               onClick={(event) => {
@@ -90,7 +100,7 @@ export const AppCard = ({
         <h3 className="truncate text-sm font-bold" style={{ color: app.text_color }}>
           {app.name}
         </h3>
-        <div className="mt-1 flex justify-center" onClick={(e) => e.stopPropagation()}>
+        <div className="mt-1 flex justify-center" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()} role="presentation">
           {canEdit && onWorkTypeChange ? (
             <Select
               value={app.work_type || 'orders'}

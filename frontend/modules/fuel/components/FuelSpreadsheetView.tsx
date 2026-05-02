@@ -89,11 +89,21 @@ function CellDetailPopover(props: Readonly<{
 }>) {
   const { popover, onClose } = props;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      onClick={onClose}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') onClose();
+      }}
+      role="button"
+      tabIndex={-1}
+    >
       <div className="absolute inset-0 bg-black/20" />
       <div
         className="relative bg-card rounded-2xl shadow-xl border border-border p-5 min-w-[300px] max-w-[380px] space-y-4"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+        role="presentation"
       >
         <div className="flex items-center justify-between">
           <h4 className="text-sm font-bold text-foreground">{popover.riderName}</h4>
@@ -167,7 +177,7 @@ export default function FuelSpreadsheetView(props: Readonly<{
     // Build orders map: employee_id → day_number → total orders
     const ordersMap = new Map<string, Map<number, number>>();
     for (const row of dailyOrderRows) {
-      const dayNum = parseInt(row.date.split('-')[2], 10);
+      const dayNum = Number.parseInt(row.date.split('-')[2], 10);
       if (!ordersMap.has(row.employee_id)) {
         ordersMap.set(row.employee_id, new Map());
       }
@@ -178,7 +188,7 @@ export default function FuelSpreadsheetView(props: Readonly<{
     // Build mileage map: employee_id → day_number → { km, fuel, notes, id }
     const mileageMap = new Map<string, Map<number, { km: number; fuel: number; notes: string | null; id: string }>>();
     for (const row of dailyRows) {
-      const dayNum = parseInt(row.date.split('-')[2], 10);
+      const dayNum = Number.parseInt(row.date.split('-')[2], 10);
       if (!mileageMap.has(row.employee_id)) {
         mileageMap.set(row.employee_id, new Map());
       }
@@ -429,17 +439,24 @@ export default function FuelSpreadsheetView(props: Readonly<{
                     {dayHeaders.map((dh) => {
                       const cell = row.days.get(dh.dayNum) ?? null;
                       const hasData = cell !== null;
+                      const dayCellClass = dh.isWeekend && !hasData
+                        ? 'bg-rose-50/40 dark:bg-rose-950/10 hover:bg-rose-100/60 dark:hover:bg-rose-950/20'
+                        : hasData
+                          ? 'bg-emerald-50/60 dark:bg-emerald-950/20 hover:bg-emerald-100 dark:hover:bg-emerald-950/40'
+                          : 'bg-muted/10 hover:bg-muted/30';
                       return (
                         <td
                           key={dh.dayNum}
-                          className={`border-l border-border/20 px-0.5 py-1 text-center cursor-pointer transition-colors min-w-[68px] ${
-                            dh.isWeekend && !hasData
-                              ? 'bg-rose-50/40 dark:bg-rose-950/10 hover:bg-rose-100/60 dark:hover:bg-rose-950/20'
-                              : hasData
-                                ? 'bg-emerald-50/60 dark:bg-emerald-950/20 hover:bg-emerald-100 dark:hover:bg-emerald-950/40'
-                                : 'bg-muted/10 hover:bg-muted/30'
-                          }`}
+                          className={`border-l border-border/20 px-0.5 py-1 text-center cursor-pointer transition-colors min-w-[68px] ${dayCellClass}`}
                           onClick={() => handleCellClick(row.employee.name, dh, cell)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              handleCellClick(row.employee.name, dh, cell);
+                            }
+                          }}
+                          role="button"
+                          tabIndex={0}
                           title={hasData ? `📦${cell.orders} 🛣️${cell.km}كم ⛽${cell.fuel}ر.س` : 'لا بيانات'}
                         >
                           {hasData ? (

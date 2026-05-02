@@ -218,6 +218,14 @@ export function SalarySlipTemplateEditor() {
                   currentTemplate.id === t.id ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-muted'
                 }`}
                 onClick={() => setCurrentTemplate(t)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setCurrentTemplate(t);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
               >
                 <div className="flex items-center gap-2 truncate">
                   {t.is_default && <CheckCircle2 size={12} className="text-green-500 shrink-0" />}

@@ -14,6 +14,9 @@ ALTER TABLE public.daily_shifts
 ALTER TABLE public.daily_shifts
   DROP CONSTRAINT IF EXISTS check_hours_worked;
 
+ALTER TABLE public.daily_shifts
+  DROP CONSTRAINT IF EXISTS daily_shifts_hours_worked_valid;
+
 -- أضف constraint جديد يسمح بالقيم الموجبة والسالبة المحددة فقط
 ALTER TABLE public.daily_shifts
   ADD CONSTRAINT daily_shifts_hours_worked_valid

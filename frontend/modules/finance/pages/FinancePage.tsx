@@ -173,9 +173,9 @@ export default function FinancePage() {
                           onBlur={() => void saveEdit(t.id)} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingId(null); }}
                           className="h-7 text-sm text-center font-bold" dir="ltr" />
                       ) : (
-                        <span className={t.is_auto ? '' : 'cursor-pointer hover:opacity-70'} onClick={() => { if (!t.is_auto) startEdit(t.id, 'amount', String(t.amount)); }}>
+                        <button type="button" className={t.is_auto ? '' : 'cursor-pointer hover:opacity-70'} onClick={() => { if (!t.is_auto) startEdit(t.id, 'amount', String(t.amount)); }} disabled={t.is_auto}>
                           {t.amount.toLocaleString()}
-                        </span>
+                        </button>
                       )}
                     </td>
                     <td className="px-3 py-2.5 text-sm text-foreground">
@@ -184,9 +184,9 @@ export default function FinancePage() {
                           onBlur={() => void saveEdit(t.id)} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingId(null); }}
                           className="h-7 text-sm" dir="rtl" />
                       ) : (
-                        <span className={t.is_auto ? '' : 'cursor-pointer hover:text-primary'} onClick={() => { if (!t.is_auto) startEdit(t.id, 'description', t.description || t.category); }}>
+                        <button type="button" className={t.is_auto ? '' : 'cursor-pointer hover:text-primary'} onClick={() => { if (!t.is_auto) startEdit(t.id, 'description', t.description || t.category); }} disabled={t.is_auto}>
                           {t.description || t.category}
-                        </span>
+                        </button>
                       )}
                     </td>
                     <td className="px-3 py-2.5 text-center">
@@ -242,9 +242,9 @@ export default function FinancePage() {
                           onBlur={() => void saveEdit(t.id)} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingId(null); }}
                           className="h-7 text-sm text-center font-bold" dir="ltr" />
                       ) : (
-                        <span className={t.is_auto ? '' : 'cursor-pointer hover:opacity-70'} onClick={() => { if (!t.is_auto) startEdit(t.id, 'amount', String(t.amount)); }}>
+                        <button type="button" className={t.is_auto ? '' : 'cursor-pointer hover:opacity-70'} onClick={() => { if (!t.is_auto) startEdit(t.id, 'amount', String(t.amount)); }} disabled={t.is_auto}>
                           {t.amount.toLocaleString()}
-                        </span>
+                        </button>
                       )}
                     </td>
                     <td className="px-3 py-2.5 text-sm text-foreground">
@@ -253,10 +253,10 @@ export default function FinancePage() {
                           onBlur={() => void saveEdit(t.id)} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingId(null); }}
                           className="h-7 text-sm" dir="rtl" />
                       ) : (
-                        <span className={t.is_auto ? '' : 'cursor-pointer hover:text-primary'} onClick={() => { if (!t.is_auto) startEdit(t.id, 'description', t.description || t.category); }}>
+                        <button type="button" className={t.is_auto ? '' : 'cursor-pointer hover:text-primary'} onClick={() => { if (!t.is_auto) startEdit(t.id, 'description', t.description || t.category); }} disabled={t.is_auto}>
                           {t.description || t.category}
                           {t.is_auto && <span className="text-[10px] text-muted-foreground ms-1.5">🔒</span>}
-                        </span>
+                        </button>
                       )}
                     </td>
                     <td className="px-3 py-2.5 text-center">

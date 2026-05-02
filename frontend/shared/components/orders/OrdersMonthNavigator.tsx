@@ -8,12 +8,14 @@ type Props = {
 };
 
 export const OrdersMonthNavigator = ({ label, onPrev, onNext, compact = false }: Props) => {
+  const buttonPadding = 'p-1.5';
+
   return (
     <div className={`flex items-center gap-0.5 bg-muted rounded-lg ${compact ? 'p-0.5' : 'p-1'}`}>
       <button
         type="button"
         onClick={onPrev}
-        className={`rounded hover:bg-background transition-colors ${compact ? 'p-1.5' : 'p-1.5'}`}
+        className={`rounded hover:bg-background transition-colors ${buttonPadding}`}
         aria-label="الشهر السابق"
       >
         <ChevronRight size={compact ? 15 : 16} />
@@ -24,7 +26,7 @@ export const OrdersMonthNavigator = ({ label, onPrev, onNext, compact = false }:
       <button
         type="button"
         onClick={onNext}
-        className={`rounded hover:bg-background transition-colors ${compact ? 'p-1.5' : 'p-1.5'}`}
+        className={`rounded hover:bg-background transition-colors ${buttonPadding}`}
         aria-label="الشهر التالي"
       >
         <ChevronLeft size={compact ? 15 : 16} />

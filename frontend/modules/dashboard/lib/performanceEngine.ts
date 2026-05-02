@@ -385,10 +385,10 @@ export function buildFleetSummary(
 
   // Find notable performers
   const topProfile = profiles.length > 0
-    ? profiles.reduce((a, b) => (a.performanceScore >= b.performanceScore ? a : b))
+    ? profiles.reduce((a, b) => (a.performanceScore >= b.performanceScore ? a : b), profiles[0])
     : null;
   const weakProfile = profiles.length > 0
-    ? profiles.reduce((a, b) => (a.performanceScore <= b.performanceScore ? a : b))
+    ? profiles.reduce((a, b) => (a.performanceScore <= b.performanceScore ? a : b), profiles[0])
     : null;
 
   const improvedProfiles = buildRiderProfiles(rankings.mostImproved);

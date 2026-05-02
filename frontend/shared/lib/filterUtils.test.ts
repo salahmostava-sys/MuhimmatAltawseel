@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { applyFilters } from './filterUtils';
 
+const sortIds = (ids: string[]) => ids.sort((a, b) => a.localeCompare(b));
+
 type Employee = {
   id: string;
   name: string;
@@ -50,7 +52,7 @@ describe('applyFilters', () => {
       { date_range: 'date' },
     );
     expect(result).toHaveLength(2);
-    expect(result.map((r) => r.id).sort()).toEqual(['1', '2']);
+    expect(sortIds(result.map((r) => r.id))).toEqual(['1', '2']);
   });
 
   it('filters by number_range', () => {
@@ -60,7 +62,7 @@ describe('applyFilters', () => {
       { salary_range: 'salary' },
     );
     expect(result).toHaveLength(2);
-    expect(result.map((r) => r.id).sort()).toEqual(['1', '2']);
+    expect(sortIds(result.map((r) => r.id))).toEqual(['1', '2']);
   });
 
   it('multiple filters use AND logic', () => {
@@ -99,7 +101,7 @@ describe('applyFilters', () => {
       { date_range: 'date' },
     );
     expect(result).toHaveLength(2);
-    expect(result.map((r) => r.id).sort()).toEqual(['2', '4']);
+    expect(sortIds(result.map((r) => r.id))).toEqual(['2', '4']);
   });
 
   it('date_range with only to (no lower bound)', () => {
@@ -109,7 +111,7 @@ describe('applyFilters', () => {
       { date_range: 'date' },
     );
     expect(result).toHaveLength(2);
-    expect(result.map((r) => r.id).sort()).toEqual(['1', '3']);
+    expect(sortIds(result.map((r) => r.id))).toEqual(['1', '3']);
   });
 
   it('filters correctly when multiple values selected', () => {
@@ -119,7 +121,7 @@ describe('applyFilters', () => {
       { status: 'status' },
     );
     expect(result).toHaveLength(3);
-    expect(result.map((r) => r.id).sort()).toEqual(['1', '3', '4']);
+    expect(sortIds(result.map((r) => r.id))).toEqual(['1', '3', '4']);
   });
 
   it('handles item with undefined field gracefully', () => {
@@ -137,7 +139,7 @@ describe('applyFilters', () => {
       { date_range: ['2026-03-10', '2026-04-30'] },
       { date_range: 'date' },
     );
-    expect(result.map((r) => r.id).sort()).toEqual(['2', '4']);
+    expect(sortIds(result.map((r) => r.id))).toEqual(['2', '4']);
   });
 
   it('date_range: excludes items after "to" date', () => {
@@ -146,7 +148,7 @@ describe('applyFilters', () => {
       { date_range: ['2026-01-01', '2026-02-28'] },
       { date_range: 'date' },
     );
-    expect(result.map((r) => r.id).sort()).toEqual(['3']);
+    expect(sortIds(result.map((r) => r.id))).toEqual(['3']);
   });
 
   it('date_range: includes items within range', () => {
@@ -155,7 +157,7 @@ describe('applyFilters', () => {
       { date_range: ['2026-03-01', '2026-03-31'] },
       { date_range: 'date' },
     );
-    expect(result.map((r) => r.id).sort()).toEqual(['1', '2']);
+    expect(sortIds(result.map((r) => r.id))).toEqual(['1', '2']);
   });
 
   it('number_range: excludes items below min', () => {

@@ -75,7 +75,7 @@ type ProfileActiveRow = {
 // In-flight deduplication: if the same call is already running, reuse its promise.
 const _inFlight: Record<string, Promise<unknown>> = {};
 function dedupe<T>(key: string, fn: () => Promise<T>): Promise<T> {
-  if (_inFlight[key]) return _inFlight[key] as Promise<T>;
+  if (Object.hasOwn(_inFlight, key)) return _inFlight[key] as Promise<T>;
   const p = fn().finally(() => { delete _inFlight[key]; });
   _inFlight[key] = p;
   return p;

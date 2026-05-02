@@ -33,8 +33,27 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '2mb' }));
 
-const logInfo = (msg, meta = {}) => console.log(JSON.stringify({ level: 'info', message: msg, ...meta, ts: new Date().toISOString() }));
-const logError = (msg, meta = {}) => console.error(JSON.stringify({ level: 'error', message: msg, ...meta, ts: new Date().toISOString() }));
+const LOG_META_ALLOWLIST = new Set([
+  'request_id',
+  'user_id',
+  'admin_user_id',
+  'action',
+  'mode',
+  'month_year',
+  'message_count',
+  'status',
+]);
+
+function safeLogMeta(meta = {}) {
+  return Object.fromEntries(
+    Object.entries(meta)
+      .filter(([key]) => LOG_META_ALLOWLIST.has(key))
+      .map(([key, value]) => [key, typeof value === 'string' ? value.slice(0, 120) : value]),
+  );
+}
+
+const logInfo = (msg, meta = {}) => console.log(JSON.stringify({ level: 'info', message: msg, ...safeLogMeta(meta), ts: new Date().toISOString() }));
+const logError = (msg, meta = {}) => console.error(JSON.stringify({ level: 'error', message: msg, ...safeLogMeta(meta), ts: new Date().toISOString() }));
 
 function getCallerClient(authHeader) {
   return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {

@@ -117,7 +117,14 @@ export const AddReviewModal = ({ open, onOpenChange, employees, monthYear, revie
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" dir="rtl" onClick={e => { if (e.target === e.currentTarget) onOpenChange(false); }}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      dir="rtl"
+      onClick={e => { if (e.target === e.currentTarget) onOpenChange(false); }}
+      onKeyDown={(e) => { if (e.key === 'Escape') onOpenChange(false); }}
+      role="button"
+      tabIndex={-1}
+    >
       <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
           <h2 className="text-lg font-bold text-foreground flex items-center gap-2">

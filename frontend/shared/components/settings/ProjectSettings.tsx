@@ -166,7 +166,7 @@ export default function ProjectSettings() {
         })
       );
 
-      const exportedCount = Object.keys(results).filter(k => results[k].length >= 0).length;
+      const exportedCount = Object.keys(results).filter(k => Array.isArray(results[k])).length;
 
       // Export JSON
       const jsonBlob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });

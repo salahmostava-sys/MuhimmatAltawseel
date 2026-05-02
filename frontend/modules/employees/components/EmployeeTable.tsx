@@ -271,7 +271,7 @@ function EmployeeDetailedTableInner({
                         : [...selected, v];
                       setColFilter(
                         "city",
-                        next.length ? [...next].sort().join(",") : "",
+                        next.length ? [...next].sort((a, b) => a.localeCompare(b)).join(",") : "",
                       );
                     };
                     return (
@@ -401,7 +401,12 @@ function EmployeeDetailedTableInner({
                       else setColFilter(col.key, `${from}..${to}`);
                     };
                     return (
-                      <div className="space-y-1.5" onClick={(event) => event.stopPropagation()}>
+                      <div
+                        className="space-y-1.5"
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => event.stopPropagation()}
+                        role="presentation"
+                      >
                         <div className="flex items-center gap-1">
                           <span className="text-[10px] text-muted-foreground w-6">من</span>
                           <Input

@@ -25,6 +25,7 @@ from sklearn.linear_model import LinearRegression
 
 def predict_orders(rows: list[dict], forecast_days: int = 7) -> dict:
     """Train on daily order totals, predict the next N days."""
+    forecast_days = min(max(int(forecast_days), 1), 90)
     df = pd.DataFrame(rows)
     df["date"] = pd.to_datetime(df["date"])
     daily = df.groupby("date")["orders"].sum().reset_index().sort_values("date")
