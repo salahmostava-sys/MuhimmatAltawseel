@@ -1,9 +1,4 @@
 {
-  "name": "muhimmat-altawseel",
-  "private": true,
-  "workspaces": [
-    "frontend"
-  ],
   "dependencies": {
     "@supabase/supabase-js": "^2.105.1"
   },

@@ -27,7 +27,7 @@ import { fuelService } from './fuelService';
 describe('fuelService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    tableResults.clear();
+    for (const k of Object.keys(tableResults)) delete tableResults[k];
   });
 
   it('getActiveEmployees returns array', async () => {

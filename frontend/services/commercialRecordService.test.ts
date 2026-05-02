@@ -28,7 +28,7 @@ import { commercialRecordService } from './commercialRecordService';
 describe('commercialRecordService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    tableResults = {};
+    for (const k of Object.keys(tableResults)) delete tableResults[k];
   });
 
   it('merges managed and legacy commercial records with usage counts', async () => {

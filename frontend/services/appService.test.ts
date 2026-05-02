@@ -31,7 +31,7 @@ import { appService } from './appService';
 describe('appService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    tableResults.clear();
+    for (const k of Object.keys(tableResults)) delete tableResults[k];
   });
 
   it('getAll returns apps on success', async () => {
