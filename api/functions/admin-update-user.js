@@ -64,6 +64,27 @@ async function _handleUpdatePassword(supabaseAdmin, user_id, password) {
   return { success: true };
 }
 
+// ─── Action dispatcher ────────────────────────────────────────────────────────
+
+async function _dispatchAction(supabaseAdmin, normalizedAction, { user_id, password, email, name, role }, callerId) {
+  if (normalizedAction === 'create_user') return _handleCreateUser(supabaseAdmin, { email, password, name, role });
+  if (normalizedAction === 'delete_user') return _handleDeleteUser(supabaseAdmin, user_id, callerId);
+  if (normalizedAction === 'revoke_session') return _handleRevokeSession(supabaseAdmin, user_id);
+  if (normalizedAction === 'update_password') return _handleUpdatePassword(supabaseAdmin, user_id, password);
+  throw new Error('Unsupported action');
+}
+
+// ─── Error classifier ─────────────────────────────────────────────────────────
+
+function _classifyAdminError(message) {
+  const clientPhrases = ['Invalid', 'required', 'must be', 'cannot delete', 'email is required', 'password is required', 'name is required', 'action is required'];
+  const isClient = clientPhrases.some(p => message.toLowerCase().includes(p.toLowerCase()));
+  const isAuthError = message.includes('Only admins') || message.includes('Not authenticated');
+  if (isAuthError) return { status: 403, safeMessage: message };
+  if (isClient) return { status: 400, safeMessage: message };
+  return { status: 500, safeMessage: 'Internal server error' };
+}
+
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
 module.exports = async function handler(req, res) {
@@ -98,30 +119,12 @@ module.exports = async function handler(req, res) {
 
     logInfo('Admin update user request', { request_id: requestId, admin_user_id: callerUser.id, action: normalizedAction });
 
-    let result;
-    if (normalizedAction === 'create_user') {
-      result = await _handleCreateUser(supabaseAdmin, { email, password, name, role });
-    } else if (normalizedAction === 'delete_user') {
-      result = await _handleDeleteUser(supabaseAdmin, user_id, callerUser.id);
-    } else if (normalizedAction === 'revoke_session') {
-      result = await _handleRevokeSession(supabaseAdmin, user_id);
-    } else if (normalizedAction === 'update_password') {
-      result = await _handleUpdatePassword(supabaseAdmin, user_id, password);
-    } else {
-      throw new Error('Unsupported action');
-    }
-
+    const result = await _dispatchAction(supabaseAdmin, normalizedAction, { user_id, password, email, name, role }, callerUser.id);
     return res.json(result);
   } catch (err) {
     const message = getErrorMessage(err);
     logError('Admin update user failed', { request_id: requestId, error: message });
-    const clientPhrases = ['Invalid', 'required', 'must be', 'cannot delete', 'email is required', 'password is required', 'name is required', 'action is required'];
-    const isClient = clientPhrases.some(p => message.toLowerCase().includes(p.toLowerCase()));
-    const isAuthError = message.includes('Only admins') || message.includes('Not authenticated');
-    let status = 500;
-    if (isAuthError) status = 403;
-    else if (isClient) status = 400;
-    const safeMessage = (isClient || isAuthError) ? message : 'Internal server error';
+    const { status, safeMessage } = _classifyAdminError(message);
     return res.status(status).json({ error: safeMessage });
   }
 };
