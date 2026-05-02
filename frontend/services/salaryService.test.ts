@@ -29,7 +29,7 @@ import { getTierSalaryExplanationLines, salaryService } from './salaryService';
 describe('salaryService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(tableResults).forEach((k) => delete tableResults[k]);
+    tableResults.clear();
   });
 
   it('returns pricing rules on success', async () => {

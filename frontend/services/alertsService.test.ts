@@ -28,7 +28,7 @@ import { alertsService } from './alertsService';
 describe('alertsService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(tableResults).forEach((k) => delete tableResults[k]);
+    tableResults.clear();
   });
 
   describe('resolveAlert', () => {

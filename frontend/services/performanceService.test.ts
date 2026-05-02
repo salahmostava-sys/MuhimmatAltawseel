@@ -29,7 +29,7 @@ import { performanceService } from './performanceService';
 describe('performanceService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(tableResults).forEach((key) => delete tableResults[key]);
+    tableResults.clear();
   });
 
   it('returns dashboard payload from the backend rpc', async () => {

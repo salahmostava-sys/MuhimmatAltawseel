@@ -326,7 +326,7 @@ const EmployeeTiers = () => {
         app_ids: merged.app_ids,
       });
       toast({ title: '✅ تم الحفظ' });
-      setEditRows(prev => { const n = { ...prev }; delete n[tier.id]; return n; });
+      setEditRows(prev => { const n = new Map(prev); n.delete(tier.id); return n; });
     } catch (err: unknown) {
       const message = getErrorMessage(err, 'تعذر حفظ التعديل');
       toast({ title: 'خطأ', description: message, variant: 'destructive' });
@@ -336,7 +336,7 @@ const EmployeeTiers = () => {
   };
 
   const cancelRow = (id: string) =>
-    setEditRows(prev => { const n = { ...prev }; delete n[id]; return n; });
+    setEditRows(prev => { const n = new Map(prev); n.delete(id); return n; });
 
   /* ── Add new row ── */
   const saveNew = async () => {

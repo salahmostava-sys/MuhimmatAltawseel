@@ -29,7 +29,7 @@ import attendanceService from './attendanceService';
 describe('attendanceService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(tableResults).forEach((k) => delete tableResults[k]);
+    Object.keys(tableResults).forEach((k) => tableResults.delete(k));
   });
 
   it('returns attendance rows on success', async () => {

@@ -32,7 +32,7 @@ import { employeeService } from './employeeService';
 describe('employeeService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(tableResults).forEach((k) => delete tableResults[k]);
+    tableResults.clear();
   });
 
   it('fetchEmployees returns data', async () => {

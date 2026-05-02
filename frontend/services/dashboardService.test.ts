@@ -29,7 +29,7 @@ import { dashboardService } from './dashboardService';
 describe('dashboardService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(tableResults).forEach((key) => delete tableResults[key]);
+    Object.keys(tableResults).forEach((key) => tableResults.delete(key));
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-04-05T12:00:00.000Z'));
   });
