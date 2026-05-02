@@ -322,13 +322,12 @@ const AI_CHAT_TOOLS = [
   { type: 'function', function: { name: 'get_orders_summary', description: 'ملخص الطلبات لليوم أو الشهر الحالي', parameters: { type: 'object', properties: { period: { type: 'string', enum: ['today', 'this_month'] } }, required: [] } } },
   { type: 'function', function: { name: 'get_salary_summary', description: 'ملخص الرواتب للشهر الحالي', parameters: { type: 'object', properties: {}, required: [] } } },
   { type: 'function', function: { name: 'get_advances_summary', description: 'ملخص السلف النشطة', parameters: { type: 'object', properties: {}, required: [] } } },
-  { type: 'function', function: { name: 'get_top_riders', description: 'أكثر المناديب تنفيذاً للطلبات هذا الشهر', parameters: { type: 'object', properties: {}, required: [] } } },
   { type: 'function', function: { name: 'get_attendance_summary', description: 'ملخص الحضور والغياب', parameters: { type: 'object', properties: { period: { type: 'string', enum: ['today', 'this_month'] } }, required: [] } } },
   { type: 'function', function: { name: 'get_alerts_summary', description: 'ملخص التنبيهات النشطة — إقامات منتهية', parameters: { type: 'object', properties: {}, required: [] } } },
   { type: 'function', function: { name: 'get_employee_details', description: 'تفاصيل موظف معين بالاسم', parameters: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } } },
   { type: 'function', function: { name: 'get_platform_accounts', description: 'حسابات المنصات — كم حساب نشط على كل منصة', parameters: { type: 'object', properties: {}, required: [] } } },
   { type: 'function', function: { name: 'get_maintenance_summary', description: 'ملخص الصيانة — عدد طلبات الصيانة وتكاليفها', parameters: { type: 'object', properties: {}, required: [] } } },
-  { type: 'function', function: { name: 'get_top_riders', description: 'أفضل 10 مناديب هذا الشهر', parameters: { type: 'object', properties: {}, required: [] } } },
+  { type: 'function', function: { name: 'get_top_riders', description: 'أفضل 10 مناديب أداءً هذا الشهر', parameters: { type: 'object', properties: {}, required: [] } } },
   { type: 'function', function: { name: 'get_bottom_riders', description: 'أضعف 10 مناديب أداءً هذا الشهر', parameters: { type: 'object', properties: {}, required: [] } } },
 ];
 
@@ -342,6 +341,26 @@ function canAccessTool(userRole, toolName) {
   const allowed = TOOL_PERMISSIONS[toolName];
   if (!allowed) return true;
   return !!userRole && allowed.includes(userRole);
+}
+
+async function queryRidersRanking(sb, monthFrom, monthTo, ascending) {
+  const { data, error } = await sb.from('daily_orders')
+    .select('employee_id, orders_count, employees(name)')
+    .gte('date', monthFrom)
+    .lte('date', monthTo);
+  if (error) throw error;
+  const totals = {};
+  for (const r of (data ?? [])) {
+    const id = r.employee_id;
+    const name = r.employees?.name ?? id;
+    const count = r.orders_count ?? 0;
+    if (!totals[id]) totals[id] = { name, total: 0 };
+    totals[id].total += count;
+  }
+  const sorted = Object.values(totals)
+    .sort((a, b) => ascending ? a.total - b.total : b.total - a.total)
+    .slice(0, 10);
+  return sorted.map((r, i) => ({ rank: i + 1, name: r.name, orders: r.total }));
 }
 
 function buildNamePattern(name) {
@@ -417,32 +436,12 @@ async function executeAiTool(sb, userRole, toolName, args) {
       return { count: (data ?? []).length, total_amount: totalAmount };
     }
     case 'get_top_riders': {
-      const { data, error } = await sb.from('daily_orders').select('employee_id, orders_count, employees(name)').gte('date', monthFrom).lte('date', monthTo);
-      if (error) throw error;
-      const totals = {};
-      for (const r of (data ?? [])) {
-        const id = r.employee_id;
-        const name = r.employees?.name ?? id;
-        const count = r.orders_count ?? 0;
-        if (!totals[id]) totals[id] = { name, total: 0 };
-        totals[id].total += count;
-      }
-      const sorted = Object.values(totals).sort((a, b) => b.total - a.total).slice(0, 10);
-      return { month: `${y}-${m}`, top_riders: sorted.map((r, i) => ({ rank: i + 1, name: r.name, orders: r.total })) };
+      const riders = await queryRidersRanking(sb, monthFrom, monthTo, false);
+      return { month: `${y}-${m}`, top_riders: riders };
     }
     case 'get_bottom_riders': {
-      const { data, error } = await sb.from('daily_orders').select('employee_id, orders_count, employees(name)').gte('date', monthFrom).lte('date', monthTo);
-      if (error) throw error;
-      const totals = {};
-      for (const r of (data ?? [])) {
-        const id = r.employee_id;
-        const name = r.employees?.name ?? id;
-        const count = r.orders_count ?? 0;
-        if (!totals[id]) totals[id] = { name, total: 0 };
-        totals[id].total += count;
-      }
-      const sorted = Object.values(totals).sort((a, b) => a.total - b.total).slice(0, 10);
-      return { month: `${y}-${m}`, bottom_riders: sorted.map((r, i) => ({ rank: i + 1, name: r.name, orders: r.total })) };
+      const riders = await queryRidersRanking(sb, monthFrom, monthTo, true);
+      return { month: `${y}-${m}`, bottom_riders: riders };
     }
     case 'get_attendance_summary': {
       const period = args.period || 'today';
