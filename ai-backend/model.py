@@ -20,6 +20,37 @@ import pandas as pd
 from sklearn.linear_model import LinearRegression
 
 
+# ─── Shared helpers ───────────────────────────────────────────────────────────
+
+
+def _classify_trend(pct: float) -> str:
+    """Classify a percentage change as up / stable / down."""
+    if pct > 5:
+        return "up"
+    if pct < -5:
+        return "down"
+    return "stable"
+
+
+def _classify_forecast_confidence(n_days: int) -> str:
+    """Return forecast confidence tier based on sample size."""
+    if n_days >= 21:
+        return "high"
+    if n_days >= 7:
+        return "medium"
+    return "low"
+
+
+def _half_trend_pct(series: pd.Series) -> float:
+    """Return % change from first half to second half of a time series."""
+    if len(series) < 4:
+        return 0.0
+    mid = len(series) // 2
+    first_half = series.iloc[:mid].mean()
+    second_half = series.iloc[mid:].mean()
+    return float(((second_half - first_half) / first_half * 100) if first_half > 0 else 0)
+
+
 # ─── 1. Predict Orders ───────────────────────────────────────────────────────
 
 
@@ -69,15 +100,12 @@ def predict_orders(rows: list[dict], forecast_days: int = 7) -> dict:
     else:
         trend_pct = 0.0
 
-    trend = "up" if trend_pct > 5 else "down" if trend_pct < -5 else "stable"
-    confidence = "high" if len(daily) >= 21 else "medium" if len(daily) >= 7 else "low"
-
     return {
         "daily_forecast": forecast,
         "monthly_total_predicted": round(monthly_predicted, 1),
-        "trend": trend,
+        "trend": _classify_trend(trend_pct),
         "trend_percent": round(trend_pct, 1),
-        "confidence": confidence,
+        "confidence": _classify_forecast_confidence(len(daily)),
     }
 
 
@@ -102,16 +130,7 @@ def find_best_driver(rows: list[dict], top_n: int = 5) -> dict:
         n_days = max(len(daily_totals), 1)
         daily_avg = total / n_days
 
-        # Trend: last half vs first half
-        if len(daily_totals) >= 4:
-            mid = len(daily_totals) // 2
-            first_half = daily_totals.iloc[:mid].mean()
-            second_half = daily_totals.iloc[mid:].mean()
-            trend_pct = ((second_half - first_half) / first_half * 100) if first_half > 0 else 0
-        else:
-            trend_pct = 0.0
-
-        trend = "up" if trend_pct > 5 else "down" if trend_pct < -5 else "stable"
+        trend_pct = _half_trend_pct(daily_totals)
 
         # Consistency: coefficient of variation (lower = more consistent)
         if len(daily_totals) >= 3 and daily_totals.mean() > 0:
@@ -125,7 +144,7 @@ def find_best_driver(rows: list[dict], top_n: int = 5) -> dict:
             "employee_name": emp_name,
             "total_orders": total,
             "daily_avg": round(daily_avg, 1),
-            "trend": trend,
+            "trend": _classify_trend(trend_pct),
             "trend_percent": round(trend_pct, 1),
             "consistency_score": consistency,
         })
@@ -156,15 +175,8 @@ def rank_platforms(rows: list[dict]) -> dict:
         share = (total / grand_total * 100) if grand_total > 0 else 0
         avg_daily = total / n_days
 
-        # Growth: last half vs first half
         daily_totals = group.groupby("date")["orders"].sum().sort_index()
-        if len(daily_totals) >= 4:
-            mid = len(daily_totals) // 2
-            first_half = daily_totals.iloc[:mid].mean()
-            second_half = daily_totals.iloc[mid:].mean()
-            growth = ((second_half - first_half) / first_half * 100) if first_half > 0 else 0
-        else:
-            growth = 0.0
+        growth = _half_trend_pct(daily_totals)
 
         platforms.append({
             "app_name": str(app_name),
@@ -179,6 +191,49 @@ def rank_platforms(rows: list[dict]) -> dict:
 
 
 # ─── 4. Smart Alerts ─────────────────────────────────────────────────────────
+
+
+def _detect_driver_alerts(
+    df_drivers: pd.DataFrame,
+    daily: pd.Series,
+    high_spike: float,
+    driver_drop: float,
+) -> list[dict]:
+    """Generate per-driver performance alerts."""
+    alerts = []
+    if df_drivers.empty or len(daily) < 7:
+        return alerts
+
+    for emp_id, group in df_drivers.groupby("employee_id"):
+        emp_daily = group.groupby("date")["orders"].sum().sort_index()
+        if len(emp_daily) < 5:
+            continue
+
+        emp_name = group["employee_name"].iloc[0] or str(emp_id)
+        recent = emp_daily.iloc[-3:].mean()
+        prev = emp_daily.iloc[:-3].mean()
+        if prev <= 0:
+            continue
+
+        emp_change = ((recent - prev) / prev) * 100
+        if emp_change <= driver_drop:
+            alerts.append({
+                "type": "driver_drop",
+                "severity": "warning",
+                "message": f"انخفاض أداء {emp_name} بنسبة {abs(round(emp_change, 1))}%",
+                "value": round(emp_change, 1),
+                "entity": str(emp_id),
+            })
+        elif emp_change >= high_spike:
+            alerts.append({
+                "type": "driver_spike",
+                "severity": "info",
+                "message": f"ارتفاع ملحوظ في أداء {emp_name} بنسبة {round(emp_change, 1)}%",
+                "value": round(emp_change, 1),
+                "entity": str(emp_id),
+            })
+
+    return alerts
 
 
 def generate_smart_alerts(rows: list[dict], thresholds: dict) -> dict:
@@ -218,33 +273,7 @@ def generate_smart_alerts(rows: list[dict], thresholds: dict) -> dict:
 
     # ── Driver-level alerts ──────────────────────────────────────────────────
     df_drivers = df.dropna(subset=["employee_id"])
-    if not df_drivers.empty and len(daily) >= 7:
-        for emp_id, group in df_drivers.groupby("employee_id"):
-            emp_daily = group.groupby("date")["orders"].sum().sort_index()
-            if len(emp_daily) < 5:
-                continue
-
-            emp_name = group["employee_name"].iloc[0] or str(emp_id)
-            recent = emp_daily.iloc[-3:].mean()
-            prev = emp_daily.iloc[:-3].mean()
-            if prev > 0:
-                emp_change = ((recent - prev) / prev) * 100
-                if emp_change <= driver_drop:
-                    alerts.append({
-                        "type": "driver_drop",
-                        "severity": "warning",
-                        "message": f"انخفاض أداء {emp_name} بنسبة {abs(round(emp_change, 1))}%",
-                        "value": round(emp_change, 1),
-                        "entity": str(emp_id),
-                    })
-                elif emp_change >= high_spike:
-                    alerts.append({
-                        "type": "driver_spike",
-                        "severity": "info",
-                        "message": f"ارتفاع ملحوظ في أداء {emp_name} بنسبة {round(emp_change, 1)}%",
-                        "value": round(emp_change, 1),
-                        "entity": str(emp_id),
-                    })
+    alerts.extend(_detect_driver_alerts(df_drivers, daily, high_spike, driver_drop))
 
     # Sort: critical first, then warning, then info
     severity_order = {"critical": 0, "warning": 1, "info": 2}
@@ -301,31 +330,18 @@ def predict_salary_forecast(
     Predict monthly salary based on current performance.
     Uses linear projection with confidence scoring.
     """
-    # Calculate current daily average
     current_daily_avg = current_orders / days_passed if days_passed > 0 else 0
-    
-    # Days remaining in month
     days_remaining = max(0, working_days_per_month - days_passed)
-    
-    # Project remaining orders based on current trend
-    projected_remaining_orders = current_daily_avg * days_remaining
-    
-    # Total projected orders for the month
-    projected_monthly_orders = int(current_orders + projected_remaining_orders)
-    
-    # Calculate predicted salary
-    order_earnings = projected_monthly_orders * avg_order_value
-    predicted_monthly_salary = base_salary + order_earnings
-    
-    # Determine confidence based on data availability
+    projected_monthly_orders = int(current_orders + current_daily_avg * days_remaining)
+    predicted_monthly_salary = base_salary + projected_monthly_orders * avg_order_value
+
     if days_passed >= 20:
         confidence = "high"
     elif days_passed >= 10:
         confidence = "medium"
     else:
         confidence = "low"
-    
-    # Determine trend relative to typical performance (assuming 30 orders/day is target)
+
     target_daily = 30
     if current_daily_avg >= target_daily * 1.1:
         trend = "above_target"
@@ -333,7 +349,7 @@ def predict_salary_forecast(
         trend = "on_track"
     else:
         trend = "below_target"
-    
+
     return {
         "predicted_monthly_salary": round(predicted_monthly_salary, 2),
         "current_daily_avg": round(current_daily_avg, 1),
@@ -350,7 +366,7 @@ def predict_salary_forecast(
 def rank_employees(employees: list[dict], top_n: int = 5) -> dict:
     """
     Rank employees using a composite scoring algorithm.
-    
+
     Scoring weights:
     - Orders performance: 40%
     - Attendance rate: 30%
@@ -359,42 +375,31 @@ def rank_employees(employees: list[dict], top_n: int = 5) -> dict:
     """
     if not employees:
         return {"employees": [], "best_employee": None}
-    
-    # Calculate max values for normalization
+
     max_orders = max(e.get("total_orders", 0) for e in employees) or 1
-    max_attendance = max(e.get("attendance_days", 0) for e in employees) or 1
     max_working_days = 30  # Assume 30-day month
-    
+
     scored_employees = []
-    
+
     for emp in employees:
         orders = emp.get("total_orders", 0)
         attendance = emp.get("attendance_days", 0)
         errors = emp.get("error_count", 0)
         late_days = emp.get("late_days", 0)
-        
-        # Normalize scores (0-100 scale)
+
         orders_score = (orders / max_orders) * 100 if max_orders > 0 else 0
-        
         attendance_rate = (attendance / max_working_days) * 100
         attendance_score = min(attendance_rate, 100)
-        
-        # Error rate: fewer errors = higher score (inverse relationship)
-        # Assuming 5+ errors is very poor (0 score), 0 errors is perfect (100)
         error_score = max(0, 100 - (errors * 20))
-        
-        # Punctuality: fewer late days = higher score
         punctuality_score = max(0, 100 - (late_days * 10))
-        
-        # Composite weighted score
+
         composite_score = (
-            orders_score * 0.40 +
-            attendance_score * 0.30 +
-            error_score * 0.20 +
-            punctuality_score * 0.10
+            orders_score * 0.40
+            + attendance_score * 0.30
+            + error_score * 0.20
+            + punctuality_score * 0.10
         )
-        
-        # Determine performance tier
+
         if composite_score >= 85:
             performance_tier = "excellent"
         elif composite_score >= 70:
@@ -403,31 +408,26 @@ def rank_employees(employees: list[dict], top_n: int = 5) -> dict:
             performance_tier = "average"
         else:
             performance_tier = "needs_improvement"
-        
+
         scored_employees.append({
             "employee_id": emp.get("employee_id", ""),
             "employee_name": emp.get("employee_name", ""),
             "composite_score": round(composite_score, 1),
-            "rank": 0,  # Will be set after sorting
+            "rank": 0,
             "total_orders": orders,
             "attendance_rate": round(attendance_rate, 1),
             "error_rate": round((errors / max(attendance, 1)) * 100, 1),
             "performance_tier": performance_tier,
         })
-    
-    # Sort by composite score descending
+
     scored_employees.sort(key=lambda x: x["composite_score"], reverse=True)
-    
-    # Assign ranks
+
     for i, emp in enumerate(scored_employees):
         emp["rank"] = i + 1
-    
-    # Get top N employees
+
     top_employees = scored_employees[:top_n]
-    
-    # Best employee is the first one
     best_employee = top_employees[0] if top_employees else None
-    
+
     return {
         "employees": top_employees,
         "best_employee": best_employee,
@@ -437,120 +437,107 @@ def rank_employees(employees: list[dict], top_n: int = 5) -> dict:
 # ─── 8. Anomaly Detection ─────────────────────────────────────────────────────
 
 
+def _detect_salary_anomaly(employee_name: str, current_salary: float, expected_range: tuple) -> tuple[dict | None, int]:
+    """Return (anomaly_dict, risk_score) if salary is below expected, else (None, 0)."""
+    min_expected, _max_expected = expected_range
+    if not (min_expected > 0 and current_salary < min_expected):
+        return None, 0
+    shortfall = min_expected - current_salary
+    shortfall_pct = (shortfall / min_expected) * 100
+    if shortfall_pct > 30:
+        severity, risk_score = "critical", 40
+    elif shortfall_pct > 15:
+        severity, risk_score = "warning", 25
+    else:
+        severity, risk_score = "info", 10
+    return {
+        "type": "low_salary",
+        "severity": severity,
+        "message": f"راتب {employee_name} أقل من المتوقع بـ {shortfall_pct:.1f}% ({shortfall:.0f} ر.س)",
+        "value": current_salary,
+        "threshold": min_expected,
+        "recommendation": "مراجعة سكيمة الراتب أو عدد الطلبات المنجزة",
+    }, risk_score
+
+
+def _detect_order_anomaly(employee_name: str, monthly_orders: int, previous_month_orders: int) -> tuple[dict | None, int]:
+    """Return (anomaly_dict, risk_score) if there is a significant order drop, else (None, 0)."""
+    if previous_month_orders <= 0:
+        return None, 0
+    change_pct = ((monthly_orders - previous_month_orders) / previous_month_orders) * 100
+    if change_pct < -50:
+        severity, risk_score = "critical", 35
+    elif change_pct < -30:
+        severity, risk_score = "warning", 25
+    elif change_pct < -15:
+        severity, risk_score = "warning", 15
+    else:
+        return None, 0
+    return {
+        "type": "order_drop",
+        "severity": severity,
+        "message": f"انخفاض حاد في طلبات {employee_name} بنسبة {abs(change_pct):.1f}% عن الشهر الماضي",
+        "value": monthly_orders,
+        "threshold": previous_month_orders,
+        "recommendation": "التحقق من الحالة الصحية أو مشاكل التوصيل",
+    }, risk_score
+
+
+def _detect_deduction_anomaly(employee_name: str, current_salary: float, deductions: float) -> tuple[dict | None, int]:
+    """Return (anomaly_dict, risk_score) if deductions are unusually high, else (None, 0)."""
+    if current_salary <= 0:
+        return None, 0
+    deduction_pct = (deductions / (current_salary + deductions)) * 100
+    if deduction_pct > 20:
+        severity, risk_score = "critical", 30
+    elif deduction_pct > 10:
+        severity, risk_score = "warning", 20
+    elif deduction_pct > 5:
+        severity, risk_score = "info", 10
+    else:
+        return None, 0
+    return {
+        "type": "high_deductions",
+        "severity": severity,
+        "message": f"خصومات مرتفعة على {employee_name}: {deduction_pct:.1f}% من الراتب ({deductions:.0f} ر.س)",
+        "value": deductions,
+        "threshold": (current_salary + deductions) * 0.1,
+        "recommendation": "مراجعة أسباب الخصومات وإمكانية تصحيح الأخطاء",
+    }, risk_score
+
+
+def _classify_risk_level(score: int) -> str:
+    """Map a numeric risk score to a risk level label."""
+    if score >= 60:
+        return "critical"
+    if score >= 40:
+        return "high"
+    if score >= 20:
+        return "medium"
+    return "low"
+
+
 def detect_anomalies(data: dict) -> dict:
     """
     Detect anomalies in salary, orders, and deductions.
     Returns a list of anomalies with severity, messages, and recommendations.
     """
-    anomalies = []
-    risk_scores = []
-    
     employee_name = data.get("employee_name", "الموظف")
-    current_salary = data.get("current_salary", 0)
-    expected_range = data.get("expected_salary_range", (0, 0))
-    monthly_orders = data.get("monthly_orders", 0)
-    previous_month_orders = data.get("previous_month_orders", 0)
-    deductions = data.get("deductions", 0)
-    
-    # 1. Low Salary Detection
-    min_expected, max_expected = expected_range
-    if min_expected > 0 and current_salary < min_expected:
-        shortfall = min_expected - current_salary
-        shortfall_pct = (shortfall / min_expected) * 100 if min_expected > 0 else 0
-        
-        if shortfall_pct > 30:
-            severity = "critical"
-            risk_score = 40
-        elif shortfall_pct > 15:
-            severity = "warning"
-            risk_score = 25
-        else:
-            severity = "info"
-            risk_score = 10
-        
-        risk_scores.append(risk_score)
-        anomalies.append({
-            "type": "low_salary",
-            "severity": severity,
-            "message": f"راتب {employee_name} أقل من المتوقع بـ {shortfall_pct:.1f}% ({shortfall:.0f} ر.س)",
-            "value": current_salary,
-            "threshold": min_expected,
-            "recommendation": "مراجعة سكيمة الراتب أو عدد الطلبات المنجزة",
-        })
-    
-    # 2. Order Drop Detection
-    if previous_month_orders > 0:
-        order_change_pct = ((monthly_orders - previous_month_orders) / previous_month_orders) * 100
-        
-        if order_change_pct < -50:
-            severity = "critical"
-            risk_score = 35
-        elif order_change_pct < -30:
-            severity = "warning"
-            risk_score = 25
-        elif order_change_pct < -15:
-            severity = "warning"
-            risk_score = 15
-        else:
-            risk_score = 0
-        
-        if risk_score > 0:
-            risk_scores.append(risk_score)
-            anomalies.append({
-                "type": "order_drop",
-                "severity": severity,
-                "message": f"انخفاض حاد في طلبات {employee_name} بنسبة {abs(order_change_pct):.1f}% عن الشهر الماضي",
-                "value": monthly_orders,
-                "threshold": previous_month_orders,
-                "recommendation": "التحقق من الحالة الصحية أو مشاكل التوصيل",
-            })
-    
-    # 3. High Deductions Detection
-    if current_salary > 0:
-        deduction_pct = (deductions / (current_salary + deductions)) * 100
-        
-        if deduction_pct > 20:
-            severity = "critical"
-            risk_score = 30
-        elif deduction_pct > 10:
-            severity = "warning"
-            risk_score = 20
-        elif deduction_pct > 5:
-            severity = "info"
-            risk_score = 10
-        else:
-            risk_score = 0
-        
-        if risk_score > 0:
-            risk_scores.append(risk_score)
-            anomalies.append({
-                "type": "high_deductions",
-                "severity": severity,
-                "message": f"خصومات مرتفعة على {employee_name}: {deduction_pct:.1f}% من الراتب ({deductions:.0f} ر.س)",
-                "value": deductions,
-                "threshold": (current_salary + deductions) * 0.1,  # 10% threshold
-                "recommendation": "مراجعة أسباب الخصومات وإمكانية تصحيح الأخطاء",
-            })
-    
-    # Calculate overall risk score (0-100)
-    overall_risk_score = min(100, sum(risk_scores))
-    
-    # Determine risk level
-    if overall_risk_score >= 60:
-        risk_level = "critical"
-    elif overall_risk_score >= 40:
-        risk_level = "high"
-    elif overall_risk_score >= 20:
-        risk_level = "medium"
-    else:
-        risk_level = "low"
-    
-    # Sort by severity (critical first)
+
+    checks = [
+        _detect_salary_anomaly(employee_name, data.get("current_salary", 0), data.get("expected_salary_range", (0, 0))),
+        _detect_order_anomaly(employee_name, data.get("monthly_orders", 0), data.get("previous_month_orders", 0)),
+        _detect_deduction_anomaly(employee_name, data.get("current_salary", 0), data.get("deductions", 0)),
+    ]
+
+    anomalies = [a for a, _ in checks if a is not None]
+    overall_risk_score = min(100, sum(s for _, s in checks))
+
     severity_order = {"critical": 0, "warning": 1, "info": 2}
     anomalies.sort(key=lambda a: severity_order.get(a["severity"], 3))
-    
+
     return {
         "anomalies": anomalies,
         "overall_risk_score": overall_risk_score,
-        "risk_level": risk_level,
+        "risk_level": _classify_risk_level(overall_risk_score),
     }
