@@ -241,7 +241,11 @@ export function CommercialRecordsManager({
                                 size="sm"
                                 variant="destructive"
                                 className="gap-1.5"
-                                onClick={() => void handleDelete(record.id!, record.name)}
+                                onClick={() => {
+                                    if (record.id) {
+                                        void handleDelete(record.id, record.name);
+                                    }
+                                }}
                                 disabled={!canMutate}
                               >
                                 {rowBusy ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}

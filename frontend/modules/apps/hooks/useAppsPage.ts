@@ -56,7 +56,7 @@ export const useAppsPage = () => {
     queryKey: appEmployeesQueryKey(uid, monthYear, selectedAppId ?? '__none__'),
     enabled: enabled && !!selectedAppId,
     staleTime: 30_000,
-    queryFn: () => appsPageService.getAppEmployees(selectedAppId!, monthYear),
+    queryFn: () => selectedAppId ? appsPageService.getAppEmployees(selectedAppId, monthYear) : Promise.resolve([]),
   });
 
   useQueryErrorToast(appsQuery.isError, appsQuery.error, undefined, appsQuery.refetch);

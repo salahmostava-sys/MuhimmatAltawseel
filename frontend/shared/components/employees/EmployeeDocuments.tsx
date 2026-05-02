@@ -172,7 +172,7 @@ export function EmployeeDocuments({
                 {hasDoc && (
                   <button
                     type="button"
-                    onClick={() => handlePreview(employee[key]!)}
+                    onClick={() => employee[key] ? handlePreview(employee[key]) : undefined}
                     className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                     title="عرض"
                   >

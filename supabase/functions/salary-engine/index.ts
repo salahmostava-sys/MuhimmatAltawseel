@@ -32,6 +32,14 @@ const logError = (message: string, meta: Record<string, unknown> = {}) => {
   console.error(JSON.stringify({ level: 'error', message, ...meta, ts: new Date().toISOString() }));
 };
 
+function getEnvVar(key: string): string {
+  const val = Deno.env.get(key);
+  if (!val) {
+    throw new Error(`Environment variable ${key} is not set`);
+  }
+  return val;
+}
+
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
 
@@ -50,8 +58,8 @@ Deno.serve(async (req) => {
 
     // Caller context (RLS + role checks)
     const callerClient = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
+      getEnvVar('SUPABASE_URL'),
+      getEnvVar('SUPABASE_ANON_KEY'),
       { global: { headers: { Authorization: authHeader } } }
     );
 
@@ -78,8 +86,8 @@ Deno.serve(async (req) => {
     }
 
     const adminClient = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      getEnvVar('SUPABASE_URL'),
+      getEnvVar('SUPABASE_SERVICE_ROLE_KEY')
     );
 
     const mode = payload.mode;

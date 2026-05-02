@@ -287,7 +287,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
       if (schemeId && schemeType === 'order_based') {
         await salarySchemeService.insertSchemeTiers(
           formTiers.map((t, i) => ({
-            scheme_id: schemeId!,
+            scheme_id: schemeId != null ? schemeId : 0,
             from_orders: t.from,
             to_orders: t.to >= 9999 ? null : t.to,
             price_per_order: t.pricePerOrder,
@@ -661,7 +661,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
                         )}
                         {(snapshots[s.id] || []).length > 0 && (
                           <span className="text-[10px] text-muted-foreground ms-auto">
-                            إجمالي {snapshots[s.id]!.length} شهر مثبت عبر السنوات
+                            إجمالي {(snapshots[s.id] || []).length} شهر مثبت عبر السنوات
                           </span>
                         )}
                       </div>

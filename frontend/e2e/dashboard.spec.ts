@@ -18,8 +18,8 @@ test.describe('Dashboard smoke', () => {
 
     await page.goto('/login');
 
-    await page.locator('#login-email').fill(email!);
-    await page.locator('#login-password').fill(password!);
+    await page.locator('#login-email').fill(email ? email : '');
+    await page.locator('#login-password').fill(password ? password : '');
     await page.getByRole('button', { name: 'تسجيل الدخول' }).click();
 
     await expect(page).toHaveURL(/\/$/);

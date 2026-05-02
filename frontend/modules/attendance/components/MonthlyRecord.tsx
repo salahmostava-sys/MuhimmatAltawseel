@@ -82,7 +82,7 @@ const MonthlyRecord = ({ selectedMonth, selectedYear }: Props) => {
     const totalHours = (presentDays + lateDays) * 8;
     const notes = rows
       .filter((r) => r.note && r.note.trim())
-      .map((r) => ({ date: r.date ?? '', note: r.note! }))
+      .map((r) => ({ date: r.date ?? '', note: r.note ?? '' }))
       .sort((a, b) => a.date.localeCompare(b.date));
     return { ...emp, presentDays, absentDays, leaveDays, sickDays, lateDays, totalHours, notes };
   });

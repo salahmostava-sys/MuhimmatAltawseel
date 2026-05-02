@@ -79,7 +79,7 @@ export default function ProfileSettingsContent({ omitPageHeading = false }: Read
 
   const { data: profileData, isLoading: profileLoading, error: profileError, refetch: refetchProfile } = useQuery({
     queryKey: ['settings', 'profile', user?.id],
-    queryFn: () => settingsHubService.getProfileByUserId(user!.id),
+    queryFn: () => settingsHubService.getProfileByUserId(user?.id),
     enabled: !!user,
     staleTime: 60_000,
   });

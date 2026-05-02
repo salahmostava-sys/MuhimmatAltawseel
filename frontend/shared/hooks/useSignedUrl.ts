@@ -22,8 +22,12 @@ export const useSignedUrl = (bucket: string, path: string | null | undefined) =>
     gcTime: 10 * 60_000,
     retry: false,
     queryFn: async () => {
+      if (!path) {
+        logError('[useSignedUrl] missing path', new Error('path is null or undefined'), { meta: { bucket, path } });
+        throw new Error('Path is required to create signed URL');
+      }
       try {
-        return await storageService.createSignedUrl(bucket, path!, 300);
+        return await storageService.createSignedUrl(bucket, path, 300);
       } catch (error) {
         logError('[useSignedUrl] createSignedUrl failed', error, { meta: { bucket, path } });
         throw error;
