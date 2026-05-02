@@ -17,18 +17,18 @@ export const appService = {
   getAll: async () => {
     const { data, error } = await supabase
       .from('apps')
-      .select('id, name, name_en, brand_color, text_color, is_active, custom_columns, work_type')
+      .select('id, name, name_en, brand_color, text_color, is_active, is_archived, custom_columns, work_type')
+      .eq('is_archived', false)
       .order('name');
     if (error) handleSupabaseError(error, 'appService.getAll');
     return data ?? [];
   },
 
   getMonthlyApps: async (_monthYear: string) => {
-    // 1. Get all non-archived apps
     const { data: allApps, error: appsError } = await supabase
       .from('apps')
-      .select('id, name, name_en, brand_color, text_color, is_active, custom_columns, work_type')
-      // .eq('is_archived', false) // Table 'apps' might not have 'is_archived' yet either, checking types...
+      .select('id, name, name_en, brand_color, text_color, is_active, is_archived, custom_columns, work_type')
+      .eq('is_archived', false)
       .order('name');
     
     if (appsError) handleSupabaseError(appsError, 'appService.getMonthlyApps.apps');
@@ -166,7 +166,12 @@ export const appService = {
   },
 
   getActiveWithScheme: async () => {
-    const { data, error } = await supabase.from('apps').select('id, name, scheme_id').eq('is_active', true).order('name');
+    const { data, error } = await supabase
+      .from('apps')
+      .select('id, name, scheme_id')
+      .eq('is_active', true)
+      .eq('is_archived', false)
+      .order('name');
     if (error) handleSupabaseError(error, 'appService.getActiveWithScheme');
     return data ?? [];
   },
@@ -175,7 +180,8 @@ export const appService = {
     const { data, error } = await supabase
       .from('apps')
       .select('id, name, work_type, scheme_id, salary_schemes(id, name, name_en, status, scheme_type, monthly_amount, target_orders, target_bonus, salary_scheme_tiers(id, from_orders, to_orders, price_per_order, tier_order, tier_type, incremental_threshold, incremental_price))')
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .eq('is_archived', false);
     if (error) handleSupabaseError(error, 'appService.getActiveWithSalarySchemes');
     return data ?? [];
   },

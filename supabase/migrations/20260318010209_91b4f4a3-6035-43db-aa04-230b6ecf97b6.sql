@@ -1,5 +1,5 @@
 
-CREATE TABLE public.employee_tiers (
+CREATE TABLE IF NOT EXISTS public.employee_tiers (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
   package_type TEXT NOT NULL DEFAULT 'شريحة أساسية',

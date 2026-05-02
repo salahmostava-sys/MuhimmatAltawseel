@@ -1,4 +1,3 @@
-// @refresh reset
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { authService } from '@services/authService';
@@ -24,7 +23,16 @@ interface AuthContextType {
   signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({} as AuthContextType);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  session: null,
+  role: null,
+  loading: true,
+  authLoading: true,
+  recoverSessionSilently: async () => false,
+  signIn: async () => ({ error: { message: 'AuthContext not ready' } }),
+  signOut: async () => undefined,
+});
 const AUTH_SIGNIN_TIMEOUT_MS = 15_000;
 const AUTH_ACTIVE_CHECK_TIMEOUT_MS = 10_000;
 

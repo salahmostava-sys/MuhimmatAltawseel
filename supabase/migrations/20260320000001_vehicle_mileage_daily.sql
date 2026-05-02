@@ -1,6 +1,6 @@
 
 -- Daily fuel/km entries table
-CREATE TABLE public.vehicle_mileage_daily (
+CREATE TABLE IF NOT EXISTS public.vehicle_mileage_daily (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   employee_id uuid NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
   date date NOT NULL,

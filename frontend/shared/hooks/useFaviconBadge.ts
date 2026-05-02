@@ -93,7 +93,7 @@ export function useFaviconBadge(count: number) {
         ctx.fillText(badgeText, x, y + 1);
       }
 
-      link?.href = canvas.toDataURL('image/png');
+      if (link) link.href = canvas.toDataURL('image/png');
     };
 
     img.onerror = () => {
