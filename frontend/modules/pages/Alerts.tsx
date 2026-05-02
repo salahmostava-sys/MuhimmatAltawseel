@@ -242,13 +242,6 @@ const Alerts = () => {
     return matchType && matchSeverity && matchSearch && matchCr && !a.resolved;
   });
 
-  const residencySummary = commercialRecords.map(cr => {
-    const crAlerts = localAlerts.filter(a => a.type === 'residency' && !a.resolved && a.entityName.includes(`سجل: ${cr}`));
-    const expired = crAlerts.filter(a => a.daysLeft < 0).length;
-    const urgent = crAlerts.filter(a => a.daysLeft >= 0 && a.daysLeft <= 30).length;
-    return { cr, total: crAlerts.length, expired, urgent };
-  }).filter(s => s.total > 0);
-
   const resolved = localAlerts.filter(a => a.resolved);
 
   const urgentCount = filtered.filter(a => a.severity === 'urgent').length;

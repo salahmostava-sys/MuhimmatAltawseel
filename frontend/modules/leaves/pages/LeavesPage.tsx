@@ -8,7 +8,6 @@ import { useToast } from '@shared/hooks/use-toast';
 import { useAuth } from '@app/providers/AuthContext';
 import { leaveService, leaveTypeLabel, leaveStatusLabel, type LeaveRequest, type LeaveStatus } from '@services/leaveService';
 import { AddLeaveModal } from '../components/AddLeaveModal';
-import { format } from 'date-fns';
 
 const statusBadge: Record<LeaveStatus, string> = {
   pending:  'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',

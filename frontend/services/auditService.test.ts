@@ -14,13 +14,6 @@ vi.mock('@services/supabase/client', () => ({
   supabase: { from: fromMock },
 }));
 
-vi.mock('@services/serviceError', () => ({
-  toServiceError: vi.fn((error: unknown, context: string) => {
-    const message = error instanceof Error ? error.message : 'service error';
-    return new Error(`${context}: ${message}`);
-  }),
-}));
-
 const getCurrentUser = vi.fn();
 
 vi.mock('@services/authService', () => ({
@@ -49,11 +42,15 @@ describe('auditService', () => {
     expect(getCurrentUser).toHaveBeenCalled();
   });
 
-  it('logAdminAction throws on Supabase insert error', async () => {
+  it('logAdminAction swallows Supabase insert errors (non-fatal audit)', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     tableResults.admin_action_log = { data: null, error: new Error('rls denied') };
 
-    await expect(auditService.logAdminAction({ action: 'delete' })).rejects.toThrow(
-      'auditService.logAdminAction: rls denied',
+    await expect(auditService.logAdminAction({ action: 'delete' })).resolves.toBeUndefined();
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[auditService] logAdminAction failed (non-fatal):',
+      'rls denied',
     );
+    warnSpy.mockRestore();
   });
 });

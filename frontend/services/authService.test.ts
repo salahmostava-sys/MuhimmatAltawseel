@@ -1,17 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { invokeMock } = vi.hoisted(() => ({
-  invokeMock: vi.fn(),
+const { getSessionMock, fetchMock } = vi.hoisted(() => ({
+  getSessionMock: vi.fn(),
+  fetchMock: vi.fn(),
 }));
 
 vi.mock('./supabase/client', () => ({
   supabase: {
-    auth: {},
+    auth: {
+      getSession: (...args: unknown[]) => getSessionMock(...args),
+    },
     from: vi.fn(),
     channel: vi.fn(),
     removeChannel: vi.fn(),
     functions: {
-      invoke: invokeMock,
+      invoke: vi.fn(),
     },
   },
 }));
@@ -29,13 +32,18 @@ import { authService } from './authService';
 describe('authService admin user management', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getSessionMock.mockResolvedValue({
+      data: { session: { access_token: 'test-access-token' } },
+      error: null,
+    });
+    globalThis.fetch = fetchMock as typeof fetch;
   });
 
   it('createManagedUser sends create_user payload and returns the created user id', async () => {
-    invokeMock.mockResolvedValue({
-      data: { user_id: 'user-99' },
-      error: null,
-    });
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ user_id: 'user-99' }),
+    } as Response);
 
     const result = await authService.createManagedUser({
       name: 'Test User',
@@ -44,23 +52,26 @@ describe('authService admin user management', () => {
       role: 'operations',
     });
 
-    expect(invokeMock).toHaveBeenCalledWith('admin-update-user', {
-      body: {
+    expect(getSessionMock).toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledWith('/api/functions/admin-update-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-access-token' },
+      body: JSON.stringify({
         action: 'create_user',
         email: 'test@example.com',
         password: 'password123',
         name: 'Test User',
         role: 'operations',
-      },
+      }),
     });
     expect(result).toEqual({ user_id: 'user-99' });
   });
 
   it('createManagedUser rejects responses that omit the new user id', async () => {
-    invokeMock.mockResolvedValue({
-      data: { success: true },
-      error: null,
-    });
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true }),
+    } as Response);
 
     await expect(
       authService.createManagedUser({
@@ -73,15 +84,17 @@ describe('authService admin user management', () => {
   });
 
   it('deleteManagedUser sends delete_user payload', async () => {
-    invokeMock.mockResolvedValue({
-      data: { success: true },
-      error: null,
-    });
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true }),
+    } as Response);
 
     await authService.deleteManagedUser('user-7');
 
-    expect(invokeMock).toHaveBeenCalledWith('admin-update-user', {
-      body: { user_id: 'user-7', action: 'delete_user' },
+    expect(fetchMock).toHaveBeenCalledWith('/api/functions/admin-update-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-access-token' },
+      body: JSON.stringify({ user_id: 'user-7', action: 'delete_user' }),
     });
   });
 });

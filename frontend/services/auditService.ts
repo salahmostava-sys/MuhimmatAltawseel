@@ -1,6 +1,5 @@
 import { supabase } from '@services/supabase/client';
 import type { Json } from '@services/supabase/types';
-import { toServiceError } from '@services/serviceError';
 import { authService } from '@services/authService';
 
 export type AdminActionLogPayload = {

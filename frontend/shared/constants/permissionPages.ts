@@ -4,6 +4,9 @@
 export const PERMISSION_PAGE_ENTRIES: { key: string; labelAr: string; labelEn: string }[] = [
   { key: 'employees', labelAr: 'الموظفون', labelEn: 'Employees' },
   { key: 'attendance', labelAr: 'الحضور والانصراف', labelEn: 'Attendance' },
+  { key: 'leaves', labelAr: 'إدارة الإجازات', labelEn: 'Leaves' },
+  { key: 'documents', labelAr: 'متابعة الوثائق', labelEn: 'Documents' },
+  { key: 'performance_reviews', labelAr: 'تقييم الأداء', labelEn: 'Performance reviews' },
   { key: 'ai_analytics', labelAr: 'تحليلات ذكية', labelEn: 'AI analytics' },
   { key: 'finance_dashboard', labelAr: 'لوحة التحكم المالية', labelEn: 'Finance dashboard' },
   { key: 'orders', labelAr: 'الطلبات', labelEn: 'Orders' },
