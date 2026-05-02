@@ -40,8 +40,8 @@ export const getAppColor = (apps: AppColorData[], appName: string) => {
   const idx = Math.max(0, apps.findIndex((app) => app.name === appName));
   const app = apps.find((item) => item.name === appName);
   const brand = app?.brand_color || FALLBACK_COLORS[idx % FALLBACK_COLORS.length];
-  // Auto-detect contrast text instead of using stored text_color
-  const text = getContrastText(brand);
+  // Use stored text_color if available, fall back to auto-contrast detection
+  const text = app?.text_color || getContrastText(brand);
   return {
     bg: `${brand}22`,
     cellBg: `${brand}15`,
@@ -63,14 +63,18 @@ export const useAppColors = () => {
     notifyOnError: false,
     queryFn: async (): Promise<AppColorData[]> => {
       const apps = await appService.getAll();
-      return apps.map((app, index) => ({
-        id: app.id,
-        name: app.name,
-        brand_color: app.brand_color || FALLBACK_COLORS[index % FALLBACK_COLORS.length],
-        text_color: getContrastText(app.brand_color || FALLBACK_COLORS[index % FALLBACK_COLORS.length]),
-        is_active: app.is_active ?? true,
-        custom_columns: normalizeCustomColumns(app.custom_columns),
-      }));
+      return apps.map((app, index) => {
+        const brand = app.brand_color || FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+        return {
+          id: app.id,
+          name: app.name,
+          brand_color: brand,
+          // Use stored text_color if set; auto-detect contrast only as fallback
+          text_color: app.text_color || getContrastText(brand),
+          is_active: app.is_active ?? true,
+          custom_columns: normalizeCustomColumns(app.custom_columns),
+        };
+      });
     },
   });
 
