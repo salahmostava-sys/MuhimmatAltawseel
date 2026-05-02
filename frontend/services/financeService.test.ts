@@ -27,7 +27,7 @@ import { financeService } from './financeService';
 describe('financeService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(tableResults).forEach((k) => delete tableResults[k]);
+    tableResults = {};
   });
 
   describe('getByMonth', () => {

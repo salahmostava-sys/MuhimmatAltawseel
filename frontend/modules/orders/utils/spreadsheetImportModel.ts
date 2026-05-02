@@ -29,7 +29,7 @@ function clearEmployeeAppMonthData(
   dayArr: number[],
 ) {
   dayArr.forEach((day) => {
-    delete nextData[`${empId}::${appId}::${day}`];
+    nextData.delete(`${empId}::${appId}::${day}`);
   });
 }
 

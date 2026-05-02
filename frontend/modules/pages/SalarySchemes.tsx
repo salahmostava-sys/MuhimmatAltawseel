@@ -413,8 +413,8 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
   const setSchemeSnapshotYear = (schemeId: string, year: number) => {
     setSnapshotYearByScheme(prev => ({ ...prev, [schemeId]: year }));
     setPinSelectionByScheme(prev => {
-      const next = { ...prev };
-      delete next[schemeId];
+      const next = new Map(prev);
+      next.delete(schemeId);
       return next;
     });
   };
@@ -650,8 +650,8 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
                             disabled={busy}
                             onClick={() =>
                               setPinSelectionByScheme(prev => {
-                                const next = { ...prev };
-                                delete next[s.id];
+                                const next = new Map(prev);
+                                next.delete(s.id);
                                 return next;
                               })
                             }

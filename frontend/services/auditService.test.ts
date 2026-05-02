@@ -27,7 +27,7 @@ import { auditService } from './auditService';
 describe('auditService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(tableResults).forEach((k) => delete tableResults[k]);
+    tableResults.clear();
     getCurrentUser.mockResolvedValue({ id: 'user-1' } as User);
   });
 

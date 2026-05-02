@@ -27,7 +27,7 @@ import { advanceService } from './advanceService';
 describe('advanceService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(tableResults).forEach((k) => delete tableResults[k]);
+    tableResults.clear();
   });
 
   it('creates advance successfully', async () => {
