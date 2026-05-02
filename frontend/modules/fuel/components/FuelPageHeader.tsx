@@ -13,13 +13,9 @@ type FuelPageHeaderProps = {
   selectedYear: string;
   onYearChange: (v: string) => void;
   years: string[];
-  /** بحث، ملفات، إلخ — بجانب تبديل العرض والتاريخ */
   toolbarEnd?: ReactNode;
 };
 
-/**
- * رأس صفحة استهلاك المناديب: مسار تنقل، عنوان، تبديل عرض شهري/يومي، اختيار الشهر والسنة.
- */
 export function FuelPageHeader({
   view,
   onViewChange,

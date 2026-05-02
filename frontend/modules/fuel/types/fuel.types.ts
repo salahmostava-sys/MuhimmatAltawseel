@@ -1,6 +1,8 @@
 import type React from 'react';
 import { getErrorMessage } from '@services/serviceError';
 
+/* ─── Row Types ──────────────────────────────────────────────── */
+
 export type DailyRow = {
   id: string;
   employee_id: string;
@@ -38,16 +40,23 @@ export type ImportRow = {
   manual_employee_id?: string;
 };
 
+/* ─── Helper Types ───────────────────────────────────────────── */
+
 export const MONTHLY_SKELETON_ROWS = ['m1', 'm2', 'm3', 'm4', 'm5'];
+
 export type MonthlyOrderRow = { employee_id: string; orders_count: number };
 export type VehicleAssignmentRow = { employee_id: string; vehicles?: { plate_number: string; type: string; brand?: string | null; model?: string | null } };
+
 export type DailyMileageAggSource = {
   employee_id: string;
   km_total: number;
   fuel_cost: number;
   employees?: { name: string; personal_photo_url?: string | null };
 };
+
 export type MonthlyAgg = { km: number; fuel: number; count: number; name: string; photo?: string | null };
+
+/* ─── Utility Functions ──────────────────────────────────────── */
 
 export const getErrorMessageOrFallback = (err: unknown, fallback: string): string =>
   getErrorMessage(err, fallback);
@@ -148,7 +157,8 @@ export const toCellString = (value: unknown): string => {
   return '';
 };
 
-/** Daily fuel/km — table public.vehicle_mileage_daily (not fuel_logs) */
+/* ─── Save Helper ────────────────────────────────────────────── */
+
 export async function saveVehicleMileageDaily(
   payload: { employee_id: string; date: string; km_total: number; fuel_cost: number; notes: string | null },
   upsertDailyMileage: (payload: { employee_id: string; date: string; km_total: number; fuel_cost: number; notes: string | null }, editId?: string) => Promise<unknown>,
@@ -157,8 +167,12 @@ export async function saveVehicleMileageDaily(
   await upsertDailyMileage(payload, editId);
 }
 
+/* ─── Constants ──────────────────────────────────────────────── */
+
 export const DAY_NAMES = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 export const IMPORT_STEPS: ImportStep[] = [1, 2, 3];
+
+/* ─── Expanded Daily Args ────────────────────────────────────── */
 
 export type DailyExpandedArgs = {
   days: DailyRow[];
