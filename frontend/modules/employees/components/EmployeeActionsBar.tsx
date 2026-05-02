@@ -75,8 +75,8 @@ export function EmployeeActionsBar({
         </div>
         {uploadReport.errors.length > 0 && (
           <div className="max-h-36 overflow-y-auto rounded border border-rose-200 bg-rose-50/40 p-2 space-y-1">
-            {uploadReport.errors.map((error, idx) => (
-              <div key={`${error.rowIndex}-floating-${idx}`} className="text-rose-700">
+            {uploadReport.errors.map((error) => (
+              <div key={error.rowIndex} className="text-rose-700">
                 السطر {error.rowIndex}: {error.issue}
               </div>
             ))}

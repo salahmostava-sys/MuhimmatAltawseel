@@ -125,9 +125,9 @@ export function useEmployeeActions(params: {
 
   const setColFilter = useCallback((key: string, value: string) => {
     setColFilters(prev => {
-      const next = { ...prev };
-      if (!value || value === 'all') delete next[key];
-      else next[key] = value;
+      const next = new Map(prev);
+      if (!value || value === 'all') next.delete(key);
+      else next.set(key, value);
       return next;
     });
   }, [setColFilters]);
@@ -269,7 +269,7 @@ export function useEmployeeActions(params: {
     }
   };
 
-  const runPrintDetailed = async () => {
+  const runPrintDetailed = () => {
     setActionLoading(true);
     try {
       handlePrint();

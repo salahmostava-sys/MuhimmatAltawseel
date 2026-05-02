@@ -2,19 +2,8 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { FileText, Search, AlertTriangle, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { useAuthQueryGate, authQueryUserId } from '@shared/hooks/useAuthQueryGate';
-import { supabase } from '@services/supabase/client';
+import { documentService, type EmployeeDoc } from '@services/documentService';
 import { differenceInDays, parseISO } from 'date-fns';
-
-interface EmployeeDoc {
-  id: string;
-  name: string;
-  job_title: string | null;
-  status: string;
-  residency_expiry: string | null;
-  probation_end_date: string | null;
-  health_insurance_expiry: string | null;
-  license_expiry: string | null;
-}
 
 type DocStatus = 'expired' | 'urgent' | 'warning' | 'ok' | 'missing';
 
@@ -74,15 +63,7 @@ const DocumentsPage = () => {
     queryKey: ['documents-employees', uid],
     enabled,
     staleTime: 2 * 60_000,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('id, name, job_title, status, residency_expiry, probation_end_date, health_insurance_expiry, license_expiry')
-        .eq('status', 'active')
-        .order('name');
-      if (error) throw error;
-      return (data ?? []) as EmployeeDoc[];
-    },
+    queryFn: () => documentService.getActiveEmployeeDocs(),
   });
 
   const needsAttention = (emp: EmployeeDoc) =>

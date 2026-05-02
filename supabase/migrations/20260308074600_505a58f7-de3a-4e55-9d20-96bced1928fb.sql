@@ -1,5 +1,5 @@
 -- Create vehicle_mileage table
-CREATE TABLE public.vehicle_mileage (
+CREATE TABLE IF NOT EXISTS public.vehicle_mileage (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   employee_id uuid NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
   month_year text NOT NULL,

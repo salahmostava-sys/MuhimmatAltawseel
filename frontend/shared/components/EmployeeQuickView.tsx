@@ -132,8 +132,8 @@ export function EmployeeQuickView({ employeeId, open, onClose }: Props) {
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {loading ? (
             <div className="space-y-4">
-              {Array.from({ length: 7 }).map((_, i) => (
-                <Skeleton key={i} className="h-6 w-full rounded-lg" />
+              {['s1','s2','s3','s4','s5','s6','s7'].map((key) => (
+                <Skeleton key={key} className="h-6 w-full rounded-lg" />
               ))}
             </div>
           ) : data ? (

@@ -31,7 +31,7 @@ import * as maintenanceService from './maintenanceService';
 describe('maintenanceService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(tableResults).forEach((k) => delete tableResults[k]);
+    tableResults.clear();
     fromMock.mockImplementation((table: string) =>
       createQueryBuilder(tableResults[table] ?? { data: null, error: null }),
     );

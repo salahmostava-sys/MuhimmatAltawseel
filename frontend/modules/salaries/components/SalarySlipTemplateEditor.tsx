@@ -229,7 +229,7 @@ export function SalarySlipTemplateEditor() {
                   className="h-7 w-7 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDelete(t.id!);
+                    if (t.id) handleDelete(t.id);
                   }}
                 >
                   <Trash2 size={14} />

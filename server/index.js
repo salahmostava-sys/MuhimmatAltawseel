@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
+import { isUuid, isValidMonth, VALID_ROLES } from './lib/validation.js';
 
 const app = express();
 const PORT = process.env.SERVER_PORT || 3001;
@@ -9,11 +10,24 @@ const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const AI_INTERNAL_KEY = process.env.AI_INTERNAL_KEY;
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const DEFAULT_GROQ_MODEL = process.env.GROQ_MODEL || 'llama3-8b-8192';
 
+// Allowed CORS origins — comma-separated list via env var
+const ALLOWED_ORIGINS = (
+  process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:5000,http://localhost:3000'
+)
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 app.use(cors({
-  origin: true,
+  origin: (origin, callback) => {
+    // Allow server-to-server calls (no Origin header) and listed origins
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin '${origin}' not in ALLOWED_ORIGINS`));
+  },
   credentials: true,
   allowedHeaders: ['Authorization', 'Content-Type', 'x-client-info', 'apikey'],
 }));
@@ -21,10 +35,6 @@ app.use(express.json({ limit: '2mb' }));
 
 const logInfo = (msg, meta = {}) => console.log(JSON.stringify({ level: 'info', message: msg, ...meta, ts: new Date().toISOString() }));
 const logError = (msg, meta = {}) => console.error(JSON.stringify({ level: 'error', message: msg, ...meta, ts: new Date().toISOString() }));
-
-const isUuid = (v) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
-const isValidMonth = (v) => /^\d{4}-(0[1-9]|1[0-2])$/.test(v);
-const VALID_ROLES = new Set(['admin', 'hr', 'finance', 'operations', 'viewer']);
 
 function getCallerClient(authHeader) {
   return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -548,10 +558,21 @@ app.post('/api/functions/ai-chat', async (req, res) => {
   }
 });
 
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+// ── Startup checks ────────────────────────────────────────────────────────────
+if (IS_PRODUCTION && !AI_INTERNAL_KEY) {
+  console.error('[server] FATAL: AI_INTERNAL_KEY must be set in production.');
+  console.error('[server] Generate one with: openssl rand -hex 32');
+  process.exit(1);
+}
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[server] Muhimmat API server running on port ${PORT}`);
+  console.log(`[server] CORS allowed origins: ${ALLOWED_ORIGINS.join(', ')}`);
   if (!SUPABASE_URL) console.warn('[server] WARNING: SUPABASE_URL not set');
   if (!SUPABASE_ANON_KEY) console.warn('[server] WARNING: SUPABASE_ANON_KEY not set');
   if (!SUPABASE_SERVICE_ROLE_KEY) console.warn('[server] WARNING: SUPABASE_SERVICE_ROLE_KEY not set');
   if (!GROQ_API_KEY) console.warn('[server] WARNING: GROQ_API_KEY not set — AI features disabled');
+  if (!AI_INTERNAL_KEY) console.warn('[server] WARNING: AI_INTERNAL_KEY not set — set in production via env');
 });

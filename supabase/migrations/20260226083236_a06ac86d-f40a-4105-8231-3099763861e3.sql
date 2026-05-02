@@ -18,7 +18,7 @@ CREATE TYPE public.scheme_status AS ENUM ('active', 'archived');
 -- ============================================================
 -- PROFILES (linked to auth.users)
 -- ============================================================
-CREATE TABLE public.profiles (
+CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT,
   name TEXT,
@@ -32,7 +32,7 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 -- ============================================================
 -- USER ROLES (separate table — no privilege escalation)
 -- ============================================================
-CREATE TABLE public.user_roles (
+CREATE TABLE IF NOT EXISTS public.user_roles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   role public.app_role NOT NULL,
@@ -62,7 +62,7 @@ $$;
 -- ============================================================
 -- USER PERMISSIONS (per-page overrides)
 -- ============================================================
-CREATE TABLE public.user_permissions (
+CREATE TABLE IF NOT EXISTS public.user_permissions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   permission_key TEXT NOT NULL,
@@ -76,7 +76,7 @@ ALTER TABLE public.user_permissions ENABLE ROW LEVEL SECURITY;
 -- ============================================================
 -- TRADE REGISTERS
 -- ============================================================
-CREATE TABLE public.trade_registers (
+CREATE TABLE IF NOT EXISTS public.trade_registers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   name_en TEXT,
@@ -89,7 +89,7 @@ ALTER TABLE public.trade_registers ENABLE ROW LEVEL SECURITY;
 -- ============================================================
 -- APPS (delivery platforms)
 -- ============================================================
-CREATE TABLE public.apps (
+CREATE TABLE IF NOT EXISTS public.apps (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   name_en TEXT,
@@ -102,7 +102,7 @@ ALTER TABLE public.apps ENABLE ROW LEVEL SECURITY;
 -- ============================================================
 -- SALARY SCHEMES
 -- ============================================================
-CREATE TABLE public.salary_schemes (
+CREATE TABLE IF NOT EXISTS public.salary_schemes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   name_en TEXT,
@@ -114,7 +114,7 @@ CREATE TABLE public.salary_schemes (
 );
 ALTER TABLE public.salary_schemes ENABLE ROW LEVEL SECURITY;
 
-CREATE TABLE public.salary_scheme_tiers (
+CREATE TABLE IF NOT EXISTS public.salary_scheme_tiers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   scheme_id UUID NOT NULL REFERENCES public.salary_schemes(id) ON DELETE CASCADE,
   tier_order INT NOT NULL DEFAULT 1,
@@ -128,7 +128,7 @@ ALTER TABLE public.salary_scheme_tiers ENABLE ROW LEVEL SECURITY;
 -- ============================================================
 -- EMPLOYEES
 -- ============================================================
-CREATE TABLE public.employees (
+CREATE TABLE IF NOT EXISTS public.employees (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   name_en TEXT,
@@ -152,7 +152,7 @@ CREATE TABLE public.employees (
 ALTER TABLE public.employees ENABLE ROW LEVEL SECURITY;
 
 -- Employee scheme assignment
-CREATE TABLE public.employee_scheme (
+CREATE TABLE IF NOT EXISTS public.employee_scheme (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
   scheme_id UUID NOT NULL REFERENCES public.salary_schemes(id),
@@ -162,7 +162,7 @@ CREATE TABLE public.employee_scheme (
 ALTER TABLE public.employee_scheme ENABLE ROW LEVEL SECURITY;
 
 -- Employee apps
-CREATE TABLE public.employee_apps (
+CREATE TABLE IF NOT EXISTS public.employee_apps (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
   app_id UUID NOT NULL REFERENCES public.apps(id),
@@ -176,7 +176,7 @@ ALTER TABLE public.employee_apps ENABLE ROW LEVEL SECURITY;
 -- ============================================================
 -- VEHICLES
 -- ============================================================
-CREATE TABLE public.vehicles (
+CREATE TABLE IF NOT EXISTS public.vehicles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   plate_number TEXT UNIQUE NOT NULL,
   type public.vehicle_type NOT NULL DEFAULT 'motorcycle',
@@ -192,7 +192,7 @@ CREATE TABLE public.vehicles (
 );
 ALTER TABLE public.vehicles ENABLE ROW LEVEL SECURITY;
 
-CREATE TABLE public.vehicle_assignments (
+CREATE TABLE IF NOT EXISTS public.vehicle_assignments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   vehicle_id UUID NOT NULL REFERENCES public.vehicles(id) ON DELETE CASCADE,
   employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
@@ -205,7 +205,7 @@ CREATE TABLE public.vehicle_assignments (
 );
 ALTER TABLE public.vehicle_assignments ENABLE ROW LEVEL SECURITY;
 
-CREATE TABLE public.maintenance_logs (
+CREATE TABLE IF NOT EXISTS public.maintenance_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   vehicle_id UUID NOT NULL REFERENCES public.vehicles(id) ON DELETE CASCADE,
   type public.maintenance_type NOT NULL DEFAULT 'routine',
@@ -222,7 +222,7 @@ ALTER TABLE public.maintenance_logs ENABLE ROW LEVEL SECURITY;
 -- ============================================================
 -- ATTENDANCE
 -- ============================================================
-CREATE TABLE public.attendance (
+CREATE TABLE IF NOT EXISTS public.attendance (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
   date DATE NOT NULL,
@@ -239,7 +239,7 @@ ALTER TABLE public.attendance ENABLE ROW LEVEL SECURITY;
 -- ============================================================
 -- DAILY ORDERS
 -- ============================================================
-CREATE TABLE public.daily_orders (
+CREATE TABLE IF NOT EXISTS public.daily_orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
   date DATE NOT NULL,
@@ -255,7 +255,7 @@ ALTER TABLE public.daily_orders ENABLE ROW LEVEL SECURITY;
 -- ============================================================
 -- ADVANCES
 -- ============================================================
-CREATE TABLE public.advances (
+CREATE TABLE IF NOT EXISTS public.advances (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
   amount NUMERIC(10,2) NOT NULL,
@@ -271,7 +271,7 @@ CREATE TABLE public.advances (
 );
 ALTER TABLE public.advances ENABLE ROW LEVEL SECURITY;
 
-CREATE TABLE public.advance_installments (
+CREATE TABLE IF NOT EXISTS public.advance_installments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   advance_id UUID NOT NULL REFERENCES public.advances(id) ON DELETE CASCADE,
   month_year TEXT NOT NULL,
@@ -284,7 +284,7 @@ ALTER TABLE public.advance_installments ENABLE ROW LEVEL SECURITY;
 -- ============================================================
 -- EXTERNAL DEDUCTIONS
 -- ============================================================
-CREATE TABLE public.external_deductions (
+CREATE TABLE IF NOT EXISTS public.external_deductions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
   source_app_id UUID REFERENCES public.apps(id),
@@ -302,7 +302,7 @@ ALTER TABLE public.external_deductions ENABLE ROW LEVEL SECURITY;
 -- ============================================================
 -- SALARY RECORDS
 -- ============================================================
-CREATE TABLE public.salary_records (
+CREATE TABLE IF NOT EXISTS public.salary_records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
   month_year TEXT NOT NULL,
@@ -326,7 +326,7 @@ ALTER TABLE public.salary_records ENABLE ROW LEVEL SECURITY;
 -- ============================================================
 -- P&L RECORDS
 -- ============================================================
-CREATE TABLE public.pl_records (
+CREATE TABLE IF NOT EXISTS public.pl_records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   month_year TEXT NOT NULL UNIQUE,
   revenue_riders NUMERIC(10,2) NOT NULL DEFAULT 0,
@@ -344,7 +344,7 @@ ALTER TABLE public.pl_records ENABLE ROW LEVEL SECURITY;
 -- ============================================================
 -- ALERTS
 -- ============================================================
-CREATE TABLE public.alerts (
+CREATE TABLE IF NOT EXISTS public.alerts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   type TEXT NOT NULL,
   entity_id UUID,
@@ -359,7 +359,7 @@ ALTER TABLE public.alerts ENABLE ROW LEVEL SECURITY;
 -- ============================================================
 -- AUDIT LOG
 -- ============================================================
-CREATE TABLE public.audit_log (
+CREATE TABLE IF NOT EXISTS public.audit_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id),
   action TEXT NOT NULL,

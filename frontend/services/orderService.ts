@@ -93,7 +93,7 @@ function getBulkUpsertErrorMessage(error: unknown): string {
   return String(error ?? 'خطأ غير معروف');
 }
 
-async function upsertDailyOrderRows(rows: DailyOrderUpsertRow[]) {
+function upsertDailyOrderRows(rows: DailyOrderUpsertRow[]) {
   return supabase.from('daily_orders').upsert(rows, { onConflict: DAILY_ORDERS_UPSERT_CONFLICT });
 }
 

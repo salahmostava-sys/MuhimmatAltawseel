@@ -25,7 +25,7 @@ import { violationService } from './violationService';
 describe('violationService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(tableResults).forEach((k) => delete tableResults[k]);
+    tableResults.clear();
   });
 
   it('getViolations returns rows on success', async () => {

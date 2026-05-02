@@ -60,3 +60,18 @@ export function validateNationalID(nationalID: string): boolean {
   }
   return true;
 }
+
+/** Returns true if v is a valid RFC-4122 UUID (versions 1-5). */
+export function isUuid(v: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
+}
+
+/** Returns true if v matches YYYY-MM (valid calendar month). */
+export function isValidMonth(v: string): boolean {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(v);
+}
+
+/** Returns true if v matches YYYY-MM-DD (basic calendar date). */
+export function isValidDate(v: string): boolean {
+  return /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(v);
+}

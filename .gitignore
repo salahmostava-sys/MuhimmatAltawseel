@@ -51,7 +51,6 @@ artifacts/
 prompt.md
 *.prompt
 /src/
-attached_assets/*.env
 
 # IDE / local tool configs
 .sonarlint/
@@ -63,3 +62,22 @@ maestro/
 __pycache__/
 *.pyc
 .circleci/
+
+# Replit agent — skills, tasks, session data (not part of the app)
+.local/
+
+# Replit attached paste files (auto-generated, not part of the codebase)
+attached_assets/
+
+# Replit environment config (not needed on GitHub)
+.replit
+
+# Auto-generated reports (not part of the codebase)
+REPO_CLEANUP_REPORT.md
+
+# Lockfiles from other package managers (project uses npm)
+frontend/bun.lock
+bun.lock
+bun.lockb
+yarn.lock
+pnpm-lock.yaml

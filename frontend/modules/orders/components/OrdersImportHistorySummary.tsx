@@ -126,8 +126,8 @@ export function OrdersImportHistorySummary(props: Readonly<OrdersImportHistorySu
                     <span className="text-xs font-semibold text-rose-700">تفاصيل الأخطاء:</span>
                   </div>
                   <ul className="space-y-1">
-                    {batch.error_summary.map((err, idx) => (
-                      <li key={idx} className="text-[11px] text-rose-600">
+                    {batch.error_summary.map((err) => (
+                      <li key={`${err.row}-${err.reason}-${err.details || ''}`} className="text-[11px] text-rose-600">
                         {err.row ? `الصف ${err.row}: ` : ''}{err.reason}
                         {err.details ? ` (${err.details})` : ''}
                       </li>

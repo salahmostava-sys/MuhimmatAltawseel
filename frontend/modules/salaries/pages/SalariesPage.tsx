@@ -140,20 +140,27 @@ const Salaries = () => {
   // Runs on phase1 finish AND phase2 finish (rows update silently with preview).
   // rows lives in local state so useSalaryActions can mutate it (dirty/approve/etc.)
   //
-  // TECH DEBT (ISSUE #7): This useEffect→useState sync is an anti-pattern. Ideally,
-  // rows should be derived directly from React Query data with mutations going through
-  // queryClient.setQueryData. This would eliminate the sync window where local state
-  // is stale while query data is fresh. Refactoring to useReducer or useImmer would
-  // also work. For now, the ref identity guard below keeps the window minimal.
-  //
-  // FIX: we do NOT list hydratedRows as dep — it's a new array reference on every
-  // render. Instead we sync whenever loadingData transitions false→false (i.e. new
-  // data arrived). We detect this by checking hydratedRows identity against a ref.
+  // NOTE (ISSUE #7): rows in local state is intentional — useSalaryActions needs
+  // setRows for optimistic order-entry and approve mutations. A full migration to
+  // queryClient.setQueryData would require threading the fullDataKey through every
+  // action hook. For now the ref guard below keeps the stale-data window minimal,
+  // and dirty-row preservation prevents query refreshes from overwriting in-progress edits.
   const lastHydratedRowsRef = useRef<typeof hydratedRows | null>(null);
   useEffect(() => {
     if (!loadingData && hydratedRows !== lastHydratedRowsRef.current) {
       lastHydratedRowsRef.current = hydratedRows;
-      setRows(hydratedRows);
+
+      // Preserve any rows the user has already edited (isDirty=true).
+      // When a realtime or phase-2 refresh arrives, non-dirty rows update
+      // immediately; dirty rows keep the user's local edits until they approve.
+      setRows((prev) => {
+        const dirtyById = new Map(
+          prev.filter((r) => r.isDirty).map((r) => [r.id, r]),
+        );
+        if (dirtyById.size === 0) return hydratedRows;
+        return hydratedRows.map((fresh) => dirtyById.get(fresh.id) ?? fresh);
+      });
+
       setEmpPlatformScheme(builtEmpPlatformScheme);
       setSalaryMeta({
         appIdByName: appNameToId,

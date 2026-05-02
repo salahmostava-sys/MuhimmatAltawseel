@@ -54,8 +54,8 @@ vi.mock('@app/providers/AuthContext', () => ({
     role: 'admin',
     loading: false,
     authLoading: false,
-    recoverSessionSilently: async () => true,
-    signIn: async () => ({ error: null }),
+    recoverSessionSilently: () => Promise.resolve(true),
+    signIn: () => Promise.resolve({ error: null }),
     signOut: async () => {},
   }),
 }));

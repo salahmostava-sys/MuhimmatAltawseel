@@ -1,11 +1,10 @@
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@app/providers/AuthContext';
 import { ReactNode, useEffect, useState } from 'react';
-import { Button } from '@shared/components/ui/button';
 import Loading from '@shared/components/Loading';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
-  const { session, role, loading, signOut, recoverSessionSilently } = useAuth();
+  const { session, loading, recoverSessionSilently } = useAuth();
   const [checkingRecovery, setCheckingRecovery] = useState(false);
   const location = useLocation();
 
@@ -26,26 +25,9 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
     return <Loading minHeightClassName="min-h-screen" className="bg-background" resetKey={resetKey} />;
   }
 
-  // Redirect is centralized in AuthProvider to avoid multi-redirect races.
   if (!session) {
     const resetKey = `${location.pathname}${location.search}`;
     return <Loading minHeightClassName="min-h-screen" className="bg-background" resetKey={resetKey} />;
-  }
-
-  if (!role) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-6" dir="rtl">
-        <div className="max-w-md text-center space-y-4">
-          <h1 className="text-xl font-semibold text-foreground">بانتظار تعيين الدور</h1>
-          <p className="text-sm text-muted-foreground">
-            لم يُعيَّن بعد دور لحسابك في النظام. بعد أن يفعّلك مدير النظام ويحدد صلاحيتك ستتمكن من الاستخدام.
-          </p>
-          <Button type="button" variant="outline" onClick={() => void signOut()}>
-            تسجيل الخروج
-          </Button>
-        </div>
-      </div>
-    );
   }
 
   return <>{children}</>;

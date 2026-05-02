@@ -245,8 +245,8 @@ const ReturnModal = ({
 // ─── Skeleton Row ─────────────────────────────────────────────────────────────
 const SkeletonRow = () => (
   <tr className="border-b border-border/30">
-    {Array.from({ length: 7 }).map((_, i) => (
-      <td key={`assignment-skeleton-cell-${i}`} className="px-3 py-3"><Skeleton className="h-4 w-full" /></td>
+    {['assignment-skeleton-cell-1', 'assignment-skeleton-cell-2', 'assignment-skeleton-cell-3', 'assignment-skeleton-cell-4', 'assignment-skeleton-cell-5', 'assignment-skeleton-cell-6', 'assignment-skeleton-cell-7'].map((cellKey) => (
+      <td key={cellKey} className="px-3 py-3"><Skeleton className="h-4 w-full" /></td>
     ))}
   </tr>
 );
@@ -464,7 +464,7 @@ const VehicleAssignment = () => {
             </thead>
             <tbody>
               {loading ? (
-                Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={`assignment-skeleton-row-${i}`} />)
+                Array.from({ length: 5 }, (_, i) => `assignment-skeleton-row-${i}`).map((key) => <SkeletonRow key={key} />)
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-16">

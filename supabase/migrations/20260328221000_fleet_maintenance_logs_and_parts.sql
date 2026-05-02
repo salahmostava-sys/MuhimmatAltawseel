@@ -10,7 +10,7 @@ DROP POLICY IF EXISTS "Authenticated can view maintenance_logs" ON public.mainte
 
 ALTER TABLE IF EXISTS public.maintenance_logs RENAME TO maintenance_logs_legacy_pre_fleet;
 
-CREATE TABLE public.maintenance_logs (
+CREATE TABLE IF NOT EXISTS public.maintenance_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   vehicle_id UUID NOT NULL REFERENCES public.vehicles(id) ON DELETE CASCADE,
   employee_id UUID REFERENCES public.employees(id) ON DELETE SET NULL,
@@ -29,7 +29,7 @@ CREATE TABLE public.maintenance_logs (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE public.maintenance_parts (
+CREATE TABLE IF NOT EXISTS public.maintenance_parts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   maintenance_log_id UUID NOT NULL REFERENCES public.maintenance_logs(id) ON DELETE CASCADE,
   part_id UUID NOT NULL REFERENCES public.spare_parts(id) ON DELETE RESTRICT,

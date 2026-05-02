@@ -73,10 +73,35 @@ A delivery operations management platform with a React frontend and a FastAPI AI
 
 ## Pending SQL to Run in Supabase
 
-Run these two files in **Supabase → SQL Editor** for the new modules to work:
+Run all of these in **Supabase → SQL Editor** in order:
 1. `supabase/migrations/20260503000000_leave_requests.sql`
 2. `supabase/migrations/20260503000001_performance_reviews.sql`
+3. `supabase/migrations/20260503000002_fix_security_warnings_v2.sql`
+4. `supabase/migrations/20260503000003_allow_negative_hours_worked.sql`
+5. `supabase/migrations/20260503000004_add_is_archived_to_apps.sql` ← **new**
 
-Previously pending (from earlier sessions):
-3. `supabase/migrations/20260501000000_fix_security_warnings.sql`
-4. `supabase/migrations/20260502000000_flip_admin_rider_logic.sql`
+## Bug Fixes Applied (Latest Session)
+
+### Critical Crashes Fixed
+- **`recoverSessionSilently is not a function`**: Removed `// @refresh reset` from `AuthContext.tsx` (it caused full module reload, leaving `useAuth()` returning the empty default object during HMR transition). Added typed stub functions as the context default value.
+- **`Cannot assign to this expression`**: `link?.href =` in `useFaviconBadge.ts` changed to `if (link) link.href =` (optional-chaining is invalid on LHS in oxc/Vite).
+
+### Migrations — IF NOT EXISTS Safety
+Added `CREATE TABLE IF NOT EXISTS` to 6 historical migration files so fresh deployments don't fail if tables pre-exist:
+- `20260226083236_a06ac86d...sql` (22 tables — foundation schema)
+- `20260308074600_505a58f7...sql` (vehicle_mileage)
+- `20260318010209_91b4f4a3...sql` (employee_tiers)
+- `20260320000001_vehicle_mileage_daily.sql`
+- `20260328220000_fleet_spare_parts.sql`
+- `20260328221000_fleet_maintenance_logs_and_parts.sql`
+
+### Apps `is_archived` Column (#5)
+- New migration `20260503000004_add_is_archived_to_apps.sql` adds `is_archived BOOLEAN DEFAULT false`.
+- `appService.ts`: all query methods now filter `.eq('is_archived', false)`; `getAll` and `getMonthlyApps` include `is_archived` in the select list.
+
+### SalariesPage Dirty-Row Protection (#3 partial)
+- `SalariesPage.tsx` `useEffect` sync now preserves rows with `isDirty=true` when a background realtime or phase-2 refresh arrives, preventing in-progress edits from being overwritten.
+
+### Known Remaining Debt
+- `SalariesPage` full migration to `queryClient.setQueryData` (ISSUE #7) — still deferred; dirty-row preservation above mitigates the main runtime impact.
+- 3 pairs of duplicate migration timestamps (historical, already applied — do not rename): `20260327120000`, `20260403000000`, `20260407000000`.

@@ -1,6 +1,6 @@
 import { Suspense, lazy, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2, CalendarDays } from 'lucide-react';
+import { Loader2, CalendarDays, BarChart2, Table2 } from 'lucide-react';
 import { Input } from '@shared/components/ui/input';
 import { Button } from '@shared/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@shared/components/ui/dialog';
@@ -27,6 +27,7 @@ import { EmployeeDetailedTable } from '@modules/employees/components/EmployeeTab
 import { useEmployeeActions } from '@modules/employees/hooks/useEmployeeTable';
 import Loading from '@shared/components/Loading';
 import CommercialRecordsManager from '@shared/components/employees/CommercialRecordsManager';
+import { EmployeeKPIs } from '@modules/employees/components/EmployeeKPIs';
 import {
   ALL_COLUMNS, DEFAULT_HIDDEN_COLS,
   type Employee, type SortDir, type ColKey,
@@ -64,6 +65,7 @@ const Employees = () => {
     error: employeesError,
     refetch: refetchEmployees,
   } = useEmployeesData();
+  const [activeTab, setActiveTab] = useState<'table' | 'kpi'>('table');
   const [sortField, setSortField] = useState<string | null>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [visibleCols, setVisibleCols] = useState<Set<ColKey>>(() => {
@@ -269,6 +271,42 @@ const Employees = () => {
         </div>
       )}
 
+      {/* ── Tab switcher ── */}
+      <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit">
+        <button
+          type="button"
+          onClick={() => setActiveTab('table')}
+          className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+            activeTab === 'table'
+              ? 'bg-background shadow-sm text-foreground'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Table2 size={15} />
+          جدول الموظفين
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('kpi')}
+          className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+            activeTab === 'kpi'
+              ? 'bg-background shadow-sm text-foreground'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <BarChart2 size={15} />
+          مؤشرات الأداء
+        </button>
+      </div>
+
+      {/* ── KPI tab ── */}
+      {activeTab === 'kpi' && (
+        <EmployeeKPIs allEmployees={allEmployeesData as Employee[]} />
+      )}
+
+      {/* ── Table tab ── */}
+      {activeTab === 'table' && (
+        <>
       <EmployeeActionsBar
         actionLoading={actionLoading}
         permissions={permissions}
@@ -292,7 +330,6 @@ const Employees = () => {
         filteredCount={filtered.length}
         totalCount={data.length}
       />
-
 
       <EmployeeDetailedTable
         activeCols={activeCols}
@@ -404,6 +441,8 @@ const Employees = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </>
+      )}
 
     </div>
   );

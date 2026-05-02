@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import AppSidebar from './AppSidebar';
+import ErrorBoundary from './ErrorBoundary';
 import { useLanguage } from '@app/providers/LanguageContext';
 import { useAuth } from '@app/providers/AuthContext';
 import { useSystemSettings } from '@app/providers/SystemSettingsContext';
@@ -115,7 +116,9 @@ const AppLayoutInner = ({ children }: AppLayoutProps) => { // NOSONAR: layout wi
       dir={isRTL ? 'rtl' : 'ltr'}
       style={{ background: 'var(--ds-surface)' }}
     >
-      <AppSidebar />
+      <ErrorBoundary>
+        <AppSidebar />
+      </ErrorBoundary>
 
       <main className={cn(
         'flex flex-col transition-all duration-300',
@@ -151,19 +154,7 @@ const AppLayoutInner = ({ children }: AppLayoutProps) => { // NOSONAR: layout wi
               className="flex items-center gap-2.5 min-w-0 rounded-xl py-1 ps-1 -ms-1 hover:opacity-90 transition-opacity"
               title={projectSubtitle || projectName}
             >
-              {settings?.logo_url ? (
-                <img
-                  src={brandLogoSrc(settings.logo_url, settings.updated_at)}
-                  alt=""
-                  className="h-10 w-10 sm:h-11 sm:w-11 rounded-full object-cover border-2 border-border/80 bg-card shadow-sm shrink-0"
-                />
-              ) : (
-                <div
-                  className="h-10 w-10 sm:h-11 sm:w-11 rounded-full flex items-center justify-center text-lg sm:text-xl shrink-0 border-2 border-border/80 shadow-sm bg-gradient-to-br from-primary to-primary/80 text-primary-foreground"
-                >
-                  🚀
-                </div>
-              )}
+              <MobileLogo logoSrc={brandLogoSrc(settings?.logo_url, settings?.updated_at)} />
               <div className="hidden sm:flex flex-col min-w-0 text-start leading-tight">
                 <span className="font-bold text-foreground text-sm sm:text-base truncate max-w-[9rem] sm:max-w-[14rem]">
                   {projectName}
@@ -325,5 +316,24 @@ const AppLayout = ({ children }: AppLayoutProps) => (
     <AppLayoutInner>{children}</AppLayoutInner>
   </MobileSidebarProvider>
 );
+
+function MobileLogo({ logoSrc }: { logoSrc?: string }) {
+  const [failed, setFailed] = useState(false);
+  if (logoSrc && !failed) {
+    return (
+      <img
+        src={logoSrc}
+        alt=""
+        className="h-10 w-10 sm:h-11 sm:w-11 rounded-full object-cover border-2 border-border/80 bg-card shadow-sm shrink-0"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-full flex items-center justify-center text-lg sm:text-xl shrink-0 border-2 border-border/80 shadow-sm bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
+      🚀
+    </div>
+  );
+}
 
 export default AppLayout;

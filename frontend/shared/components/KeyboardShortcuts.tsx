@@ -173,7 +173,7 @@ export function KeyboardShortcuts() {
                 </div>
                 <kbd className="inline-flex items-center gap-0.5 rounded-md border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px] font-medium text-muted-foreground shadow-sm">
                   {s.keys.map((k, i) => (
-                    <span key={i}>
+                    <span key={k}>
                       {i > 0 && <span className="mx-0.5 opacity-40">+</span>}
                       {k}
                     </span>
@@ -200,7 +200,7 @@ export function KeyboardShortcuts() {
                 </div>
                 <kbd className="inline-flex items-center gap-0.5 rounded-md border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px] font-medium text-muted-foreground shadow-sm">
                   {s.keys.map((k, i) => (
-                    <span key={i}>
+                    <span key={k}>
                       {i > 0 && <span className="mx-0.5 opacity-40">+</span>}
                       {k}
                     </span>

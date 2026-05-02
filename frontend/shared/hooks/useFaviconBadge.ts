@@ -93,7 +93,7 @@ export function useFaviconBadge(count: number) {
         ctx.fillText(badgeText, x, y + 1);
       }
 
-      link!.href = canvas.toDataURL('image/png');
+      if (link) link.href = canvas.toDataURL('image/png');
     };
 
     img.onerror = () => {
@@ -115,7 +115,9 @@ export function useFaviconBadge(count: number) {
         ctx.textBaseline = 'middle';
         ctx.fillText(badgeText, 26, 6);
 
-        link!.href = canvas.toDataURL('image/png');
+        if (link) {
+          link.href = canvas.toDataURL('image/png');
+        }
       }
     };
 

@@ -70,7 +70,7 @@ describe('useAppsData', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toHaveLength(1);
-    expect(result.current.data![0].employeeCount).toBe(3);
+    expect(result.current.data?.[0].employeeCount).toBe(3);
     expect(appService.getAll).toHaveBeenCalledTimes(1);
     expect(appService.countActiveEmployeeApps).toHaveBeenCalledWith('a1');
   });

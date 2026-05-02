@@ -1,11 +1,16 @@
 """
 ML model layer for the Muhimmat AI engine.
 
-Uses scikit-learn (LinearRegression / RandomForest) and pandas for:
-  - Order forecasting
+Uses scikit-learn (LinearRegression) and pandas for:
+  - Order forecasting (linear trend on daily time-index)
   - Driver ranking & trend detection
   - Platform ranking
   - Smart alert generation
+
+Notes:
+  - A minimum of 30 data points is recommended for reliable forecasts.
+    Functions return confidence="low" when fewer samples are available.
+  - All forecast values are clipped at zero (no negative order counts).
 """
 
 from __future__ import annotations

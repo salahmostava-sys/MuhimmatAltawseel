@@ -251,8 +251,8 @@ export function RiderProfilePerformanceCard({ data }: RiderProfilePerformanceCar
             </p>
           </div>
           <div className="space-y-1.5">
-            {analysis.details.map((detail, i) => (
-              <div key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
+            {analysis.details.map((detail) => (
+              <div key={detail} className="flex items-start gap-2 text-xs text-muted-foreground">
                 <span className="mt-1 w-1.5 h-1.5 rounded-full bg-violet-300 shrink-0" />
                 <span>{detail}</span>
               </div>

@@ -26,7 +26,7 @@ function RankingColumn(props: Readonly<{
       ) : (
         <div className="space-y-3">
           {rows.map((row, index) => (
-            <div key={`${title}-${row.employeeId}-${index}`} className="rounded-xl border border-border/60 px-4 py-3">
+            <div key={`${title}-${row.employeeId}`} className="rounded-xl border border-border/60 px-4 py-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">

@@ -811,7 +811,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                   onRemove={() => {
                     setFiles(p => ({ ...p, personal: null }));
                     setUploadState((s) => ({ ...s, personal: { status: 'idle', error: null } }));
-                    if (editEmployee?.personal_photo_url) setRemovedDocs(prev => [...prev, { storagePath: editEmployee.personal_photo_url!, field: 'personal_photo_url' }]);
+                    if (editEmployee?.personal_photo_url) setRemovedDocs(prev => [...prev, { storagePath: editEmployee?.personal_photo_url, field: 'personal_photo_url' }]);
                   }}
                   status={uploadState.personal.status}
                   errorText={uploadState.personal.error}
@@ -823,7 +823,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                   onRemove={() => {
                     setFiles(p => ({ ...p, id: null }));
                     setUploadState((s) => ({ ...s, id: { status: 'idle', error: null } }));
-                    if (editEmployee?.id_photo_url) setRemovedDocs(prev => [...prev, { storagePath: editEmployee.id_photo_url!, field: 'id_photo_url' }]);
+                    if (editEmployee?.id_photo_url) setRemovedDocs(prev => [...prev, { storagePath: editEmployee?.id_photo_url, field: 'id_photo_url' }]);
                   }}
                   status={uploadState.id.status}
                   errorText={uploadState.id.error}
@@ -835,7 +835,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                   onRemove={() => {
                     setFiles(p => ({ ...p, iqama: null }));
                     setUploadState((s) => ({ ...s, iqama: { status: 'idle', error: null } }));
-                    if (editEmployee?.iqama_photo_url) setRemovedDocs(prev => [...prev, { storagePath: editEmployee.iqama_photo_url!, field: 'iqama_photo_url' }]);
+                    if (editEmployee?.iqama_photo_url) setRemovedDocs(prev => [...prev, { storagePath: editEmployee?.iqama_photo_url, field: 'iqama_photo_url' }]);
                   }}
                   status={uploadState.iqama.status}
                   errorText={uploadState.iqama.error}
@@ -847,7 +847,7 @@ const AddEmployeeModal = ({ onClose, onSuccess, editEmployee }: Props) => {
                   onRemove={() => {
                     setFiles(p => ({ ...p, license: null }));
                     setUploadState((s) => ({ ...s, license: { status: 'idle', error: null } }));
-                    if (editEmployee?.license_photo_url) setRemovedDocs(prev => [...prev, { storagePath: editEmployee.license_photo_url!, field: 'license_photo_url' }]);
+                    if (editEmployee?.license_photo_url) setRemovedDocs(prev => [...prev, { storagePath: editEmployee?.license_photo_url, field: 'license_photo_url' }]);
                   }}
                   status={uploadState.license.status}
                   errorText={uploadState.license.error}

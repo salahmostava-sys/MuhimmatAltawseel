@@ -178,7 +178,10 @@ describe('usePlatformAccountsPage', () => {
     expect(result.current.employeesFull.some((e) => e.id === 'emp-1')).toBe(true);
     expect(result.current.employees.some((e) => e.id === 'emp-1')).toBe(false);
 
-    const account = result.current.accounts[0]!;
+    const account = result.current.accounts?.[0];
+    if (!account) {
+      throw new Error('Account is undefined');
+    }
 
     await act(async () => {
       await result.current.openHistory(account);
@@ -186,7 +189,7 @@ describe('usePlatformAccountsPage', () => {
 
     await waitFor(() => expect(result.current.historyLoading).toBe(false));
     expect(result.current.historyGroups).toHaveLength(1);
-    expect(result.current.historyGroups[0]!.assignments[0]!.employee_name).toBe('Alice');
+    expect(result.current.historyGroups?.[0]?.assignments?.[0]?.employee_name).toBe('Alice');
   });
 
   it('تدفق التعيين: clearing flags و استمرار النجاح إذا فشل audit', async () => {
@@ -199,7 +202,10 @@ describe('usePlatformAccountsPage', () => {
     const { result } = renderHook(() => usePlatformAccountsPage(), { wrapper: createWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    const account = result.current.accounts[0]!;
+    const account = result.current.accounts?.[0];
+    if (!account) {
+      throw new Error('Account is undefined');
+    }
     act(() => {
       result.current.openAssign(account);
     });

@@ -10,7 +10,7 @@ const mockAuthState = vi.hoisted(() => ({
 }));
 
 const permissionsServiceMock = vi.hoisted(() => ({
-  getUserPermission: vi.fn(async () => null),
+  getUserPermission: vi.fn(() => Promise.resolve(null)),
 }));
 
 vi.mock('@app/providers/AuthContext', () => ({
@@ -98,7 +98,7 @@ describe('DEFAULT_PERMISSIONS role matrix', () => {
   it('covers every gated route in the default permission matrix', () => {
     const pageKeys = routesManifest
       .filter((route) => route.permission)
-      .map((route) => route.permission!.replace(/^view_/, ''));
+      .map((route) => route.permission?.replace(/^view_/, ''));
 
     const roles = Object.keys(DEFAULT_PERMISSIONS) as Array<'admin' | 'hr' | 'finance' | 'operations' | 'viewer'>;
     for (const role of roles) {

@@ -9,7 +9,7 @@ import { externalDeductionService } from '@services/externalDeductionService';
 import { performanceService } from '@services/performanceService';
 
 export const salaryDataService = {
-  async calculateSalaryForEmployeeMonth(
+  calculateSalaryForEmployeeMonth(
     employeeId: string,
     monthYear: string,
     paymentMethod = 'cash',
@@ -25,11 +25,11 @@ export const salaryDataService = {
     );
   },
 
-  async calculateSalaryForMonth(monthYear: string, paymentMethod = 'cash') {
+  calculateSalaryForMonth(monthYear: string, paymentMethod = 'cash') {
     return salaryService.calculateSalaryForMonth({ monthYear, paymentMethod });
   },
 
-  async getSalaryPreviewForMonth(monthYear: string) {
+  getSalaryPreviewForMonth(monthYear: string) {
     return salaryService.getSalaryPreviewForMonth(monthYear);
   },
 
@@ -65,31 +65,31 @@ export const salaryDataService = {
     await salaryService.upsertMany(records);
   },
 
-  async captureMonthSnapshot(monthYear: string) {
+  captureMonthSnapshot(monthYear: string) {
     return performanceService.captureSalaryMonthSnapshot(monthYear);
   },
 
-  async markInstallmentsDeducted(installmentIds: string[], deductedAtIso: string) {
+  markInstallmentsDeducted(installmentIds: string[], deductedAtIso: string) {
     return advanceService.markInstallmentsDeducted(installmentIds, deductedAtIso);
   },
 
-  async getInstallmentsByIds(installmentIds: string[]) {
+  getInstallmentsByIds(installmentIds: string[]) {
     return advanceService.getInstallmentsByIds(installmentIds);
   },
 
-  async getAdvanceInstallmentStatuses(advanceId: string) {
+  getAdvanceInstallmentStatuses(advanceId: string) {
     return advanceService.getAdvanceInstallmentStatuses(advanceId);
   },
 
-  async markAdvanceCompleted(advanceId: string) {
+  markAdvanceCompleted(advanceId: string) {
     return advanceService.markAdvanceCompleted(advanceId);
   },
 
-  async getMonthInstallmentsForAdvances(selectedMonth: string, advanceIds: string[]) {
+  getMonthInstallmentsForAdvances(selectedMonth: string, advanceIds: string[]) {
     return advanceService.getMonthInstallmentsForAdvances(selectedMonth, advanceIds);
   },
 
-  async getPendingInstallmentsForAdvances(advanceIds: string[]) {
+  getPendingInstallmentsForAdvances(advanceIds: string[]) {
     return advanceService.getPendingInstallmentsForAdvances(advanceIds);
   },
 };

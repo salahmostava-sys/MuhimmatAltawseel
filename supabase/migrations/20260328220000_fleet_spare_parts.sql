@@ -2,7 +2,7 @@
 
 BEGIN;
 
-CREATE TABLE public.spare_parts (
+CREATE TABLE IF NOT EXISTS public.spare_parts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name_ar TEXT NOT NULL,
   part_number TEXT,

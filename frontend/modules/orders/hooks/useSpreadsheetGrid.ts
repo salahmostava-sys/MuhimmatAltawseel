@@ -229,8 +229,8 @@ export function useSpreadsheetGrid() {
       const next = { ...prev };
       Object.entries(vals).forEach(([appId, count]) => {
         const key = `${empId}::${appId}::${day}`;
-        if (count > 0) next[key] = count;
-        else delete next[key];
+        if (count > 0) next.set(key, count);
+        else next.delete(key);
       });
       return next;
     });
@@ -246,7 +246,7 @@ export function useSpreadsheetGrid() {
       empMonthTotal,
     });
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setPendingImportFile(file);

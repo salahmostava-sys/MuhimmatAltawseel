@@ -6,7 +6,7 @@ import {
   Layers, ChevronsLeft, ChevronsRight, ShieldCheck, Sparkles, Wrench,
   ChevronDown, CalendarDays, FileText, Star,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState, type ComponentType } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState, type ComponentType } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@shared/components/ui/collapsible';
 import { useLanguage } from '@app/providers/LanguageContext';
 import { useSystemSettings } from '@app/providers/SystemSettingsContext';
@@ -124,7 +124,7 @@ type SidebarNavItemData = {
   path: string;
 };
 
-function SidebarNavLink({
+const SidebarNavLink = memo(function SidebarNavLink({
   item,
   collapsed,
   isRTL,
@@ -174,7 +174,7 @@ function SidebarNavLink({
       {!collapsed && <span>{item.label}</span>}
     </Link>
   );
-}
+});
 
 const AppSidebar = () => {
   const location = useLocation();
@@ -311,20 +311,7 @@ const AppSidebar = () => {
           collapsed ? 'px-3 justify-center' : 'px-5',
         )}>
           <Link to="/" className="flex items-center gap-3 min-w-0">
-            {settings?.logo_url ? (
-              <img
-                src={brandLogoSrc(settings.logo_url, settings.updated_at)}
-                alt="logo"
-                className="w-9 h-9 rounded-xl object-cover flex-shrink-0"
-              />
-            ) : (
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-base font-bold flex-shrink-0 shadow-brand-sm"
-                style={{ background: 'linear-gradient(135deg, #2642e6, #465fff)' }}
-              >
-                🚀
-              </div>
-            )}
+            <SidebarLogo logoSrc={brandLogoSrc(settings?.logo_url, settings?.updated_at)} />
             {!collapsed && (
               <div className="min-w-0">
                 <span
@@ -456,5 +443,27 @@ const AppSidebar = () => {
     </>
   );
 };
+
+function SidebarLogo({ logoSrc }: { logoSrc?: string }) {
+  const [failed, setFailed] = useState(false);
+  if (logoSrc && !failed) {
+    return (
+      <img
+        src={logoSrc}
+        alt="logo"
+        className="w-9 h-9 rounded-xl object-cover flex-shrink-0"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <div
+      className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-base font-bold flex-shrink-0 shadow-brand-sm"
+      style={{ background: 'linear-gradient(135deg, #2642e6, #465fff)' }}
+    >
+      🚀
+    </div>
+  );
+}
 
 export default AppSidebar;

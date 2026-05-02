@@ -23,7 +23,16 @@ interface AuthContextType {
   signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({} as AuthContextType);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  session: null,
+  role: null,
+  loading: true,
+  authLoading: true,
+  recoverSessionSilently: () => Promise.resolve(false),
+  signIn: () => Promise.resolve({ error: { message: 'AuthContext not ready' } }),
+  signOut: () => Promise.resolve(undefined),
+});
 const AUTH_SIGNIN_TIMEOUT_MS = 15_000;
 const AUTH_ACTIVE_CHECK_TIMEOUT_MS = 10_000;
 
@@ -42,7 +51,7 @@ const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): 
   }
 };
 
-const fetchRole = async (userId: string): Promise<AppRole | null> => {
+const fetchRole = (userId: string): Promise<AppRole | null> => {
   return authService.fetchUserRole(userId);
 };
 
@@ -175,7 +184,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [verifyCurrentUserActive]);
 
-  const recoverSessionSilently = useCallback(async (opts?: { refetchActiveQueries?: boolean }) => {
+  const recoverSessionSilently = useCallback((opts?: { refetchActiveQueries?: boolean }) => {
     if (recoverInFlightRef.current !== null) return recoverInFlightRef.current;
 
     const task = (async () => {
@@ -220,10 +229,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const subscription = authService.onAuthStateChange((event, nextSession) => {
       void (async () => {
         try {
+          // INITIAL_SESSION is handled by the getSession() bootstrap below.
+          // Skipping here prevents duplicate is_active_user + get_my_role calls on load.
+          if ((event as string) === 'INITIAL_SESSION') return;
+
           if (isFirstLoad.current) {
             isFirstLoad.current = false;
-            // loading is turned off by getSession().finally() below,
-            // AFTER session/user/role are set — avoids redirect race.
           }
           if (event === 'SIGNED_OUT' || (event as string) === 'TOKEN_REFRESH_FAILED') {
             await handleUnauthenticatedState(event.toLowerCase());
