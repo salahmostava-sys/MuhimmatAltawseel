@@ -72,6 +72,15 @@ type ProfileActiveRow = {
   is_active?: boolean;
 };
 
+// In-flight deduplication: if the same call is already running, reuse its promise.
+const _inFlight: Record<string, Promise<unknown>> = {};
+function dedupe<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  if (_inFlight[key]) return _inFlight[key] as Promise<T>;
+  const p = fn().finally(() => { delete _inFlight[key]; });
+  _inFlight[key] = p;
+  return p;
+}
+
 export const authService = {
   signIn: async (email: string, password: string): Promise<{ session: Session | null; user: User | null }> => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -101,38 +110,40 @@ export const authService = {
     return data.user;
   },
 
-  fetchUserRole: async (userId: string): Promise<AppRole | null> => {
-    const { data: rpcRole, error: rpcError } = await supabase.rpc("get_my_role");
-    if (!rpcError) {
-      return (rpcRole as AppRole | null) ?? null;
-    }
+  fetchUserRole: (userId: string): Promise<AppRole | null> =>
+    dedupe(`role:${userId}`, async () => {
+      const { data: rpcRole, error: rpcError } = await supabase.rpc("get_my_role");
+      if (!rpcError) {
+        return (rpcRole as AppRole | null) ?? null;
+      }
 
-    const { data, error } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .limit(1)
-      .maybeSingle();
-    throwIfError(error, "authService.fetchUserRole");
-    return (data?.role as AppRole) ?? null;
-  },
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .limit(1)
+        .maybeSingle();
+      throwIfError(error, "authService.fetchUserRole");
+      return (data?.role as AppRole) ?? null;
+    }),
 
-  fetchIsActive: async (userId: string): Promise<boolean> => {
-    const { data: rpcActive, error: rpcError } = await supabase.rpc("is_active_user", {
-      _user_id: userId,
-    });
-    if (!rpcError && typeof rpcActive === "boolean") {
-      return rpcActive;
-    }
+  fetchIsActive: (userId: string): Promise<boolean> =>
+    dedupe(`active:${userId}`, async () => {
+      const { data: rpcActive, error: rpcError } = await supabase.rpc("is_active_user", {
+        _user_id: userId,
+      });
+      if (!rpcError && typeof rpcActive === "boolean") {
+        return rpcActive;
+      }
 
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("is_active")
-      .eq("id", userId)
-      .maybeSingle<ProfileActiveRow>();
-    throwIfError(error, "authService.fetchIsActive");
-    return data?.is_active !== false;
-  },
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("is_active")
+        .eq("id", userId)
+        .maybeSingle<ProfileActiveRow>();
+      throwIfError(error, "authService.fetchIsActive");
+      return data?.is_active !== false;
+    }),
 
   fetchProfile: async (userId: string): Promise<UserProfile | null> => {
     const { data, error } = await supabase

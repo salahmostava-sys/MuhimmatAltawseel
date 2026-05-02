@@ -229,10 +229,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const subscription = authService.onAuthStateChange((event, nextSession) => {
       void (async () => {
         try {
+          // INITIAL_SESSION is handled by the getSession() bootstrap below.
+          // Skipping here prevents duplicate is_active_user + get_my_role calls on load.
+          if ((event as string) === 'INITIAL_SESSION') return;
+
           if (isFirstLoad.current) {
             isFirstLoad.current = false;
-            // loading is turned off by getSession().finally() below,
-            // AFTER session/user/role are set — avoids redirect race.
           }
           if (event === 'SIGNED_OUT' || (event as string) === 'TOKEN_REFRESH_FAILED') {
             await handleUnauthenticatedState(event.toLowerCase());
