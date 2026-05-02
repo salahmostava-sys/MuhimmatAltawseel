@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Bell, X, CheckCheck, FileWarning, AlertTriangle, Clock, ShieldAlert } from 'lucide-react';
 import { useLanguage } from '@app/providers/LanguageContext';
+import { useAuth } from '@app/providers/AuthContext';
 import { useAlerts } from '@shared/hooks/useAlerts';
 import { cn } from '@shared/lib/utils';
 import { logError } from '@shared/lib/logger';
@@ -76,8 +77,11 @@ function daysLabel(days: number, isRTL: boolean): string {
 
 export default function NotificationCenter() {
   const [open, setOpen] = useState(false);
+  const { user } = useAuth();
+  const storageKey = user?.id ? `nc_dismissed_${user.id}` : 'nc_dismissed';
+
   const [dismissed, setDismissed] = useState<Set<string>>(() => {
-    try { return new Set(JSON.parse(localStorage.getItem('nc_dismissed') || '[]')); }
+    try { return new Set(JSON.parse(localStorage.getItem(storageKey) || '[]')); }
     catch (e) {
       logError('[NotificationCenter] invalid nc_dismissed in storage', e, { level: 'warn' });
       return new Set();
@@ -115,14 +119,14 @@ export default function NotificationCenter() {
     e.stopPropagation();
     const next = new Set(dismissed).add(id);
     setDismissed(next);
-    localStorage.setItem('nc_dismissed', JSON.stringify([...next]));
+    localStorage.setItem(storageKey, JSON.stringify([...next]));
   };
 
   /* ── Dismiss all ─────────────────────────────────────────── */
   const dismissAll = () => {
     const next = new Set([...dismissed, ...active.map(a => a.id)]);
     setDismissed(next);
-    localStorage.setItem('nc_dismissed', JSON.stringify([...next]));
+    localStorage.setItem(storageKey, JSON.stringify([...next]));
   };
 
   /* ── Badge color ─────────────────────────────────────────── */

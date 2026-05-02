@@ -4,7 +4,15 @@ import { useSystemSettings } from '@app/providers/SystemSettingsContext';
 import { authQueryUserId, useAuthQueryGate } from '@shared/hooks/useAuthQueryGate';
 import { useMonthlyActiveEmployeeIds } from '@shared/hooks/useMonthlyActiveEmployeeIds';
 import { alertsService } from '@services/alertsService';
-import { buildAlertsFromResponses, type EmployeeAlertRow } from '@shared/lib/alertsBuilder';
+import {
+  buildAlertsFromResponses,
+  type EmployeeAlertRow,
+  type VehicleExpiryRow,
+  type PlatformAccountAlertRow,
+  type PersistedAlertRow,
+  type LowStockSparePartAlertRow,
+  type AbscondedEmployeeAlertRow,
+} from '@shared/lib/alertsBuilder';
 import { filterVisibleEmployeesInMonth } from '@shared/lib/employeeVisibility';
 import { defaultQueryRetry } from '@shared/lib/query';
 
@@ -36,13 +44,15 @@ export const useAlerts = () => {
         ),
       };
       // Supabase responses are { data, error } — buildAlertsFromResponses reads only .data
-      /* eslint-disable @typescript-eslint/no-explicit-any */
       return buildAlertsFromResponses(
-        employeesVisibleRes as any, vehiclesRes as any, platformAccountsRes as any,
-        dbAlertsRes as any, sparePartsRes as any, abscondedRes as any,
+        employeesVisibleRes as { data: EmployeeAlertRow[] | null },
+        vehiclesRes as { data: VehicleExpiryRow[] | null },
+        platformAccountsRes as { data: PlatformAccountAlertRow[] | null },
+        dbAlertsRes as { data: PersistedAlertRow[] | null },
+        sparePartsRes as { data: LowStockSparePartAlertRow[] | null },
+        abscondedRes as { data: AbscondedEmployeeAlertRow[] | null },
         expiryHorizon, today,
       );
-      /* eslint-enable @typescript-eslint/no-explicit-any */
     },
     retry: defaultQueryRetry,
     // Alerts domain policy: always fresh

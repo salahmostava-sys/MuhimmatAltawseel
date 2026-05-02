@@ -58,8 +58,8 @@ export const dashboardService = {
     let lastError: unknown = null;
     for (const fnName of fnNames) {
       for (const params of attempts) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- dynamic RPC name requires cast
-        const { data, error } = await (supabase.rpc as Function)(fnName, params);
+        type DynamicRpc = (name: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
+        const { data, error } = await (supabase.rpc as unknown as DynamicRpc)(fnName, params);
         if (!error) return data;
         lastError = error;
 

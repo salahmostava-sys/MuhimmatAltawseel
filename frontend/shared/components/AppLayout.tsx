@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import AppSidebar from './AppSidebar';
+import ErrorBoundary from './ErrorBoundary';
 import { useLanguage } from '@app/providers/LanguageContext';
 import { useAuth } from '@app/providers/AuthContext';
 import { useSystemSettings } from '@app/providers/SystemSettingsContext';
@@ -115,7 +116,9 @@ const AppLayoutInner = ({ children }: AppLayoutProps) => { // NOSONAR: layout wi
       dir={isRTL ? 'rtl' : 'ltr'}
       style={{ background: 'var(--ds-surface)' }}
     >
-      <AppSidebar />
+      <ErrorBoundary>
+        <AppSidebar />
+      </ErrorBoundary>
 
       <main className={cn(
         'flex flex-col transition-all duration-300',

@@ -1,0 +1,22 @@
+🔴 حرجة — أُصلحت الآن
+#	المشكلة	الملف	الحل
+1	FuelPage غير موجود — App.tsx يستورد الصفحة لكن المجلد pages/ لم يكن موجوداً في موديول الوقود، مما يُعطّل تحميل التطبيق بالكامل	modules/fuel/pages/FuelPage.tsx	✅ أُنشئت الصفحة كاملةً بعرض شهري + يومي + جدول بيانات
+2	تحذير HMR يُعيد تحميل كل شجرة التطبيق عند أي تعديل على إعدادات النظام	SystemSettingsContext.tsx	✅ أُضيف // @refresh reset
+🟠 متوسطة — ديون تقنية موثقة
+#	المشكلة	الملف	التأثير
+3	useEffect→useState anti-pattern — بيانات React Query تُنسخ إلى useState محلي، مما قد يُسبب بيانات قديمة في نافذة قصيرة	SalariesPage.tsx:143 (موثق كـ ISSUE #7)	منخفض، له حماية جزئية
+4	(supabase.rpc as Function) — تجاوز نظام TypeScript للاستدعاء الديناميكي للـ RPC	dashboardService.ts:62	منخفض، محمي بـ try/catch
+5	is_archived column — فلتر مُعلّق بسبب غياب العمود في قاعدة البيانات	appService.ts:31	منخفض، يعيد كل التطبيقات
+6	as any متعدد في useAlerts.ts لنتائج Promise.all	shared/hooks/useAlerts.ts:41-42	منخفض، لا يؤثر على المستخدم
+🟡 أداء وتجربة مستخدم
+#	المشكلة	الملف	التأثير
+7	NotificationCenter — قائمة التنبيهات لا تُحفظ على السيرفر — "مسح الكل" يخفيها محلياً فقط وتعود عند فتح تاب جديد	NotificationCenter.tsx	متوسط، مُربك للمستخدم
+8	AppSidebar — إعادة رسم كل الروابط عند التنقل بدون React.memo	AppSidebar.tsx	أداء بسيط
+9	AppLayout — الشريط الجانبي والهيدر خارج ErrorBoundary — إذا تعطل السايدبار تتعطل الصفحة كاملة	App.tsx:82-90	نادر لكن خطير
+10	DocumentsPage — بدون service layer — تستعلم قاعدة البيانات مباشرةً وتستخدم throw error العام	documents/pages/DocumentsPage.tsx	يخالف نمط المشروع
+🔵 ديون قاعدة البيانات (Migrations)
+#	المشكلة	التفاصيل
+11	4 migrations لم تُطبَّق بعد	20260503000000 إلى 20260503000003 — إجازات، تقييم أداء، أمان، ساعات سالبة
+12	CREATE TABLE بدون IF NOT EXISTS في 6 ملفات قديمة	خطر فشل عند نشر نظيف جديد
+13	تعارض أسماء Timestamps — ملفان بنفس البادئة الزمنية	20260407000000 يظهر مرتين، 20260410010000 يظهر مرتين
+14	بقايا multitenancy — هياكل company_id أُضيفت وأُزيلت في نفس الأسبوع	تضخم تاريخ الـ migrations

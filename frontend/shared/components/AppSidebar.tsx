@@ -6,7 +6,7 @@ import {
   Layers, ChevronsLeft, ChevronsRight, ShieldCheck, Sparkles, Wrench,
   ChevronDown, CalendarDays, FileText, Star,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState, type ComponentType } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState, type ComponentType } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@shared/components/ui/collapsible';
 import { useLanguage } from '@app/providers/LanguageContext';
 import { useSystemSettings } from '@app/providers/SystemSettingsContext';
@@ -124,7 +124,7 @@ type SidebarNavItemData = {
   path: string;
 };
 
-function SidebarNavLink({
+const SidebarNavLink = memo(function SidebarNavLink({
   item,
   collapsed,
   isRTL,
@@ -174,7 +174,7 @@ function SidebarNavLink({
       {!collapsed && <span>{item.label}</span>}
     </Link>
   );
-}
+});
 
 const AppSidebar = () => {
   const location = useLocation();
