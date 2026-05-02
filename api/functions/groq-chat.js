@@ -1,9 +1,7 @@
-const { requireAuth, setCors, logError, logInfo, GROQ_API_KEY, GROQ_BASE_URL, DEFAULT_GROQ_MODEL } = require('../_lib');
+const { requireAuth, ensurePostRequest, getErrorMessage, logError, logInfo, GROQ_API_KEY, GROQ_BASE_URL, DEFAULT_GROQ_MODEL } = require('../_lib');
 
 module.exports = async function handler(req, res) {
-  setCors(res);
-  if (req.method === 'OPTIONS') return res.status(204).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!ensurePostRequest(req, res)) return;
 
   const requestId = crypto.randomUUID();
   try {
@@ -45,7 +43,7 @@ module.exports = async function handler(req, res) {
     const message = data.choices?.[0]?.message?.content ?? '';
     return res.json({ message });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = getErrorMessage(err);
     logError('groq-chat unhandled error', { request_id: requestId, error: message });
     return res.status(500).json({ error: 'Internal server error' });
   }

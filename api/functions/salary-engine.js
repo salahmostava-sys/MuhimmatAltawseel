@@ -1,9 +1,7 @@
-const { requireAuth, getAdminClient, setCors, isUuid, isValidMonth, logInfo, logError } = require('../_lib');
+const { requireAuth, getAdminClient, ensurePostRequest, getErrorMessage, isUuid, isValidMonth, logInfo, logError } = require('../_lib');
 
 module.exports = async function handler(req, res) {
-  setCors(res);
-  if (req.method === 'OPTIONS') return res.status(204).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!ensurePostRequest(req, res)) return;
 
   const requestId = crypto.randomUUID();
   try {
@@ -61,7 +59,7 @@ module.exports = async function handler(req, res) {
 
     return res.status(400).json({ error: 'Invalid mode. Use "employee", "month", or "month_preview"' });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = getErrorMessage(err);
     logError('Salary engine failed', { request_id: requestId, error: message });
     const clientPhrases = ['Invalid month_year', 'Invalid employee_id', 'Invalid mode', 'No authorization header', 'Not authenticated', 'Only admin/finance'];
     const isClient = clientPhrases.some(p => message.includes(p));

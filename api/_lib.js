@@ -36,6 +36,23 @@ function setCors(res) {
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
 }
 
+function ensurePostRequest(req, res) {
+  setCors(res);
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return false;
+  }
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return false;
+  }
+  return true;
+}
+
+function getErrorMessage(err) {
+  return err instanceof Error ? err.message : String(err);
+}
+
 const isUuid = (v) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
 const isValidMonth = (v) => /^\d{4}-(0[1-9]|1[0-2])$/.test(v);
 const VALID_ROLES = new Set(['admin', 'hr', 'finance', 'operations', 'viewer']);
@@ -44,6 +61,7 @@ const logInfo = (msg, meta = {}) => console.log(JSON.stringify({ level: 'info', 
 
 module.exports = {
   getCallerClient, getAdminClient, requireAuth, setCors,
+  ensurePostRequest, getErrorMessage,
   isUuid, isValidMonth, VALID_ROLES, logError, logInfo,
   SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY,
   GROQ_API_KEY: process.env.GROQ_API_KEY,

@@ -1,9 +1,7 @@
-const { requireAuth, getAdminClient, setCors, isUuid, VALID_ROLES, logInfo, logError } = require('../_lib');
+const { requireAuth, getAdminClient, ensurePostRequest, getErrorMessage, isUuid, VALID_ROLES, logInfo, logError } = require('../_lib');
 
 module.exports = async function handler(req, res) {
-  setCors(res);
-  if (req.method === 'OPTIONS') return res.status(204).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!ensurePostRequest(req, res)) return;
 
   const requestId = crypto.randomUUID();
   try {
@@ -92,7 +90,7 @@ module.exports = async function handler(req, res) {
 
     return res.json({ success: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = getErrorMessage(err);
     logError('Admin update user failed', { request_id: requestId, error: message });
     const clientPhrases = ['Invalid', 'required', 'must be', 'cannot delete', 'email is required', 'password is required', 'name is required', 'action is required'];
     const isClient = clientPhrases.some(p => message.toLowerCase().includes(p.toLowerCase()));

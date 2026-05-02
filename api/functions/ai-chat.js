@@ -1,13 +1,11 @@
 const {
-  requireAuth, setCors, logError,
+  requireAuth, ensurePostRequest, getErrorMessage, logError,
   GROQ_API_KEY, GROQ_BASE_URL,
   AI_CHAT_TOOLS, AI_CHAT_SYSTEM_PROMPT, executeAiTool, callGroqChat,
 } = require('../_lib');
 
 module.exports = async function handler(req, res) {
-  setCors(res);
-  if (req.method === 'OPTIONS') return res.status(204).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!ensurePostRequest(req, res)) return;
 
   const requestId = crypto.randomUUID();
   try {
@@ -48,7 +46,8 @@ module.exports = async function handler(req, res) {
 
     return res.json({ message: responseMessage.content ?? '' });
   } catch (e) {
-    logError('[ai-chat] error', { request_id: requestId, error: e.message });
-    return res.status(500).json({ error: e.message || 'Internal server error' });
+    const message = getErrorMessage(e);
+    logError('[ai-chat] error', { request_id: requestId, error: message });
+    return res.status(500).json({ error: message || 'Internal server error' });
   }
 };
