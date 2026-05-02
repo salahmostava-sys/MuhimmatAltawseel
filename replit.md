@@ -43,3 +43,40 @@ A delivery operations management platform with a React frontend and a FastAPI AI
 - **Login page**: staggered entrance animations, floating decorative circles in branding panel, glassmorphism feature cards, animated submit button with shimmer, caps-lock warning, security badge
 - **AppLayout**: smooth `page-enter` animation on route change via `pageKey` state
 - **AI Dashboard**: connected to real data (salary forecast, best employees, active riders count)
+
+## New Modules Added
+
+### إدارة الإجازات (Leave Management) — `/leaves`
+- **DB**: `supabase/migrations/20260503000000_leave_requests.sql` — table `leave_requests` (must be run in Supabase SQL Editor)
+- **Service**: `frontend/services/leaveService.ts`
+- **Page**: `frontend/modules/leaves/pages/LeavesPage.tsx`
+- **Modal**: `frontend/modules/leaves/components/AddLeaveModal.tsx`
+- Leave types: annual, sick, emergency, unpaid, other
+- Actions: add request, approve, reject, delete
+- Filters: by type, status, employee name
+
+### متابعة الوثائق (Document Expiry Tracking) — `/documents`
+- **No new DB table** — queries existing `employees` columns: `residency_expiry`, `health_insurance_expiry`, `license_expiry`, `probation_end_date`
+- **Page**: `frontend/modules/documents/pages/DocumentsPage.tsx`
+- Shows all active employees with color-coded expiry badges per document
+- Status levels: expired (red), urgent ≤7 days (orange), warning ≤30 days (yellow), ok (green), missing (grey)
+- Clickable stat cards for quick filtering
+
+### تقييم الأداء الشهري (Formal HR Performance Reviews) — `/performance-reviews`
+- **DB**: `supabase/migrations/20260503000001_performance_reviews.sql` — table `hr_performance_reviews` (must be run in Supabase SQL Editor)
+- **Service**: `frontend/services/hrReviewService.ts`
+- **Page**: `frontend/modules/performance/pages/PerformanceReviewsPage.tsx`
+- **Modal**: `frontend/modules/performance/components/AddReviewModal.tsx`
+- 4 criteria scored 1–10: attendance, performance, behavior, commitment
+- Auto-computes average + grade: ممتاز / جيد جداً / جيد / مقبول / ضعيف
+- Month picker navigation, edit/delete support
+
+## Pending SQL to Run in Supabase
+
+Run these two files in **Supabase → SQL Editor** for the new modules to work:
+1. `supabase/migrations/20260503000000_leave_requests.sql`
+2. `supabase/migrations/20260503000001_performance_reviews.sql`
+
+Previously pending (from earlier sessions):
+3. `supabase/migrations/20260501000000_fix_security_warnings.sql`
+4. `supabase/migrations/20260502000000_flip_admin_rider_logic.sql`
