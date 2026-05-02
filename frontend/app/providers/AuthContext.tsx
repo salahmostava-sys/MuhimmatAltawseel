@@ -1,3 +1,4 @@
+// @refresh reset
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { authService } from '@services/authService';
