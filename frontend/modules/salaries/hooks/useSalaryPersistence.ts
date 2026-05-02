@@ -197,7 +197,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
 
       setApprovingRowId(id);
       const calcResult = await run(
-        async () => computeServerSalaryForPayment(row, selectedMonth),
+        () => computeServerSalaryForPayment(row, selectedMonth),
         { errorTitle: 'ØªØ¹Ø°Ù‘Ø± Ø­Ø³Ø§Ø¨ Ø§Ù„Ø±Ø§ØªØ¨ Ù…Ù† Ø§Ù„Ø®Ø§Ø¯Ù…' },
       );
       if (!calcResult) {
@@ -342,7 +342,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
     }
 
     const monthCalcData = await run(
-      async () => salaryDataService.calculateSalaryForMonth(selectedMonth),
+      () => salaryDataService.calculateSalaryForMonth(selectedMonth),
       { errorTitle: 'Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø­Ø³Ø§Ø¨ Ù…Ù† Ø§Ù„Ø®Ø§Ø¯Ù…' },
     );
     // FIX M7: undefined means run() caught an error and showed a toast â€” abort
@@ -463,17 +463,17 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
   );
 
   const persistEmployeePaymentMethod = useCallback(
-    async (row: SalaryRow, next: 'bank' | 'cash') => {
+    (row: SalaryRow, next: 'bank' | 'cash') => {
       if (row.paymentMethod === next) return;
       if (next === 'bank' && !row.hasIban) {
         toast.error('Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø±Ù‚Ù… Ø¢ÙŠØ¨Ø§Ù†', {
-          description: 'Ø£Ø¶Ù Ø±Ù‚Ù… Ø§Ù„Ø¢ÙŠØ¨Ø§Ù† Ù…Ù† Ù…Ù„Ù Ø§Ù„Ù…ÙˆØ¸Ù Ù‚Ø¨Ù„ Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„ØªØ­ÙˆÙŠÙ„ Ø§Ù„Ø¨Ù†ÙƒÙŠ.',
+          description: 'Ø£Ø¶Ù Ø±Ù‚Ù… Ø§Ù„ØآØ¨Ø§Ù† Ù…Ù† Ù…Ù„Ù Ø§Ù„Ù…ÙˆØ¸Ù Ù‚Ø¨Ù„ Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„ØAAØحÙˆÙŠÙ„ Ø§Ù„Ø¨Ù†ÙƒÙŠ.',
         });
         return;
       }
       setEmployeeFieldSaving(`${row.employeeId}:payment`);
       updateRow(row.id, { paymentMethod: next });
-      toast.success('ØªÙ… ØªØ­Ø¯ÙŠØ« Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„ØµØ±Ù â€” Ø§Ø¹ØªÙ…Ø¯ Ø§Ù„Ø±Ø§ØªØ¨ Ù„Ø­ÙØ¸ Ø§Ù„ØªØºÙŠÙŠØ± Ù†Ù‡Ø§Ø¦ÙŠØ§Ù‹');
+      toast.success('ØªÙ… ØAAØحØ¯ÙŠØ« Ø·ØرÙŠÙ‚Ø© Ø§Ù„ØµØ±Ùڤ â€” Ø§ØعØAAÙ…Ø¯ Ø§Ù„Ø±Ø§ØAAØ¨ Ù„ØُÙØ¸ Ø§Ù„ØAAØBAÙŠÙŠØ± Ù†Ù‡Ø§Ø¦ØŠØ§Ù‹');
       setEmployeeFieldSaving(null);
     },
     [toast, setEmployeeFieldSaving, updateRow],

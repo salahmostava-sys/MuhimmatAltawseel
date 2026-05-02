@@ -42,7 +42,7 @@ describe('authService admin user management', () => {
   it('createManagedUser sends create_user payload and returns the created user id', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
-      json: async () => ({ user_id: 'user-99' }),
+      json: () => Promise.resolve({ user_id: 'user-99' }),
     } as Response);
 
     const result = await authService.createManagedUser({
@@ -70,7 +70,7 @@ describe('authService admin user management', () => {
   it('createManagedUser rejects responses that omit the new user id', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
-      json: async () => ({ success: true }),
+      json: () => ({ success: true }),
     } as Response);
 
     await expect(
@@ -86,7 +86,7 @@ describe('authService admin user management', () => {
   it('deleteManagedUser sends delete_user payload', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
-      json: async () => ({ success: true }),
+      json: () => Promise.resolve({ success: true }),
     } as Response);
 
     await authService.deleteManagedUser('user-7');

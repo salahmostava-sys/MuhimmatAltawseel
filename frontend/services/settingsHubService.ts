@@ -156,7 +156,7 @@ export const settingsHubService = {
     const { error } = await supabase.from('profiles').update(payload as never).eq('id', userId);
     if (error) throw toServiceError(error, 'settingsHubService.updateProfileByUserId');
   },
-  updatePassword: async (password: string) => authService.updatePassword(password),
+  updatePassword: (password: string) => authService.updatePassword(password),
 
   getTradeRegister: async () => {
     const { data, error } = await supabase.from('trade_registers').select('*').order('created_at').limit(1).maybeSingle();

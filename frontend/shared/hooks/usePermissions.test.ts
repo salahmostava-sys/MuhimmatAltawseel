@@ -10,7 +10,7 @@ const mockAuthState = vi.hoisted(() => ({
 }));
 
 const permissionsServiceMock = vi.hoisted(() => ({
-  getUserPermission: vi.fn(async () => null),
+  getUserPermission: vi.fn(() => Promise.resolve(null)),
 }));
 
 vi.mock('@app/providers/AuthContext', () => ({

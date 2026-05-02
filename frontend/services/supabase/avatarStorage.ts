@@ -31,7 +31,7 @@ function assertSegmentSafeForStoragePath(segment: string): void {
   }
 }
 
-export async function uploadAvatarToAvatarsBucket(
+export function uploadAvatarToAvatarsBucket(
   userId: string,
   file: File,
   extension: string,

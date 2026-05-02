@@ -13,6 +13,6 @@ export function useRiderPredictions() {
     queryKey: ['rider-predictions', authQueryUserId(userId), currentMonth] as const,
     enabled,
     staleTime: 30 * 60 * 1000,
-    queryFn: async (): Promise<RiderPrediction[]> => analyticsService.getRiderPredictions(now),
+    queryFn: (): Promise<RiderPrediction[]> => analyticsService.getRiderPredictions(now),
   });
 }
