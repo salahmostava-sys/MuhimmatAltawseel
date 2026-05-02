@@ -43,6 +43,7 @@ const LOG_META_ALLOWLIST = new Set([
   'month_year',
   'message_count',
   'status',
+  'error',
 ]);
 
 function safeLogMeta(meta = {}) {
@@ -79,6 +80,76 @@ async function requireAuth(req, res) {
     return null;
   }
   return { user, callerClient };
+}
+
+// ─── Salary engine error classifier ──────────────────────────────────────────
+
+function _classifySalaryError(message) {
+  const clientPhrases = ['Invalid month_year', 'Invalid employee_id', 'Invalid mode', 'No authorization header', 'Not authenticated', 'Method not allowed', 'Only admin/finance'];
+  const isAuthz = message.includes('Only admin/finance');
+  const isClient = isAuthz || clientPhrases.some(p => message.includes(p));
+  if (isAuthz) return 403;
+  if (isClient) return 400;
+  return 500;
+}
+
+// ─── Admin-update-user handler helpers ───────────────────────────────────────
+
+async function _srvHandleCreateUser(supabaseAdmin, { email, password, name, role }, logErr) {
+  const normalizedEmail = String(email ?? '').trim().toLowerCase();
+  const normalizedName = String(name ?? '').trim();
+  const normalizedRole = String(role ?? 'viewer').trim();
+
+  if (!normalizedEmail || !normalizedEmail.includes('@')) throw new Error('Invalid email');
+  if (!password || String(password).length < 8) throw new Error('Password must be at least 8 characters');
+  if (!normalizedName) throw new Error('name is required');
+  if (!VALID_ROLES.has(normalizedRole)) throw new Error('Invalid role');
+
+  let createdUserId = null;
+  try {
+    const { data: createdUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email: normalizedEmail,
+      password,
+      email_confirm: true,
+      user_metadata: { name: normalizedName },
+    });
+    if (createError) throw createError;
+    createdUserId = createdUser.user?.id ?? null;
+    if (!createdUserId) throw new Error('User creation returned no user id');
+
+    const { error: profileError } = await supabaseAdmin.from('profiles').update({ email: normalizedEmail, name: normalizedName, is_active: true }).eq('id', createdUserId);
+    if (profileError) throw profileError;
+
+    await supabaseAdmin.from('user_roles').delete().eq('user_id', createdUserId);
+    const { error: insertRoleError } = await supabaseAdmin.from('user_roles').insert({ user_id: createdUserId, role: normalizedRole });
+    if (insertRoleError) throw insertRoleError;
+  } catch (createUserFlowError) {
+    if (createdUserId) {
+      await supabaseAdmin.auth.admin.deleteUser(createdUserId).catch(e => logErr('Failed to cleanup partially created user', { error: e.message }));
+    }
+    throw createUserFlowError;
+  }
+  return { success: true, user_id: createdUserId };
+}
+
+async function _srvHandleDeleteUser(supabaseAdmin, user_id, callerId) {
+  if (user_id === callerId) throw new Error('You cannot delete your own account');
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(user_id);
+  if (error) throw error;
+}
+
+async function _srvHandleRevokeSession(supabaseAdmin, user_id) {
+  const authSchema = supabaseAdmin.schema('auth');
+  const { error: refreshErr } = await authSchema.from('refresh_tokens').delete().eq('user_id', user_id);
+  if (refreshErr) throw refreshErr;
+  const { error: sessErr } = await authSchema.from('sessions').delete().eq('user_id', user_id);
+  if (sessErr) throw sessErr;
+}
+
+async function _srvHandleUpdatePassword(supabaseAdmin, user_id, password) {
+  if (!password) throw new Error('password is required for update_password');
+  const { error } = await supabaseAdmin.auth.admin.updateUserById(user_id, { password });
+  if (error) throw error;
 }
 
 // ── Health check ─────────────────────────────────────────────────────────────
