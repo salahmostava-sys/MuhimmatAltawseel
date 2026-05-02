@@ -546,8 +546,8 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
                     {/* Tiers */}
                     <div className="space-y-1.5 mb-3">
                       <p className="text-xs font-medium text-muted-foreground">الشرائح:</p>
-                      {(tiers[s.id] || []).map((t, i) => (
-                        <div key={`${s.id}-tier-${t.tierType}-${t.from}-${t.to}-${i}`} className="flex items-center gap-2 text-sm bg-muted/50 rounded-lg px-3 py-1.5">
+                      {(tiers[s.id] || []).map((t) => (
+                        <div key={`${s.id}-tier-${t.tierType}-${t.from}-${t.to}`} className="flex items-center gap-2 text-sm bg-muted/50 rounded-lg px-3 py-1.5">
                           <span className="text-xs bg-muted rounded px-1.5 py-0.5 text-muted-foreground">{tierTypeLabels[t.tierType] || t.tierType}</span>
                           <span className="text-muted-foreground">من {t.from} إلى {t.to >= 9999 ? '∞' : t.to}</span>
                           {renderTierDescription(t)}
@@ -743,7 +743,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
                     للنموذج الذي وصفته (كل النطاق يُضرب ككتلة واحدة) استخدم «شريحة واحدة» وليس «تراكمي». النطاق 401–449 ثم 450–470 ثابت ثم فوق 470 بسعر زيادي كما في الزر «مثال».
                   </p>
                   {formTiers.map((t, i) => (
-                    <div key={`form-tier-${t.tierType}-${t.from}-${t.to}-${i}`} className="bg-muted/50 rounded-lg p-3 space-y-2">
+                    <div key={`form-tier-${t.tierType}-${t.from}-${t.to}`} className="bg-muted/50 rounded-lg p-3 space-y-2">
                       {/* Tier type selector */}
                       <div className="flex items-center gap-2">
                         <Select value={t.tierType} onValueChange={v => updateTier(i, 'tierType', v)}>

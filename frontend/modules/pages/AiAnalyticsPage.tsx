@@ -222,8 +222,8 @@ const AiAnalyticsPage = () => {
       <PageSection title={`مؤشرات الأداء — ${selectedMonthLabel}`}>
         {perfQ.isLoading ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-24 w-full rounded-xl" />
+            {[1, 2, 3, 4].map((id) => (
+              <Skeleton key={id} className="h-24 w-full rounded-xl" />
             ))}
           </div>
         ) : perfQ.isError ? (
@@ -301,9 +301,9 @@ const AiAnalyticsPage = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  {alerts.slice(0, 8).map((a, idx) => (
+                  {alerts.slice(0, 8).map((a) => (
                     <div
-                      key={`${a.employeeId ?? 'org'}-${a.alertType}-${idx}`}
+                      key={a.id}
                       className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-card px-3 py-2 text-sm"
                     >
                       <Badge variant={SEVERITY_BADGE[a.severity]}>
@@ -341,8 +341,8 @@ const AiAnalyticsPage = () => {
                             `${name} ${((percent ?? 0) * 100).toFixed(0)}٪`
                           }
                         >
-                          {pieData.map((_, i) => (
-                            <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                          {pieData.map((entry, i) => (
+                            <Cell key={entry.name} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                           ))}
                         </Pie>
                         <Tooltip
