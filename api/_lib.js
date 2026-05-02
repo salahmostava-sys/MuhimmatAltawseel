@@ -1,4 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
+const aiTools = require('./_aiTools');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -48,4 +49,5 @@ module.exports = {
   GROQ_API_KEY: process.env.GROQ_API_KEY,
   GROQ_BASE_URL: 'https://api.groq.com/openai/v1',
   DEFAULT_GROQ_MODEL: process.env.GROQ_MODEL || 'llama3-8b-8192',
+  ...aiTools,
 };

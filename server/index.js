@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
 import { isUuid, isValidMonth, VALID_ROLES } from './lib/validation.js';
+import { AI_CHAT_SYSTEM_PROMPT, AI_CHAT_TOOLS, executeAiTool, callGroqChat } from './lib/aiTools.js';
 
 const app = express();
 const PORT = process.env.SERVER_PORT || 3001;
@@ -306,196 +307,6 @@ app.post('/api/functions/groq-chat', async (req, res) => {
 });
 
 // ── AI Chat (replaces ai-chat edge function) ──────────────────────────────────
-// Tool definitions and implementations for the AI chat assistant
-const AI_CHAT_SYSTEM_PROMPT = `
-أنت مساعد إداري ذكي لنظام "مهمات التوصيل" اللوجستي.
-لا تؤلف أي أرقام أو بيانات من عندك أبداً.
-استخدم الأدوات المتاحة للإجابة على أسئلة المستخدم 
-بناءً على البيانات الحقيقية من النظام.
-أجب دائماً باللغة العربية بشكل دقيق ومختصر.
-إذا لم تجد البيانات المطلوبة في الأدوات المتاحة، قل ذلك صراحةً.
-`.trim();
-
-const AI_CHAT_TOOLS = [
-  { type: 'function', function: { name: 'get_employee_stats', description: 'إحصائيات المناديب — العدد الإجمالي وتوزيعهم حسب الحالة', parameters: { type: 'object', properties: {}, required: [] } } },
-  { type: 'function', function: { name: 'get_vehicle_status', description: 'حالة المركبات — كم مركبة نشطة وغير معينة', parameters: { type: 'object', properties: {}, required: [] } } },
-  { type: 'function', function: { name: 'get_orders_summary', description: 'ملخص الطلبات لليوم أو الشهر الحالي', parameters: { type: 'object', properties: { period: { type: 'string', enum: ['today', 'this_month'] } }, required: [] } } },
-  { type: 'function', function: { name: 'get_salary_summary', description: 'ملخص الرواتب للشهر الحالي', parameters: { type: 'object', properties: {}, required: [] } } },
-  { type: 'function', function: { name: 'get_advances_summary', description: 'ملخص السلف النشطة', parameters: { type: 'object', properties: {}, required: [] } } },
-  { type: 'function', function: { name: 'get_attendance_summary', description: 'ملخص الحضور والغياب', parameters: { type: 'object', properties: { period: { type: 'string', enum: ['today', 'this_month'] } }, required: [] } } },
-  { type: 'function', function: { name: 'get_alerts_summary', description: 'ملخص التنبيهات النشطة — إقامات منتهية', parameters: { type: 'object', properties: {}, required: [] } } },
-  { type: 'function', function: { name: 'get_employee_details', description: 'تفاصيل موظف معين بالاسم', parameters: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } } },
-  { type: 'function', function: { name: 'get_platform_accounts', description: 'حسابات المنصات — كم حساب نشط على كل منصة', parameters: { type: 'object', properties: {}, required: [] } } },
-  { type: 'function', function: { name: 'get_maintenance_summary', description: 'ملخص الصيانة — عدد طلبات الصيانة وتكاليفها', parameters: { type: 'object', properties: {}, required: [] } } },
-  { type: 'function', function: { name: 'get_top_riders', description: 'أفضل 10 مناديب أداءً هذا الشهر', parameters: { type: 'object', properties: {}, required: [] } } },
-  { type: 'function', function: { name: 'get_bottom_riders', description: 'أضعف 10 مناديب أداءً هذا الشهر', parameters: { type: 'object', properties: {}, required: [] } } },
-];
-
-const TOOL_PERMISSIONS = {
-  get_salary_summary: ['admin', 'finance'],
-  get_advances_summary: ['admin', 'finance'],
-  get_employee_details: ['admin', 'hr', 'finance'],
-};
-
-function canAccessTool(userRole, toolName) {
-  const allowed = TOOL_PERMISSIONS[toolName];
-  if (!allowed) return true;
-  return !!userRole && allowed.includes(userRole);
-}
-
-async function queryRidersRanking(sb, monthFrom, monthTo, ascending) {
-  const { data, error } = await sb.from('daily_orders')
-    .select('employee_id, orders_count, employees(name)')
-    .gte('date', monthFrom)
-    .lte('date', monthTo);
-  if (error) throw error;
-  const totals = {};
-  for (const r of (data ?? [])) {
-    const id = r.employee_id;
-    const name = r.employees?.name ?? id;
-    const count = r.orders_count ?? 0;
-    if (!totals[id]) totals[id] = { name, total: 0 };
-    totals[id].total += count;
-  }
-  const sorted = Object.values(totals)
-    .sort((a, b) => ascending ? a.total - b.total : b.total - a.total)
-    .slice(0, 10);
-  return sorted.map((r, i) => ({ rank: i + 1, name: r.name, orders: r.total }));
-}
-
-function buildNamePattern(name) {
-  const t = name.trim();
-  if (!t) return null;
-  return `%${t.replace(/[\\%_]/g, '\\$&')}%`;
-}
-
-async function executeAiTool(sb, userRole, toolName, args) {
-  if (!canAccessTool(userRole, toolName)) {
-    if (toolName === 'get_salary_summary' || toolName === 'get_advances_summary') {
-      return { error: 'عذراً، بيانات الرواتب والسلف مقصورة على المدير والمحاسب فقط.' };
-    }
-    return { error: 'لا تملك صلاحية الوصول إلى هذه البيانات.' };
-  }
-
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const monthFrom = `${y}-${m}-01`;
-  const monthTo = new Date(y, now.getMonth() + 1, 0).toISOString().split('T')[0];
-  const today = now.toISOString().split('T')[0];
-
-  switch (toolName) {
-    case 'get_employee_stats': {
-      const { data, error } = await sb.from('employees').select('sponsorship_status, status');
-      if (error) throw error;
-      const rows = data ?? [];
-      const active_count = rows.filter(r => r.status === 'active').length;
-      const by_sponsorship = {};
-      for (const r of rows) { const s = r.sponsorship_status ?? 'unknown'; by_sponsorship[s] = (by_sponsorship[s] ?? 0) + 1; }
-      return { total: rows.length, active_employees_count: active_count, by_sponsorship };
-    }
-    case 'get_vehicle_status': {
-      const { data, error } = await sb.from('vehicles').select('status');
-      if (error) throw error;
-      const rows = data ?? [];
-      const by_status = {};
-      for (const r of rows) { const s = r.status ?? 'unknown'; by_status[s] = (by_status[s] ?? 0) + 1; }
-      return { total: rows.length, by_status };
-    }
-    case 'get_orders_summary': {
-      const period = args.period || 'today';
-      const from = period === 'this_month' ? monthFrom : today;
-      const to = period === 'this_month' ? monthTo : today;
-      const { data, error } = await sb.from('daily_orders').select('orders_count, apps(name)').gte('date', from).lte('date', to);
-      if (error) throw error;
-      let total = 0;
-      const by_platform = {};
-      for (const r of (data ?? [])) {
-        const count = r.orders_count ?? 0;
-        total += count;
-        const appName = r.apps?.name ?? 'أخرى';
-        by_platform[appName] = (by_platform[appName] ?? 0) + count;
-      }
-      return { total, period: period === 'this_month' ? 'الشهر الحالي' : 'اليوم', by_platform };
-    }
-    case 'get_salary_summary': {
-      const monthYear = `${y}-${m}`;
-      const { data, error } = await sb.from('salary_records').select('is_approved, net_salary').eq('month_year', monthYear);
-      if (error) throw error;
-      let paid = 0, pending = 0, totalAmount = 0;
-      for (const r of (data ?? [])) {
-        totalAmount += r.net_salary ?? 0;
-        if (r.is_approved) paid++; else pending++;
-      }
-      return { month: monthYear, paid, pending, total_records: (data ?? []).length, total_amount: totalAmount };
-    }
-    case 'get_advances_summary': {
-      const { data, error } = await sb.from('advances').select('id, amount').eq('status', 'active');
-      if (error) throw error;
-      const totalAmount = (data ?? []).reduce((s, r) => s + (r.amount ?? 0), 0);
-      return { count: (data ?? []).length, total_amount: totalAmount };
-    }
-    case 'get_top_riders': {
-      const riders = await queryRidersRanking(sb, monthFrom, monthTo, false);
-      return { month: `${y}-${m}`, top_riders: riders };
-    }
-    case 'get_bottom_riders': {
-      const riders = await queryRidersRanking(sb, monthFrom, monthTo, true);
-      return { month: `${y}-${m}`, bottom_riders: riders };
-    }
-    case 'get_attendance_summary': {
-      const period = args.period || 'today';
-      const from = period === 'this_month' ? monthFrom : today;
-      const to = period === 'this_month' ? monthTo : today;
-      const { data, error } = await sb.from('attendance').select('status').gte('date', from).lte('date', to);
-      if (error) throw error;
-      const by_status = {};
-      for (const r of (data ?? [])) { const s = r.status ?? 'unknown'; by_status[s] = (by_status[s] ?? 0) + 1; }
-      return { period: period === 'this_month' ? 'الشهر الحالي' : 'اليوم', total_records: (data ?? []).length, by_status };
-    }
-    case 'get_alerts_summary': {
-      const threshold = monthTo;
-      const { data, error } = await sb.from('employees').select('id, name, residency_expiry').eq('status', 'active').not('residency_expiry', 'is', null).lte('residency_expiry', threshold);
-      if (error) throw error;
-      const expiring = (data ?? []).map(e => ({
-        name: e.name,
-        expiry: e.residency_expiry,
-        days_left: Math.round((new Date(e.residency_expiry).getTime() - now.getTime()) / 86400000),
-      })).sort((a, b) => a.days_left - b.days_left);
-      return { expiring_residencies: expiring.length, details: expiring.slice(0, 10) };
-    }
-    case 'get_employee_details': {
-      const pattern = buildNamePattern(args.name ?? '');
-      if (!pattern) return { found: false, message: 'يرجى تحديد اسم الموظف.' };
-      const canViewSalary = userRole === 'admin' || userRole === 'finance';
-      const fields = ['id', 'name', 'national_id', 'phone', 'city', 'status', 'sponsorship_status', 'job_title', 'join_date', 'residency_expiry', ...(canViewSalary ? ['base_salary'] : [])].join(', ');
-      const { data, error } = await sb.from('employees').select(fields).ilike('name', pattern).limit(5);
-      if (error) throw error;
-      if (!data || data.length === 0) return { found: false, message: `لم يُعثر على موظف باسم "${args.name}"` };
-      return { found: true, employees: data };
-    }
-    case 'get_platform_accounts': {
-      const { data, error } = await sb.from('platform_accounts').select('status, app_id, apps(name)').eq('status', 'active');
-      if (error) throw error;
-      const by_platform = {};
-      for (const r of (data ?? [])) {
-        const name = r.apps?.name ?? 'أخرى';
-        by_platform[name] = (by_platform[name] ?? 0) + 1;
-      }
-      return { total_active: (data ?? []).length, by_platform };
-    }
-    case 'get_maintenance_summary': {
-      const { data, error } = await sb.from('maintenance_logs').select('cost, status, type').gte('date', monthFrom).lte('date', monthTo);
-      if (error) throw error;
-      const totalCost = (data ?? []).reduce((s, r) => s + (r.cost ?? 0), 0);
-      const by_status = {};
-      for (const r of (data ?? [])) { const s = r.status ?? 'unknown'; by_status[s] = (by_status[s] ?? 0) + 1; }
-      return { month: `${y}-${m}`, records: (data ?? []).length, total_cost: totalCost, by_status };
-    }
-    default:
-      return { error: `Unknown tool: ${toolName}` };
-  }
-}
 
 app.post('/api/functions/ai-chat', async (req, res) => {
   const requestId = crypto.randomUUID();
@@ -524,29 +335,7 @@ app.post('/api/functions/ai-chat', async (req, res) => {
       ...clientMessages.map(m => ({ role: m.role, content: m.content })),
     ];
 
-    const groqChat = async (msgs, tools) => {
-      const body = {
-        model: 'llama3-70b-8192',
-        messages: msgs,
-        temperature: 0.3,
-        max_tokens: 1024,
-      };
-      if (tools) { body.tools = tools; body.tool_choice = 'auto'; }
-
-      const groqRes = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
-        body: JSON.stringify(body),
-      });
-      if (!groqRes.ok) {
-        const err = await groqRes.text();
-        throw new Error(`Groq API error ${groqRes.status}: ${err}`);
-      }
-      const json = await groqRes.json();
-      return json.choices[0].message;
-    };
-
-    const responseMessage = await groqChat(conversation, AI_CHAT_TOOLS);
+    const responseMessage = await callGroqChat(GROQ_API_KEY, GROQ_BASE_URL, conversation, AI_CHAT_TOOLS);
 
     if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
       conversation.push(responseMessage);
@@ -565,7 +354,7 @@ app.post('/api/functions/ai-chat', async (req, res) => {
         conversation.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify(result) });
       }
 
-      const finalResponse = await groqChat(conversation);
+      const finalResponse = await callGroqChat(GROQ_API_KEY, GROQ_BASE_URL, conversation);
       return res.json({ message: finalResponse.content ?? '' });
     }
 
