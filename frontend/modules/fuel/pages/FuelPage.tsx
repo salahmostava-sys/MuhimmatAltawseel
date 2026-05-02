@@ -251,7 +251,7 @@ function DailyTable({
 function SpreadsheetView({
   monthly,
   daily,
-  dailyOrderRows,
+  dailyOrderRows: _dailyOrderRows,
   monthYear,
 }: Readonly<{
   monthly: MonthlyRow[];

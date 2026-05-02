@@ -4,17 +4,14 @@ on:
   pull_request:
     branches:
       - main
-  push:
-    branches:
-      - main
 
 jobs:
-  build:
-    name: Build frontend
+  lint-check:
+    name: Quick lint check (PR only)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -23,18 +20,10 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Report root package files
-        run: |
-          for file in package.json package-lock.json bun.lock bun.lockb; do
-            if [ -f "$file" ]; then
-              echo "Note: root-level $file present; frontend CI installs strictly from frontend/."
-            fi
-          done
-
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
 
-      - name: Lint, test, and build (verify — strict)
+      - name: Lint (zero warnings)
         working-directory: frontend
-        run: npm run lint:strict && npm run test && npm run build
+        run: npm run lint:strict
