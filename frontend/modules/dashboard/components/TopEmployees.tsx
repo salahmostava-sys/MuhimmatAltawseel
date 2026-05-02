@@ -38,8 +38,8 @@ export function TopEmployees(props: Readonly<{
             <div>
               <p className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest mb-2">الإجمالي</p>
               <div className="space-y-2">
-                {topRidersOverall.map((r, idx) => (
-                  <div key={`${r.appId}-${r.name}-${idx}`} className="flex items-center justify-between rounded-xl px-3 py-2.5 hover:bg-muted/40">
+                {topRidersOverall.map((r) => (
+                  <div key={r.appId} className="flex items-center justify-between rounded-xl px-3 py-2.5 hover:bg-muted/40">
                     <span className="text-sm font-semibold truncate">{r.name}</span>
                     <span className="text-sm font-black">{r.orders.toLocaleString()}</span>
                   </div>
@@ -57,8 +57,8 @@ export function TopEmployees(props: Readonly<{
                         <span className="text-xs font-bold text-foreground/75">{app.name}</span>
                       </div>
                       <div className="space-y-2">
-                        {app.riders.map((r, idx) => (
-                          <div key={`${app.id}-${r.name}-${idx}`} className="flex items-center justify-between rounded-xl px-3 py-2 hover:bg-muted/40">
+                        {app.riders.map((r) => (
+                          <div key={r.id} className="flex items-center justify-between rounded-xl px-3 py-2 hover:bg-muted/40">
                             <span className="text-sm truncate">{r.name}</span>
                             <span className="text-sm font-black">{r.orders.toLocaleString()}</span>
                           </div>
@@ -80,8 +80,8 @@ export function TopEmployees(props: Readonly<{
                         <span className="text-xs font-bold text-foreground/75">{app.name}</span>
                       </div>
                       <div className="space-y-2">
-                        {app.riders.map((r, idx) => (
-                          <div key={`bottom-${app.id}-${r.name}-${idx}`} className="flex items-center justify-between rounded-xl px-3 py-2 hover:bg-rose-50/50 border border-rose-100/60">
+                        {app.riders.map((r) => (
+                          <div key={`bottom-${app.id}-${r.id}`} className="flex items-center justify-between rounded-xl px-3 py-2 hover:bg-rose-50/50 border border-rose-100/60">
                             <span className="text-sm truncate">{r.name}</span>
                             <span className="text-sm font-black text-rose-700">{r.orders.toLocaleString()}</span>
                           </div>
@@ -99,8 +99,8 @@ export function TopEmployees(props: Readonly<{
                   الحصة = هدف المنصة ÷ عدد المناديب النشطين عليها؛ الإسقاط = معدّل الشهر حتى اليوم ممتد لنهاية الشهر.
                 </p>
                 <div className="space-y-2">
-                  {atRiskRiders.map((r, idx) => (
-                    <div key={`risk-${r.appId}-${r.name}-${idx}`} className="flex flex-wrap items-center justify-between gap-2 rounded-xl px-3 py-2.5 bg-amber-50/60 border border-amber-100">
+                  {atRiskRiders.map((r) => (
+                    <div key={`risk-${r.appId}-${r.name}`} className="flex flex-wrap items-center justify-between gap-2 rounded-xl px-3 py-2.5 bg-amber-50/60 border border-amber-100">
                       <div className="min-w-0">
                         <span className="text-sm font-semibold text-foreground">{r.name}</span>
                         <span className="text-[10px] text-muted-foreground ms-2 inline-flex items-center gap-1">

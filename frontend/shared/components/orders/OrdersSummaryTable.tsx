@@ -92,13 +92,17 @@ export const OrdersSummaryTable = ({
       </thead>
       <tbody>
         {loading ? (
-          Array.from({ length: 5 }).map((_, i) => (
-            <tr key={`skeleton-row-${i}`} className="border-b border-border/30">
-              {Array.from({ length: apps.length + 5 }).map((__, j) => (
-                <td key={`skeleton-cell-${i}-${j}`} className="p-3"><div className="h-4 bg-muted rounded animate-pulse" /></td>
-              ))}
-            </tr>
-          ))
+          Array.from({ length: 5 }, (_, i) => ({ id: `skeleton-row-${i}` }))
+            .map((row) => (
+              <tr key={row.id} className="border-b border-border/30">
+                {Array.from({ length: apps.length + 5 }, (_, j) => ({ id: `skeleton-cell-${row.id}-${j}` }))
+                  .map((cell) => (
+                    <td key={cell.id} className="p-3">
+                      <div className="h-4 bg-muted rounded animate-pulse" />
+                    </td>
+                  ))}
+              </tr>
+            ))
         ) : sortedEmployees.map((emp, idx) => {
           const total = empTotal(emp.id);
           const avg = total > 0 ? Math.round(total / days) : 0;

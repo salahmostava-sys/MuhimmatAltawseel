@@ -260,10 +260,17 @@ const DailyAttendance = ({ selectedMonth, selectedYear }: Props) => {
   ];
   let tableBodyRows: React.ReactNode;
   if (loading) {
-    tableBodyRows = Array.from({ length: 5 }).map((_, i) => (
-      <tr key={`skeleton-row-${i}`} className="ta-tr">
-        {Array.from({ length: 5 }).map((_, j) => (
-          <td key={`skeleton-cell-${i}-${j}`} className="ta-td">
+    const skeletonData = [
+      { id: 'skeleton-row-1', cells: ['skeleton-cell-1-1', 'skeleton-cell-1-2', 'skeleton-cell-1-3', 'skeleton-cell-1-4', 'skeleton-cell-1-5'] },
+      { id: 'skeleton-row-2', cells: ['skeleton-cell-2-1', 'skeleton-cell-2-2', 'skeleton-cell-2-3', 'skeleton-cell-2-4', 'skeleton-cell-2-5'] },
+      { id: 'skeleton-row-3', cells: ['skeleton-cell-3-1', 'skeleton-cell-3-2', 'skeleton-cell-3-3', 'skeleton-cell-3-4', 'skeleton-cell-3-5'] },
+      { id: 'skeleton-row-4', cells: ['skeleton-cell-4-1', 'skeleton-cell-4-2', 'skeleton-cell-4-3', 'skeleton-cell-4-4', 'skeleton-cell-4-5'] },
+      { id: 'skeleton-row-5', cells: ['skeleton-cell-5-1', 'skeleton-cell-5-2', 'skeleton-cell-5-3', 'skeleton-cell-5-4', 'skeleton-cell-5-5'] },
+    ];
+    tableBodyRows = skeletonData.map((row) => (
+      <tr key={row.id} className="ta-tr">
+        {row.cells.map((cellId) => (
+          <td key={cellId} className="ta-td">
             <div className="h-4 bg-muted rounded animate-pulse" />
           </td>
         ))}

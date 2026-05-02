@@ -165,8 +165,8 @@ const MonthlyRecord = ({ selectedMonth, selectedYear }: Props) => {
               <PopoverContent className="w-72 max-h-60 overflow-y-auto p-3" align="center">
                 <p className="text-xs font-semibold text-foreground mb-2">ملاحظات {row.name}</p>
                 <div className="space-y-2">
-                  {row.notes.map((n, i) => (
-                    <div key={i} className="flex gap-2 text-xs border-b border-border/30 pb-1.5 last:border-0">
+                  {row.notes.map((n) => (
+                    <div key={`${n.date}-${n.note}`} className="flex gap-2 text-xs border-b border-border/30 pb-1.5 last:border-0">
                       <span className="text-muted-foreground font-mono whitespace-nowrap">{n.date.slice(5)}</span>
                       <span className="text-foreground">{n.note}</span>
                     </div>
