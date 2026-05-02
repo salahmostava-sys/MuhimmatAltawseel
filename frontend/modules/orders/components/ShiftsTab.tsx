@@ -166,7 +166,7 @@ export function ShiftsTab({
   );
 
   // Keep backward compat — total = حاضر days only
-  const empMonthTotal = empPresentTotal;
+  const _empMonthTotal = empPresentTotal;
 
   const handleCellClick = (empId: string, day: number) => {
     if (!canEdit) return;
