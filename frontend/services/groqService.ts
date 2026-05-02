@@ -59,14 +59,14 @@ export const groqService = {
     return _configured;
   },
 
-  chat: async (message: string, systemPrompt?: string): Promise<string> => {
+  chat: (message: string, systemPrompt?: string): Promise<string> => {
     const messages: GroqMessage[] = [];
     if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
     messages.push({ role: 'user', content: message });
     return callGroqServer(messages);
   },
 
-  chatMessages: async (messages: GroqMessage[]): Promise<string> => {
+  chatMessages: (messages: GroqMessage[]): Promise<string> => {
     return callGroqServer(messages);
   },
 

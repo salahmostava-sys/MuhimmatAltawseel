@@ -144,7 +144,7 @@ export function useSalaryPrint(params: UseSalaryPrintParams) {
 
   // ── Toolbar wrapper ───────────────────────────────────────────────────────
 
-  const runPrintTable = useCallback(async () => {
+  const runPrintTable = useCallback(() => {
     setSalaryActionLoading(true);
     try {
       handlePrintTable();

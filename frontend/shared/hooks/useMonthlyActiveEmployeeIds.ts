@@ -12,7 +12,7 @@ export function useMonthlyActiveEmployeeIds(monthKey?: string) {
 
   return useAuthedQuery({
     buildQueryKey: (uid) => ['employees', uid, 'active-ids', mk] as const,
-    queryFn: async (): Promise<MonthlyActiveEmployeeIdsResult> =>
+    queryFn: (): Promise<MonthlyActiveEmployeeIdsResult> =>
       employeeActivityService.getMonthlyActiveEmployeeIds(mk),
     staleTime: 60_000,
     requireUser: false,

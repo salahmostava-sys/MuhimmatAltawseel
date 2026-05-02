@@ -572,7 +572,7 @@ export const fetchPricingRulesMap = async (appNameToId: Record<string, string>) 
   const appIds = Object.values(appNameToId);
   if (appIds.length === 0) return {};
   // Single query instead of Promise.all with N individual calls
-  return salaryService.getPricingRulesForApps(appIds);
+  return await salaryService.getPricingRulesForApps(appIds);
 };
 
 export const getManualDeductionTotal = (row: SalaryRow) =>

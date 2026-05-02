@@ -98,7 +98,7 @@ export const useAppsPage = () => {
   });
 
   const toggleMonthlyActiveMutation = useMutation({
-    mutationFn: async (app: AppData) =>
+    mutationFn: (app: AppData) =>
       appService.toggleMonthlyActive(app.id, monthYear, !app.is_active_this_month),
     onSuccess: async () => {
       await invalidateApps();

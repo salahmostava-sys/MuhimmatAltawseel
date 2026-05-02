@@ -29,9 +29,9 @@ const AuthContext = createContext<AuthContextType>({
   role: null,
   loading: true,
   authLoading: true,
-  recoverSessionSilently: async () => false,
-  signIn: async () => ({ error: { message: 'AuthContext not ready' } }),
-  signOut: async () => undefined,
+  recoverSessionSilently: () => Promise.resolve(false),
+  signIn: () => Promise.resolve({ error: { message: 'AuthContext not ready' } }),
+  signOut: () => Promise.resolve(undefined),
 });
 const AUTH_SIGNIN_TIMEOUT_MS = 15_000;
 const AUTH_ACTIVE_CHECK_TIMEOUT_MS = 10_000;
@@ -51,7 +51,7 @@ const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): 
   }
 };
 
-const fetchRole = async (userId: string): Promise<AppRole | null> => {
+const fetchRole = (userId: string): Promise<AppRole | null> => {
   return authService.fetchUserRole(userId);
 };
 
@@ -184,7 +184,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [verifyCurrentUserActive]);
 
-  const recoverSessionSilently = useCallback(async (opts?: { refetchActiveQueries?: boolean }) => {
+  const recoverSessionSilently = useCallback((opts?: { refetchActiveQueries?: boolean }) => {
     if (recoverInFlightRef.current !== null) return recoverInFlightRef.current;
 
     const task = (async () => {

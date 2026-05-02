@@ -67,7 +67,7 @@ export function createSupabaseMock(options: SupabaseMockOptions) {
     storage: {
       from() {
         return {
-          upload: async () => options.storageUpload ?? { data: { path: 'mock' }, error: null },
+          upload: () => Promise.resolve(options.storageUpload ?? { data: { path: 'mock' }, error: null }),
           getPublicUrl: () => ({ data: { publicUrl: 'https://cdn.test/avatar.png' } }),
         };
       },
@@ -77,10 +77,10 @@ export function createSupabaseMock(options: SupabaseMockOptions) {
     }),
     removeChannel: () => {},
     functions: {
-      invoke: async () => {
+      invoke: () => {
         const r = options.functionsInvoke;
-        if (typeof r === 'function') return r();
-        return r ?? { data: null, error: null };
+        if (typeof r === 'function') return Promise.resolve(r());
+        return Promise.resolve(r ?? { data: null, error: null });
       },
     },
   };
