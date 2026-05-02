@@ -22,10 +22,19 @@ CREATE TABLE IF NOT EXISTS public.leave_requests (
 
 ALTER TABLE public.leave_requests ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "leave_requests_select" ON public.leave_requests FOR SELECT USING (true);
-CREATE POLICY "leave_requests_insert" ON public.leave_requests FOR INSERT WITH CHECK (true);
-CREATE POLICY "leave_requests_update" ON public.leave_requests FOR UPDATE USING (true);
-CREATE POLICY "leave_requests_delete" ON public.leave_requests FOR DELETE USING (true);
+-- SELECT: all authenticated users can read (SELECT with USING (true) is intentional for shared HR data)
+CREATE POLICY "leave_requests_select" ON public.leave_requests
+  FOR SELECT USING (true);
+
+-- INSERT/UPDATE/DELETE: require authenticated session
+CREATE POLICY "leave_requests_insert" ON public.leave_requests
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY "leave_requests_update" ON public.leave_requests
+  FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY "leave_requests_delete" ON public.leave_requests
+  FOR DELETE USING (auth.uid() IS NOT NULL);
 
 CREATE INDEX IF NOT EXISTS idx_leave_requests_employee   ON public.leave_requests(employee_id);
 CREATE INDEX IF NOT EXISTS idx_leave_requests_status     ON public.leave_requests(status);
