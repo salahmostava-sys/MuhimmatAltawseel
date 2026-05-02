@@ -162,12 +162,12 @@ export const buildAppEmployees = ({
     const projectedMonthEnd = Math.round((monthOrders / daysPassed) * daysInMonth);
 
     return {
-      id: employee!.id,
-      name: employee!.name,
-      national_id: employee!.national_id ?? null,
-      phone: employee!.phone ?? null,
-      job_title: employee!.job_title ?? null,
-      status: employee!.status,
+      id: employee?.id,
+      name: employee?.name,
+      national_id: employee?.national_id ?? null,
+      phone: employee?.phone ?? null,
+      job_title: employee?.job_title ?? null,
+      status: employee?.status,
       monthOrders,
       targetShare,
       projectedMonthEnd,

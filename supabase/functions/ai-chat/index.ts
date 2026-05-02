@@ -572,7 +572,8 @@ async function getRiderMonthlyAverage(sb: DbClient, name: string) {
   name = name.trim();
   const namePattern = buildNameSearchPattern(name);
   if (!name) return { error: 'يرجى تحديد اسم المندوب' };
-  const { data: emp } = await sb.from('employees').select('id, name').ilike('name', namePattern!).limit(1).maybeSingle();
+  if (!namePattern) return { error: 'فشل إنشاء نمط البحث للاسم' };
+  const { data: emp } = await sb.from('employees').select('id, name').ilike('name', namePattern).limit(1).maybeSingle();
   if (!emp) return { error: `لم يتم العثور على مندوب باسم "${name}"` };
 
   const now = new Date();
@@ -737,8 +738,20 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    if (!supabaseUrl) {
+      return new Response(
+        JSON.stringify({ error: 'SUPABASE_URL not configured' }),
+        { status: 500, headers: { ...getCorsHeaders(requestOrigin), 'Content-Type': 'application/json' } },
+      );
+    }
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!serviceRoleKey) {
+      return new Response(
+        JSON.stringify({ error: 'SUPABASE_SERVICE_ROLE_KEY not configured' }),
+        { status: 500, headers: { ...getCorsHeaders(requestOrigin), 'Content-Type': 'application/json' } },
+      );
+    }
     const groqKey = Deno.env.get('GROQ_API_KEY');
     if (!groqKey) {
       return new Response(

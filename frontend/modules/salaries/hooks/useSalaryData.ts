@@ -145,7 +145,7 @@ export function useSalaryData({ selectedMonth, salariesDraftKey }: UseSalaryData
     gcTime: 5 * 60_000, // keep in memory 5 min after unmount
     retry: false,
     queryFn: async () => {
-      const monthlyContext = phase1.data!;
+      const monthlyContext = phase1.data ?? {};
       // Use current phase2 data if available, otherwise empty (phase1-only pass)
       const previewData = phase2.data?.previewData ?? [];
 

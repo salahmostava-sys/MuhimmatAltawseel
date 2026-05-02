@@ -338,7 +338,7 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
 
   // ── Totals (computed from all filtered rows, not just visible ones) ────────
   const totals = useMemo(() => filtered.reduce((acc, r) => {
-    const c = computedRows.get(r.id)!;
+    const c = computedRows.get(r.id);
     const activityTotals = getSalaryRowActivityTotals(r);
     platforms.forEach(p => {
       acc.platformOrders[p] = (acc.platformOrders[p] || 0) + (r.platformMetrics[p]?.ordersCount || 0);
@@ -351,21 +351,21 @@ export function SalaryTable(props: Readonly<SalaryTableProps>) {
     });
     acc.totalOrders += activityTotals.orders;
     acc.totalShiftDays += activityTotals.shiftDays;
-    acc.platformSalaries += c.totalPlatformSalary;
+    acc.platformSalaries += c?.totalPlatformSalary || 0;
     acc.platformIncome += r.platformIncome;
     acc.workDaysSum += r.workDays;
     acc.fuelCost += r.fuelCost;
     acc.incentives += r.incentives;
     acc.sickAllowance += r.sickAllowance;
-    acc.totalAdditions += c.totalAdditions;
-    acc.totalWithSalary += c.totalWithSalary;
+    acc.totalAdditions += c?.totalAdditions || 0;
+    acc.totalWithSalary += c?.totalWithSalary || 0;
     acc.advance += r.advanceDeduction;
     acc.externalDed += r.externalDeduction;
     acc.violations += r.violations;
-    acc.totalDed += c.totalDeductions;
-    acc.net += c.netSalary;
+    acc.totalDed += c?.totalDeductions || 0;
+    acc.net += c?.netSalary || 0;
     acc.transfer += r.transfer;
-    acc.remaining += c.remaining;
+    acc.remaining += c?.remaining || 0;
     return acc;
   }, {
     platformOrders: {} as Record<string, number>,

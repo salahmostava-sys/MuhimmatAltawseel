@@ -55,9 +55,15 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'No authorization header' }, 401, requestOrigin);
     }
 
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    if (!supabaseUrl || !supabaseAnonKey) {
+      logError('Supabase client environment variables not configured', { request_id: requestId });
+      return jsonResponse({ error: 'Server misconfiguration' }, 500, requestOrigin);
+    }
     const callerClient = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
+      supabaseUrl,
+      supabaseAnonKey,
       { global: { headers: { Authorization: authHeader } } },
     );
 
@@ -67,9 +73,14 @@ Deno.serve(async (req) => {
     }
 
     // ── 4. Rate limiting: 20 requests per user per 60 seconds ────────────────
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!supabaseServiceRoleKey) {
+      logError('SUPABASE_SERVICE_ROLE_KEY not configured', { request_id: requestId });
+      return jsonResponse({ error: 'Server misconfiguration' }, 500, requestOrigin);
+    }
     const adminClient = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      supabaseUrl,
+      supabaseServiceRoleKey,
     );
 
     const rateLimitKey = `groq-chat:${callerUser.id}`;
