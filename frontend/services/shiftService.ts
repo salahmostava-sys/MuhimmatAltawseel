@@ -91,6 +91,22 @@ export const shiftService = {
     if (error) throw toServiceError(error, 'shiftService.delete');
   },
 
+  /**
+   * Delete all shift rows for a given month and app.
+   * Used before a full-sync upsert so absent/cleared cells are properly removed.
+   */
+  deleteByMonthAndApp: async (year: number, month: number, appId: string) => {
+    const from = `${year}-${String(month).padStart(2, '0')}-01`;
+    const to = new Date(year, month, 0).toISOString().split('T')[0];
+    const { error } = await supabase
+      .from('daily_shifts')
+      .delete()
+      .eq('app_id', appId)
+      .gte('date', from)
+      .lte('date', to);
+    if (error) throw toServiceError(error, 'shiftService.deleteByMonthAndApp');
+  },
+
   getTotalHoursByEmployee: async (employeeId: string, monthYear: string) => {
     const [year, month] = monthYear.split('-');
     const from = `${year}-${month}-01`;

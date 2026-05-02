@@ -22,32 +22,35 @@ export function ShiftsTabWrapper() {
   const year = Number(yearStr);
   const month = Number(monthStr);
 
-  // Fetch employees
   const { data: employees = [] } = useQuery({
     queryKey: ['employees', 'base', uid],
     queryFn: () => orderService.getBaseEmployees(),
     enabled,
   });
 
-  // Fetch apps
   const { data: apps = [] } = useQuery({
     queryKey: ['apps', 'active', uid],
     queryFn: () => orderService.getActiveApps(),
     enabled,
   });
 
-  // Fetch employee â†” app assignments
   const { data: employeeApps = [] } = useQuery({
     queryKey: ['employee-apps', uid],
     queryFn: () => orderService.getEmployeeAppAssignments(),
     enabled,
   });
 
-  // Only show employees assigned to shift-capable apps
   const shiftAppIds = useMemo(
     () => new Set(apps.filter(isShiftCapableApp).map((a) => a.id)),
     [apps],
   );
+
+  /** ID of the first shift-capable app — used for full-month sync on save */
+  const shiftAppId = useMemo(
+    () => apps.filter(isShiftCapableApp)[0]?.id ?? '',
+    [apps],
+  );
+
   const shiftEmployeeIds = useMemo(() => {
     const ids = new Set<string>();
     employeeApps.forEach((ea) => {
@@ -61,7 +64,6 @@ export function ShiftsTabWrapper() {
     [employees, shiftEmployeeIds],
   );
 
-  // Fetch shifts for current month
   const { data: shifts = [], isLoading } = useQuery({
     queryKey: ['shifts', 'month', globalMonth, uid],
     queryFn: () => shiftService.getByMonth(globalMonth),
@@ -89,7 +91,17 @@ export function ShiftsTabWrapper() {
           notes: shift.notes ?? undefined,
         }));
 
-        await shiftService.bulkUpsert(rows);
+        // Full-sync: delete all existing rows for this month+app first,
+        // then re-insert. This ensures cells changed to absent/unset are
+        // properly cleared (including old leave records changed back to absent).
+        if (shiftAppId) {
+          await shiftService.deleteByMonthAndApp(year, month, shiftAppId);
+        }
+
+        if (rows.length > 0) {
+          await shiftService.bulkUpsert(rows);
+        }
+
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['shifts'] }),
           queryClient.invalidateQueries({ queryKey: ['employees', uid, 'active-ids', globalMonth] }),
@@ -103,7 +115,7 @@ export function ShiftsTabWrapper() {
         throw error;
       }
     },
-    [globalMonth, queryClient, uid]
+    [globalMonth, queryClient, uid, shiftAppId, year, month],
   );
 
   return (
@@ -114,7 +126,7 @@ export function ShiftsTabWrapper() {
         const raw = s as Record<string, unknown>;
         return {
           ...s,
-          date: String(raw.date ?? raw.date ?? ''),
+          date: String(raw.date ?? ''),
         };
       }) as ShiftRow[]}
       employees={shiftEmployees}

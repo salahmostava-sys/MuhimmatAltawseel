@@ -21,8 +21,24 @@ export type ShiftRow = {
   app?: { name: string };
 };
 
-/** key = `${empId}::${day}` → hours */
+/**
+ * key = `${empId}::${day}`
+ * value:
+ *   1   = حاضر
+ *   0   = غائب (explicit, stored locally — not persisted to DB)
+ *  -1   = إجازة براتب
+ *  -2   = إجازة مرضى
+ * (key absent) = لم يُحدد
+ */
 type ShiftGrid = Record<string, number>;
+
+/** Human label for a grid value */
+const ATTENDANCE_LABELS: Record<number, string> = {
+  1: 'حاضر',
+  0: 'غائب',
+  [-1]: 'إجازة براتب',
+  [-2]: 'إجازة مرضى',
+};
 
 type Props = {
   year: number;
@@ -49,7 +65,11 @@ function buildGridFromShifts(shifts: ShiftRow[]): ShiftGrid {
     const day = parseInt(s.date.slice(8, 10), 10);
     if (isNaN(day)) continue;
     const key = `${s.employee_id}::${day}`;
-    grid[key] = (grid[key] ?? 0) + s.hours_worked;
+    // Include all non-zero values: present (>0) and leave statuses (<0)
+    // hours_worked === 0 should never be saved to DB, but skip it for safety
+    if (s.hours_worked !== 0) {
+      grid[key] = s.hours_worked;
+    }
   }
   return grid;
 }
@@ -62,7 +82,8 @@ function gridToShiftRows(
 ): ShiftRow[] {
   const rows: ShiftRow[] = [];
   for (const [key, hours] of Object.entries(grid)) {
-    if (hours <= 0) continue;
+    // Skip absent (0) — only save present (1) and leave types (-1, -2)
+    if (hours === 0) continue;
     const [empId, dayStr] = key.split('::');
     const day = parseInt(dayStr, 10);
     if (!empId || isNaN(day)) continue;
@@ -92,8 +113,6 @@ export function ShiftsTab({
   const shiftApps = useMemo(() => apps.filter(isShiftCapableApp), [apps]);
   const shiftAppId = shiftApps[0]?.id ?? '';
 
-  // All employees passed from parent (already filtered to shift-app assignments)
-  // plus any extra employees that have shift data in this month but weren't in the list
   const allShiftEmployees = useMemo(() => {
     const empIds = new Set(employees.map((e) => e.id));
     const extras: typeof employees = [];
@@ -121,8 +140,6 @@ export function ShiftsTab({
     setGrid(buildGridFromShifts(shifts));
   }, [shifts]);
 
-
-
   const days = getDaysInMonth(year, month);
   const dayArr = useMemo(() => Array.from({ length: days }, (_, i) => i + 1), [days]);
 
@@ -136,28 +153,40 @@ export function ShiftsTab({
     [grid],
   );
 
-  const empMonthTotal = useCallback(
-    (empId: string) => dayArr.reduce((s, d) => s + getVal(empId, d), 0),
+  /** Count of days where employee was PRESENT (hours > 0) */
+  const empPresentTotal = useCallback(
+    (empId: string) => dayArr.reduce((s, d) => s + (getVal(empId, d) > 0 ? 1 : 0), 0),
     [dayArr, getVal],
   );
+
+  /** Count of days where employee was on LEAVE (hours < 0) */
+  const empLeaveTotal = useCallback(
+    (empId: string) => dayArr.reduce((s, d) => s + (getVal(empId, d) < 0 ? 1 : 0), 0),
+    [dayArr, getVal],
+  );
+
+  // Keep backward compat — total = حاضر days only
+  const empMonthTotal = empPresentTotal;
 
   const handleCellClick = (empId: string, day: number) => {
     if (!canEdit) return;
     const key = `${empId}::${day}`;
-    // Toggle: if already editing this cell, close it
     if (editingCell === key) {
       setEditingCell(null);
       return;
     }
     setEditingCell(key);
-
   };
 
-  const commitAttendance = (key: string, value: number) => {
+  /** Set an explicit attendance value; pass null to clear the cell entirely */
+  const commitAttendance = (key: string, value: number | null) => {
     setGrid((prev) => {
       const next = { ...prev };
-      if (value > 0) next[key] = value;
-      else delete next[key];
+      if (value === null) {
+        delete next[key]; // "فاضي" — remove from grid
+      } else {
+        next[key] = value; // 0=غائب, 1=حاضر, -1=إجازة براتب, -2=إجازة مرضى
+      }
       return next;
     });
     setEditingCell(null);
@@ -177,15 +206,21 @@ export function ShiftsTab({
 
   const exportExcel = async () => {
     const XLSX = await loadXlsx();
-    const headers = ['الموظف', ...dayArr.map((d) => String(d)), 'المجموع'];
+    const headers = ['الموظف', ...dayArr.map((d) => String(d)), 'الحاضر', 'الإجازة'];
     const rows = filteredEmployees.map((emp) => {
       const values: Array<string | number> = [emp.name];
       dayArr.forEach((d) => {
         const v = getVal(emp.id, d);
         const key = `${emp.id}::${d}`;
-        values.push(v > 0 ? 'حاضر' : grid[key] !== undefined ? 'غائب' : '');
+        values.push(
+          v > 0 ? 'حاضر' :
+          v === -1 ? 'إجازة براتب' :
+          v === -2 ? 'إجازة مرضى' :
+          grid[key] !== undefined ? 'غائب' : '',
+        );
       });
-      values.push(empMonthTotal(emp.id));
+      values.push(empPresentTotal(emp.id));
+      values.push(empLeaveTotal(emp.id));
       return values;
     });
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
@@ -212,7 +247,6 @@ export function ShiftsTab({
         return;
       }
 
-      // Build name → employee map (use ALL employees, not just shift-assigned)
       const nameMap = new Map<string, string>();
       const importEmployeeList = allEmployees && allEmployees.length > 0 ? allEmployees : allShiftEmployees;
       importEmployeeList.forEach(emp => {
@@ -245,10 +279,21 @@ export function ShiftsTab({
             setGrid(prev => ({ ...prev, [key]: 1 }));
             imported++;
           } else if (cellValue === 'غائب' || cellValue === '0' || cellValue === 'absent') {
-            setGrid(prev => { const next = { ...prev }; next[key] = 0; return next; });
+            setGrid(prev => ({ ...prev, [key]: 0 }));
+            imported++;
+          } else if (
+            cellValue === 'إجازة براتب' || cellValue === 'paid_leave' ||
+            cellValue === '-1' || cellValue === 'إجازة'
+          ) {
+            setGrid(prev => ({ ...prev, [key]: -1 }));
+            imported++;
+          } else if (
+            cellValue === 'إجازة مرضى' || cellValue === 'sick_leave' ||
+            cellValue === '-2' || cellValue === 'مرضى'
+          ) {
+            setGrid(prev => ({ ...prev, [key]: -2 }));
             imported++;
           }
-          // فاضي = لا تغيير
         }
       }
 
@@ -268,13 +313,14 @@ export function ShiftsTab({
   const downloadTemplate = async () => {
     const XLSX = await loadXlsx();
     const headers = ['الموظف', ...dayArr.map(d => String(d))];
-    const templateEmployees = filteredEmployees;
-    const rows = templateEmployees.map(emp => [emp.name, ...dayArr.map(() => '')]);
+    const rows = filteredEmployees.map(emp => [emp.name, ...dayArr.map(() => '')]);
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'قالب الدوام');
     XLSX.writeFile(wb, `قالب_دوام_${month}_${year}.xlsx`);
-    toast.success('تم تنزيل القالب');
+    toast.success('تم تنزيل القالب', {
+      description: 'القيم المقبولة: حاضر / غائب / إجازة براتب / إجازة مرضى',
+    });
   };
 
   const handlePrint = () => {
@@ -301,8 +347,8 @@ export function ShiftsTab({
   const today = now.getFullYear() === year && now.getMonth() + 1 === month ? now.getDate() : -1;
 
   const grandTotal = useMemo(
-    () => filteredEmployees.reduce((s, e) => s + empMonthTotal(e.id), 0),
-    [filteredEmployees, empMonthTotal],
+    () => filteredEmployees.reduce((s, e) => s + empPresentTotal(e.id), 0),
+    [filteredEmployees, empPresentTotal],
   );
 
   if (shiftApps.length === 0) {
@@ -372,7 +418,7 @@ export function ShiftsTab({
             <Loader2 size={20} className="animate-spin" /> جاري التحميل...
           </div>
         ) : (
-          <table ref={tableRef} className="border-collapse text-[11px] leading-tight w-full" style={{ minWidth: `${36 + 132 + days * 40 + 64}px` }}>
+          <table ref={tableRef} className="border-collapse text-[11px] leading-tight w-full" style={{ minWidth: `${36 + 132 + days * 44 + 80}px` }}>
             <thead className="sticky top-0 z-20">
               <tr className="bg-muted border-b-2 border-border">
                 <th className="sticky right-0 z-[32] bg-muted text-center px-0.5 py-1.5 font-semibold text-muted-foreground border-l border-border" style={{ minWidth: 36, width: 36 }}>
@@ -390,14 +436,14 @@ export function ShiftsTab({
                       key={d}
                       className={`text-center px-0.5 py-1.5 font-medium border-l border-border/50
                         ${isToday ? 'bg-primary/20 text-primary font-bold' : isWeekend ? 'text-muted-foreground/50 bg-muted/40' : 'text-muted-foreground'}`}
-                      style={{ minWidth: 40 }}
+                      style={{ minWidth: 44 }}
                     >
                       {d}
                     </th>
                   );
                 })}
-                <th className="sticky left-0 z-30 text-center py-1.5 font-bold text-primary bg-muted border-r-2 border-border" style={{ minWidth: 64 }}>
-                  المجموع
+                <th className="sticky left-0 z-30 text-center py-1.5 font-bold text-primary bg-muted border-r-2 border-border" style={{ minWidth: 80 }}>
+                  الملخص
                 </th>
               </tr>
             </thead>
@@ -411,7 +457,8 @@ export function ShiftsTab({
                 </tr>
               ) : (
                 filteredEmployees.map((emp, idx) => {
-                  const total = empMonthTotal(emp.id);
+                  const presentTotal = empPresentTotal(emp.id);
+                  const leaveTotal = empLeaveTotal(emp.id);
                   const rowBg = idx % 2 === 0 ? 'hsl(var(--card))' : 'hsl(var(--muted))';
 
                   return (
@@ -438,7 +485,18 @@ export function ShiftsTab({
                         const dow = new Date(year, month - 1, d).getDay();
                         const isWeekend = dow === 5 || dow === 6;
                         const isToday = d === today;
-                        const isPresent = val > 0;
+
+                        const isPresent   = val > 0;
+                        const isPaidLeave = val === -1;
+                        const isSickLeave = val === -2;
+                        const isAbsent    = val === 0 && grid[cellKey] !== undefined;
+
+                        // Current select value
+                        const selectVal =
+                          val > 0 ? '1' :
+                          val === -1 ? '-1' :
+                          val === -2 ? '-2' :
+                          isAbsent ? '0' : '';
 
                         return (
                           <td
@@ -447,19 +505,17 @@ export function ShiftsTab({
                               ${isToday ? 'bg-primary/10' : isWeekend ? 'bg-muted/20' : ''}
                               ${isEditing ? 'ring-2 ring-inset ring-primary' : ''}
                               ${canEdit && !isEditing ? 'cursor-pointer hover:bg-primary/5' : ''}`}
-                            style={{ minWidth: 52 }}
+                            style={{ minWidth: 44 }}
                             onClick={() => !isEditing && handleCellClick(emp.id, d)}
                           >
                             {isEditing ? (
                               <select
                                 autoFocus
-                                value={val > 0 ? '1' : val === 0 && grid[cellKey] !== undefined ? '0' : ''}
+                                value={selectVal}
                                 onChange={(e) => {
                                   const v = e.target.value;
                                   if (v === '') {
-                                    // فاضي — مسح من الشبكة
-                                    setGrid((prev) => { const next = { ...prev }; delete next[cellKey]; return next; });
-                                    setEditingCell(null);
+                                    commitAttendance(cellKey, null);
                                   } else {
                                     commitAttendance(cellKey, parseInt(v, 10));
                                   }
@@ -470,12 +526,18 @@ export function ShiftsTab({
                                 <option value="">— فاضي —</option>
                                 <option value="1">حاضر ✅</option>
                                 <option value="0">غائب ❌</option>
+                                <option value="-1">إجازة براتب 🏖️</option>
+                                <option value="-2">إجازة مرضى 🏥</option>
                               </select>
                             ) : (
                               <div className="h-7 flex items-center justify-center">
                                 {isPresent ? (
                                   <span className="font-bold text-[10px] leading-none text-emerald-600 dark:text-emerald-400">حاضر</span>
-                                ) : grid[cellKey] !== undefined ? (
+                                ) : isPaidLeave ? (
+                                  <span className="font-bold text-[10px] leading-none text-sky-600 dark:text-sky-400">إجازة</span>
+                                ) : isSickLeave ? (
+                                  <span className="font-bold text-[10px] leading-none text-amber-600 dark:text-amber-400">مرضى</span>
+                                ) : isAbsent ? (
                                   <span className="font-bold text-[10px] leading-none text-rose-500 dark:text-rose-400">غائب</span>
                                 ) : (
                                   <span className="text-muted-foreground/20">·</span>
@@ -486,12 +548,23 @@ export function ShiftsTab({
                         );
                       })}
 
+                      {/* Summary column */}
                       <td
-                        className="sticky left-0 z-10 text-center px-1 py-1 font-bold border-r-2 border-border bg-muted"
-                        style={{ minWidth: 64 }}
+                        className="sticky left-0 z-10 text-center px-1 py-1 border-r-2 border-border bg-muted"
+                        style={{ minWidth: 80 }}
                       >
-                        <span className="text-emerald-600 font-bold text-[10px]">{total}</span>
-                        <span className="text-muted-foreground/50 text-[9px]"> / {days}</span>
+                        <div className="flex flex-col items-center leading-tight">
+                          <div className="flex items-center gap-0.5 tabular-nums">
+                            <span className="text-emerald-600 font-bold text-[10px]">{presentTotal}</span>
+                            {leaveTotal > 0 && (
+                              <>
+                                <span className="text-muted-foreground/40 text-[9px]">+</span>
+                                <span className="text-sky-600 font-bold text-[10px]">{leaveTotal}ج</span>
+                              </>
+                            )}
+                            <span className="text-muted-foreground/50 text-[9px]">/{days}</span>
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -508,23 +581,29 @@ export function ShiftsTab({
                     الإجمالي
                   </td>
                   {dayArr.map((d) => {
-                    const dayTotal = filteredEmployees.reduce((s, e) => s + (getVal(e.id, d) > 0 ? 1 : 0), 0);
+                    const presentCount = filteredEmployees.reduce((s, e) => s + (getVal(e.id, d) > 0 ? 1 : 0), 0);
+                    const leaveCount  = filteredEmployees.reduce((s, e) => s + (getVal(e.id, d) < 0 ? 1 : 0), 0);
                     const isToday = d === today;
                     return (
                       <td
                         key={d}
-                        className={`text-center px-0.5 py-1.5 font-bold border-l border-border/40 ${isToday ? 'bg-primary/10 text-primary' : 'text-foreground'}`}
-                        style={{ minWidth: 52, backgroundColor: isToday ? undefined : 'hsl(var(--muted) / 0.4)' }}
+                        className={`text-center px-0.5 py-1.5 border-l border-border/40 ${isToday ? 'bg-primary/10' : ''}`}
+                        style={{ minWidth: 44, backgroundColor: isToday ? undefined : 'hsl(var(--muted) / 0.4)' }}
                       >
-                        {dayTotal > 0 ? (
-                          <span className="text-emerald-600">{dayTotal}</span>
-                        ) : (
-                          <span className="text-muted-foreground/30">0</span>
-                        )}
+                        <div className="flex flex-col items-center leading-tight">
+                          {presentCount > 0 ? (
+                            <span className="font-bold text-emerald-600 text-[10px]">{presentCount}</span>
+                          ) : (
+                            <span className="text-muted-foreground/30 text-[10px]">0</span>
+                          )}
+                          {leaveCount > 0 && (
+                            <span className="text-sky-500 text-[9px]">{leaveCount}ج</span>
+                          )}
+                        </div>
                       </td>
                     );
                   })}
-                  <td className="sticky left-0 z-10 text-center px-1.5 py-1.5 font-bold text-xs text-primary border-r-2 border-border bg-muted" style={{ minWidth: 64 }}>
+                  <td className="sticky left-0 z-10 text-center px-1.5 py-1.5 font-bold text-xs text-primary border-r-2 border-border bg-muted" style={{ minWidth: 80 }}>
                     {grandTotal}
                   </td>
                 </tr>
@@ -535,12 +614,27 @@ export function ShiftsTab({
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-[10px] text-muted-foreground px-1">
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" /> حاضر</span>
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" /> غائب</span>
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-muted-foreground/20 inline-block" /> لم يُحدد</span>
-        <span>• اضغط على الخلية لتغيير الحالة</span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-muted-foreground px-1">
+        <span className="flex items-center gap-1">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" /> حاضر
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" /> غائب
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-2.5 h-2.5 rounded-full bg-sky-500 inline-block" /> إجازة براتب
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" /> إجازة مرضى
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-2.5 h-2.5 rounded-full bg-muted-foreground/20 inline-block" /> لم يُحدد
+        </span>
+        <span className="text-muted-foreground/60">• ج = أيام إجازة (لا تُحسب في الحاضر)</span>
+        <span className="text-muted-foreground/60">• اضغط على الخلية لتغيير الحالة</span>
       </div>
     </div>
   );
 }
+
+export { ATTENDANCE_LABELS };
