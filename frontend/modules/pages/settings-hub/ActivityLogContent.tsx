@@ -4,6 +4,7 @@ import { useLanguage } from '@app/providers/LanguageContext';
 import {
   Search, RefreshCw, X, Activity, FolderOpen,
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
+  User,
 } from 'lucide-react';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
@@ -31,6 +32,12 @@ interface AuditLog {
   profile?: { name: string | null; email: string | null } | null;
 }
 
+interface UserProfile {
+  id: string;
+  name: string | null;
+  email: string | null;
+}
+
 const PAGE_SIZE = 25;
 
 const actionColors: Record<string, string> = {
@@ -46,41 +53,103 @@ const actionLabels: Record<string, { ar: string; en: string }> = {
 };
 
 const tableLabels: Record<string, { ar: string; en: string }> = {
-  employees:            { ar: 'الموظفون', en: 'Employees' },
-  attendance:           { ar: 'الحضور', en: 'Attendance' },
-  advances:             { ar: 'السلف', en: 'Advances' },
-  salary_records:       { ar: 'الرواتب', en: 'Salaries' },
-  daily_orders:         { ar: 'الطلبات', en: 'Orders' },
-  vehicles:             { ar: 'المركبات', en: 'Vehicles' },
-  vehicle_assignments:  { ar: 'تسليم العهد', en: 'Vehicle Assignments' },
-  alerts:               { ar: 'التنبيهات', en: 'Alerts' },
-  apps:                 { ar: 'التطبيقات', en: 'Apps' },
-  profiles:             { ar: 'الملفات الشخصية', en: 'Profiles' },
-  user_roles:           { ar: 'الأدوار', en: 'Roles' },
-  user_permissions:     { ar: 'الصلاحيات', en: 'Permissions' },
-  system_settings:      { ar: 'إعدادات النظام', en: 'System Settings' },
+  // Core HR
+  employees:              { ar: 'الموظفون', en: 'Employees' },
+  attendance:             { ar: 'الحضور', en: 'Attendance' },
+  daily_shifts:           { ar: 'الدوام', en: 'Shifts' },
+  advances:               { ar: 'السلف', en: 'Advances' },
+  salary_records:         { ar: 'الرواتب', en: 'Salaries' },
+  salary_deductions:      { ar: 'خصومات الرواتب', en: 'Salary Deductions' },
+  external_deductions:    { ar: 'الخصومات الخارجية', en: 'External Deductions' },
+  leave_requests:         { ar: 'طلبات الإجازة', en: 'Leave Requests' },
+  performance_reviews:    { ar: 'تقييم الأداء', en: 'Performance Reviews' },
+  employee_documents:     { ar: 'وثائق الموظفين', en: 'Employee Documents' },
+  documents:              { ar: 'الوثائق', en: 'Documents' },
+  // Orders
+  daily_orders:           { ar: 'الطلبات', en: 'Orders' },
+  apps:                   { ar: 'التطبيقات', en: 'Apps' },
+  employee_apps:          { ar: 'تعيينات التطبيقات', en: 'Employee Apps' },
+  // Vehicles
+  vehicles:               { ar: 'المركبات', en: 'Vehicles' },
+  vehicle_assignments:    { ar: 'تسليم العهد', en: 'Vehicle Assignments' },
+  fuel_records:           { ar: 'سجل الوقود', en: 'Fuel Records' },
+  maintenance_records:    { ar: 'صيانة المركبات', en: 'Maintenance' },
+  spare_parts:            { ar: 'قطع الغيار', en: 'Spare Parts' },
+  vehicle_fines:          { ar: 'مخالفات المركبات', en: 'Vehicle Fines' },
+  // System
+  alerts:                 { ar: 'التنبيهات', en: 'Alerts' },
+  profiles:               { ar: 'الملفات الشخصية', en: 'Profiles' },
+  user_roles:             { ar: 'الأدوار', en: 'Roles' },
+  user_permissions:       { ar: 'الصلاحيات', en: 'Permissions' },
+  system_settings:        { ar: 'إعدادات النظام', en: 'System Settings' },
+  trade_registers:        { ar: 'السجل التجاري', en: 'Trade Registers' },
+  salary_slips:           { ar: 'قسائم الرواتب', en: 'Salary Slips' },
+  slip_templates:         { ar: 'قوالب القسائم', en: 'Slip Templates' },
+};
+
+/** Arabic labels for common DB field names */
+const FIELD_LABELS: Record<string, string> = {
+  name: 'الاسم',
+  name_en: 'الاسم (إنجليزي)',
+  status: 'الحالة',
+  salary: 'الراتب',
+  amount: 'المبلغ',
+  date: 'التاريخ',
+  notes: 'ملاحظات',
+  employee_id: 'الموظف',
+  app_id: 'التطبيق',
+  hours_worked: 'ساعات العمل',
+  attendance_status: 'حالة الحضور',
+  start_date: 'تاريخ البداية',
+  end_date: 'تاريخ النهاية',
+  leave_type: 'نوع الإجازة',
+  leave_status: 'حالة الطلب',
+  rating: 'التقييم',
+  review_date: 'تاريخ التقييم',
+  document_type: 'نوع الوثيقة',
+  expiry_date: 'تاريخ الانتهاء',
+  brand_color: 'لون التطبيق',
+  salary_type: 'نوع الراتب',
+  total_amount: 'الإجمالي',
+  net_amount: 'الصافي',
+  deduction_amount: 'الخصم',
+  phone: 'الجوال',
+  email: 'البريد الإلكتروني',
+  role: 'الدور',
 };
 
 const toShortText = (value: unknown) => {
   if (value === null || value === undefined) return '—';
   const str = typeof value === 'string' ? value : JSON.stringify(value);
-  return str.length > 28 ? `${str.slice(0, 28)}...` : str;
+  return str.length > 30 ? `${str.slice(0, 30)}...` : str;
 };
 
 const buildChangeSummary = (log: AuditLog) => {
   const oldV = log.old_value || {};
   const newV = log.new_value || {};
+
+  const label = (k: string) => FIELD_LABELS[k] ?? k;
+
   if (log.action === 'INSERT') {
-    return Object.entries(newV).slice(0, 3).map(([k, v]) => `${k}: ${toShortText(v)}`).join(' | ');
+    return Object.entries(newV)
+      .filter(([k]) => !['id', 'created_at', 'updated_at'].includes(k))
+      .slice(0, 3)
+      .map(([k, v]) => `${label(k)}: ${toShortText(v)}`)
+      .join(' | ');
   }
   if (log.action === 'DELETE') {
-    return Object.entries(oldV).slice(0, 3).map(([k, v]) => `${k}: ${toShortText(v)}`).join(' | ');
+    return Object.entries(oldV)
+      .filter(([k]) => !['id', 'created_at', 'updated_at'].includes(k))
+      .slice(0, 3)
+      .map(([k, v]) => `${label(k)}: ${toShortText(v)}`)
+      .join(' | ');
   }
   const keys = Array.from(new Set([...Object.keys(oldV), ...Object.keys(newV)]));
   const changed = keys
+    .filter((k) => !['id', 'created_at', 'updated_at'].includes(k))
     .filter((k) => JSON.stringify(oldV[k]) !== JSON.stringify(newV[k]))
     .slice(0, 3)
-    .map((k) => `${k}: ${toShortText(oldV[k])} → ${toShortText(newV[k])}`);
+    .map((k) => `${label(k)}: ${toShortText(oldV[k])} ← ${toShortText(newV[k])}`);
   return changed.join(' | ');
 };
 
@@ -94,19 +163,7 @@ const formatJson = (obj: Record<string, unknown> | null) => {
   }
 };
 
-const getHeaderAlignmentClass = (index: number, isRTL: boolean) => {
-  if (index === 2) return 'text-center';
-  return isRTL ? 'text-start' : 'text-end';
-};
-
-const SKELETON_ROWS = [
-  'activity-skeleton-row-1',
-  'activity-skeleton-row-2',
-  'activity-skeleton-row-3',
-  'activity-skeleton-row-4',
-  'activity-skeleton-row-5',
-  'activity-skeleton-row-6',
-] as const;
+const SKELETON_ROWS = Array.from({ length: 6 }, (_, i) => `skeleton-row-${i}`);
 
 const hasPayload = (log: AuditLog) =>
   Boolean(
@@ -114,18 +171,29 @@ const hasPayload = (log: AuditLog) =>
       (log.new_value && Object.keys(log.new_value).length > 0)
   );
 
+/** Avatar initial letter for user display */
+const avatarChar = (profile: { name: string | null; email: string | null }) =>
+  ((profile.name || profile.email || '?')[0] ?? '?').toUpperCase();
+
+/** Resolve display name from profile */
+const displayName = (profile: { name: string | null; email: string | null } | null | undefined) => {
+  if (!profile) return null;
+  return profile.name || profile.email?.split('@')[0] || 'مستخدم';
+};
+
 export default function ActivityLogContent() {
   const { isRTL } = useLanguage();
   const { enabled, userId } = useAuthQueryGate();
   const uid = authQueryUserId(userId);
   const { permissions: _settingsPerms } = usePermissions('settings');
-  // _settingsPerms available for future permission gating on activity logs
+
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
   const [filterAction, setFilterAction] = useState('all');
   const [filterTable, setFilterTable] = useState('all');
+  const [filterUserId, setFilterUserId] = useState('all');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -134,12 +202,23 @@ export default function ActivityLogContent() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  // Fetch distinct users who appear in audit logs (for the user filter dropdown)
+  const { data: auditUsers = [] } = useQuery<UserProfile[]>({
+    queryKey: ['audit-log-users', uid],
+    enabled,
+    queryFn: async () => {
+      const profiles = await settingsHubService.getAuditUsers();
+      return profiles;
+    },
+    staleTime: 60_000,
+  });
+
   const {
     data: logsData,
     isLoading: loading,
     refetch: refetchLogs,
   } = useQuery({
-    queryKey: ['activity-log', uid, page, filterAction, filterTable, debouncedSearch],
+    queryKey: ['activity-log', uid, page, filterAction, filterTable, filterUserId, debouncedSearch],
     enabled,
     queryFn: async () => {
       const { rows: data, total: count } = await settingsHubService.getAuditLogs(
@@ -147,7 +226,8 @@ export default function ActivityLogContent() {
         (page + 1) * PAGE_SIZE - 1,
         filterAction,
         filterTable,
-        debouncedSearch
+        debouncedSearch,
+        filterUserId,
       );
 
       const userIds = [...new Set((data || []).map((l) => l.user_id).filter(Boolean))] as string[];
@@ -162,7 +242,7 @@ export default function ActivityLogContent() {
           ...l,
           old_value: l.old_value as Record<string, unknown> | null,
           new_value: l.new_value as Record<string, unknown> | null,
-          profile: l.user_id ? profileMap[l.user_id] ?? null : null,
+          profile: l.user_id ? (profileMap[l.user_id] ?? null) : null,
         })),
         total: count || 0,
       };
@@ -171,13 +251,12 @@ export default function ActivityLogContent() {
     staleTime: 15_000,
   });
 
-  // Local state mirrors React Query — used for totalCount-driven pagination.
-  // Could use logsData directly, but keeping for consistency with existing patterns.
   useEffect(() => {
     setLogs(logsData?.rows || []);
     setTotalCount(logsData?.total || 0);
   }, [logsData]);
-  useEffect(() => { setPage(0); }, [filterAction, filterTable, debouncedSearch]);
+
+  useEffect(() => { setPage(0); }, [filterAction, filterTable, filterUserId, debouncedSearch]);
   useEffect(() => { setExpandedId(null); }, [page]);
 
   const handleExport = async () => {
@@ -185,17 +264,18 @@ export default function ActivityLogContent() {
       const data = await settingsHubService.getAuditLogsForExport();
       if (!data.length) return;
       const rows = data.map(l => ({
-        'التاريخ': format(new Date(l.created_at), 'yyyy-MM-dd HH:mm:ss'),
-        'الجدول': l.table_name,
-        'العملية': l.action,
-        'معرف المستخدم': l.user_id || '',
-        'معرف السجل': l.record_id || '',
+        'التاريخ':         format(new Date(l.created_at), 'yyyy-MM-dd HH:mm:ss'),
+        'اسم المستخدم':   l.user_name || '',
+        'البريد الإلكتروني': l.user_email || '',
+        'الوحدة':         tableLabels[l.table_name]?.ar || l.table_name,
+        'العملية':        actionLabels[l.action]?.ar || l.action,
+        'معرف السجل':     l.record_id || '',
       }));
       const XLSX = await loadXlsx();
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Activity Log');
-      XLSX.writeFile(wb, `activity_log_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+      XLSX.utils.book_append_sheet(wb, ws, 'سجل النشاطات');
+      XLSX.writeFile(wb, `سجل_النشاطات_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
     } catch (err) {
       logError('[ActivityLog] export failed', err);
     }
@@ -203,16 +283,18 @@ export default function ActivityLogContent() {
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const getActionLabel = (action: string) => actionLabels[action]?.ar || action;
-  const getTableLabel = (table: string) => tableLabels[table]?.ar || table;
-  const activeFilters = [filterAction !== 'all', filterTable !== 'all'].filter(Boolean).length;
+  const getTableLabel  = (table: string)  => tableLabels[table]?.ar  || table;
+  const activeFilters  = [filterAction !== 'all', filterTable !== 'all', filterUserId !== 'all'].filter(Boolean).length;
 
   return (
     <div className="space-y-5" dir={isRTL ? 'rtl' : 'ltr'}>
 
       {/* Section header */}
       <div className="flex items-center gap-3 pb-4" style={{ borderBottom: '1px solid var(--ds-surface-container)' }}>
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: 'rgba(38,66,230,0.08)', color: '#2642e6' }}>
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ background: 'rgba(38,66,230,0.08)', color: '#2642e6' }}
+        >
           <Activity size={20} />
         </div>
         <div>
@@ -220,7 +302,7 @@ export default function ActivityLogContent() {
             سجل النشاطات
           </h2>
           <p className="text-xs" style={{ color: 'var(--ds-on-surface-variant)' }}>
-            {`${totalCount.toLocaleString()} سجل محفوظ`}
+            {`${totalCount.toLocaleString('ar-EG')} سجل محفوظ`}
           </p>
         </div>
         <div className="flex items-center gap-2 ms-auto">
@@ -245,17 +327,38 @@ export default function ActivityLogContent() {
         className="rounded-xl p-3 flex flex-wrap items-center gap-3"
         style={{ background: 'var(--ds-surface-low)' }}
       >
+        {/* Search */}
         <div className="relative flex-1 min-w-[180px]">
           <Search size={13} className={`absolute top-1/2 -translate-y-1/2 text-muted-foreground ${isRTL ? 'right-3' : 'left-3'}`} />
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="بحث..."
+            placeholder="بحث في الجداول أو معرف السجل..."
             className={`h-8 text-sm ${isRTL ? 'pr-8' : 'pl-8'}`}
           />
         </div>
+
+        {/* User filter */}
+        {auditUsers.length > 0 && (
+          <Select value={filterUserId} onValueChange={setFilterUserId}>
+            <SelectTrigger className="h-8 text-xs w-44">
+              <User size={11} className="me-1 text-muted-foreground flex-shrink-0" />
+              <SelectValue placeholder="كل المستخدمين" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">كل المستخدمين</SelectItem>
+              {auditUsers.map(u => (
+                <SelectItem key={u.id} value={u.id}>
+                  {u.name || u.email?.split('@')[0] || u.id.slice(0, 8)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* Action filter */}
         <Select value={filterAction} onValueChange={setFilterAction}>
-          <SelectTrigger className="h-8 text-xs w-36"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-8 text-xs w-32"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">كل العمليات</SelectItem>
             <SelectItem value="INSERT">إضافة</SelectItem>
@@ -263,18 +366,22 @@ export default function ActivityLogContent() {
             <SelectItem value="DELETE">حذف</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Table filter */}
         <Select value={filterTable} onValueChange={setFilterTable}>
           <SelectTrigger className="h-8 text-xs w-44"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">كل الجداول</SelectItem>
+            <SelectItem value="all">كل الوحدات</SelectItem>
             {Object.entries(tableLabels).map(([key, label]) => (
               <SelectItem key={key} value={key}>{label.ar}</SelectItem>
             ))}
           </SelectContent>
         </Select>
+
+        {/* Clear filters */}
         {activeFilters > 0 && (
           <button
-            onClick={() => { setFilterAction('all'); setFilterTable('all'); }}
+            onClick={() => { setFilterAction('all'); setFilterTable('all'); setFilterUserId('all'); }}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
           >
             <X size={12} /> مسح
@@ -286,24 +393,15 @@ export default function ActivityLogContent() {
       </div>
 
       {/* Table */}
-      <div
-        className="rounded-xl overflow-hidden"
-        style={{ boxShadow: 'var(--shadow-card)' }}
-      >
+      <div className="rounded-xl overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr style={{ background: 'var(--ds-surface-low)', borderBottom: '1px solid var(--ds-surface-container)' }}>
-                {[
-                  'التاريخ والوقت',
-                  'المستخدم',
-                  'العملية',
-                  'الوحدة',
-                  'التفاصيل',
-                ].map((h, i) => (
+                {['التاريخ والوقت', 'المستخدم', 'العملية', 'الوحدة', 'التفاصيل'].map((h, i) => (
                   <th
-                    key={`activity-header-${h}`}
-                    className={`p-3 text-xs font-semibold whitespace-nowrap ${getHeaderAlignmentClass(i, isRTL)} ${i === 4 ? 'hidden lg:table-cell' : ''}`}
+                    key={h}
+                    className={`p-3 text-xs font-semibold whitespace-nowrap text-start ${i === 4 ? 'hidden lg:table-cell' : ''}`}
                     style={{ color: 'var(--ds-on-surface-variant)' }}
                   >
                     {h}
@@ -312,157 +410,184 @@ export default function ActivityLogContent() {
               </tr>
             </thead>
             <tbody style={{ background: 'var(--ds-surface-lowest)' }}>
-              {loading && SKELETON_ROWS.map((skeletonKey) => (
-                <tr key={skeletonKey} style={{ borderBottom: '1px solid var(--ds-surface-container)' }}>
+
+              {/* Loading skeletons */}
+              {loading && SKELETON_ROWS.map((k) => (
+                <tr key={k} style={{ borderBottom: '1px solid var(--ds-surface-container)' }}>
                   <td className="p-3"><Skeleton className="h-4 w-28" /></td>
-                  <td className="p-3"><Skeleton className="h-4 w-24" /></td>
-                  <td className="p-3 text-center"><Skeleton className="h-5 w-14 mx-auto rounded-full" /></td>
+                  <td className="p-3"><Skeleton className="h-4 w-32" /></td>
+                  <td className="p-3"><Skeleton className="h-5 w-14 rounded-full" /></td>
                   <td className="p-3"><Skeleton className="h-4 w-20" /></td>
-                  <td className="p-3 hidden lg:table-cell"><Skeleton className="h-4 w-36" /></td>
+                  <td className="p-3 hidden lg:table-cell"><Skeleton className="h-4 w-40" /></td>
                 </tr>
               ))}
+
+              {/* Empty state */}
               {!loading && logs.length === 0 && (
                 <tr>
                   <td colSpan={5} className="p-12 text-center">
                     <Activity size={32} className="mx-auto mb-3 opacity-20" style={{ color: 'var(--ds-on-surface-variant)' }} />
-                    <p className="text-sm" style={{ color: 'var(--ds-on-surface-variant)' }}>
-                      لا توجد سجلات
-                    </p>
+                    <p className="text-sm" style={{ color: 'var(--ds-on-surface-variant)' }}>لا توجد سجلات</p>
                   </td>
                 </tr>
               )}
-              {!loading && logs.length > 0 && logs.map(log => (
-                    <Fragment key={log.id}>
-                    <tr
-                      style={{ borderBottom: expandedId === log.id ? 'none' : '1px solid var(--ds-surface-container)' }}
-                      className={`transition-colors hover:bg-[var(--ds-surface-low)] ${expandedId === log.id ? 'bg-[var(--ds-surface-low)]' : ''} ${hasPayload(log) ? 'cursor-pointer' : ''}`}
-                      onClick={() => {
-                        if (!hasPayload(log)) return;
-                        setExpandedId(expandedId === log.id ? null : log.id);
-                      }}
-                    >
-                      <td className="p-3 whitespace-nowrap">
-                        <p className="text-xs font-medium" style={{ color: 'var(--ds-on-surface)' }} dir="ltr">
-                          {format(new Date(log.created_at), 'yyyy-MM-dd')}
-                        </p>
-                        <p className="text-[10px]" style={{ color: 'var(--ds-on-surface-variant)' }} dir="ltr">
-                          {format(new Date(log.created_at), 'HH:mm:ss')}
-                        </p>
-                      </td>
-                      <td className="p-3">
-                        {log.profile ? (
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
-                              style={{ background: 'rgba(38,66,230,0.08)', color: '#2642e6' }}
-                            >
-                              {(log.profile.name || log.profile.email || '?')[0].toUpperCase()}
-                            </div>
-                            <div>
-                              <p className="text-xs font-medium" style={{ color: 'var(--ds-on-surface)' }}>{log.profile.name || '—'}</p>
-                              <p className="text-[10px]" style={{ color: 'var(--ds-on-surface-variant)' }} dir="ltr">{log.profile.email || ''}</p>
-                            </div>
+
+              {/* Log rows */}
+              {!loading && logs.map(log => (
+                <Fragment key={log.id}>
+                  <tr
+                    style={{
+                      borderBottom: expandedId === log.id ? 'none' : '1px solid var(--ds-surface-container)',
+                    }}
+                    className={`transition-colors hover:bg-[var(--ds-surface-low)]
+                      ${expandedId === log.id ? 'bg-[var(--ds-surface-low)]' : ''}
+                      ${hasPayload(log) ? 'cursor-pointer' : ''}`}
+                    onClick={() => {
+                      if (!hasPayload(log)) return;
+                      setExpandedId(expandedId === log.id ? null : log.id);
+                    }}
+                  >
+                    {/* Date / Time */}
+                    <td className="p-3 whitespace-nowrap">
+                      <p className="text-xs font-medium" style={{ color: 'var(--ds-on-surface)' }} dir="ltr">
+                        {format(new Date(log.created_at), 'yyyy-MM-dd')}
+                      </p>
+                      <p className="text-[10px]" style={{ color: 'var(--ds-on-surface-variant)' }} dir="ltr">
+                        {format(new Date(log.created_at), 'HH:mm:ss')}
+                      </p>
+                    </td>
+
+                    {/* User */}
+                    <td className="p-3">
+                      {log.profile ? (
+                        /* Known user with profile */
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                            style={{ background: 'rgba(38,66,230,0.10)', color: '#2642e6' }}
+                          >
+                            {avatarChar(log.profile)}
                           </div>
-                        ) : (
-                          <span className="text-xs" style={{ color: 'var(--ds-on-surface-variant)' }}>
-                            النظام
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-3 text-center">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${actionColors[log.action] || 'bg-muted text-muted-foreground border-border'}`}>
-                          {getActionLabel(log.action)}
-                        </span>
-                      </td>
-                      <td className="p-3">
-                        <span className="text-xs font-medium" style={{ color: 'var(--ds-on-surface)' }}>
-                          {getTableLabel(log.table_name)}
-                        </span>
-                        <p className="text-[10px] font-mono" style={{ color: 'var(--ds-on-surface-variant)' }}>
-                          {log.table_name}
-                        </p>
-                      </td>
-                      <td className="p-3 hidden lg:table-cell max-w-xs">
-                        <div className="flex items-start gap-1.5">
-                          {hasPayload(log) && (
-                            <span className="flex-shrink-0 mt-0.5" style={{ color: 'var(--ds-on-surface-variant)' }}>
-                              {expandedId === log.id ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                            </span>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            {(log.new_value || log.old_value) && (
-                              <p
-                                className="text-[10px] font-mono truncate max-w-[200px]"
-                                style={{ color: 'var(--ds-on-surface-variant)' }}
-                                title={buildChangeSummary(log)}
-                              >
-                                {buildChangeSummary(log) || '—'}
-                              </p>
-                            )}
-                            {log.record_id && (
-                              <p className="text-[9px] font-mono mt-0.5 opacity-50" dir="ltr" style={{ color: 'var(--ds-on-surface-variant)' }}>
-                                {log.record_id.slice(0, 8)}...
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold truncate max-w-[120px]" style={{ color: 'var(--ds-on-surface)' }}>
+                              {displayName(log.profile)}
+                            </p>
+                            {log.profile.email && (
+                              <p className="text-[10px] truncate max-w-[120px]" style={{ color: 'var(--ds-on-surface-variant)' }} dir="ltr">
+                                {log.profile.email}
                               </p>
                             )}
                           </div>
                         </div>
-                      </td>
-                    </tr>
-                    {expandedId === log.id && (
-                      <tr style={{ borderBottom: '1px solid var(--ds-surface-container)' }}>
-                        <td colSpan={5} className="p-0" style={{ background: 'var(--ds-surface-lowest)' }}>
-                          <div className="p-3 border-t" style={{ borderColor: 'var(--ds-surface-container)' }}>
-                            {log.action === 'UPDATE' && (
-                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                                <div>
-                                  <p className="text-[10px] font-semibold mb-1.5" style={{ color: 'var(--ds-on-surface)' }}>قبل</p>
-                                  <pre
-                                    className="text-[10px] font-mono p-2 rounded-lg overflow-x-auto max-h-72 overflow-y-auto whitespace-pre-wrap break-all"
-                                    style={{
-                                      background: 'var(--ds-surface-low)',
-                                      border: '1px solid var(--ds-surface-container)',
-                                      color: 'var(--ds-on-surface-variant)',
-                                    }}
-                                    dir="ltr"
-                                  >
-                                    {formatJson(log.old_value)}
-                                  </pre>
-                                </div>
-                                <div>
-                                  <p className="text-[10px] font-semibold mb-1.5" style={{ color: 'var(--ds-on-surface)' }}>بعد</p>
-                                  <pre
-                                    className="text-[10px] font-mono p-2 rounded-lg overflow-x-auto max-h-72 overflow-y-auto whitespace-pre-wrap break-all"
-                                    style={{
-                                      background: 'var(--ds-surface-low)',
-                                      border: '1px solid var(--ds-surface-container)',
-                                      color: 'var(--ds-on-surface-variant)',
-                                    }}
-                                    dir="ltr"
-                                  >
-                                    {formatJson(log.new_value)}
-                                  </pre>
-                                </div>
-                              </div>
-                            )}
-                            {log.action === 'INSERT' && (
+                      ) : log.user_id ? (
+                        /* user_id exists but no matching profile (deleted user) */
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+                            style={{ background: 'rgba(120,120,120,0.10)', color: '#888' }}
+                          >
+                            <User size={12} />
+                          </div>
+                          <div>
+                            <p className="text-xs" style={{ color: 'var(--ds-on-surface)' }}>مستخدم محذوف</p>
+                            <p className="text-[9px] font-mono" style={{ color: 'var(--ds-on-surface-variant)' }}>
+                              {log.user_id.slice(0, 8)}…
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        /* No user_id at all — system trigger */
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] flex-shrink-0"
+                            style={{ background: 'rgba(0,0,0,0.06)', color: '#666' }}
+                          >
+                            ⚙️
+                          </div>
+                          <span className="text-xs" style={{ color: 'var(--ds-on-surface-variant)' }}>
+                            النظام
+                          </span>
+                        </div>
+                      )}
+                    </td>
+
+                    {/* Action badge */}
+                    <td className="p-3">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${actionColors[log.action] || 'bg-muted text-muted-foreground border-border'}`}
+                      >
+                        {getActionLabel(log.action)}
+                      </span>
+                    </td>
+
+                    {/* Table / Module */}
+                    <td className="p-3">
+                      <span className="text-xs font-medium" style={{ color: 'var(--ds-on-surface)' }}>
+                        {getTableLabel(log.table_name)}
+                      </span>
+                      <p className="text-[10px] font-mono opacity-50" style={{ color: 'var(--ds-on-surface-variant)' }}>
+                        {log.table_name}
+                      </p>
+                    </td>
+
+                    {/* Change summary */}
+                    <td className="p-3 hidden lg:table-cell max-w-xs">
+                      <div className="flex items-start gap-1.5">
+                        {hasPayload(log) && (
+                          <span className="flex-shrink-0 mt-0.5" style={{ color: 'var(--ds-on-surface-variant)' }}>
+                            {expandedId === log.id ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                          </span>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          {(log.new_value || log.old_value) && (
+                            <p
+                              className="text-[10px] font-mono truncate max-w-[220px]"
+                              style={{ color: 'var(--ds-on-surface-variant)' }}
+                              title={buildChangeSummary(log)}
+                            >
+                              {buildChangeSummary(log) || '—'}
+                            </p>
+                          )}
+                          {log.record_id && (
+                            <p className="text-[9px] font-mono mt-0.5 opacity-40" dir="ltr">
+                              #{log.record_id.slice(0, 8)}…
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+
+                  {/* Expanded payload */}
+                  {expandedId === log.id && (
+                    <tr style={{ borderBottom: '1px solid var(--ds-surface-container)' }}>
+                      <td colSpan={5} className="p-0" style={{ background: 'var(--ds-surface-lowest)' }}>
+                        <div className="p-4 border-t" style={{ borderColor: 'var(--ds-surface-container)' }}>
+
+                          {/* Header: who did what */}
+                          <div className="flex items-center gap-2 mb-3 text-xs" style={{ color: 'var(--ds-on-surface-variant)' }}>
+                            <span className="font-semibold" style={{ color: 'var(--ds-on-surface)' }}>
+                              {log.profile ? displayName(log.profile) : log.user_id ? 'مستخدم محذوف' : 'النظام'}
+                            </span>
+                            <span>قام بـ</span>
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border ${actionColors[log.action] || ''}`}>
+                              {getActionLabel(log.action)}
+                            </span>
+                            <span>في</span>
+                            <span className="font-semibold" style={{ color: 'var(--ds-on-surface)' }}>
+                              {getTableLabel(log.table_name)}
+                            </span>
+                            <span className="opacity-50 ms-1" dir="ltr">
+                              — {format(new Date(log.created_at), 'yyyy-MM-dd HH:mm:ss')}
+                            </span>
+                          </div>
+
+                          {log.action === 'UPDATE' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                               <div>
-                                <p className="text-[10px] font-semibold mb-1.5" style={{ color: 'var(--ds-on-surface)' }}>البيانات المضافة</p>
-                                <pre
-                                  className="text-[10px] font-mono p-2 rounded-lg overflow-x-auto max-h-72 overflow-y-auto whitespace-pre-wrap break-all"
-                                  style={{
-                                    background: 'var(--ds-surface-low)',
-                                    border: '1px solid var(--ds-surface-container)',
-                                    color: 'var(--ds-on-surface-variant)',
-                                  }}
-                                  dir="ltr"
-                                >
-                                  {formatJson(log.new_value)}
-                                </pre>
-                              </div>
-                            )}
-                            {log.action === 'DELETE' && (
-                              <div>
-                                <p className="text-[10px] font-semibold mb-1.5" style={{ color: 'var(--ds-on-surface)' }}>البيانات المحذوفة</p>
+                                <p className="text-[10px] font-semibold mb-1.5 flex items-center gap-1" style={{ color: 'var(--ds-on-surface)' }}>
+                                  <span className="text-rose-500">●</span> قبل التعديل
+                                </p>
                                 <pre
                                   className="text-[10px] font-mono p-2 rounded-lg overflow-x-auto max-h-72 overflow-y-auto whitespace-pre-wrap break-all"
                                   style={{
@@ -475,29 +600,68 @@ export default function ActivityLogContent() {
                                   {formatJson(log.old_value)}
                                 </pre>
                               </div>
-                            )}
-                            {!['INSERT', 'UPDATE', 'DELETE'].includes(log.action) && (
-                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                                <div>
-                                  <p className="text-[10px] font-semibold mb-1.5">قبل</p>
-                                  <pre className="text-[10px] font-mono p-2 rounded-lg overflow-x-auto max-h-48" dir="ltr" style={{ background: 'var(--ds-surface-low)', border: '1px solid var(--ds-surface-container)' }}>
-                                    {formatJson(log.old_value)}
-                                  </pre>
-                                </div>
-                                <div>
-                                  <p className="text-[10px] font-semibold mb-1.5">بعد</p>
-                                  <pre className="text-[10px] font-mono p-2 rounded-lg overflow-x-auto max-h-48" dir="ltr" style={{ background: 'var(--ds-surface-low)', border: '1px solid var(--ds-surface-container)' }}>
-                                    {formatJson(log.new_value)}
-                                  </pre>
-                                </div>
+                              <div>
+                                <p className="text-[10px] font-semibold mb-1.5 flex items-center gap-1" style={{ color: 'var(--ds-on-surface)' }}>
+                                  <span className="text-emerald-500">●</span> بعد التعديل
+                                </p>
+                                <pre
+                                  className="text-[10px] font-mono p-2 rounded-lg overflow-x-auto max-h-72 overflow-y-auto whitespace-pre-wrap break-all"
+                                  style={{
+                                    background: 'var(--ds-surface-low)',
+                                    border: '1px solid var(--ds-surface-container)',
+                                    color: 'var(--ds-on-surface-variant)',
+                                  }}
+                                  dir="ltr"
+                                >
+                                  {formatJson(log.new_value)}
+                                </pre>
                               </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                    </Fragment>
-                  ))}
+                            </div>
+                          )}
+
+                          {log.action === 'INSERT' && (
+                            <div>
+                              <p className="text-[10px] font-semibold mb-1.5 flex items-center gap-1" style={{ color: 'var(--ds-on-surface)' }}>
+                                <span className="text-emerald-500">●</span> البيانات المضافة
+                              </p>
+                              <pre
+                                className="text-[10px] font-mono p-2 rounded-lg overflow-x-auto max-h-72 overflow-y-auto whitespace-pre-wrap break-all"
+                                style={{
+                                  background: 'var(--ds-surface-low)',
+                                  border: '1px solid var(--ds-surface-container)',
+                                  color: 'var(--ds-on-surface-variant)',
+                                }}
+                                dir="ltr"
+                              >
+                                {formatJson(log.new_value)}
+                              </pre>
+                            </div>
+                          )}
+
+                          {log.action === 'DELETE' && (
+                            <div>
+                              <p className="text-[10px] font-semibold mb-1.5 flex items-center gap-1" style={{ color: 'var(--ds-on-surface)' }}>
+                                <span className="text-rose-500">●</span> البيانات المحذوفة
+                              </p>
+                              <pre
+                                className="text-[10px] font-mono p-2 rounded-lg overflow-x-auto max-h-72 overflow-y-auto whitespace-pre-wrap break-all"
+                                style={{
+                                  background: 'var(--ds-surface-low)',
+                                  border: '1px solid var(--ds-surface-container)',
+                                  color: 'var(--ds-on-surface-variant)',
+                                }}
+                                dir="ltr"
+                              >
+                                {formatJson(log.old_value)}
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              ))}
             </tbody>
           </table>
         </div>
@@ -512,7 +676,7 @@ export default function ActivityLogContent() {
             }}
           >
             <p className="text-xs" style={{ color: 'var(--ds-on-surface-variant)' }}>
-              {`${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, totalCount)} من ${totalCount}`}
+              {`${(page * PAGE_SIZE + 1).toLocaleString('ar-EG')}–${Math.min((page + 1) * PAGE_SIZE, totalCount).toLocaleString('ar-EG')} من ${totalCount.toLocaleString('ar-EG')}`}
             </p>
             <div className="flex items-center gap-1">
               <button

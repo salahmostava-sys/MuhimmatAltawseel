@@ -28,15 +28,23 @@ export const settingsHubService = {
     return data.session?.user?.id ?? null;
   },
 
-  getAuditLogs: async (from: number, to: number, filterAction: string, filterTable: string, search: string) => {
+  getAuditLogs: async (
+    from: number,
+    to: number,
+    filterAction: string,
+    filterTable: string,
+    search: string,
+    filterUserId = 'all',
+  ) => {
     let query = supabase
       .from('audit_log')
-      .select('*', { count: 'estimated' })
+      .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(from, to);
 
     if (filterAction !== 'all') query = query.eq('action', filterAction);
     if (filterTable !== 'all') query = query.eq('table_name', filterTable);
+    if (filterUserId !== 'all') query = query.eq('user_id', filterUserId);
     if (search.trim()) {
       const sq = sanitizeLikeQuery(search.trim());
       query = query.or(`table_name.ilike.%${sq}%,action.ilike.%${sq}%,record_id.ilike.%${sq}%`);
@@ -51,15 +59,69 @@ export const settingsHubService = {
       pageSize: Math.max(1, to - from + 1),
     });
   },
+
   getAuditProfilesByIds: async (userIds: string[]) => {
-    const { data, error } = await supabase.from('profiles').select('id, name, email').in('id', userIds);
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, name, email')
+      .in('id', userIds);
     if (error) throw toServiceError(error, 'settingsHubService.getAuditProfilesByIds');
     return data ?? [];
   },
+
+  /**
+   * Fetch distinct users who have at least one entry in audit_log.
+   * Used to populate the "filter by user" dropdown.
+   */
+  getAuditUsers: async () => {
+    // Get distinct non-null user_ids from audit_log
+    const { data: logRows, error: logError } = await supabase
+      .from('audit_log')
+      .select('user_id')
+      .not('user_id', 'is', null)
+      .limit(500);
+    if (logError) throw toServiceError(logError, 'settingsHubService.getAuditUsers');
+
+    const uniqueIds = [...new Set((logRows ?? []).map(r => r.user_id).filter(Boolean))] as string[];
+    if (uniqueIds.length === 0) return [];
+
+    const { data: profiles, error: profError } = await supabase
+      .from('profiles')
+      .select('id, name, email')
+      .in('id', uniqueIds);
+    if (profError) throw toServiceError(profError, 'settingsHubService.getAuditUsers.profiles');
+
+    return (profiles ?? []).sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', 'ar'));
+  },
+
+  /**
+   * Export all audit logs (up to 2000 rows) with resolved user names.
+   */
   getAuditLogsForExport: async () => {
-    const { data, error } = await supabase.from('audit_log').select('*').order('created_at', { ascending: false }).limit(1000);
+    const { data, error } = await supabase
+      .from('audit_log')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(2000);
     if (error) throw toServiceError(error, 'settingsHubService.getAuditLogsForExport');
-    return data ?? [];
+    const rows = data ?? [];
+
+    // Resolve user IDs → names
+    const userIds = [...new Set(rows.map(l => l.user_id).filter(Boolean))] as string[];
+    const profileMap: Record<string, { name: string | null; email: string | null }> = {};
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .in('id', userIds);
+      (profiles ?? []).forEach(p => { profileMap[p.id] = { name: p.name, email: p.email }; });
+    }
+
+    return rows.map(row => ({
+      ...row,
+      user_name:  row.user_id ? (profileMap[row.user_id]?.name  ?? 'غير معروف') : 'النظام',
+      user_email: row.user_id ? (profileMap[row.user_id]?.email ?? '')          : '',
+    }));
   },
 
   getProfileByUserId: async (userId: string) => {
