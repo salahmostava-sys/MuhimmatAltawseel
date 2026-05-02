@@ -60,6 +60,15 @@ else:
         "endpoint authentication is DISABLED. Set this variable in production."
     )
 
+# ── Production guard ──────────────────────────────────────────────────────────
+_ENV = os.getenv("ENV", "development").lower()
+if _ENV == "production" and not AI_INTERNAL_KEY:
+    raise SystemExit(
+        "[security] FATAL: AI_INTERNAL_KEY must be set when ENV=production.\n"
+        "Generate one with:  openssl rand -hex 32\n"
+        "Then add it to your environment secrets."
+    )
+
 # ─── Rate Limiter ─────────────────────────────────────────────────────────────
 
 _rate_lock = threading.Lock()
