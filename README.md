@@ -40,7 +40,7 @@ npm run dev
 
 ```
 MuhimmatAltawseel/
-├── frontend/                  ← React SPA
+├── frontend/                  ← React SPA (Vite · port 5000)
 │   ├── app/                   ← Routing, providers, config
 │   │   ├── App.tsx            ← Route definitions
 │   │   ├── routesManifest.ts  ← Sidebar navigation config
@@ -50,29 +50,55 @@ MuhimmatAltawseel/
 │   │   ├── orders/            ← الطلبات اليومية
 │   │   ├── salaries/          ← الرواتب
 │   │   ├── advances/          ← السلف
+│   │   ├── finance/           ← الإدارة المالية
 │   │   ├── dashboard/         ← لوحة التحكم
 │   │   ├── apps/              ← إدارة المنصات (أمازون، هنقرستيشن...)
 │   │   ├── fuel/              ← استهلاك الوقود
 │   │   ├── maintenance/       ← الصيانة والمخزون
 │   │   ├── platform-accounts/ ← حسابات المنصات
 │   │   ├── violations/        ← المخالفات
+│   │   ├── leaves/            ← إدارة الإجازات
+│   │   ├── performance/       ← تقييم الأداء
 │   │   └── pages/             ← صفحات متنوعة (تنبيهات، مركبات، إلخ)
 │   ├── services/              ← Supabase API layer
 │   ├── shared/                ← مكونات وأدوات مشتركة
 │   │   ├── components/        ← UI components مشتركة
 │   │   ├── hooks/             ← Custom hooks مشتركة
-│   │   ├── lib/               ← Utility functions
+│   │   ├── lib/               ← Utility functions (validation, formatting…)
 │   │   ├── constants/         ← ثوابت النظام
 │   │   └── types/             ← Types مشتركة
 │   └── docs/                  ← توثيق داخلي
 │
+├── server/                    ← Express API server (Node.js · port 3001)
+│   ├── index.js               ← نقطة الدخول — CORS، routes، Groq proxy
+│   └── lib/
+│       └── validation.js      ← دوال التحقق المشتركة (isUuid، isValidMonth…)
+│
+├── ai-backend/                ← FastAPI AI analytics server (Python · port 8000)
+│   ├── main.py                ← نقطة الدخول — rate limiter، auth، endpoints
+│   ├── model.py               ← ML model functions (LinearRegression)
+│   └── requirements.txt       ← Python dependencies
+│
+├── api/                       ← Vercel Serverless Functions (Node.js · CommonJS)
+│   └── _lib.js                ← مساعدات مشتركة للـ API functions
+│
+├── scripts/                   ← أدوات المطوّر والصيانة
+│   ├── github-cleanup.sh      ← تنظيف فروع GitHub القديمة
+│   ├── system-audit.mjs       ← فحص سلامة الكود والهيكل
+│   ├── system-audit.ps1       ← نفس الفحص (Windows PowerShell)
+│   └── validate-supabase-assets.mjs ← التحقق من وجود migrations و Edge Functions
+│
 └── supabase/                  ← Backend
-    ├── functions/             ← Edge Functions
-    │   ├── admin-update-user/ ← إدارة المستخدمين (إنشاء/حذف)
+    ├── functions/             ← Edge Functions (Deno)
+    │   ├── admin-update-user/ ← إدارة المستخدمين (إنشاء/حذف) — يحتاج admin role
     │   ├── salary-engine/     ← محرك حساب الرواتب
-    │   └── ai-chat/           ← AI Chat
-    └── migrations/            ← 114 SQL migration
+    │   ├── groq-chat/         ← Groq LLM proxy
+    │   ├── ai-chat/           ← AI Chat مع أدوات النظام
+    │   └── _shared/cors.ts    ← إعدادات CORS المشتركة
+    └── migrations/            ← SQL migrations (مرتّبة بالتاريخ)
 ```
+
+> **ملاحظة:** `server/` (Express) يُشغَّل في Replit كـ "API Server" workflow على port 3001 ويعمل كـ proxy للـ Groq API. `api/` يُستخدم في بيئة Vercel كـ serverless functions. الاثنان يخدمان نفس الغرض في بيئتَين مختلفتَين.
 
 ---
 
@@ -158,7 +184,11 @@ Page → Hook → Service → Supabase
 ```bash
 npx supabase functions deploy salary-engine --no-verify-jwt
 npx supabase functions deploy admin-update-user --no-verify-jwt
+npx supabase functions deploy groq-chat --no-verify-jwt
+npx supabase functions deploy ai-chat --no-verify-jwt
 ```
+
+> **ملاحظة أمنية:** `--no-verify-jwt` مطلوب لأن Supabase يحجب طلبات OPTIONS (CORS preflight) إذا كانت JWT verification مفعّلة على مستوى المنصة. كلتا الدالتين تُجري التحقق اليدوي داخليًا: تتحقق من وجود Authorization header، وتستدعي `getUser()`، وتتأكد من صلاحية المستخدم (admin role لـ admin-update-user) قبل أي عملية. لا تُبطل هذا الخيار دون التحقق من أن CORS preflight لا يزال يعمل.
 
 ### Database Migrations
 ```bash

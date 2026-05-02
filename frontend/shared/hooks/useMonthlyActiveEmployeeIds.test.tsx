@@ -53,7 +53,7 @@ const createWrapper = () => {
 describe('useMonthlyActiveEmployeeIds', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(tableResults).forEach((k) => tableResults.delete(k));
+    for (const k of Object.keys(tableResults)) delete tableResults[k];
     mockAuth.session = { access_token: 'tok' };
     mockAuth.user = { id: 'u1' };
     fromMock.mockImplementation((table: string) =>

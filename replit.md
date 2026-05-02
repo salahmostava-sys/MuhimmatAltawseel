@@ -7,22 +7,42 @@ A delivery operations management platform with a React frontend and a FastAPI AI
 - **Frontend**: Vite + React + TypeScript (`frontend/`)
   - Runs on port 5000
   - Connects to Supabase for auth and database
+  - Connects to Express API server for Groq chat proxy
   - Connects to AI backend for ML analytics (optional)
   - Uses Tailwind CSS + Radix UI components
+- **API Server**: Express.js (`server/`)
+  - Runs on port 3001
+  - Proxies Groq LLM requests (keeps API key server-side)
+  - Shared validation helpers in `server/lib/validation.js`
+  - CORS origins configured via `ALLOWED_ORIGINS` env var
 - **AI Backend**: FastAPI + Python (`ai-backend/`)
   - Runs on port 8000
   - Provides ML endpoints: order prediction, salary forecasting, anomaly detection, etc.
   - Purely stateless; no database
+- **api/**: Vercel serverless functions (CommonJS) — same role as `server/` but for Vercel production
 
 ## Running the App
 - **Frontend workflow**: `cd frontend && npm run dev` (port 5000, webview)
+- **API Server workflow**: `cd server && node index.js` (port 3001, console)
 - **AI Backend workflow**: `cd ai-backend && uvicorn main:app --host 0.0.0.0 --port 8000 --reload` (port 8000, console)
 
 ## Required Environment Variables (Secrets)
-- `VITE_SUPABASE_URL` — Supabase project URL (https://xxx.supabase.co)
-- `VITE_SUPABASE_PUBLISHABLE_KEY` — Supabase anon/public key
-- `VITE_AI_BACKEND_URL` — URL of the AI backend (optional, e.g. https://your-repl.replit.app:8000 or http://localhost:8000)
+
+### Frontend (VITE_* — exposed to browser)
+- `VITE_SUPABASE_URL` (**required**) — Supabase project URL (https://xxx.supabase.co)
+- `VITE_SUPABASE_PUBLISHABLE_KEY` (**required**) — Supabase anon/public key
+- `VITE_AI_BACKEND_URL` — URL of the AI backend (optional)
 - `VITE_SENTRY_DSN` — Sentry DSN for error tracking (optional)
+
+### API Server (server/ — server-side only)
+- `SUPABASE_SERVICE_ROLE_KEY` (**required in prod**) — Service role key for admin operations
+- `GROQ_API_KEY` — Groq API key for LLM proxy
+- `AI_INTERNAL_KEY` (**required in prod**) — Shared secret between server and ai-backend. Generate with: `openssl rand -hex 32`
+- `ALLOWED_ORIGINS` — Comma-separated list of allowed CORS origins (defaults to localhost ports)
+
+### AI Backend (ai-backend/ — server-side only)
+- `AI_INTERNAL_KEY` (**required when ENV=production**) — Must match server's value
+- `ENV` — Set to `production` to enable startup key check (default: `development`)
 
 ## Package Manager
 - Frontend: npm (package-lock.json present)
@@ -104,4 +124,8 @@ Added `CREATE TABLE IF NOT EXISTS` to 6 historical migration files so fresh depl
 
 ### Known Remaining Debt
 - `SalariesPage` full migration to `queryClient.setQueryData` (ISSUE #7) — still deferred; dirty-row preservation above mitigates the main runtime impact.
-- 3 pairs of duplicate migration timestamps (historical, already applied — do not rename): `20260327120000`, `20260403000000`, `20260407000000`.
+- **Duplicate migration timestamps** (historical, already applied to production — **do not rename or reorder**):
+  - `20260327120000_avatars_allow_svg_mime.sql` + `20260327120000_finalize_remove_company_id_single_org.sql`
+  - `20260403000000_add_commercial_record_to_employees.sql` + `20260403000000_update_salary_engine_for_shifts.sql`
+  - `20260407000000_concurrent_editing_protection.sql` + `20260407000000_salary_preview_platform_breakdown.sql`
+  - These were committed with the same timestamp prefix. Supabase applies them in filesystem sort order. They are already applied in production; renaming them would cause re-application and likely fail. Safe to leave as-is.

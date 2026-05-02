@@ -6,6 +6,25 @@ import { ErrorBoundary } from "@shared/components/ErrorBoundary";
 import { installGlobalErrorMonitoring } from "@shared/lib/logger";
 import { isLikelyStaleChunkReason, reloadOnceForStaleChunk } from "@shared/lib/chunkLoadRecovery";
 
+// ── Environment validation ────────────────────────────────────────────────────
+// Fail fast with a clear message instead of cryptic Supabase/auth errors later.
+const REQUIRED_ENV_VARS = [
+  'VITE_SUPABASE_URL',
+  'VITE_SUPABASE_PUBLISHABLE_KEY',
+] as const;
+
+const missingEnv = REQUIRED_ENV_VARS.filter(
+  (key) => !import.meta.env[key],
+);
+
+if (missingEnv.length > 0) {
+  const list = missingEnv.map((k) => `  • ${k}`).join('\n');
+  throw new Error(
+    `[startup] Missing required environment variables:\n${list}\n\n` +
+    'Copy .env.example to .env.local and fill in the values.',
+  );
+}
+
 if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({
     dsn: import.meta.env.VITE_SENTRY_DSN,

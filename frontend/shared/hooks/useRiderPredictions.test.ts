@@ -45,7 +45,7 @@ describe('useRiderPredictions', () => {
     queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    Object.keys(tableResults).forEach((k) => tableResults.delete(k));
+    for (const k of Object.keys(tableResults)) delete tableResults[k];
     mockGate.enabled = true;
     mockGate.userId = 'u1';
     mockGate.authLoading = false;
