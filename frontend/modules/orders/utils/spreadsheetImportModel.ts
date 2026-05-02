@@ -28,9 +28,9 @@ function clearEmployeeAppMonthData(
   appId: string,
   dayArr: number[],
 ) {
-  dayArr.forEach((day) => {
-    nextData.delete(`${empId}::${appId}::${day}`);
-  });
+  for (const day of dayArr) {
+    delete nextData[`${empId}::${appId}::${day}`];
+  }
 }
 
 function resolveImportTargetAppsForEmployee(params: {

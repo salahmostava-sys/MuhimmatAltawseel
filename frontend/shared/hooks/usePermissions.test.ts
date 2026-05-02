@@ -70,8 +70,8 @@ describe('DEFAULT_PERMISSIONS role matrix', () => {
     expect(permissions.can_edit).toBe(true);
   });
 
-  it('hr has no access to finance-only pages (deductions)', () => {
-    const permissions = DEFAULT_PERMISSIONS.hr.deductions;
+  it('hr has no access to finance-only pages (finance module)', () => {
+    const permissions = DEFAULT_PERMISSIONS.hr.finance;
     expect(permissions.can_view).toBe(false);
     expect(permissions.can_edit).toBe(false);
     expect(permissions.can_delete).toBe(false);
@@ -282,11 +282,11 @@ describe('usePermissions hook', () => {
     expect(result.current.permissions.can_edit).toBe(true);
   });
 
-  it('finance role can access the finance dashboard', async () => {
+  it('finance role can access the finance module', async () => {
     mockAuthState.user = { id: 'u1' };
     mockAuthState.role = 'finance';
 
-    const { result } = renderHook(() => usePermissions('finance_dashboard'), {
+    const { result } = renderHook(() => usePermissions('finance'), {
       wrapper: createWrapper(),
     });
 
@@ -294,7 +294,7 @@ describe('usePermissions hook', () => {
     expect(result.current.permissions).toEqual({
       can_view: true,
       can_edit: true,
-      can_delete: false,
+      can_delete: true,
     });
   });
 });
