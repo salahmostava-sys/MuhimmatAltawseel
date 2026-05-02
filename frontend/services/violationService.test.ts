@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createQueryBuilder, type MockQueryResult } from '@shared/test/mocks/supabaseClientMock';
+import { formatServiceError, resetMockTableResults } from '@shared/test/mocks/serviceLayerTestUtils';
 
 const { tableResults, fromMock } = vi.hoisted(() => {
   const tableResultsLocal: Record<string, MockQueryResult> = {};
@@ -14,10 +15,7 @@ vi.mock('@services/supabase/client', () => ({
 }));
 
 vi.mock('@services/serviceError', () => ({
-  toServiceError: vi.fn((error: unknown, context: string) => {
-    const message = error instanceof Error ? error.message : 'service error';
-    return new Error(`${context}: ${message}`);
-  }),
+  toServiceError: vi.fn(formatServiceError),
 }));
 
 import { violationService } from './violationService';
@@ -25,7 +23,7 @@ import { violationService } from './violationService';
 describe('violationService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    for (const k of Object.keys(tableResults)) delete tableResults[k];
+    resetMockTableResults(tableResults);
   });
 
   it('getViolations returns rows on success', async () => {

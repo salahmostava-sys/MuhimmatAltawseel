@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createQueryBuilder, type MockQueryResult } from '@shared/test/mocks/supabaseClientMock';
+import { resetMockTableResults, throwFormattedServiceError } from '@shared/test/mocks/serviceLayerTestUtils';
 
 const { tableResults, fromMock } = vi.hoisted(() => {
   const tableResultsLocal: Record<string, MockQueryResult> = {};
@@ -16,10 +17,7 @@ vi.mock('@services/supabase/client', () => ({
 }));
 
 vi.mock('@services/serviceError', () => ({
-  handleSupabaseError: vi.fn((error: unknown, context: string) => {
-    const message = error instanceof Error ? error.message : 'service error';
-    throw new Error(`${context}: ${message}`);
-  }),
+  handleSupabaseError: vi.fn(throwFormattedServiceError),
 }));
 
 import { fuelService } from './fuelService';
@@ -27,7 +25,7 @@ import { fuelService } from './fuelService';
 describe('fuelService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    for (const k of Object.keys(tableResults)) delete tableResults[k];
+    resetMockTableResults(tableResults);
   });
 
   it('getActiveEmployees returns array', async () => {

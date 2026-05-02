@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createQueryBuilder, type MockQueryResult } from '@shared/test/mocks/supabaseClientMock';
+import { formatServiceError, resetMockTableResults } from '@shared/test/mocks/serviceLayerTestUtils';
 
 const { tableResults, fromMock, rpcMock } = vi.hoisted(() => {
   const tableResultsLocal: Record<string, MockQueryResult> = {};
@@ -18,10 +19,7 @@ vi.mock('@services/supabase/client', () => ({
 }));
 
 vi.mock('@services/serviceError', () => ({
-  toServiceError: vi.fn((error: unknown, context: string) => {
-    const message = error instanceof Error ? error.message : 'service error';
-    return new Error(`${context}: ${message}`);
-  }),
+  toServiceError: vi.fn(formatServiceError),
 }));
 
 import { performanceService } from './performanceService';
@@ -29,7 +27,7 @@ import { performanceService } from './performanceService';
 describe('performanceService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    for (const k of Object.keys(tableResults)) delete tableResults[k];
+    resetMockTableResults(tableResults);
   });
 
   it('returns dashboard payload from the backend rpc', async () => {
