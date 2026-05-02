@@ -136,8 +136,8 @@ export const ColFilterPopover = ({ label, active, children, onClear }: ColFilter
 
 export const SkeletonRow = ({ cols }: { cols: number }) => (
   <tr className="border-b border-border/30">
-    {columns.map((column) => (
-      <td key={column.id} className="px-3 py-3">
+    {Array.from({ length: cols }, (_, i) => (
+      <td key={i} className="px-3 py-3">
         <Skeleton className="h-4 w-full" />
       </td>
     ))}
