@@ -64,7 +64,7 @@ const wrappedFetch: typeof fetch = async (input, init) => {
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   global: { fetch: wrappedFetch },
   auth: {
-    storage: localStorage,
+    storage: sessionStorage,
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,

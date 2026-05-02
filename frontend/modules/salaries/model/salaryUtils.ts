@@ -14,45 +14,28 @@ export const hasPlatformActivity = (metric?: PlatformSalaryMetric | null) =>
   Boolean(metric && (metric.ordersCount > 0 || metric.shiftDays > 0 || metric.salary > 0));
 
 /**
- * Keywords that identify administrative / non-delivery job titles.
- * These roles are NOT riders, so they are treated differently in salary calculations.
+ * Keywords that identify delivery / field rider roles.
+ * Any employee whose job title matches these is treated as a rider.
  *
- * ⚠️ Do NOT add delivery / field roles here (driver, سائق, مندوب…).
- *    Delivery roles must return false from isAdministrativeJobTitle.
+ * Rule: anyone whose job title does NOT match these keywords is treated as administrative.
+ * This means you only need to maintain the RIDER list — all other titles are admin by default.
+ *
+ * ⚠️ Do NOT add admin titles here. Only delivery / field roles belong in this list.
  */
-const ADMIN_JOB_TITLE_KEYWORDS = [
-  // ── English administrative titles ──────────────────────────────────────────
-  'admin',
-  'administrator',
-  'manager',
-  'supervisor',
-  'coordinator',
-  'accountant',
-  'finance',
-  'financial',
-  'hr',
-  'human resources',
-  'office',
-  'reception',
-  'support',
-  'customer service',
-  'procurement',
-  'purchasing',
-  'payroll',
-  // ── Arabic administrative titles ───────────────────────────────────────────
-  'ادارة',
-  'اداري',
-  'مدير',
-  'مشرف',
-  'منسق',
-  'محاسب',
-  'مالية',
-  'مالي',
-  'موارد',
-  'شؤون',
-  'استقبال',
-  'خدمة عملاء',
-  'دعم',
+const RIDER_JOB_TITLE_KEYWORDS = [
+  // ── English rider titles ────────────────────────────────────────────────────
+  'rider',
+  'driver',
+  'delivery',
+  'courier',
+  'dispatch',
+  'messenger',
+  // ── Arabic rider titles ─────────────────────────────────────────────────────
+  'مندوب',
+  'سائق',
+  'توصيل',
+  'موصل',
+  'مرسال',
 ];
 
 const normalizeSalaryJobTitle = (value?: string | null) =>
@@ -67,10 +50,23 @@ const normalizeSalaryJobTitle = (value?: string | null) =>
     .replace(/\s+/g, ' ')
     .trim();
 
-export const isAdministrativeJobTitle = (jobTitle?: string | null) => {
+/** Returns true when the job title belongs to a delivery / field rider. */
+export const isRiderJobTitle = (jobTitle?: string | null): boolean => {
   const normalized = normalizeSalaryJobTitle(jobTitle);
   if (!normalized) return false;
-  return ADMIN_JOB_TITLE_KEYWORDS.some((keyword) => normalized.includes(keyword));
+  return RIDER_JOB_TITLE_KEYWORDS.some((keyword) => normalized.includes(keyword));
+};
+
+/**
+ * Returns true when the employee should be treated as administrative (non-rider).
+ *
+ * Rule: anyone whose job title is set AND does NOT match rider keywords is administrative.
+ * Empty / null job title returns false (unknown role — won't auto-include in salary months).
+ */
+export const isAdministrativeJobTitle = (jobTitle?: string | null): boolean => {
+  const normalized = normalizeSalaryJobTitle(jobTitle);
+  if (!normalized) return false;
+  return !isRiderJobTitle(jobTitle);
 };
 
 export const getDisplayedBaseSalary = (

@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { Loader2, Save, Clock, Download, Upload, Printer } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Loader2, Save, Clock, Download, Upload, Printer, Wallet } from 'lucide-react';
 import { toast } from '@shared/components/ui/sonner';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';

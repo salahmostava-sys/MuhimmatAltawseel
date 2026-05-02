@@ -21,6 +21,11 @@ export const auditService = {
       record_id: payload.record_id ?? null,
       meta: (payload.meta ?? {}) as Json,
     });
-    if (error) throw toServiceError(error, 'auditService.logAdminAction');
+    // Audit logging is a secondary side-effect. Never throw here — an RLS
+    // error or transient network failure must not block the user's primary
+    // action (delete, save, etc.).
+    if (error) {
+      console.warn('[auditService] logAdminAction failed (non-fatal):', error.message);
+    }
   },
 };

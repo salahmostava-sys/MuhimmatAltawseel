@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
-import { Wallet, TrendingUp, Users, Building2 } from 'lucide-react';
+import { Wallet, TrendingUp, Users, Building2, Package, Clock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@shared/components/ui/button';
 import { SalaryEngineStatusBadge } from '@modules/salaries/components/SalaryEngineStatusBadge';
 import { isAdministrativeJobTitle } from '@modules/salaries/model/salaryUtils';
 import type { SalaryRow } from '@modules/salaries/types/salary.types';
@@ -12,6 +14,7 @@ interface SalaryMonthSelectorProps {
 
 export function SalaryMonthSelector(props: Readonly<SalaryMonthSelectorProps>) {
   const { loadingData, previewBackendError, isRefreshingPreview = false } = props;
+  const navigate = useNavigate();
 
   return (
     <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -29,6 +32,26 @@ export function SalaryMonthSelector(props: Readonly<SalaryMonthSelectorProps>) {
             isRefreshingPreview={isRefreshingPreview}
           />
         </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-1.5 h-8 text-xs"
+          onClick={() => navigate('/orders')}
+        >
+          <Package size={13} />
+          الطلبات
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-1.5 h-8 text-xs"
+          onClick={() => navigate('/orders?tab=shifts')}
+        >
+          <Clock size={13} />
+          الدوام
+        </Button>
       </div>
     </div>
   );

@@ -93,7 +93,8 @@ export function ShiftsTabWrapper() {
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['shifts'] }),
           queryClient.invalidateQueries({ queryKey: ['employees', uid, 'active-ids', globalMonth] }),
-          queryClient.invalidateQueries({ queryKey: ['salaries', uid, 'base-context', globalMonth] }),
+          queryClient.invalidateQueries({ queryKey: ['salaries', uid, 'context', globalMonth] }),
+          queryClient.invalidateQueries({ queryKey: ['salaries', uid, 'preview', globalMonth] }),
         ]);
         toast.success('تم حفظ بيانات الدوام بنجاح');
       } catch (error) {

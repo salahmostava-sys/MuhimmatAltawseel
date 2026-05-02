@@ -12,7 +12,6 @@ import {
   type DashboardPerformanceTabKey,
 } from '@modules/dashboard/components/DashboardPerformanceHeader';
 import { DashboardPerformanceOverviewTab } from '@modules/dashboard/components/DashboardPerformanceOverviewTab';
-import { QuickActions } from '@modules/dashboard/components/QuickActions';
 
 
 const loadAnalyticsTab = () =>
@@ -89,9 +88,6 @@ export default function DashboardPerformancePage() {
           void loadPlatformsTab();
         }}
       />
-
-      {/* Quick Actions Section */}
-      <QuickActions />
 
       {dashboardQuery.isError ? (
         <QueryErrorRetry
