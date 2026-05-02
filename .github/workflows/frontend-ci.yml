@@ -27,7 +27,7 @@ jobs:
         run: |
           for file in package.json package-lock.json bun.lock bun.lockb; do
             if [ -f "$file" ]; then
-              echo "Legacy root-level $file detected. Frontend CI still installs strictly from frontend/."
+              echo "Note: root-level $file present; frontend CI installs strictly from frontend/."
             fi
           done
 

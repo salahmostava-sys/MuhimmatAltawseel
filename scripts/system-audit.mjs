@@ -58,7 +58,7 @@ function reportRootPackageFiles() {
 
   if (legacyFiles.length > 0) {
     process.stdout.write(
-      `Warning: legacy root-level package files detected: ${legacyFiles.join(', ')}. Frontend installs still use frontend/package-lock.json.\n`,
+      `Note: root-level package manifest(s) present (${legacyFiles.join(', ')}); frontend installs use frontend/package-lock.json only.\n`,
     );
   }
 }
@@ -93,7 +93,9 @@ if (!skipBackend) {
   );
 
   if (dependencyCheck.status !== 0) {
-    process.stdout.write('Warning: skipping AI backend smoke tests locally because required Python packages are not installed.\n');
+    process.stdout.write(
+      'Skipping AI backend smoke tests: Python deps missing. Install with: pip install -r ai-backend/requirements.txt\n',
+    );
   } else {
     runCommand('AI backend smoke tests', pythonCommand, ['-m', 'unittest', 'discover', '-s', 'ai-backend', '-p', 'test_*.py']);
   }

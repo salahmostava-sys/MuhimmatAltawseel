@@ -14,13 +14,13 @@ const toastMocks = (await import('@shared/components/ui/sonner')).toast as any;
 
 vi.mock('@services/orderService', () => ({
   orderService: {
-    replaceMonthData: vi.fn(),
+    bulkUpsert: vi.fn(),
   },
 }));
 
 const { orderService } = await import('@services/orderService');
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const replaceMonthDataMock = orderService.replaceMonthData as any;
+const bulkUpsertMock = orderService.bulkUpsert as any;
 
 vi.mock('@shared/lib/logger', () => ({
   logError: vi.fn(),
@@ -37,8 +37,8 @@ describe('saveSpreadsheetMonth', () => {
     vi.clearAllMocks();
   });
 
-  it.skip('clears the month when the grid is empty instead of blocking save', async () => {
-    replaceMonthDataMock.mockResolvedValue({ saved: 0, failed: [] });
+  it('persists an empty grid via bulkUpsert (clear month path)', async () => {
+    bulkUpsertMock.mockResolvedValue({ saved: 0, failed: [] });
     const setSaving = vi.fn();
 
     const result = await saveSpreadsheetMonth({
@@ -53,14 +53,14 @@ describe('saveSpreadsheetMonth', () => {
     });
 
     expect(result).toBe(true);
-    expect(replaceMonthDataMock).toHaveBeenCalledWith('2026-04', []);
+    expect(bulkUpsertMock).toHaveBeenCalledWith([], 100);
     expect(toastMocks.success).toHaveBeenCalledTimes(1);
     expect(toastMocks.error).not.toHaveBeenCalled();
     expect(setSaving).toHaveBeenNthCalledWith(1, true);
     expect(setSaving).toHaveBeenLastCalledWith(false);
   });
 
-  it.skip('still blocks saving when the grid only contains invalid rows', async () => {
+  it('blocks saving when the grid only contains invalid rows', async () => {
     const setSaving = vi.fn();
 
     const result = await saveSpreadsheetMonth({
@@ -91,7 +91,7 @@ describe('saveSpreadsheetMonth', () => {
     });
 
     expect(result).toBe(false);
-    expect(replaceMonthDataMock).not.toHaveBeenCalled();
+    expect(bulkUpsertMock).not.toHaveBeenCalled();
     expect(toastMocks.warning).toHaveBeenCalledTimes(1);
     expect(toastMocks.error).toHaveBeenCalledTimes(1);
     expect(setSaving).toHaveBeenNthCalledWith(1, true);

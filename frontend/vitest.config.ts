@@ -11,6 +11,8 @@ export default defineConfig({
     'process.env.NODE_ENV': '"test"',
   },
   test: {
+    // forks pool often hits IPC/timeouts on Windows; threads are stable here.
+    pool: "threads",
     environment: "jsdom",
     globals: true,
     setupFiles: [path.resolve(__dirname, "./vitest.setup.ts")],
@@ -50,7 +52,6 @@ export default defineConfig({
         "**/components/**",
         "modules/**/hooks/**",
       ],
-      /** ÙÙŠ CI Ù…Ø¹ Sonar Ù†ÙˆÙ„Ù‘Ø¯ lcov Ø¯ÙˆÙ† Ø¥ÙŠÙ‚Ø§Ù Ø§Ù„Ø³ÙŠØ± Ø¨Ø³Ø¨Ø¨ Ø§Ù„Ø¹ØªØ¨Ø§Øª Ø§Ù„Ù…Ù†Ø®ÙØ¶Ø© Ø­Ø§Ù„ÙŠØ§Ù‹ */
       // CI relies on lcov reporting, so keep these lightweight thresholds for local runs only.
       thresholds: process.env.CI
         ? undefined

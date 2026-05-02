@@ -36,12 +36,13 @@ const buildRow = (registeredApps: string[]): SalaryRow => ({
 });
 
 describe('buildPlatformSetupWarnings', () => {
-  it.skip('limits warnings to platforms that affect current salary rows', () => {
+  it('limits warnings to platforms that affect current salary rows', () => {
     const apps: AppWithSchemeRow[] = [
-      { id: 'jahiz-id', name: 'Jahiz', salary_schemes: null },
+      { id: 'jahiz-id', name: 'Jahiz', work_type: 'hybrid', salary_schemes: null },
       {
         id: 'keeta-id',
         name: 'Keeta',
+        work_type: 'hybrid',
         salary_schemes: {
           id: 'scheme-1',
           name: 'Scheme 1',
@@ -51,7 +52,7 @@ describe('buildPlatformSetupWarnings', () => {
           target_bonus: null,
         },
       },
-      { id: 'unused-id', name: 'Unused', salary_schemes: null },
+      { id: 'unused-id', name: 'Unused', work_type: 'hybrid', salary_schemes: null },
     ];
 
     const rulesMap: Record<string, PricingRule[]> = {

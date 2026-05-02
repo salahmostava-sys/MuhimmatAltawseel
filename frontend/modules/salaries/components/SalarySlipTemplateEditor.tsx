@@ -153,11 +153,11 @@ export function SalarySlipTemplateEditor() {
     }
   };
 
-  const getSelectedColumns = (): string[] => {
+  const getSelectedColumns = useCallback((): string[] => {
     const cols = currentTemplate.selected_columns;
     if (Array.isArray(cols)) return cols as string[];
     return [];
-  };
+  }, [currentTemplate.selected_columns]);
 
   const toggleColumn = (key: string) => {
     const cols = getSelectedColumns();
@@ -168,7 +168,6 @@ export function SalarySlipTemplateEditor() {
     }
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const updatePreview = useCallback(() => {
     if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
     previewTimerRef.current = setTimeout(() => {
@@ -184,7 +183,7 @@ export function SalarySlipTemplateEditor() {
         previewSlipInIframe(previewRef.current, html);
       }
     }, 300);
-  }, [currentTemplate.header_html, currentTemplate.footer_html, currentTemplate.selected_columns]);
+  }, [currentTemplate.header_html, currentTemplate.footer_html, getSelectedColumns]);
 
   useEffect(() => {
     updatePreview();
