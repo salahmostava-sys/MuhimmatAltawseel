@@ -30,8 +30,8 @@ export function useInvalidateMaintenanceQueries() {
   const { userId } = useAuthQueryGate();
   const uid = authQueryUserId(userId);
   return useCallback(() => {
-    void qc.invalidateQueries({ queryKey: ['maintenance_logs', uid] });
-    void qc.invalidateQueries({ queryKey: ['spare_parts', uid] });
-    void qc.invalidateQueries({ queryKey: ['alerts', uid] });
+    qc.invalidateQueries({ queryKey: ['maintenance_logs', uid] }).catch(() => {});
+    qc.invalidateQueries({ queryKey: ['spare_parts', uid] }).catch(() => {});
+    qc.invalidateQueries({ queryKey: ['alerts', uid] }).catch(() => {});
   }, [qc, uid]);
 }

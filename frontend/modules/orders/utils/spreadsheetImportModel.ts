@@ -78,6 +78,65 @@ function resolveImportTargetAppsForEmployee(params: {
   return { targetApps: assignedApps };
 }
 
+function validateCellValue(cellValue: unknown, rowIdx: number, day: number): { valid: boolean; value: number; error?: string } {
+  const val = Number(cellValue);
+
+  if (Number.isNaN(val)) {
+    if (cellValue !== '' && cellValue !== null && cellValue !== undefined) {
+      return { valid: false, value: 0, error: `صف ${rowIdx + 2}, يوم ${day}: قيمة غير صحيحة "${cellValue}"` };
+    }
+    return { valid: false, value: 0 };
+  }
+
+  if (val <= 0) return { valid: false, value: 0 };
+
+  if (val > 10000) {
+    return { valid: false, value: 0, error: `صف ${rowIdx + 2}, يوم ${day}: عدد الطلبات ${val} كبير جدا` };
+  }
+
+  return { valid: true, value: val };
+}
+
+function processRowCellsForMappedImport(
+  line: unknown[],
+  dayArr: number[],
+  rowIdx: number,
+  empId: string,
+  targetApps: App[],
+  newData: DailyData,
+  clearedScopes: Set<string>,
+): { imported: number; hasValidData: boolean; errors: string[] } {
+  let imported = 0;
+  let hasValidData = false;
+  const errors: string[] = [];
+
+  // Clear previous data for this employee+app scope
+  for (const app of targetApps) {
+    const scopeKey = `${empId}::${app.id}`;
+    if (clearedScopes.has(scopeKey)) continue;
+    clearEmployeeAppMonthData(newData, empId, app.id, dayArr);
+    clearedScopes.add(scopeKey);
+  }
+
+  // Process each day cell
+  for (let idx = 0; idx < dayArr.length; idx++) {
+    const d = dayArr[idx];
+    const cellValue = line[idx + 1];
+    const result = validateCellValue(cellValue, rowIdx, d);
+
+    if (result.error) errors.push(result.error);
+    if (!result.valid) continue;
+
+    hasValidData = true;
+    for (const app of targetApps) {
+      newData[`${empId}::${app.id}::${d}`] = result.value;
+      imported++;
+    }
+  }
+
+  return { imported, hasValidData, errors };
+}
+
 export function mergeImportedOrdersFromMatrixWithMapping(params: {
   matrixRows: unknown[];
   dayArr: number[];
@@ -130,42 +189,11 @@ export function mergeImportedOrdersFromMatrixWithMapping(params: {
       continue;
     }
 
-    let hasValidData = false;
+    const result = processRowCellsForMappedImport(line, dayArr, rowIdx, empId, targetApps, newData, clearedScopes);
+    imported += result.imported;
+    errors.push(...result.errors);
 
-    for (const app of targetApps) {
-      const scopeKey = `${empId}::${app.id}`;
-      if (clearedScopes.has(scopeKey)) continue;
-      clearEmployeeAppMonthData(newData, empId, app.id, dayArr);
-      clearedScopes.add(scopeKey);
-    }
-
-    for (let idx = 0; idx < dayArr.length; idx++) {
-      const d = dayArr[idx];
-      const cellValue = line[idx + 1];
-      const val = Number(cellValue);
-
-      if (Number.isNaN(val)) {
-        if (cellValue !== '' && cellValue !== null && cellValue !== undefined) {
-          errors.push(`صف ${rowIdx + 2}, يوم ${d}: قيمة غير صحيحة "${cellValue}"`);
-        }
-        continue;
-      }
-
-      if (val <= 0) continue;
-
-      if (val > 10000) {
-        errors.push(`صف ${rowIdx + 2}, يوم ${d}: عدد الطلبات ${val} كبير جدا`);
-        continue;
-      }
-
-      hasValidData = true;
-      for (const app of targetApps) {
-        newData[`${empId}::${app.id}::${d}`] = val;
-        imported++;
-      }
-    }
-
-    if (!hasValidData) {
+    if (!result.hasValidData) {
       skipped++;
     }
   }

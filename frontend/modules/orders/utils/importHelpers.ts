@@ -5,6 +5,61 @@ export function ordersImportHeadersMatch(actual: string[], expected: string[]): 
   return actual.length === expected.length && actual.every((h, i) => h === expected[i]);
 }
 
+type CellValidationResult = {
+  valid: boolean;
+  value: number;
+  error?: string;
+};
+
+function validateCell(cellValue: unknown, rowIdx: number, day: number): CellValidationResult {
+  const val = Number(cellValue);
+
+  if (Number.isNaN(val)) {
+    if (cellValue !== '' && cellValue !== null && cellValue !== undefined) {
+      return { valid: false, value: 0, error: `صف ${rowIdx + 2}, يوم ${day}: قيمة غير صحيحة "${cellValue}"` };
+    }
+    return { valid: false, value: 0 };
+  }
+
+  if (val <= 0) return { valid: false, value: 0 };
+
+  if (val > 10000) {
+    return { valid: false, value: 0, error: `صف ${rowIdx + 2}, يوم ${day}: عدد الطلبات ${val} كبير جداً` };
+  }
+
+  return { valid: true, value: val };
+}
+
+function processRowCells(
+  line: unknown[],
+  dayArr: number[],
+  rowIdx: number,
+  empId: string,
+  targetApps: App[],
+  newData: DailyData,
+): { imported: number; hasValidData: boolean; errors: string[] } {
+  let imported = 0;
+  let hasValidData = false;
+  const errors: string[] = [];
+
+  for (let idx = 0; idx < dayArr.length; idx++) {
+    const d = dayArr[idx];
+    const cellValue = line[idx + 1];
+    const result = validateCell(cellValue, rowIdx, d);
+
+    if (result.error) errors.push(result.error);
+    if (!result.valid) continue;
+
+    hasValidData = true;
+    for (const app of targetApps) {
+      newData[`${empId}::${app.id}::${d}`] = result.value;
+      imported++;
+    }
+  }
+
+  return { imported, hasValidData, errors };
+}
+
 export function mergeImportedOrdersFromMatrix(
   matrixRows: unknown[],
   dayArr: number[],
@@ -41,34 +96,11 @@ export function mergeImportedOrdersFromMatrix(
       continue;
     }
     
-    let hasValidData = false;
-    for (let idx = 0; idx < dayArr.length; idx++) {
-      const d = dayArr[idx];
-      const cellValue = line[idx + 1];
-      const val = Number(cellValue);
-      
-      if (Number.isNaN(val)) {
-        if (cellValue !== '' && cellValue !== null && cellValue !== undefined) {
-          errors.push(`صف ${rowIdx + 2}, يوم ${d}: قيمة غير صحيحة "${cellValue}"`);
-        }
-        continue;
-      }
-      
-      if (val <= 0) continue;
-      
-      if (val > 10000) {
-        errors.push(`صف ${rowIdx + 2}, يوم ${d}: عدد الطلبات ${val} كبير جداً`);
-        continue;
-      }
-      
-      hasValidData = true;
-      for (const app of targetApps) {
-        newData[`${emp.id}::${app.id}::${d}`] = val;
-        imported++;
-      }
-    }
+    const result = processRowCells(line, dayArr, rowIdx, emp.id, targetApps, newData);
+    imported += result.imported;
+    errors.push(...result.errors);
     
-    if (!hasValidData) {
+    if (!result.hasValidData) {
       skipped++;
     }
   }

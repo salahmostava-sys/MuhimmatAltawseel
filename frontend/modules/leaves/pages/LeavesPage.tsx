@@ -67,7 +67,7 @@ const LeavesPage = () => {
     try {
       await leaveService.updateStatus(id, status, user?.id ?? null);
       toast({ title: status === 'approved' ? 'تمت الموافقة على الإجازة' : 'تم رفض طلب الإجازة' });
-      void refetch();
+      refetch().catch(() => {});
     } catch (err) {
       toast({ title: 'خطأ', description: err instanceof Error ? err.message : 'تعذر تحديث الحالة', variant: 'destructive' });
     } finally {
@@ -80,7 +80,7 @@ const LeavesPage = () => {
     try {
       await leaveService.delete(id);
       toast({ title: 'تم حذف الطلب' });
-      void refetch();
+      refetch().catch(() => {});
     } catch (err) {
       toast({ title: 'خطأ', description: err instanceof Error ? err.message : 'تعذر الحذف', variant: 'destructive' });
     }

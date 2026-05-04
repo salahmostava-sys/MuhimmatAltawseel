@@ -92,7 +92,7 @@ export default function DashboardPerformancePage() {
       {dashboardQuery.isError ? (
         <QueryErrorRetry
           error={dashboardQuery.error}
-          onRetry={() => void dashboardQuery.refetch()}
+          onRetry={() => { dashboardQuery.refetch(); }}
           isFetching={dashboardQuery.isFetching}
           title="تعذر تحميل لوحة المعلومات"
           hint="تحقق من الاتصال أو من تطبيق أحدث migrations ثم أعد المحاولة."

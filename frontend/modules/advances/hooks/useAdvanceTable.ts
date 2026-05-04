@@ -13,6 +13,15 @@ import { calcPaid, calcPending } from '@modules/advances/types/advance.types';
 import { loadXlsx } from '@modules/orders/utils/xlsx';
 import { getErrorMessage } from '@services/serviceError';
 
+function mapRowToRecord(line: unknown, columns: typeof ADVANCE_IO_COLUMNS): Record<string, unknown> {
+  const values = Array.isArray(line) ? line : [];
+  const row: Record<string, unknown> = {};
+  columns.forEach((column, idx) => {
+    row[column.key] = values[idx];
+  });
+  return row;
+}
+
 export function useAdvanceTable(
   advances: Advance[],
   employees: { id: string; name: string; national_id?: string | null; sponsorship_status?: string | null }[],
@@ -142,14 +151,7 @@ export function useAdvanceTable(
         });
         return;
       }
-      const rows = matrix.slice(1).map((line) => {
-        const values = Array.isArray(line) ? line : [];
-        const row: Record<string, unknown> = {};
-        ADVANCE_IO_COLUMNS.forEach((column, idx) => {
-          row[column.key] = values[idx];
-        });
-        return row;
-      });
+      const rows = matrix.slice(1).map((line) => mapRowToRecord(line, ADVANCE_IO_COLUMNS));
       let success = 0;
       for (const row of rows) {
         const empName = row.name;

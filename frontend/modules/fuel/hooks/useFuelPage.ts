@@ -241,8 +241,8 @@ export function useFuelPage() { // NOSONAR: page data layer with many independen
   }, [dailyError, toast]);
 
   const refresh = () => {
-    void refetchMonthly();
-    void refetchDaily();
+    refetchMonthly().catch(() => {});
+    refetchDaily().catch(() => {});
   };
   const loading = view === 'monthly' ? monthlyLoading : view === 'spreadsheet' ? (monthlyLoading || dailyLoading) : dailyLoading;
 

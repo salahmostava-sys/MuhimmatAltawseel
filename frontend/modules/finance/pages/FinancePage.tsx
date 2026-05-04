@@ -83,7 +83,7 @@ export default function FinancePage() {
   };
 
   if (error && !loading) {
-    return <div className="space-y-4" dir="rtl"><QueryErrorRetry error={error} onRetry={() => void refetch()} title="تعذر تحميل البيانات المالية" /></div>;
+    return <div className="space-y-4" dir="rtl"><QueryErrorRetry error={error} onRetry={() => { refetch(); }} title="تعذر تحميل البيانات المالية" /></div>;
   }
 
   return (
@@ -101,7 +101,7 @@ export default function FinancePage() {
           <div className="inline-flex items-center rounded-xl bg-muted/40 px-3 py-1.5 border border-border/50 text-[11px] font-bold text-muted-foreground">
             <Calendar size={13} className="me-1.5 text-primary/70" />{monthLabel}
           </div>
-          <Button variant="outline" size="sm" onClick={() => void syncSalaries()} disabled={isSyncing} className="gap-1.5 h-8 text-xs">
+          <Button variant="outline" size="sm" onClick={() => { syncSalaries(); }} disabled={isSyncing} className="gap-1.5 h-8 text-xs">
             <RefreshCw size={13} className={isSyncing ? 'animate-spin' : ''} /> مزامنة الرواتب
           </Button>
           <Button variant="outline" size="sm" onClick={handleCarryOver} disabled={carryingOver || expenseItems.length === 0} className="gap-1.5 h-8 text-xs">
@@ -170,7 +170,7 @@ export default function FinancePage() {
                     <td className="px-3 py-2.5 text-center font-bold text-emerald-600">
                       {editingId === t.id && editField === 'amount' ? (
                         <Input autoFocus type="number" min="0" value={editText} onChange={e => setEditText(e.target.value)}
-                          onBlur={() => void saveEdit(t.id)} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingId(null); }}
+                          onBlur={() => { saveEdit(t.id); }} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingId(null); }}
                           className="h-7 text-sm text-center font-bold" dir="ltr" />
                       ) : (
                         <button type="button" className={t.is_auto ? '' : 'cursor-pointer hover:opacity-70'} onClick={() => { if (!t.is_auto) startEdit(t.id, 'amount', String(t.amount)); }} disabled={t.is_auto}>
@@ -181,7 +181,7 @@ export default function FinancePage() {
                     <td className="px-3 py-2.5 text-sm text-foreground">
                       {editingId === t.id && editField === 'description' ? (
                         <Input autoFocus value={editText} onChange={e => setEditText(e.target.value)}
-                          onBlur={() => void saveEdit(t.id)} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingId(null); }}
+                          onBlur={() => { saveEdit(t.id); }} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingId(null); }}
                           className="h-7 text-sm" dir="rtl" />
                       ) : (
                         <button type="button" className={t.is_auto ? '' : 'cursor-pointer hover:text-primary'} onClick={() => { if (!t.is_auto) startEdit(t.id, 'description', t.description || t.category); }} disabled={t.is_auto}>
@@ -191,7 +191,7 @@ export default function FinancePage() {
                     </td>
                     <td className="px-3 py-2.5 text-center">
                       {t.is_auto ? <Lock size={12} className="mx-auto text-muted-foreground/40" /> : (
-                        <button type="button" onClick={() => void deleteTransaction(t.id)} disabled={isDeleting} className="p-1 rounded hover:bg-destructive/10 text-destructive/60 hover:text-destructive"><Trash2 size={13} /></button>
+                        <button type="button" onClick={() => { deleteTransaction(t.id); }} disabled={isDeleting} className="p-1 rounded hover:bg-destructive/10 text-destructive/60 hover:text-destructive"><Trash2 size={13} /></button>
                       )}
                     </td>
                   </tr>
@@ -205,7 +205,7 @@ export default function FinancePage() {
                   <Input placeholder="وصف الإيراد..." value={newRevenue.description} onChange={e => setNewRevenue(r => ({ ...r, description: e.target.value }))} className="h-9 text-sm w-full" dir="rtl" />
                 </td>
                 <td className="px-2 py-2 text-center">
-                  <Button size="sm" onClick={() => void handleAddRow('revenue')} disabled={isSaving || !newRevenue.amount} className="h-9 w-9 p-0 bg-emerald-600 hover:bg-emerald-700">
+                  <Button size="sm" onClick={() => { handleAddRow('revenue'); }} disabled={isSaving || !newRevenue.amount} className="h-9 w-9 p-0 bg-emerald-600 hover:bg-emerald-700">
                     <Plus size={16} />
                   </Button>
                 </td>
@@ -239,7 +239,7 @@ export default function FinancePage() {
                     <td className="px-3 py-2.5 text-center font-bold text-rose-500">
                       {editingId === t.id && editField === 'amount' ? (
                         <Input autoFocus type="number" min="0" value={editText} onChange={e => setEditText(e.target.value)}
-                          onBlur={() => void saveEdit(t.id)} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingId(null); }}
+                          onBlur={() => { saveEdit(t.id); }} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingId(null); }}
                           className="h-7 text-sm text-center font-bold" dir="ltr" />
                       ) : (
                         <button type="button" className={t.is_auto ? '' : 'cursor-pointer hover:opacity-70'} onClick={() => { if (!t.is_auto) startEdit(t.id, 'amount', String(t.amount)); }} disabled={t.is_auto}>
@@ -250,7 +250,7 @@ export default function FinancePage() {
                     <td className="px-3 py-2.5 text-sm text-foreground">
                       {editingId === t.id && editField === 'description' ? (
                         <Input autoFocus value={editText} onChange={e => setEditText(e.target.value)}
-                          onBlur={() => void saveEdit(t.id)} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingId(null); }}
+                          onBlur={() => { saveEdit(t.id); }} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingId(null); }}
                           className="h-7 text-sm" dir="rtl" />
                       ) : (
                         <button type="button" className={t.is_auto ? '' : 'cursor-pointer hover:text-primary'} onClick={() => { if (!t.is_auto) startEdit(t.id, 'description', t.description || t.category); }} disabled={t.is_auto}>
@@ -261,7 +261,7 @@ export default function FinancePage() {
                     </td>
                     <td className="px-3 py-2.5 text-center">
                       {!t.is_auto && (
-                        <button type="button" onClick={() => void deleteTransaction(t.id)} disabled={isDeleting} className="p-1 rounded hover:bg-destructive/10 text-destructive/60 hover:text-destructive"><Trash2 size={13} /></button>
+                        <button type="button" onClick={() => { deleteTransaction(t.id); }} disabled={isDeleting} className="p-1 rounded hover:bg-destructive/10 text-destructive/60 hover:text-destructive"><Trash2 size={13} /></button>
                       )}
                     </td>
                   </tr>
@@ -275,7 +275,7 @@ export default function FinancePage() {
                   <Input placeholder="وصف المصروف..." value={newExpense.description} onChange={e => setNewExpense(r => ({ ...r, description: e.target.value }))} className="h-9 text-sm w-full" dir="rtl" />
                 </td>
                 <td className="px-2 py-2 text-center">
-                  <Button size="sm" onClick={() => void handleAddRow('expense')} disabled={isSaving || !newExpense.amount} className="h-9 w-9 p-0 bg-rose-500 hover:bg-rose-600">
+                  <Button size="sm" onClick={() => { handleAddRow('expense'); }} disabled={isSaving || !newExpense.amount} className="h-9 w-9 p-0 bg-rose-500 hover:bg-rose-600">
                     <Plus size={16} />
                   </Button>
                 </td>

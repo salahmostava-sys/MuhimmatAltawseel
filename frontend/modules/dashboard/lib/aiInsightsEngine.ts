@@ -195,6 +195,73 @@ function buildInsights(
 
 // ─── Alerts ─────────────────────────────────────────────────────────────────
 
+function buildSuddenDropAlert(rider: RiderPerformanceProfile): AIAlert | null {
+  if (rider.growthPct >= -20) return null;
+  const name = getFirstTwoNames(rider.employeeName);
+  return {
+    id: `drop-${rider.employeeId}`,
+    employeeId: rider.employeeId,
+    employeeName: name,
+    category: 'sudden_drop',
+    severity: rider.growthPct < -40 ? 'critical' : 'warning',
+    message: `انخفاض مفاجئ في أداء ${name}`,
+    detail: `انخفض بنسبة ${Math.abs(rider.growthPct).toFixed(0)}% عن الشهر الماضي`,
+    value: rider.growthPct,
+  };
+}
+
+function buildAbsenceAlert(rider: RiderPerformanceProfile): AIAlert | null {
+  if (rider.activeDays > 3 || rider.totalOrders >= 20) return null;
+  const name = getFirstTwoNames(rider.employeeName);
+  return {
+    id: `absent-${rider.employeeId}`,
+    employeeId: rider.employeeId,
+    employeeName: name,
+    category: 'absence',
+    severity: rider.activeDays === 0 ? 'critical' : 'warning',
+    message: `${name} شبه غائب`,
+    detail: `عمل ${rider.activeDays} أيام فقط مع ${rider.totalOrders} طلب`,
+    value: rider.activeDays,
+  };
+}
+
+function buildWeakPerformanceAlert(rider: RiderPerformanceProfile): AIAlert | null {
+  if (rider.performanceScore >= 35 || rider.activeDays <= 5) return null;
+  const name = getFirstTwoNames(rider.employeeName);
+  return {
+    id: `weak-${rider.employeeId}`,
+    employeeId: rider.employeeId,
+    employeeName: name,
+    category: 'weak_performance',
+    severity: rider.performanceScore < 20 ? 'critical' : 'warning',
+    message: `أداء ${name} ضعيف مستمر`,
+    detail: `تقييم ${rider.performanceScore}/100 — ${tierLabel(rider.tier)}`,
+    value: rider.performanceScore,
+  };
+}
+
+function buildExceptionalAlert(rider: RiderPerformanceProfile): AIAlert | null {
+  if (rider.performanceScore < 90 || rider.growthPct <= 10) return null;
+  const name = getFirstTwoNames(rider.employeeName);
+  return {
+    id: `exceptional-${rider.employeeId}`,
+    employeeId: rider.employeeId,
+    employeeName: name,
+    category: 'exceptional',
+    severity: 'success',
+    message: `أداء استثنائي من ${name}`,
+    detail: `تقييم ${rider.performanceScore}/100 مع تحسّن ${rider.growthPct.toFixed(0)}%`,
+    value: rider.performanceScore,
+  };
+}
+
+const ALERT_BUILDERS = [
+  buildSuddenDropAlert,
+  buildAbsenceAlert,
+  buildWeakPerformanceAlert,
+  buildExceptionalAlert,
+];
+
 /**
  * Generate AI-powered alerts for individual riders.
  */
@@ -202,62 +269,9 @@ export function generateAlerts(riders: RiderPerformanceProfile[]): AIAlert[] {
   const alerts: AIAlert[] = [];
 
   for (const rider of riders) {
-    const name = getFirstTwoNames(rider.employeeName);
-
-    // Sudden drop (>20% decline)
-    if (rider.growthPct < -20) {
-      alerts.push({
-        id: `drop-${rider.employeeId}`,
-        employeeId: rider.employeeId,
-        employeeName: name,
-        category: 'sudden_drop',
-        severity: rider.growthPct < -40 ? 'critical' : 'warning',
-        message: `انخفاض مفاجئ في أداء ${name}`,
-        detail: `انخفض بنسبة ${Math.abs(rider.growthPct).toFixed(0)}% عن الشهر الماضي`,
-        value: rider.growthPct,
-      });
-    }
-
-    // Absence (very low active days)
-    if (rider.activeDays <= 3 && rider.totalOrders < 20) {
-      alerts.push({
-        id: `absent-${rider.employeeId}`,
-        employeeId: rider.employeeId,
-        employeeName: name,
-        category: 'absence',
-        severity: rider.activeDays === 0 ? 'critical' : 'warning',
-        message: `${name} شبه غائب`,
-        detail: `عمل ${rider.activeDays} أيام فقط مع ${rider.totalOrders} طلب`,
-        value: rider.activeDays,
-      });
-    }
-
-    // Weak performance (score < 35)
-    if (rider.performanceScore < 35 && rider.activeDays > 5) {
-      alerts.push({
-        id: `weak-${rider.employeeId}`,
-        employeeId: rider.employeeId,
-        employeeName: name,
-        category: 'weak_performance',
-        severity: rider.performanceScore < 20 ? 'critical' : 'warning',
-        message: `أداء ${name} ضعيف مستمر`,
-        detail: `تقييم ${rider.performanceScore}/100 — ${tierLabel(rider.tier)}`,
-        value: rider.performanceScore,
-      });
-    }
-
-    // Exceptional performance
-    if (rider.performanceScore >= 90 && rider.growthPct > 10) {
-      alerts.push({
-        id: `exceptional-${rider.employeeId}`,
-        employeeId: rider.employeeId,
-        employeeName: name,
-        category: 'exceptional',
-        severity: 'success',
-        message: `أداء استثنائي من ${name}`,
-        detail: `تقييم ${rider.performanceScore}/100 مع تحسّن ${rider.growthPct.toFixed(0)}%`,
-        value: rider.performanceScore,
-      });
+    for (const builder of ALERT_BUILDERS) {
+      const alert = builder(rider);
+      if (alert) alerts.push(alert);
     }
   }
 
@@ -368,6 +382,55 @@ export function generateRecommendations(
 
 // ─── Per-Rider AI Analysis ──────────────────────────────────────────────────
 
+function determinePerformanceTrend(growthPct: number): 'improving' | 'declining' | 'stable' {
+  if (growthPct > 5) return 'improving';
+  if (growthPct < -5) return 'declining';
+  return 'stable';
+}
+
+function buildTrendDetail(growthPct: number): string {
+  if (growthPct > 5) return `أداؤه يتحسّن بنسبة ${growthPct.toFixed(1)}%`;
+  if (growthPct < -5) return `أداؤه يتراجع بنسبة ${Math.abs(growthPct).toFixed(1)}%`;
+  return 'أداؤه مستقر مقارنة بالشهر السابق';
+}
+
+function buildTargetDetail(achievementPct: number): string | null {
+  if (achievementPct >= 100) return `حقق الهدف الشهري (${achievementPct.toFixed(0)}%)`;
+  if (achievementPct >= 75) return `قريب من تحقيق الهدف (${achievementPct.toFixed(0)}%)`;
+  if (achievementPct > 0) return `بعيد عن الهدف (${achievementPct.toFixed(0)}%)`;
+  return null;
+}
+
+function buildJudgmentText(
+  tier: PerformanceTier,
+  trend: 'improving' | 'declining' | 'stable',
+  isConsistent: boolean,
+): string {
+  const parts: string[] = [];
+
+  if (tier === 'excellent') {
+    parts.push('أداء ممتاز');
+    if (trend === 'improving') parts.push('ويتحسّن');
+    if (isConsistent) parts.push('ومنتظم');
+    parts.push('— يستحق تقدير');
+  } else if (tier === 'good') {
+    parts.push('أداء جيد');
+    if (trend === 'declining') parts.push('لكنه يتراجع');
+    else if (isConsistent) parts.push('ومنتظم');
+  } else if (tier === 'average') {
+    parts.push('أداء متوسط');
+    if (trend === 'improving') parts.push('لكنه يتحسّن');
+    else if (!isConsistent) parts.push('وغير مستقر');
+    parts.push('— يحتاج تحفيز');
+  } else {
+    parts.push('أداء ضعيف');
+    if (trend === 'declining') parts.push('ومتراجع');
+    parts.push('— يحتاج متابعة عاجلة');
+  }
+
+  return parts.join(' ');
+}
+
 /**
  * Generate an AI analysis for a single rider.
  */
@@ -375,17 +438,8 @@ export function analyzeRider(rider: RiderPerformanceProfile): RiderAIAnalysis {
   const details: string[] = [];
 
   // Determine trend
-  let performanceTrend: 'improving' | 'declining' | 'stable';
-  if (rider.growthPct > 5) {
-    performanceTrend = 'improving';
-    details.push(`أداؤه يتحسّن بنسبة ${rider.growthPct.toFixed(1)}%`);
-  } else if (rider.growthPct < -5) {
-    performanceTrend = 'declining';
-    details.push(`أداؤه يتراجع بنسبة ${Math.abs(rider.growthPct).toFixed(1)}%`);
-  } else {
-    performanceTrend = 'stable';
-    details.push('أداؤه مستقر مقارنة بالشهر السابق');
-  }
+  const performanceTrend = determinePerformanceTrend(rider.growthPct);
+  details.push(buildTrendDetail(rider.growthPct));
 
   // Consistency check
   const isConsistent = rider.consistencyRatio >= 0.6;
@@ -396,13 +450,8 @@ export function analyzeRider(rider: RiderPerformanceProfile): RiderAIAnalysis {
   }
 
   // Target achievement
-  if (rider.targetAchievementPct >= 100) {
-    details.push(`حقق الهدف الشهري (${rider.targetAchievementPct.toFixed(0)}%)`);
-  } else if (rider.targetAchievementPct >= 75) {
-    details.push(`قريب من تحقيق الهدف (${rider.targetAchievementPct.toFixed(0)}%)`);
-  } else if (rider.targetAchievementPct > 0) {
-    details.push(`بعيد عن الهدف (${rider.targetAchievementPct.toFixed(0)}%)`);
-  }
+  const targetDetail = buildTargetDetail(rider.targetAchievementPct);
+  if (targetDetail) details.push(targetDetail);
 
   // Average orders per day
   details.push(`متوسط ${rider.avgOrdersPerDay.toFixed(1)} طلب/يوم — ${rider.activeDays} يوم عمل`);
@@ -415,28 +464,8 @@ export function analyzeRider(rider: RiderPerformanceProfile): RiderAIAnalysis {
     (rider.consistencyRatio < 0.4 && rider.activeDays > 5);
 
   // Build judgment text
-  const judgmentParts: string[] = [];
   const tier = classifyPerformance(rider.performanceScore);
-
-  if (tier === 'excellent') {
-    judgmentParts.push('أداء ممتاز');
-    if (performanceTrend === 'improving') judgmentParts.push('ويتحسّن');
-    if (isConsistent) judgmentParts.push('ومنتظم');
-    judgmentParts.push('— يستحق تقدير');
-  } else if (tier === 'good') {
-    judgmentParts.push('أداء جيد');
-    if (performanceTrend === 'declining') judgmentParts.push('لكنه يتراجع');
-    else if (isConsistent) judgmentParts.push('ومنتظم');
-  } else if (tier === 'average') {
-    judgmentParts.push('أداء متوسط');
-    if (performanceTrend === 'improving') judgmentParts.push('لكنه يتحسّن');
-    else if (!isConsistent) judgmentParts.push('وغير مستقر');
-    judgmentParts.push('— يحتاج تحفيز');
-  } else {
-    judgmentParts.push('أداء ضعيف');
-    if (performanceTrend === 'declining') judgmentParts.push('ومتراجع');
-    judgmentParts.push('— يحتاج متابعة عاجلة');
-  }
+  const judgmentText = buildJudgmentText(tier, performanceTrend, isConsistent);
 
   return {
     performanceTrend,
@@ -444,7 +473,7 @@ export function analyzeRider(rider: RiderPerformanceProfile): RiderAIAnalysis {
     needsFollowUp,
     performanceScore: rider.performanceScore,
     tier,
-    judgmentText: judgmentParts.join(' '),
+    judgmentText,
     details,
   };
 }

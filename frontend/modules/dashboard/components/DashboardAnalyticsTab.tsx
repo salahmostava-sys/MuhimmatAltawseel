@@ -308,7 +308,7 @@ export function DashboardAnalyticsTab() {
       <div className="flex items-center justify-center min-h-[280px] px-4">
         <QueryErrorRetry
           error={error}
-          onRetry={() => void refetch()}
+          onRetry={() => { refetch(); }}
           isFetching={isFetching}
           title="تعذر تحميل التحليلات"
           hint="إذا استمر الخطأ: تأكد من الاتصال، ثم أعد المحاولة. قد تكون هناك ضغوط مؤقتة على الخادم."

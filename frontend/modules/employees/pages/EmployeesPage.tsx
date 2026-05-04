@@ -153,7 +153,7 @@ const Employees = () => {
       if (document.visibilityState !== 'visible' || hiddenAt === null) return;
       const away = Date.now() - hiddenAt;
       hiddenAt = null;
-      if (away >= minAwayMs) void refetchEmployees();
+      if (away >= minAwayMs) refetchEmployees().catch(() => {});
     };
     document.addEventListener('visibilitychange', onVis);
     return () => document.removeEventListener('visibilitychange', onVis);
@@ -213,9 +213,9 @@ const Employees = () => {
   const hasNoPaginatedRows = paginated.length === 0;
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const handleRowEditStart = useCallback((rowId: string) => void presence.trackRow(rowId), [presence.trackRow]);
+  const handleRowEditStart = useCallback((rowId: string) => { presence.trackRow(rowId); }, [presence.trackRow]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const handleRowEditEnd = useCallback(() => void presence.trackRow(null), [presence.trackRow]);
+  const handleRowEditEnd = useCallback(() => { presence.trackRow(null); }, [presence.trackRow]);
 
   // ── Clear selectedEmployee if no longer visible in current month ──
   // (moved out of render body into an effect to avoid setState during render)
@@ -252,7 +252,7 @@ const Employees = () => {
       </div>
         <QueryErrorRetry
           error={employeesError}
-          onRetry={() => void refetchEmployees()}
+          onRetry={() => { refetchEmployees(); }}
           title="تعذر تحميل بيانات الموظفين"
           hint="تحقق من الاتصال وصلاحياتك ثم أعد المحاولة."
         />
@@ -370,7 +370,7 @@ const Employees = () => {
             open={showAddModal}
             editEmployee={editEmployee}
             onClose={() => { setShowAddModal(false); setEditEmployee(null); }}
-            onSuccess={() => { void refetchEmployees(); setShowAddModal(false); setEditEmployee(null); }}
+            onSuccess={() => { refetchEmployees().catch(() => {}); setShowAddModal(false); setEditEmployee(null); }}
           />
         </Suspense>
       )}

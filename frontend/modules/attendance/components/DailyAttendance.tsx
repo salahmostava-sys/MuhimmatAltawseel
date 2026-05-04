@@ -84,7 +84,7 @@ const DailyAttendance = ({ selectedMonth, selectedYear }: Props) => {
       await attendanceService.addStatusConfig(name);
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['attendance-status-configs'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance-status-configs'] }).catch(() => {});
     },
     onError: (e) => {
       logError('[DailyAttendance] failed to save custom status to server', e, { level: 'warn' });

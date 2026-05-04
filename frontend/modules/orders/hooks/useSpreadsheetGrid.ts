@@ -344,9 +344,9 @@ export function useSpreadsheetGrid() {
     });
 
   const handleSave = () =>
-    void persistSpreadsheetData(data, {
+    persistSpreadsheetData(data, {
       sourceType: 'manual',
-    });
+    }).catch(() => {});
 
   const handleLockMonth = async () => {
     const my = monthYear(year, month);

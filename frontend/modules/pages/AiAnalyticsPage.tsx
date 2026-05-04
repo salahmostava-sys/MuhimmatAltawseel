@@ -229,7 +229,7 @@ const AiAnalyticsPage = () => {
         ) : perfQ.isError ? (
           <QueryErrorRetry
             error={perfQ.error}
-            onRetry={() => void perfQ.refetch()}
+            onRetry={() => { perfQ.refetch(); }}
             isFetching={perfQ.isFetching}
             title="تعذر تحميل لوحة الأداء"
             hint="تأكد من صلاحياتك والاتصال ثم أعد المحاولة."

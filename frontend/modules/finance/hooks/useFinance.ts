@@ -25,7 +25,7 @@ export function useFinance() {
   const createMutation = useMutation({
     mutationFn: (input: CreateTransactionInput) => financeService.create(input),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey }).catch(() => {});
       toast({ title: 'تم إضافة العملية بنجاح' });
     },
     onError: (e) => {
@@ -36,7 +36,7 @@ export function useFinance() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => financeService.delete(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey }).catch(() => {});
       toast({ title: 'تم الحذف' });
     },
     onError: (e) => {
@@ -47,7 +47,7 @@ export function useFinance() {
   const updateMutation = useMutation({
     mutationFn: (params: { id: string; description?: string; amount?: number }) => financeService.update(params.id, params),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey }).catch(() => {});
     },
     onError: (e) => {
       toast({ title: 'خطأ في التعديل', description: getErrorMessage(e), variant: 'destructive' });
@@ -57,7 +57,7 @@ export function useFinance() {
   const syncSalaries = useMutation({
     mutationFn: () => financeService.syncSalariesAsExpenses(selectedMonth),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey }).catch(() => {});
       toast({ title: 'تم مزامنة الرواتب' });
     },
     onError: (e) => {
