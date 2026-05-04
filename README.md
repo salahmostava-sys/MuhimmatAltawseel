@@ -98,7 +98,7 @@ MuhimmatAltawseel/
     └── migrations/            ← SQL migrations (مرتّبة بالتاريخ)
 ```
 
-> **ملاحظة:** `server/` (Express) يُشغَّل في Replit كـ "API Server" workflow على port 3001 ويعمل كـ proxy للـ Groq API. `api/` يُستخدم في بيئة Vercel كـ serverless functions. الاثنان يخدمان نفس الغرض في بيئتَين مختلفتَين.
+> **ملاحظة:** `server/` (Express) يُشغَّل كـ "API Server" workflow على port 3001 ويعمل كـ proxy للـ Groq API. `api/` يُستخدم في بيئة Vercel كـ serverless functions. الاثنان يخدمان نفس الغرض في بيئتَين مختلفتَين.
 
 ---
 

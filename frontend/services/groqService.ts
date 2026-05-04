@@ -1,5 +1,5 @@
 /**
- * Groq AI Service — proxied through the Replit Express server.
+ * Groq AI Service — proxied through the Express server.
  * The API key is stored server-side only (never exposed to browser).
  */
 import { supabase } from '@services/supabase/client';

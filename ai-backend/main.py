@@ -78,7 +78,7 @@ _last_rate_cleanup = 0.0
 
 
 def _get_client_ip(request: Request) -> str:
-    """Extract real client IP, honouring X-Forwarded-For (proxy/Replit)."""
+    """Extract real client IP, honouring X-Forwarded-For (proxy)."""
     forwarded_for = request.headers.get("X-Forwarded-For")
     if forwarded_for:
         return forwarded_for.split(",")[0].strip()

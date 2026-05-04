@@ -45,11 +45,10 @@ done
 
 # ── 2. إزالة الملفات غير المرغوبة من git index ───────────
 echo ""
-echo "🗂️  إزالة الملفات الخاصة بـ Replit من git tracking..."
+echo "🗂️  إزالة الملفات المؤقتة من git tracking..."
 
 FILES_TO_UNTRACK=(
   "REPO_CLEANUP_REPORT.md"
-  ".replit"
 )
 
 for f in "${FILES_TO_UNTRACK[@]}"; do
@@ -63,7 +62,7 @@ done
 
 # ── 3. إضافة commit ورفعه ────────────────────────────────
 if ! git diff --cached --quiet; then
-  git commit -m "chore: untrack Replit-specific files from repo"
+  git commit -m "chore: untrack temp files from repo"
   git push "$REMOTE" main
   echo ""
   echo "✅ تم الـ commit والـ push"

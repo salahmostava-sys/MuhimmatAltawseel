@@ -3,7 +3,7 @@ import { differenceInDays, differenceInYears, parseISO, startOfMonth, endOfMonth
 import { Users, UserCheck, UserX, UserMinus, ShieldCheck, ShieldOff, Car, AlertTriangle, CalendarClock, MapPin, Globe2, TrendingUp } from 'lucide-react';
 import type { Employee } from '@modules/employees/model/employeeUtils';
 import { getEmployeeCities } from '@modules/employees/model/employeeUtils';
-import { SPONSORSHIP_LABELS, LICENSE_LABELS, STATUS_LABELS } from '@modules/employees/types/employee.types';
+import { SPONSORSHIP_LABELS, LICENSE_LABELS } from '@modules/employees/types/employee.types';
 
 interface Props {
   allEmployees: Employee[];
@@ -16,14 +16,7 @@ const daysDiff = (dateStr?: string | null): number | null => {
   try { return differenceInDays(parseISO(dateStr), today); } catch { return null; }
 };
 
-const kpiCard = (
-  icon: React.ReactNode,
-  label: string,
-  value: number | string,
-  sub?: string,
-  colorClass = 'text-foreground',
-  bgClass = 'bg-card',
-) => ({ icon, label, value, sub, colorClass, bgClass });
+
 
 export function EmployeeKPIs({ allEmployees }: Props) {
   const stats = useMemo(() => {
