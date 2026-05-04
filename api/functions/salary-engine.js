@@ -64,7 +64,14 @@ module.exports = async function handler(req, res) {
     const clientPhrases = ['Invalid month_year', 'Invalid employee_id', 'Invalid mode', 'No authorization header', 'Not authenticated', 'Only admin/finance'];
     const isClient = clientPhrases.some(p => message.includes(p));
     const isAuthz = message.includes('Only admin/finance');
-    const status = isAuthz ? 403 : isClient ? 400 : 500;
+    let status;
+    if (isAuthz) {
+      status = 403;
+    } else if (isClient) {
+      status = 400;
+    } else {
+      status = 500;
+    }
     return res.status(status).json({ error: message });
   }
 };

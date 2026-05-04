@@ -56,7 +56,7 @@ const AppsPage = () => {
         <AppsPageHeader canEdit={permissions.can_edit} onAdd={openingCreateModal} />
         <QueryErrorRetry
           error={appsError}
-          onRetry={() => void refetchApps()}
+          onRetry={() => refetchApps()}
           title="تعذر تحميل المنصات"
         />
       </div>

@@ -117,7 +117,7 @@ export function useAdvanceTable(
     return { count: wo.length, remaining: wo.reduce((s, e) => s + e.remaining, 0) };
   }, [employeeSummaries]);
 
-  const fetchAll = useCallback(() => { void refetchAdvancesData(); }, [refetchAdvancesData]);
+  const fetchAll = useCallback(() => { refetchAdvancesData(); }, [refetchAdvancesData]);
 
   const handleImportAdvances = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

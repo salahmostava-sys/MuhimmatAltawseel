@@ -39,7 +39,7 @@ function canAccessTool(userRole, toolName) {
 function buildNamePattern(name) {
   const t = (name || '').trim();
   if (!t) return null;
-  return `%${t.replace(/[\\%_]/g, '\\$&')}%`;
+  return `%${t.replaceAll(/[\\%_]/g, String.raw`\$&`)}%`;
 }
 
 async function queryRidersRanking(sb, monthFrom, monthTo, ascending) {

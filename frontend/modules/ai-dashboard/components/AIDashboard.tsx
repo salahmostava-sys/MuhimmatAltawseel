@@ -112,16 +112,16 @@ export function AIDashboard({
   }, [aiConfigured, topPerformers, toast]);
 
   const refreshAll = useCallback(() => {
-    void loadSalaryForecast();
-    void loadBestEmployees();
+    loadSalaryForecast();
+    loadBestEmployees();
   }, [loadSalaryForecast, loadBestEmployees]);
 
   useEffect(() => {
-    void loadSalaryForecast();
+    loadSalaryForecast();
   }, [loadSalaryForecast]);
 
   useEffect(() => {
-    void loadBestEmployees();
+    loadBestEmployees();
   }, [loadBestEmployees]);
 
   const getTrendIcon = (trend: string) => {
@@ -205,13 +205,13 @@ export function AIDashboard({
                   متبقي {salaryForecast.days_remaining.toLocaleString('ar-SA')} يوم في الشهر
                 </div>
               </div>
-            ) : !aiConfigured ? (
+            ) : aiConfigured ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
-                خدمة الذكاء الاصطناعي غير مهيأة في هذه البيئة.
+                لا توجد بيانات طلبات كافية لتوليد التوقع.
               </div>
             ) : (
               <div className="py-8 text-center text-sm text-muted-foreground">
-                لا توجد بيانات طلبات كافية لتوليد التوقع.
+                خدمة الذكاء الاصطناعي غير مهيأة في هذه البيئة.
               </div>
             )}
           </CardContent>
@@ -271,11 +271,8 @@ export function AIDashboard({
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-            ) : !aiConfigured ? (
-              <div className="py-8 text-center text-sm text-muted-foreground">
-                يتطلب تفعيل خدمة الذكاء الاصطناعي.
-              </div>
-            ) : bestEmployees && bestEmployees.employees.length > 0 ? (
+            ) : aiConfigured ? (
+              bestEmployees && bestEmployees.employees.length > 0 ? (
               <div className="space-y-2">
                 {bestEmployees.employees.slice(0, 5).map((emp, idx) => (
                   <div
@@ -299,13 +296,18 @@ export function AIDashboard({
                   </div>
                 )}
               </div>
-            ) : topPerformers.length === 0 ? (
+            ) : topPerformers.length > 0 ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
-                لا توجد بيانات مناديب لهذا الشهر.
+                تعذر تحليل بيانات المناديب. حاول مجدداً.
               </div>
             ) : (
               <div className="py-8 text-center text-sm text-muted-foreground">
-                تعذر تحليل بيانات المناديب. حاول مجدداً.
+                لا توجد بيانات مناديب لهذا الشهر.
+              </div>
+            )
+            ) : (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                يتطلب تفعيل خدمة الذكاء الاصطناعي.
               </div>
             )}
           </CardContent>

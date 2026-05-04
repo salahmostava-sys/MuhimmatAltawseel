@@ -275,7 +275,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // ── Auth failure bus (React Query errors bubble up here) ──────────────────
   useEffect(() => {
     return onAuthFailure(({ source, reason }) => {
-      void handleUnauthenticatedState(`${source}:${reason}`);
+      handleUnauthenticatedState(`${source}:${reason}`);
     });
   }, [handleUnauthenticatedState]);
 
@@ -285,7 +285,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (loading || refreshing) return;
     if (session) return;
-    void recoverSessionSilently().then((recovered) => {
+    recoverSessionSilently().then((recovered) => {
       if (!recovered) redirectToLoginIfNeeded();
     });
   }, [loading, refreshing, session, redirectToLoginIfNeeded, recoverSessionSilently]);
@@ -307,7 +307,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const active = await verifyCurrentUserActive(currentSession.user.id, 'wake_recheck');
           if (!active) return;
         }
-        void queryClient.refetchQueries({ type: 'active' });
+        queryClient.refetchQueries({ type: 'active' });
       }
     };
 

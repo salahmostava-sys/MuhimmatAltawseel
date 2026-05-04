@@ -171,7 +171,7 @@ export const buildAppEmployees = ({
       monthOrders,
       targetShare,
       projectedMonthEnd,
-      onTrack: targetShare !== null ? projectedMonthEnd >= targetShare * 0.95 : null,
+      onTrack: targetShare == null ? null : projectedMonthEnd >= targetShare * 0.95,
     };
   });
 };

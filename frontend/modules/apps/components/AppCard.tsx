@@ -34,7 +34,8 @@ export const AppCard = ({
   const isActiveInMonth = app.is_active_this_month;
 
   return (
-    <div
+    <button
+      type="button"
       onClick={() => isActiveInMonth && onSelect(app)}
       onKeyDown={(event) => {
         if (isActiveInMonth && (event.key === 'Enter' || event.key === ' ')) {
@@ -42,12 +43,11 @@ export const AppCard = ({
           onSelect(app);
         }
       }}
-      role="button"
       tabIndex={isActiveInMonth ? 0 : -1}
       className={`group relative cursor-pointer overflow-hidden rounded-2xl border text-center transition-all ${
-        !isActiveInMonth
-          ? 'border-white/20 opacity-50 grayscale hover:grayscale-0'
-          : 'border-white/20 shadow-sm hover:scale-[1.01] hover:shadow-md'
+        isActiveInMonth
+          ? 'border-white/20 shadow-sm hover:scale-[1.01] hover:shadow-md'
+          : 'border-white/20 opacity-50 grayscale hover:grayscale-0'
       } ${selected ? 'ring-2 ring-primary border-primary' : ''}`}
       style={{ backgroundColor: app.brand_color, color: app.text_color }}
     >
@@ -57,7 +57,7 @@ export const AppCard = ({
             className="absolute left-2 top-2 z-10 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity"
             onClick={(event) => event.stopPropagation()}
             onKeyDown={(event) => event.stopPropagation()}
-            role="presentation"
+            aria-hidden="true"
           >
             <button
               onClick={(event) => {
@@ -100,7 +100,7 @@ export const AppCard = ({
         <h3 className="truncate text-sm font-bold" style={{ color: app.text_color }}>
           {app.name}
         </h3>
-        <div className="mt-1 flex justify-center" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()} role="presentation">
+        <div className="mt-1 flex justify-center" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()} aria-hidden="true">
           {canEdit && onWorkTypeChange ? (
             <Select
               value={app.work_type || 'orders'}
@@ -151,7 +151,7 @@ export const AppCard = ({
           </div>
         )}
       </div>
-    </div>
+    </button>
   );
 };
 

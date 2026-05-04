@@ -141,7 +141,7 @@ const Advances = () => {
       <div className="space-y-4" dir="rtl">
         <QueryErrorRetry
           error={advancesPageError}
-          onRetry={() => void refetchAdvancesData()}
+          onRetry={() => refetchAdvancesData()}
           title="تعذر تحميل بيانات السلف"
           hint="تحقق من الاتصال وصلاحياتك ثم أعد المحاولة."
         />

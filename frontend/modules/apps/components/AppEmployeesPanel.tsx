@@ -11,6 +11,17 @@ interface AppEmployeesPanelProps {
   onClose: () => void;
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  active: 'نشط',
+  inactive: 'موقوف',
+};
+const STATUS_CLASSES: Record<string, string> = {
+  active: 'badge-success',
+  inactive: 'badge-warning',
+};
+const getStatusLabel = (status: string) => STATUS_LABELS[status] ?? 'منتهي';
+const getStatusClass = (status: string) => STATUS_CLASSES[status] ?? 'badge-urgent';
+
 export const AppEmployeesPanel = ({
   app,
   monthYear,
@@ -66,8 +77,8 @@ export const AppEmployeesPanel = ({
             </thead>
             <tbody>
               {employees.map((employee) => {
-                const statusLabel = employee.status === 'active' ? 'نشط' : employee.status === 'inactive' ? 'موقوف' : 'منتهي';
-                const statusClass = employee.status === 'active' ? 'badge-success' : employee.status === 'inactive' ? 'badge-warning' : 'badge-urgent';
+                const statusLabel = getStatusLabel(employee.status);
+                const statusClass = getStatusClass(employee.status);
                 
                 return (
                   <tr key={employee.id} className="ta-tr group">
@@ -96,10 +107,10 @@ export const AppEmployeesPanel = ({
                       {employee.monthOrders.toLocaleString()}
                     </td>
                     <td className="ta-td text-center text-xs tabular-nums text-muted-foreground">
-                      {employee.targetShare !== null ? Math.round(employee.targetShare).toLocaleString() : '—'}
+                      {employee.targetShare != null ? Math.round(employee.targetShare).toLocaleString() : '—'}
                     </td>
                     <td className="ta-td text-center text-xs font-semibold tabular-nums">
-                      {employee.projectedMonthEnd !== null ? employee.projectedMonthEnd.toLocaleString() : '—'}
+                      {employee.projectedMonthEnd != null ? employee.projectedMonthEnd.toLocaleString() : '—'}
                     </td>
                     <td className="ta-td text-center">
                       {employee.onTrack === null ? (

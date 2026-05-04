@@ -13,7 +13,7 @@ module.exports = async function handler(req, res) {
 
     const auth = await requireAuth(req, res);
     if (!auth) return;
-    const { user, callerClient } = auth;
+    const { callerClient } = auth;
 
     let userRole = null;
     try { const { data: role } = await callerClient.rpc('get_my_role'); userRole = role ?? null; } catch { /* non-blocking */ }
