@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Building2, Loader2, Pencil, Plus, Save, Trash2, X } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@shared/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@shared/components/ui/dialog';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { useToast } from '@shared/hooks/use-toast';
@@ -113,6 +113,9 @@ export function CommercialRecordsManager({
             <Building2 size={18} className="text-primary" />
             إدارة السجلات التجارية
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            إضافة وتعديل وحذف السجلات التجارية
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5">

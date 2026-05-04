@@ -125,9 +125,9 @@ export function useEmployeeActions(params: {
 
   const setColFilter = useCallback((key: string, value: string) => {
     setColFilters(prev => {
-      const next = new Map(prev);
-      if (!value || value === 'all') next.delete(key);
-      else next.set(key, value);
+      const next = { ...prev };
+      if (!value || value === 'all') delete next[key];
+      else next[key] = value;
       return next;
     });
   }, [setColFilters]);

@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, CalendarDays, BarChart2, Table2 } from 'lucide-react';
 import { Input } from '@shared/components/ui/input';
 import { Button } from '@shared/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@shared/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@shared/components/ui/dialog';
 import { Label } from '@shared/components/ui/label';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -410,6 +410,9 @@ const Employees = () => {
               <CalendarDays size={16} className="text-destructive" />
               تحديد تاريخ — {statusDateDialog?.label}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              أدخل تاريخ {statusDateDialog?.label} للمندوب {statusDateDialog?.emp.name}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <p className="text-sm text-muted-foreground">
