@@ -9,6 +9,104 @@ import { QueryErrorRetry } from '@shared/components/QueryErrorRetry';
 import { useFinance } from '@modules/finance/hooks/useFinance';
 import type { TransactionType } from '@services/financeService';
 
+/* ── Smart Recommendations sub-component ─────────────────────── */
+function PlatformProfitCard({ p }: { p: { name: string; revenue: number; salary: number; orders: number } }) {
+  const profit = p.revenue - p.salary;
+  const isProfitable = profit > 0;
+  const marginPct = p.revenue > 0 ? ((profit / p.revenue) * 100).toFixed(0) : '0';
+  return (
+    <div className={`rounded-xl p-3 border ${isProfitable ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/10' : 'border-rose-200 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/10'}`}>
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-bold text-sm text-foreground">{p.name}</span>
+        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isProfitable ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300'}`}>
+          {isProfitable ? `✅ ربح ${marginPct}%` : `⚠️ خسارة`}
+        </span>
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-xs">
+        <div>
+          <p className="text-muted-foreground">الإيرادات</p>
+          <p className="font-bold text-emerald-600">{p.revenue > 0 ? p.revenue.toLocaleString() : '—'}</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">الرواتب</p>
+          <p className="font-bold text-rose-500">{p.salary > 0 ? p.salary.toLocaleString() : '—'}</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">الفرق</p>
+          <p className={`font-bold ${isProfitable ? 'text-emerald-600' : 'text-rose-500'}`}>
+            {profit > 0 ? '+' : ''}{profit.toLocaleString()}
+          </p>
+        </div>
+      </div>
+      <p className="text-[10px] text-muted-foreground mt-2">
+        {p.orders.toLocaleString()} طلب
+        {p.revenue > 0 && p.orders > 0 && ` • متوسط الإيراد/طلب: ${(p.revenue / p.orders).toFixed(1)} ر.س`}
+        {p.salary > 0 && p.orders > 0 && ` • تكلفة الراتب/طلب: ${(p.salary / p.orders).toFixed(1)} ر.س`}
+      </p>
+    </div>
+  );
+}
+
+function SmartRecommendations({
+  revenue, expenses, balance, platformStats,
+}: {
+  revenue: number; expenses: number; balance: number;
+  platformStats: { platforms: { name: string; revenue: number; salary: number; orders: number }[] } | null;
+}) {
+  const profitable = platformStats?.platforms.filter(p => p.revenue > p.salary) ?? [];
+  const losing = platformStats?.platforms.filter(p => p.revenue > 0 && p.revenue <= p.salary) ?? [];
+
+  return (
+    <div className="bg-card rounded-2xl shadow-card p-5 border border-primary/20">
+      <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
+        💡 توصيات ذكية
+      </h3>
+      <div className="space-y-2.5">
+        {platformStats && platformStats.platforms.length > 0 && (
+          <div className="bg-primary/5 rounded-lg px-4 py-3">
+            <p className="text-sm font-bold text-foreground mb-3">📊 تحليل كل منصة: إيرادات مقابل رواتب</p>
+            <div className="space-y-3">
+              {platformStats.platforms.map(p => (
+                <PlatformProfitCard key={p.name} p={p} />
+              ))}
+            </div>
+            {platformStats.platforms.some(p => p.revenue > 0) && (
+              <p className="text-xs text-muted-foreground mt-3 bg-muted/30 rounded-lg px-3 py-2">
+                💡 <strong>نصيحة:</strong>{' '}
+                {losing.length > 0
+                  ? `ركّز على ${profitable[0]?.name ?? 'المنصات الرابحة'} وراجع تكاليف ${losing.map(l => l.name).join(' و ')}`
+                  : 'كل المنصات رابحة — استمر وزد الطلبات'}
+              </p>
+            )}
+          </div>
+        )}
+        {balance < 0 && (
+          <div className="flex items-start gap-2 bg-rose-50 dark:bg-rose-950/20 rounded-lg px-3 py-2.5">
+            <span className="text-rose-500 text-lg leading-none mt-0.5">⚠️</span>
+            <div>
+              <p className="text-sm font-semibold text-rose-600">أنت خسران {Math.abs(balance).toLocaleString()} ر.س هذا الشهر</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {platformStats && platformStats.platforms.length > 0
+                  ? `ركّز على زيادة طلبات ${platformStats.platforms[0].name} أو قلل المصاريف غير الضرورية`
+                  : 'حاول زيادة الإيرادات أو تقليل المصاريف'}
+              </p>
+            </div>
+          </div>
+        )}
+        {balance >= 0 && balance >= expenses * 0.3 && (
+          <div className="flex items-start gap-2 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg px-3 py-2.5">
+            <span className="text-emerald-500 text-lg leading-none mt-0.5">✅</span>
+            <div>
+              <p className="text-sm font-semibold text-emerald-600">أداء ممتاز! هامش ربح {revenue > 0 ? ((balance / revenue) * 100).toFixed(0) : 0}%</p>
+              <p className="text-xs text-muted-foreground mt-0.5">استمر على هذا الأداء</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function FinancePage() {
   const { selectedMonth } = useTemporalContext();
   const {
@@ -287,92 +385,7 @@ export default function FinancePage() {
 
       {/* ── Smart Recommendations ──────────────────────── */}
       {!loading && (revenue > 0 || expenses > 0) && (
-        <div className="bg-card rounded-2xl shadow-card p-5 border border-primary/20">
-          <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
-            💡 توصيات ذكية
-          </h3>
-          <div className="space-y-2.5">
-            {/* Per-platform profitability */}
-            {platformStats && platformStats.platforms.length > 0 && (
-              <div className="bg-primary/5 rounded-lg px-4 py-3">
-                <p className="text-sm font-bold text-foreground mb-3">📊 تحليل كل منصة: إيرادات مقابل رواتب</p>
-                <div className="space-y-3">
-                  {platformStats.platforms.map(p => {
-                    const profit = p.revenue - p.salary;
-                    const isProfitable = profit > 0;
-                    const marginPct = p.revenue > 0 ? ((profit / p.revenue) * 100).toFixed(0) : '0';
-                    return (
-                      <div key={p.name} className={`rounded-xl p-3 border ${isProfitable ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/10' : 'border-rose-200 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/10'}`}>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-bold text-sm text-foreground">{p.name}</span>
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isProfitable ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300'}`}>
-                            {isProfitable ? `✅ ربح ${marginPct}%` : `⚠️ خسارة`}
-                          </span>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2 text-xs">
-                          <div>
-                            <p className="text-muted-foreground">الإيرادات</p>
-                            <p className="font-bold text-emerald-600">{p.revenue > 0 ? p.revenue.toLocaleString() : '—'}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">الرواتب</p>
-                            <p className="font-bold text-rose-500">{p.salary > 0 ? p.salary.toLocaleString() : '—'}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">الفرق</p>
-                            <p className={`font-bold ${isProfitable ? 'text-emerald-600' : 'text-rose-500'}`}>
-                              {profit > 0 ? '+' : ''}{profit.toLocaleString()}
-                            </p>
-                          </div>
-                        </div>
-                        <p className="text-[10px] text-muted-foreground mt-2">
-                          {p.orders.toLocaleString()} طلب
-                          {p.revenue > 0 && p.orders > 0 && ` • متوسط الإيراد/طلب: ${(p.revenue / p.orders).toFixed(1)} ر.س`}
-                          {p.salary > 0 && p.orders > 0 && ` • تكلفة الراتب/طلب: ${(p.salary / p.orders).toFixed(1)} ر.س`}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-                {platformStats.platforms.some(p => p.revenue > 0) && (
-                  <p className="text-xs text-muted-foreground mt-3 bg-muted/30 rounded-lg px-3 py-2">
-                    💡 <strong>نصيحة:</strong>{' '}
-                    {(() => {
-                      const profitable = platformStats.platforms.filter(p => p.revenue > p.salary);
-                      const losing = platformStats.platforms.filter(p => p.revenue > 0 && p.revenue <= p.salary);
-                      if (losing.length > 0) return `ركّز على ${profitable[0]?.name ?? 'المنصات الرابحة'} وراجع تكاليف ${losing.map(l => l.name).join(' و ')}`;
-                      return 'كل المنصات رابحة — استمر وزد الطلبات';
-                    })()}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Profit/Loss */}
-            {balance < 0 && (
-              <div className="flex items-start gap-2 bg-rose-50 dark:bg-rose-950/20 rounded-lg px-3 py-2.5">
-                <span className="text-rose-500 text-lg leading-none mt-0.5">⚠️</span>
-                <div>
-                  <p className="text-sm font-semibold text-rose-600">أنت خسران {Math.abs(balance).toLocaleString()} ر.س هذا الشهر</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {platformStats && platformStats.platforms.length > 0
-                      ? `ركّز على زيادة طلبات ${platformStats.platforms[0].name} أو قلل المصاريف غير الضرورية`
-                      : 'حاول زيادة الإيرادات أو تقليل المصاريف'}
-                  </p>
-                </div>
-              </div>
-            )}
-            {balance >= 0 && balance >= expenses * 0.3 && (
-              <div className="flex items-start gap-2 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg px-3 py-2.5">
-                <span className="text-emerald-500 text-lg leading-none mt-0.5">✅</span>
-                <div>
-                  <p className="text-sm font-semibold text-emerald-600">أداء ممتاز! هامش ربح {revenue > 0 ? ((balance / revenue) * 100).toFixed(0) : 0}%</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">استمر على هذا الأداء</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        <SmartRecommendations revenue={revenue} expenses={expenses} balance={balance} platformStats={platformStats} />
       )}
     </div>
   );

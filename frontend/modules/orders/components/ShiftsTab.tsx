@@ -58,6 +58,87 @@ function getDaysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate();
 }
 
+function buildNameMap(employees: Employee[]): Map<string, string> {
+  const nameMap = new Map<string, string>();
+  employees.forEach((emp) => {
+    nameMap.set(emp.name.trim(), emp.id);
+    nameMap.set(emp.name.trim().replace(/\s+/g, ' '), emp.id);
+  });
+  return nameMap;
+}
+
+function parseCellToAttendance(cellValue: string): number | null {
+  if (cellValue === 'حاضر' || cellValue === '1' || cellValue === 'present') return 1;
+  if (cellValue === 'غائب' || cellValue === '0' || cellValue === 'absent') return 0;
+  if (cellValue === 'إجازة براتب' || cellValue === 'paid_leave' || cellValue === '-1' || cellValue === 'إجازة') return -1;
+  if (cellValue === 'إجازة مرضى' || cellValue === 'sick_leave' || cellValue === '-2' || cellValue === 'مرضى') return -2;
+  return null;
+}
+
+function resolveEmployeeId(empName: string, nameMap: Map<string, string>): string | null {
+  return nameMap.get(empName) ?? nameMap.get(empName.replace(/\s+/g, ' ')) ?? null;
+}
+
+function processImportRows(
+  matrix: unknown[][],
+  dayArr: number[],
+  nameMap: Map<string, string>,
+  setGrid: React.Dispatch<React.SetStateAction<ShiftGrid>>,
+): { imported: number; skipped: number; errors: string[] } {
+  let imported = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+  for (let rowIdx = 1; rowIdx < matrix.length; rowIdx++) {
+    const row = Array.isArray(matrix[rowIdx]) ? matrix[rowIdx] : [];
+    const empName = String((row as string[])[0] ?? '').trim();
+    if (!empName) { skipped++; continue; }
+    const empId = resolveEmployeeId(empName, nameMap);
+    if (!empId) {
+      skipped++;
+      errors.push(`صف ${rowIdx + 1}: "${empName}" غير موجود`);
+      continue;
+    }
+    for (let idx = 0; idx < dayArr.length; idx++) {
+      const d = dayArr[idx];
+      const cellValue = String((row as string[])[idx + 1] ?? '').trim();
+      const key = `${empId}::${d}`;
+      const attendance = parseCellToAttendance(cellValue);
+      if (attendance !== null) {
+        setGrid(prev => ({ ...prev, [key]: attendance }));
+        imported++;
+      }
+    }
+  }
+  return { imported, skipped, errors };
+}
+
+function getSelectValue(val: number, isAbsent: boolean): string {
+  if (val > 0) return '1';
+  if (val === -1) return '-1';
+  if (val === -2) return '-2';
+  if (isAbsent) return '0';
+  return '';
+}
+
+type CellDisplay = { label: string; colorClass: string } | null;
+
+function getShiftCellDisplay(val: number, isAbsent: boolean): CellDisplay {
+  if (val > 0) return { label: 'حاضر', colorClass: 'text-emerald-600 dark:text-emerald-400' };
+  if (val === -1) return { label: 'إجازة', colorClass: 'text-sky-600 dark:text-sky-400' };
+  if (val === -2) return { label: 'مرضى', colorClass: 'text-amber-600 dark:text-amber-400' };
+  if (isAbsent) return { label: 'غائب', colorClass: 'text-rose-500 dark:text-rose-400' };
+  return null;
+}
+
+function getShiftCellClassName(isToday: boolean, isWeekend: boolean, isEditing: boolean, canEdit: boolean): string {
+  const parts = ['text-center', 'p-0', 'border-l', 'border-border/30', 'transition-colors'];
+  if (isToday) parts.push('bg-primary/10');
+  else if (isWeekend) parts.push('bg-muted/20');
+  if (isEditing) parts.push('ring-2', 'ring-inset', 'ring-primary');
+  else if (canEdit) parts.push('cursor-pointer', 'hover:bg-primary/5');
+  return parts.join(' ');
+}
+
 function buildGridFromShifts(shifts: ShiftRow[]): ShiftGrid {
   const grid: ShiftGrid = {};
   for (const s of shifts) {
@@ -247,55 +328,10 @@ export function ShiftsTab({
         return;
       }
 
-      const nameMap = new Map<string, string>();
       const importEmployeeList = allEmployees && allEmployees.length > 0 ? allEmployees : allShiftEmployees;
-      importEmployeeList.forEach(emp => {
-        nameMap.set(emp.name.trim(), emp.id);
-        nameMap.set(emp.name.trim().replace(/\s+/g, ' '), emp.id);
-      });
-
-      let imported = 0;
-      let skipped = 0;
-      const errors: string[] = [];
-
-      for (let rowIdx = 1; rowIdx < matrix.length; rowIdx++) {
-        const row = Array.isArray(matrix[rowIdx]) ? matrix[rowIdx] : [];
-        const empName = String((row as string[])[0] ?? '').trim();
-        if (!empName) { skipped++; continue; }
-
-        const empId = nameMap.get(empName) ?? nameMap.get(empName.replace(/\s+/g, ' '));
-        if (!empId) {
-          skipped++;
-          errors.push(`صف ${rowIdx + 1}: "${empName}" غير موجود`);
-          continue;
-        }
-
-        for (let idx = 0; idx < dayArr.length; idx++) {
-          const d = dayArr[idx];
-          const cellValue = String((row as string[])[idx + 1] ?? '').trim();
-          const key = `${empId}::${d}`;
-
-          if (cellValue === 'حاضر' || cellValue === '1' || cellValue === 'present') {
-            setGrid(prev => ({ ...prev, [key]: 1 }));
-            imported++;
-          } else if (cellValue === 'غائب' || cellValue === '0' || cellValue === 'absent') {
-            setGrid(prev => ({ ...prev, [key]: 0 }));
-            imported++;
-          } else if (
-            cellValue === 'إجازة براتب' || cellValue === 'paid_leave' ||
-            cellValue === '-1' || cellValue === 'إجازة'
-          ) {
-            setGrid(prev => ({ ...prev, [key]: -1 }));
-            imported++;
-          } else if (
-            cellValue === 'إجازة مرضى' || cellValue === 'sick_leave' ||
-            cellValue === '-2' || cellValue === 'مرضى'
-          ) {
-            setGrid(prev => ({ ...prev, [key]: -2 }));
-            imported++;
-          }
-        }
-      }
+      const nameMap = buildNameMap(importEmployeeList);
+      const { imported, skipped, errors } = processImportRows(matrix, dayArr, nameMap, setGrid);
+      const totalRows = matrix.length - 1;
 
       if (errors.length > 0) {
         toast.warning('تم الاستيراد مع تحذيرات', {
@@ -303,7 +339,7 @@ export function ShiftsTab({
           duration: 10000,
         });
       } else {
-        toast.success('تم الاستيراد', { description: `${imported} خلية من ${matrix.length - 1} صف` });
+        toast.success('تم الاستيراد', { description: `${imported} خلية من ${totalRows} صف` });
       }
     } catch (err) {
       toast.error('فشل الاستيراد', { description: getErrorMessage(err, 'خطأ في قراءة الملف') });
@@ -485,33 +521,20 @@ export function ShiftsTab({
                         const dow = new Date(year, month - 1, d).getDay();
                         const isWeekend = dow === 5 || dow === 6;
                         const isToday = d === today;
-
-                        const isPresent   = val > 0;
-                        const isPaidLeave = val === -1;
-                        const isSickLeave = val === -2;
-                        const isAbsent    = val === 0 && grid[cellKey] !== undefined;
-
-                        // Current select value
-                        const selectVal =
-                          val > 0 ? '1' :
-                          val === -1 ? '-1' :
-                          val === -2 ? '-2' :
-                          isAbsent ? '0' : '';
+                        const isAbsent = val === 0 && grid[cellKey] !== undefined;
+                        const display = getShiftCellDisplay(val, isAbsent);
 
                         return (
                           <td
                             key={d}
-                            className={`text-center p-0 border-l border-border/30 transition-colors
-                              ${isToday ? 'bg-primary/10' : isWeekend ? 'bg-muted/20' : ''}
-                              ${isEditing ? 'ring-2 ring-inset ring-primary' : ''}
-                              ${canEdit && !isEditing ? 'cursor-pointer hover:bg-primary/5' : ''}`}
+                            className={getShiftCellClassName(isToday, isWeekend, isEditing, canEdit)}
                             style={{ minWidth: 44 }}
                             onClick={() => !isEditing && handleCellClick(emp.id, d)}
                           >
                             {isEditing ? (
                               <select
                                 autoFocus
-                                value={selectVal}
+                                value={getSelectValue(val, isAbsent)}
                                 onChange={(e) => {
                                   const v = e.target.value;
                                   if (v === '') {
@@ -531,14 +554,8 @@ export function ShiftsTab({
                               </select>
                             ) : (
                               <div className="h-7 flex items-center justify-center">
-                                {isPresent ? (
-                                  <span className="font-bold text-[10px] leading-none text-emerald-600 dark:text-emerald-400">حاضر</span>
-                                ) : isPaidLeave ? (
-                                  <span className="font-bold text-[10px] leading-none text-sky-600 dark:text-sky-400">إجازة</span>
-                                ) : isSickLeave ? (
-                                  <span className="font-bold text-[10px] leading-none text-amber-600 dark:text-amber-400">مرضى</span>
-                                ) : isAbsent ? (
-                                  <span className="font-bold text-[10px] leading-none text-rose-500 dark:text-rose-400">غائب</span>
+                                {display ? (
+                                  <span className={`font-bold text-[10px] leading-none ${display.colorClass}`}>{display.label}</span>
                                 ) : (
                                   <span className="text-muted-foreground/20">·</span>
                                 )}
