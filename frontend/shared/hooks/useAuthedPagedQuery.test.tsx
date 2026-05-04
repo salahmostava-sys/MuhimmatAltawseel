@@ -1,7 +1,6 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createQueryClientWrapper } from '@shared/test/authedQuerySetup';
 
 const mockAuthState = vi.hoisted(() => ({
   user: { id: 'u1' } as { id: string } | null,
@@ -30,16 +29,6 @@ vi.mock('@shared/hooks/useQueryErrorToast', () => ({
 
 import { useAuthedPagedQuery } from './useAuthedPagedQuery';
 
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-
-  return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-};
-
 describe('useAuthedPagedQuery', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -60,7 +49,7 @@ describe('useAuthedPagedQuery', () => {
           queryFn,
           errorTitle: 'تعذر تحميل البيانات',
         }),
-      { wrapper: createWrapper() },
+      { wrapper: createQueryClientWrapper() },
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -86,7 +75,7 @@ describe('useAuthedPagedQuery', () => {
           queryFn,
           errorTitle: 'تعذر تحميل البيانات',
         }),
-      { wrapper: createWrapper() },
+      { wrapper: createQueryClientWrapper() },
     );
 
     await waitFor(() => expect(result.current.fetchStatus).toBe('idle'));

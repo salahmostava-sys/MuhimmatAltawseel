@@ -1,5 +1,6 @@
 import { supabase } from '@services/supabase/client';
 import { handleSupabaseError } from '@services/serviceError';
+import { getActiveEmployeesWithJobTitle } from '@services/employeeLookupService';
 
 export interface HrReview {
   id: string;
@@ -72,13 +73,5 @@ export const hrReviewService = {
     if (error) handleSupabaseError(error, 'hrReviewService.delete');
   },
 
-  getEmployees: async () => {
-    const { data, error } = await supabase
-      .from('employees')
-      .select('id, name, job_title')
-      .eq('status', 'active')
-      .order('name');
-    if (error) handleSupabaseError(error, 'hrReviewService.getEmployees');
-    return (data ?? []) as { id: string; name: string; job_title: string | null }[];
-  },
+  getEmployees: getActiveEmployeesWithJobTitle,
 };

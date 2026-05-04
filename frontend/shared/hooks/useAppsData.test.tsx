@@ -1,8 +1,7 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { appService } from '@services/appService';
+import { createQueryClientWrapper } from '@shared/test/authedQuerySetup';
 
 vi.mock('@services/appService', () => ({
   appService: {
@@ -36,15 +35,6 @@ vi.mock('@shared/hooks/useQueryErrorToast', () => ({
 
 import { useAppsData } from './useAppsData';
 
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-};
-
 describe('useAppsData', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -66,7 +56,7 @@ describe('useAppsData', () => {
     ] as Awaited<ReturnType<typeof appService.getAll>>);
     vi.mocked(appService.countActiveEmployeeApps).mockResolvedValue(3);
 
-    const { result } = renderHook(() => useAppsData(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useAppsData(), { wrapper: createQueryClientWrapper() });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toHaveLength(1);
@@ -78,7 +68,7 @@ describe('useAppsData', () => {
   it('surfaces error when getAll fails', async () => {
     vi.mocked(appService.getAll).mockRejectedValue(new Error('supabase down'));
 
-    const { result } = renderHook(() => useAppsData(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useAppsData(), { wrapper: createQueryClientWrapper() });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error?.message).toContain('supabase down');
@@ -87,7 +77,7 @@ describe('useAppsData', () => {
   it('does not fetch when session is missing', async () => {
     mockAuth.session = null;
 
-    const { result } = renderHook(() => useAppsData(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useAppsData(), { wrapper: createQueryClientWrapper() });
 
     await waitFor(() => expect(result.current.fetchStatus).toBe('idle'));
     expect(appService.getAll).not.toHaveBeenCalled();
