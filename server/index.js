@@ -396,6 +396,10 @@ app.post('/api/functions/ai-chat', async (req, res) => {
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 // ── Startup checks ────────────────────────────────────────────────────────────
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.error('[server] FATAL: SUPABASE_URL and SUPABASE_ANON_KEY (or VITE_SUPABASE_PUBLISHABLE_KEY) must be set.');
+  process.exit(1);
+}
 if (IS_PRODUCTION && !AI_INTERNAL_KEY) {
   console.error('[server] FATAL: AI_INTERNAL_KEY must be set in production.');
   console.error('[server] Generate one with: openssl rand -hex 32');
@@ -405,9 +409,7 @@ if (IS_PRODUCTION && !AI_INTERNAL_KEY) {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[server] Muhimmat API server running on port ${PORT}`);
   console.log(`[server] CORS allowed origins: ${ALLOWED_ORIGINS.join(', ')}`);
-  if (!SUPABASE_URL) console.warn('[server] WARNING: SUPABASE_URL not set');
-  if (!SUPABASE_ANON_KEY) console.warn('[server] WARNING: SUPABASE_ANON_KEY not set');
-  if (!SUPABASE_SERVICE_ROLE_KEY) console.warn('[server] WARNING: SUPABASE_SERVICE_ROLE_KEY not set');
+  if (!SUPABASE_SERVICE_ROLE_KEY) console.warn('[server] WARNING: SUPABASE_SERVICE_ROLE_KEY not set — admin actions will fail');
   if (!GROQ_API_KEY) console.warn('[server] WARNING: GROQ_API_KEY not set — AI features disabled');
   if (!AI_INTERNAL_KEY) console.warn('[server] WARNING: AI_INTERNAL_KEY not set — set in production via env');
 });
