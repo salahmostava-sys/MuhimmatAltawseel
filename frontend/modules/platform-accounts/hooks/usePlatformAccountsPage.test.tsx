@@ -1,8 +1,7 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AccountAssignment } from '@services/accountAssignmentService';
+import { createQueryClientWrapper } from '@shared/test/authedQuerySetup';
 
 const toastMock = vi.hoisted(() => ({
   success: vi.fn(),
@@ -81,15 +80,7 @@ vi.mock('@services/auditService', () => ({
 
 import { usePlatformAccountsPage } from './usePlatformAccountsPage';
 
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
 
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
-  };
-};
 
 describe('usePlatformAccountsPage', () => {
   const createDeferred = <T,>() => {
@@ -172,7 +163,7 @@ describe('usePlatformAccountsPage', () => {
       },
     ]);
 
-    const { result } = renderHook(() => usePlatformAccountsPage(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => usePlatformAccountsPage(), { wrapper: createQueryClientWrapper() });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.employeesFull.some((e) => e.id === 'emp-1')).toBe(true);
@@ -199,7 +190,7 @@ describe('usePlatformAccountsPage', () => {
     const assignDeferred = createDeferred<AccountAssignment>();
     accountAssignmentServiceMock.assignPlatformAccount.mockReturnValue(assignDeferred.promise);
 
-    const { result } = renderHook(() => usePlatformAccountsPage(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => usePlatformAccountsPage(), { wrapper: createQueryClientWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     const account = result.current.accounts?.[0];

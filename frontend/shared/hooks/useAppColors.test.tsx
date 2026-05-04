@@ -1,8 +1,7 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { appService } from '@services/appService';
+import { createQueryClientWrapper } from '@shared/test/authedQuerySetup';
 
 vi.mock('@services/appService', () => ({
   appService: {
@@ -37,14 +36,6 @@ vi.mock('@shared/hooks/useQueryErrorToast', () => ({
 
 import { useAppColors } from './useAppColors';
 
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-};
 
 describe('useAppColors', () => {
   beforeEach(() => {
@@ -73,7 +64,7 @@ describe('useAppColors', () => {
       },
     ] as Awaited<ReturnType<typeof appService.getAll>>);
 
-    const { result } = renderHook(() => useAppColors(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useAppColors(), { wrapper: createQueryClientWrapper() });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.apps).toHaveLength(2);
@@ -88,7 +79,7 @@ describe('useAppColors', () => {
   it('does not fetch when session is missing', async () => {
     mockAuth.session = null;
 
-    const { result } = renderHook(() => useAppColors(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useAppColors(), { wrapper: createQueryClientWrapper() });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(appService.getAll).not.toHaveBeenCalled();

@@ -1,10 +1,9 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAlerts } from './useAlerts';
 import { alertsService } from '@services/alertsService';
 import { buildAlertsFromResponses } from '@shared/lib/alertsBuilder';
+import { createQueryClientWrapper } from '@shared/test/authedQuerySetup';
 
 vi.mock('@app/providers/SystemSettingsContext', () => ({
   useSystemSettings: () => ({ settings: { iqama_alert_days: 90 } }),
@@ -24,14 +23,6 @@ vi.mock('@shared/lib/alertsBuilder', () => ({
   buildAlertsFromResponses: vi.fn(),
 }));
 
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-};
 
 describe('useAlerts', () => {
   beforeEach(() => {
@@ -59,7 +50,7 @@ describe('useAlerts', () => {
       },
     ]);
 
-    const { result } = renderHook(() => useAlerts(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useAlerts(), { wrapper: createQueryClientWrapper() });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data?.[0]?.id).toBe('res-emp-1');
@@ -70,7 +61,7 @@ describe('useAlerts', () => {
   it('returns error when alerts service fails', async () => {
     vi.mocked(alertsService.fetchAlertsDataWithTimeout).mockRejectedValue(new Error('timeout'));
 
-    const { result } = renderHook(() => useAlerts(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useAlerts(), { wrapper: createQueryClientWrapper() });
 
     await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 6000 });
     expect((result.current.error as unknown as Error | null)?.message).toContain('timeout');

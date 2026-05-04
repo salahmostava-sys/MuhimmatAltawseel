@@ -1,8 +1,7 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as maintenanceService from '@services/maintenanceService';
+import { createQueryClientWrapper } from '@shared/test/authedQuerySetup';
 
 vi.mock('@services/maintenanceService', () => ({
   getSpareparts: vi.fn(),
@@ -26,14 +25,6 @@ vi.mock('@shared/hooks/useAuthQueryGate', () => ({
 
 import { useSpareParts, useMaintenanceLogs } from '@modules/maintenance/hooks/useMaintenanceData';
 
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-};
 
 describe('useSpareParts', () => {
   beforeEach(() => {
@@ -46,7 +37,7 @@ describe('useSpareParts', () => {
     mockGate.enabled = false;
     mockGate.userId = null;
 
-    const { result } = renderHook(() => useSpareParts(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useSpareParts(), { wrapper: createQueryClientWrapper() });
 
     await new Promise((r) => setTimeout(r, 100));
     expect(result.current.data).toBeUndefined();
@@ -58,7 +49,7 @@ describe('useSpareParts', () => {
       { id: 'sp1', name_ar: 'ÙÙ„ØªØ± Ø²ÙŠØª', stock_quantity: 10, min_stock_alert: 5, unit: 'Ù‚Ø·Ø¹Ø©', unit_cost: 25 },
     ]);
 
-    const { result } = renderHook(() => useSpareParts(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useSpareParts(), { wrapper: createQueryClientWrapper() });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toHaveLength(1);
@@ -68,7 +59,7 @@ describe('useSpareParts', () => {
   it('returns error on failure', async () => {
     vi.mocked(maintenanceService.getSpareparts).mockRejectedValue(new Error('spare_parts missing'));
 
-    const { result } = renderHook(() => useSpareParts(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useSpareParts(), { wrapper: createQueryClientWrapper() });
 
     await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 5000 });
     expect(result.current.error?.message).toContain('spare_parts missing');
@@ -86,7 +77,7 @@ describe('useMaintenanceLogs', () => {
     mockGate.enabled = false;
     mockGate.userId = null;
 
-    const { result } = renderHook(() => useMaintenanceLogs(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useMaintenanceLogs(), { wrapper: createQueryClientWrapper() });
 
     await new Promise((r) => setTimeout(r, 100));
     expect(maintenanceService.getMaintenanceLogs).not.toHaveBeenCalled();
@@ -102,7 +93,7 @@ describe('useMaintenanceLogs', () => {
       },
     ] as Awaited<ReturnType<typeof maintenanceService.getMaintenanceLogs>>);
 
-    const { result } = renderHook(() => useMaintenanceLogs(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useMaintenanceLogs(), { wrapper: createQueryClientWrapper() });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toHaveLength(1);
@@ -111,7 +102,7 @@ describe('useMaintenanceLogs', () => {
   it('returns error on failure', async () => {
     vi.mocked(maintenanceService.getMaintenanceLogs).mockRejectedValue(new Error('logs query failed'));
 
-    const { result } = renderHook(() => useMaintenanceLogs(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useMaintenanceLogs(), { wrapper: createQueryClientWrapper() });
 
     await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 5000 });
     expect(result.current.error?.message).toContain('logs query failed');
