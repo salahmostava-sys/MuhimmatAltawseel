@@ -1,8 +1,7 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createQueryBuilder, type MockQueryResult } from '@shared/test/mocks/supabaseClientMock';
+import { createQueryClientWrapper } from '@shared/test/authedQuerySetup';
 
 const { tableResults, fromMock } = vi.hoisted(() => {
   const tableResultsLocal: Record<string, MockQueryResult> = {};
@@ -41,15 +40,6 @@ vi.mock('@shared/hooks/useQueryErrorToast', () => ({
 
 import { useMonthlyActiveEmployeeIds } from './useMonthlyActiveEmployeeIds';
 
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-};
-
 describe('useMonthlyActiveEmployeeIds', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -75,7 +65,7 @@ describe('useMonthlyActiveEmployeeIds', () => {
       error: null,
     };
 
-    const { result } = renderHook(() => useMonthlyActiveEmployeeIds('2026-03'), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useMonthlyActiveEmployeeIds('2026-03'), { wrapper: createQueryClientWrapper() });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toBeDefined();
@@ -93,7 +83,7 @@ describe('useMonthlyActiveEmployeeIds', () => {
     tableResults.attendance = { data: [], error: null };
     tableResults.salary_records = { data: [], error: null };
 
-    const { result } = renderHook(() => useMonthlyActiveEmployeeIds('2026-03'), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useMonthlyActiveEmployeeIds('2026-03'), { wrapper: createQueryClientWrapper() });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error?.message).toContain('orders query failed');
@@ -102,7 +92,7 @@ describe('useMonthlyActiveEmployeeIds', () => {
   it('does not run query when session is null', async () => {
     mockAuth.session = null;
 
-    const { result } = renderHook(() => useMonthlyActiveEmployeeIds('2026-03'), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useMonthlyActiveEmployeeIds('2026-03'), { wrapper: createQueryClientWrapper() });
 
     await waitFor(() => expect(result.current.fetchStatus).toBe('idle'));
     expect(fromMock).not.toHaveBeenCalled();

@@ -1,5 +1,6 @@
 import { supabase } from '@services/supabase/client';
 import { handleSupabaseError } from '@services/serviceError';
+import { getActiveEmployeesWithJobTitle } from '@services/employeeLookupService';
 
 export type LeaveType = 'annual' | 'sick' | 'emergency' | 'unpaid' | 'other';
 export type LeaveStatus = 'pending' | 'approved' | 'rejected';
@@ -90,13 +91,5 @@ export const leaveService = {
     if (error) handleSupabaseError(error, 'leaveService.delete');
   },
 
-  getEmployees: async () => {
-    const { data, error } = await supabase
-      .from('employees')
-      .select('id, name, job_title')
-      .eq('status', 'active')
-      .order('name');
-    if (error) handleSupabaseError(error, 'leaveService.getEmployees');
-    return (data ?? []) as { id: string; name: string; job_title: string | null }[];
-  },
+  getEmployees: getActiveEmployeesWithJobTitle,
 };
