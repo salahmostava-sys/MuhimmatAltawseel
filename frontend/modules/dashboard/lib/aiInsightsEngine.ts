@@ -401,34 +401,49 @@ function buildTargetDetail(achievementPct: number): string | null {
   return null;
 }
 
+function buildExcellentJudgment(trend: 'improving' | 'declining' | 'stable', isConsistent: boolean): string[] {
+  const parts: string[] = ['أداء ممتاز'];
+  if (trend === 'improving') parts.push('ويتحسّن');
+  if (isConsistent) parts.push('ومنتظم');
+  parts.push('— يستحق تقدير');
+  return parts;
+}
+
+function buildGoodJudgment(trend: 'improving' | 'declining' | 'stable', isConsistent: boolean): string[] {
+  const parts: string[] = ['أداء جيد'];
+  if (trend === 'declining') parts.push('لكنه يتراجع');
+  else if (isConsistent) parts.push('ومنتظم');
+  return parts;
+}
+
+function buildAverageJudgment(trend: 'improving' | 'declining' | 'stable', isConsistent: boolean): string[] {
+  const parts: string[] = ['أداء متوسط'];
+  if (trend === 'improving') parts.push('لكنه يتحسّن');
+  else if (!isConsistent) parts.push('وغير مستقر');
+  parts.push('— يحتاج تحفيز');
+  return parts;
+}
+
+function buildWeakJudgment(trend: 'improving' | 'declining' | 'stable'): string[] {
+  const parts: string[] = ['أداء ضعيف'];
+  if (trend === 'declining') parts.push('ومتراجع');
+  parts.push('— يحتاج متابعة عاجلة');
+  return parts;
+}
+
+const TIER_JUDGMENT_BUILDERS: Record<PerformanceTier, (trend: 'improving' | 'declining' | 'stable', isConsistent: boolean) => string[]> = {
+  excellent: buildExcellentJudgment,
+  good: buildGoodJudgment,
+  average: buildAverageJudgment,
+  weak: buildWeakJudgment,
+};
+
 function buildJudgmentText(
   tier: PerformanceTier,
   trend: 'improving' | 'declining' | 'stable',
   isConsistent: boolean,
 ): string {
-  const parts: string[] = [];
-
-  if (tier === 'excellent') {
-    parts.push('أداء ممتاز');
-    if (trend === 'improving') parts.push('ويتحسّن');
-    if (isConsistent) parts.push('ومنتظم');
-    parts.push('— يستحق تقدير');
-  } else if (tier === 'good') {
-    parts.push('أداء جيد');
-    if (trend === 'declining') parts.push('لكنه يتراجع');
-    else if (isConsistent) parts.push('ومنتظم');
-  } else if (tier === 'average') {
-    parts.push('أداء متوسط');
-    if (trend === 'improving') parts.push('لكنه يتحسّن');
-    else if (!isConsistent) parts.push('وغير مستقر');
-    parts.push('— يحتاج تحفيز');
-  } else {
-    parts.push('أداء ضعيف');
-    if (trend === 'declining') parts.push('ومتراجع');
-    parts.push('— يحتاج متابعة عاجلة');
-  }
-
-  return parts.join(' ');
+  return TIER_JUDGMENT_BUILDERS[tier](trend, isConsistent).join(' ');
 }
 
 /**
