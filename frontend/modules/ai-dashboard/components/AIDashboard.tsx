@@ -39,6 +39,128 @@ const TIER_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | 'destru
   needs_improvement: 'destructive',
 };
 
+function renderSalaryForecastContent(
+  loading: boolean,
+  salaryForecast: SalaryForecastResponse | null,
+  aiConfigured: boolean,
+  getTrendIcon: (trend: string) => JSX.Element,
+  getTrendLabel: (trend: string) => string,
+  getConfidenceBadge: (confidence: string) => JSX.Element,
+) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (salaryForecast) {
+    return (
+      <div className="space-y-4">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-primary">
+            {salaryForecast.predicted_monthly_salary.toLocaleString('ar-SA')} ر.س
+          </div>
+          <div className="text-xs text-muted-foreground">الراتب المتوقع لهذا الشهر</div>
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="rounded bg-muted p-2 text-center">
+            <div className="font-medium">{salaryForecast.projected_monthly_orders.toLocaleString('ar-SA')}</div>
+            <div className="text-muted-foreground">طلب متوقع</div>
+          </div>
+          <div className="rounded bg-muted p-2 text-center">
+            <div className="font-medium">{salaryForecast.current_daily_avg.toLocaleString('ar-SA')}</div>
+            <div className="text-muted-foreground">متوسط يومي</div>
+          </div>
+        </div>
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center gap-1">
+            {getTrendIcon(salaryForecast.trend)}
+            <span>{getTrendLabel(salaryForecast.trend)}</span>
+          </div>
+          {getConfidenceBadge(salaryForecast.confidence)}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          متبقي {salaryForecast.days_remaining.toLocaleString('ar-SA')} يوم في الشهر
+        </div>
+      </div>
+    );
+  }
+  if (aiConfigured) {
+    return (
+      <div className="py-8 text-center text-sm text-muted-foreground">
+        لا توجد بيانات طلبات كافية لتوليد التوقع.
+      </div>
+    );
+  }
+  return (
+    <div className="py-8 text-center text-sm text-muted-foreground">
+      خدمة الذكاء الاصطناعي غير مهيأة في هذه البيئة.
+    </div>
+  );
+}
+
+function renderBestEmployeesContent(
+  loading: boolean,
+  aiConfigured: boolean,
+  bestEmployees: BestEmployeeResponse | null,
+  topPerformers: PerformanceRankingEntry[],
+) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (!aiConfigured) {
+    return (
+      <div className="py-8 text-center text-sm text-muted-foreground">
+        يتطلب تفعيل خدمة الذكاء الاصطناعي.
+      </div>
+    );
+  }
+  if (bestEmployees && bestEmployees.employees.length > 0) {
+    return (
+      <div className="space-y-2">
+        {bestEmployees.employees.slice(0, 5).map((emp, idx) => (
+          <div
+            key={emp.employee_id}
+            className="flex items-center gap-2 rounded-lg border border-border/60 bg-card px-2 py-1.5 text-xs"
+          >
+            <span className="w-4 font-bold text-muted-foreground tabular-nums">{idx + 1}</span>
+            <span className="flex-1 truncate font-medium">{emp.employee_name}</span>
+            <Badge variant={TIER_VARIANT[emp.performance_tier] ?? 'outline'} className="shrink-0 text-[10px]">
+              {TIER_LABEL[emp.performance_tier] ?? emp.performance_tier}
+            </Badge>
+            <span className="w-12 text-left tabular-nums text-muted-foreground">
+              {emp.total_orders.toLocaleString('ar-SA')}
+            </span>
+          </div>
+        ))}
+        {bestEmployees.best_employee && (
+          <div className="mt-2 flex items-center gap-1 rounded bg-primary/10 px-2 py-1 text-xs text-primary">
+            <Zap className="h-3 w-3" />
+            الأفضل: {bestEmployees.best_employee.employee_name}
+          </div>
+        )}
+      </div>
+    );
+  }
+  if (topPerformers.length > 0) {
+    return (
+      <div className="py-8 text-center text-sm text-muted-foreground">
+        تعذر تحليل بيانات المناديب. حاول مجدداً.
+      </div>
+    );
+  }
+  return (
+    <div className="py-8 text-center text-sm text-muted-foreground">
+      لا توجد بيانات مناديب لهذا الشهر.
+    </div>
+  );
+}
+
 export function AIDashboard({
   currentOrders = null,
   daysPassed = 15,
@@ -172,48 +294,7 @@ export function AIDashboard({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {loadingForecast ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : salaryForecast ? (
-              <div className="space-y-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">
-                    {salaryForecast.predicted_monthly_salary.toLocaleString('ar-SA')} ر.س
-                  </div>
-                  <div className="text-xs text-muted-foreground">الراتب المتوقع لهذا الشهر</div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="rounded bg-muted p-2 text-center">
-                    <div className="font-medium">{salaryForecast.projected_monthly_orders.toLocaleString('ar-SA')}</div>
-                    <div className="text-muted-foreground">طلب متوقع</div>
-                  </div>
-                  <div className="rounded bg-muted p-2 text-center">
-                    <div className="font-medium">{salaryForecast.current_daily_avg.toLocaleString('ar-SA')}</div>
-                    <div className="text-muted-foreground">متوسط يومي</div>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1">
-                    {getTrendIcon(salaryForecast.trend)}
-                    <span>{getTrendLabel(salaryForecast.trend)}</span>
-                  </div>
-                  {getConfidenceBadge(salaryForecast.confidence)}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  متبقي {salaryForecast.days_remaining.toLocaleString('ar-SA')} يوم في الشهر
-                </div>
-              </div>
-            ) : aiConfigured ? (
-              <div className="py-8 text-center text-sm text-muted-foreground">
-                لا توجد بيانات طلبات كافية لتوليد التوقع.
-              </div>
-            ) : (
-              <div className="py-8 text-center text-sm text-muted-foreground">
-                خدمة الذكاء الاصطناعي غير مهيأة في هذه البيئة.
-              </div>
-            )}
+            {renderSalaryForecastContent(loadingForecast, salaryForecast, aiConfigured, getTrendIcon, getTrendLabel, getConfidenceBadge)}
           </CardContent>
         </Card>
 
@@ -267,49 +348,7 @@ export function AIDashboard({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {loadingBest ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : aiConfigured ? (
-              bestEmployees && bestEmployees.employees.length > 0 ? (
-              <div className="space-y-2">
-                {bestEmployees.employees.slice(0, 5).map((emp, idx) => (
-                  <div
-                    key={emp.employee_id}
-                    className="flex items-center gap-2 rounded-lg border border-border/60 bg-card px-2 py-1.5 text-xs"
-                  >
-                    <span className="w-4 font-bold text-muted-foreground tabular-nums">{idx + 1}</span>
-                    <span className="flex-1 truncate font-medium">{emp.employee_name}</span>
-                    <Badge variant={TIER_VARIANT[emp.performance_tier] ?? 'outline'} className="shrink-0 text-[10px]">
-                      {TIER_LABEL[emp.performance_tier] ?? emp.performance_tier}
-                    </Badge>
-                    <span className="w-12 text-left tabular-nums text-muted-foreground">
-                      {emp.total_orders.toLocaleString('ar-SA')}
-                    </span>
-                  </div>
-                ))}
-                {bestEmployees.best_employee && (
-                  <div className="mt-2 flex items-center gap-1 rounded bg-primary/10 px-2 py-1 text-xs text-primary">
-                    <Zap className="h-3 w-3" />
-                    الأفضل: {bestEmployees.best_employee.employee_name}
-                  </div>
-                )}
-              </div>
-            ) : topPerformers.length > 0 ? (
-              <div className="py-8 text-center text-sm text-muted-foreground">
-                تعذر تحليل بيانات المناديب. حاول مجدداً.
-              </div>
-            ) : (
-              <div className="py-8 text-center text-sm text-muted-foreground">
-                لا توجد بيانات مناديب لهذا الشهر.
-              </div>
-            )
-            ) : (
-              <div className="py-8 text-center text-sm text-muted-foreground">
-                يتطلب تفعيل خدمة الذكاء الاصطناعي.
-              </div>
-            )}
+            {renderBestEmployeesContent(loadingBest, aiConfigured, bestEmployees, topPerformers)}
           </CardContent>
         </Card>
       </div>
