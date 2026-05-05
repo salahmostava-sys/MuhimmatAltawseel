@@ -302,7 +302,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
       toast({ title: editing ? 'تم التعديل' : 'تمت الإضافة', description: editing ? 'تم تعديل السكيمة بنجاح' : 'تمت إضافة السكيمة بنجاح' });
       setShowModal(false);
       await invalidateRelatedQueries();
-      void refetchSchemeData();
+      refetchSchemeData();
     } catch (err: unknown) {
       const message = getErrorMessage(err, 'حدث خطأ غير متوقع');
       toast({ title: 'خطأ', description: message, variant: 'destructive' });
@@ -318,7 +318,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
       toast({ title: '✅ تم الربط', description: `تم ربط السكيمة بالمنصة بنجاح` });
       setShowAssignModal(false);
       await invalidateRelatedQueries();
-      void refetchSchemeData();
+      refetchSchemeData();
     } catch (err: unknown) {
       const message = getErrorMessage(err, 'حدث خطأ غير متوقع');
       toast({ title: 'خطأ', description: message, variant: 'destructive' });
@@ -331,7 +331,7 @@ const SalarySchemes = ({ embedded = false }: SalarySchemesProps) => {
       await appService.assignScheme(appId, null);
       toast({ title: 'تم إلغاء الربط' });
       await invalidateRelatedQueries();
-      void refetchSchemeData();
+      refetchSchemeData();
     } catch (err: unknown) {
       const message = getErrorMessage(err, 'حدث خطأ غير متوقع');
       toast({ title: 'خطأ', description: message, variant: 'destructive' });

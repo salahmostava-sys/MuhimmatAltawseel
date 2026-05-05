@@ -98,7 +98,7 @@ const AppsPage = () => {
                 onEdit={openingEditModal}
                 onToggleActive={(item, event) => {
                   event.stopPropagation();
-                  void toggleMonthlyActive(item);
+                  toggleMonthlyActive(item);
                 }}
                 onDelete={(item, event) => {
                   event.stopPropagation();
@@ -165,14 +165,14 @@ const AppsPage = () => {
           <AlertDialogFooter className="gap-2 flex-col sm:flex-row">
             <AlertDialogCancel disabled={deleting}>إلغاء</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => { setDeleteMode('soft'); void confirmDelete(); }}
+              onClick={() => { setDeleteMode('soft'); confirmDelete(); }}
               disabled={deleting}
               className="bg-warning text-warning-foreground hover:bg-warning/90"
             >
               {deleting && deleteMode === 'soft' ? 'جاري الأرشفة...' : '📦 أرشفة'}
             </AlertDialogAction>
             <AlertDialogAction
-              onClick={() => { setDeleteMode('hard'); void confirmDelete(); }}
+              onClick={() => { setDeleteMode('hard'); confirmDelete(); }}
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

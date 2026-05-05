@@ -216,7 +216,7 @@ const SalaryRowCells = memo(function SalaryRowCells({
       <td className={`${tdClass} text-center align-middle`}>
         <Select
           value={r.cityKey ?? '_none'}
-          onValueChange={(v) => { if (v !== '_none') void persistEmployeeCity(r, v as 'makkah' | 'jeddah'); }}
+          onValueChange={(v) => { if (v !== '_none') { persistEmployeeCity(r, v as 'makkah' | 'jeddah'); } }}
           disabled={employeeFieldSaving === `${r.employeeId}:city`}
         >
           <SelectTrigger className="h-8 w-[104px] text-xs mx-auto" dir="rtl">
@@ -234,7 +234,7 @@ const SalaryRowCells = memo(function SalaryRowCells({
       <td className={`${tdClass} border-l border-border/40 text-center align-middle`}>
         <Select
           value={r.paymentMethod}
-          onValueChange={(v) => void persistEmployeePaymentMethod(r, v as 'bank' | 'cash')}
+          onValueChange={(v) => { persistEmployeePaymentMethod(r, v as 'bank' | 'cash'); }}
           disabled={employeeFieldSaving === `${r.employeeId}:payment`}
         >
           <SelectTrigger className="h-8 w-[100px] text-xs mx-auto" dir="rtl">
@@ -256,7 +256,7 @@ const SalaryRowCells = memo(function SalaryRowCells({
             </Button>
           )}
           {r.status === 'approved' && !r.isDirty && canEdit && (
-            <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1 text-primary border-primary/40 hover:bg-primary/10" onClick={() => void markAsPaid(r)} disabled={markingPaid === r.id}>
+            <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1 text-primary border-primary/40 hover:bg-primary/10" onClick={() => { markAsPaid(r); }} disabled={markingPaid === r.id}>
               {markingPaid === r.id ? <Loader2 size={11} className="animate-spin" /> : <>✅ تم الصرف</>}
             </Button>
           )}

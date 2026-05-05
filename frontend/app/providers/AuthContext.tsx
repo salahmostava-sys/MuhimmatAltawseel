@@ -198,7 +198,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           return true;
         }
 
-        // No stored session/token: avoid refreshSession() to prevent AuthSessionMissingError spam.
+        // No stored session/token: arefreshSession() to prevent AuthSessionMissingError spam.
         if (!current) return false;
         await authService.refreshSession();
 
@@ -311,8 +311,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    const onFocus = () => { void onWake(); };
-    const onOnline = () => { void onWake(); };
+    const onFocus = () => { onWake(); };
+    const onOnline = () => { onWake(); };
 
     document.addEventListener('visibilitychange', onWake);
     globalThis.addEventListener('focus', onFocus);

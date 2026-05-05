@@ -46,7 +46,7 @@ export function AppWorkTypeSettings({ appId, appName, currentWorkType, onWorkTyp
   useEffect(() => {
     setWorkType(currentWorkType);
     if (currentWorkType === 'hybrid') {
-      void loadHybridRule();
+      loadHybridRule();
     }
   }, [currentWorkType, loadHybridRule]);
 
@@ -148,7 +148,7 @@ export function AppWorkTypeSettings({ appId, appName, currentWorkType, onWorkTyp
                       max="24"
                       value={hybridRule.min_hours_for_shift || ''}
                       onChange={(e) =>
-                        setHybridRule({ ...hybridRule, min_hours_for_shift: parseFloat(e.target.value) })
+                        setHybridRule({ ...hybridRule, min_hours_for_shift: Number.parseFloat(e.target.value) })
                       }
                       placeholder="11"
                     />
@@ -165,7 +165,7 @@ export function AppWorkTypeSettings({ appId, appName, currentWorkType, onWorkTyp
                       min="0"
                       value={hybridRule.shift_rate || ''}
                       onChange={(e) =>
-                        setHybridRule({ ...hybridRule, shift_rate: parseFloat(e.target.value) })
+                        setHybridRule({ ...hybridRule, shift_rate: Number.parseFloat(e.target.value) })
                       }
                       placeholder="150"
                     />

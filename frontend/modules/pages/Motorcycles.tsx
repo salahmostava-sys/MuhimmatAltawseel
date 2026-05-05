@@ -27,11 +27,11 @@ const LazyVehicleFormModal = lazy(() =>
 );
 
 const prefetchVehicleFormModal = () => {
-  void loadVehicleFormModal();
+  loadVehicleFormModal();
 };
 
 const prefetchXlsx = () => {
-  void loadXlsx();
+  loadXlsx();
 };
 
 const statusLabels: Record<string, string> = {
@@ -147,8 +147,8 @@ const cell = (row: Record<string, unknown>, ...keys: string[]) => {
 const normalizeHeaderKey = (h: string) =>
   String(h ?? '')
     .trim()
-    .replace(/\uFEFF/g, '')
-    .replace(/\s+/g, ' ')
+    .replaceAll(/\uFEFF/g, '')
+    .replaceAll(/\s+/g, ' ')
     .toLowerCase();
 
 function findColIndex(normToIdx: Map<string, number>, ...candidates: string[]): number {
@@ -188,7 +188,7 @@ function buildMotorcycleImportColumnMap(
       extras.push('شريحة البنزين', 'fuel chip', 'has fuel chip', 'has_fuel_chip');
     }
     if (col.key === 'type') extras.push('نوع المركبة', 'vehicle type');
-    const idx = findColIndex(normToIdx, col.label, col.key.replace(/_/g, ' '), col.key, ...extras);
+    const idx = findColIndex(normToIdx, col.label, col.key.replaceAll(/_/g, ' '), col.key, ...extras);
     byKey[col.key] = idx;
   }
   return { byKey };
@@ -339,7 +339,7 @@ const Motorcycles = () => {
             : 'لم يُستورد أي صف — تأكد من وجود أرقام لوحات في العمود.';
         toast({ title: success > 0 ? `تم استيراد ${success} مركبة ✅` : 'لم يُستورد شيء', description: skipped > 0 || success === 0 ? okMsg : undefined });
         setFileIoHint({ kind: success > 0 ? 'ok' : 'err', message: okMsg });
-        void refetchVehicles();
+        refetchVehicles();
       } catch (err) {
         logError('[Motorcycles] import failed', err);
         const message = getErrorMessage(err, 'فشل قراءة الملف أو الاتصال بالخادم');
@@ -434,7 +434,7 @@ const Motorcycles = () => {
     try {
       await vehicleService.delete(deleteVehicle.id);
       toast({ title: 'تم حذف المركبة' });
-      void refetchVehicles();
+      refetchVehicles();
     } catch (e) {
       logError('[Motorcycles] delete failed', e);
       const message = getErrorMessage(e, 'حدث خطأ غير متوقع');
@@ -470,8 +470,8 @@ const Motorcycles = () => {
               ><FolderOpen size={14} /> ملفات</Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => { void handleExport(); }}>📊 تصدير Excel</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { void handleTemplate(); }}>📋 تحميل قالب الاستيراد</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { handleExport(); }}>📊 تصدير Excel</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { handleTemplate(); }}>📋 تحميل قالب الاستيراد</DropdownMenuItem>
               {permissions.can_edit && (
                 <DropdownMenuItem onClick={() => { prefetchXlsx(); importRef.current?.click(); }}>
                   ⬆️ استيراد Excel
@@ -722,7 +722,7 @@ const Motorcycles = () => {
           <LazyVehicleFormModal
             open={showForm}
             onClose={closeForm}
-            onSaved={() => { void refetchVehicles(); }}
+            onSaved={() => { refetchVehicles(); }}
             editVehicle={editVehicle}
           />
         </Suspense>

@@ -109,7 +109,7 @@ export default function SettingsHubOptimized() {
   }, [searchParams]);
 
   const prefetchTab = (key: TabKey) => {
-    void tabLoaders[key]();
+    tabLoaders[key]().catch(() => {});
   };
 
   const switchTab = (key: TabKey) => {

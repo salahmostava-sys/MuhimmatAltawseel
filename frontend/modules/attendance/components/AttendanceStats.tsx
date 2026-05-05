@@ -68,7 +68,7 @@ const AttendanceStats = ({ selectedMonth, selectedYear }: Props) => {
         setLoading(false);
       }
     };
-    void fetch();
+    fetch();
   }, [selectedMonth, selectedYear]);
 
   const totalRecorded = Object.values(totals).reduce((a, b) => a + b, 0);

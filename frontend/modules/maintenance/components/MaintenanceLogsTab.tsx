@@ -264,7 +264,7 @@ export function MaintenanceLogsTab() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void handleDelete()} disabled={deleting}>
+            <AlertDialogAction onClick={() => { handleDelete(); }} disabled={deleting}>
               حذف
             </AlertDialogAction>
           </AlertDialogFooter>

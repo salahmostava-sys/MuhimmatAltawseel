@@ -13,9 +13,7 @@
  */
 export function previewSlipInIframe(container: HTMLElement, html: string): void {
   // Clear previous content safely
-  while (container.firstChild) {
-    container.removeChild(container.firstChild);
-  }
+  container.replaceChildren();
 
   const iframe = document.createElement('iframe');
   iframe.style.width = '100%';
@@ -33,7 +31,7 @@ export function previewSlipInIframe(container: HTMLElement, html: string): void 
 // ─── Print ──────────────────────────────────────────────────────────────────
 
 /**
- * Open a hidden iframe, load the HTML, and trigger window.print().
+ * Open a hidden iframe, load the HTML, and trigger globalThis.print().
  * Automatically cleans up after printing.
  */
 export function printSlipHTML(html: string): void {
@@ -49,7 +47,7 @@ export function printSlipHTML(html: string): void {
 
   const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
   if (!iframeDoc) {
-    document.body.removeChild(iframe);
+    iframe.remove();
     return;
   }
 
@@ -64,7 +62,7 @@ export function printSlipHTML(html: string): void {
         iframe.contentWindow?.print();
       } catch {
         // Fallback: open in new window
-        const win = window.open('', '_blank');
+        const win = globalThis.open('', '_blank');
         if (win) {
           win.document.write(html);
           win.document.close();
@@ -73,7 +71,7 @@ export function printSlipHTML(html: string): void {
       }
       // Cleanup after a delay to let the print dialog finish
       setTimeout(() => {
-        try { document.body.removeChild(iframe); } catch { /* already removed */ }
+        try { iframe.remove(); } catch { /* already removed */ }
       }, 1000);
     }, 300);
   });
@@ -85,13 +83,13 @@ export function printSlipHTML(html: string): void {
  * Export salary slip as PDF using an iframe-based print approach.
  *
  * This opens a new window with the HTML content and triggers the browser's
- * Save as PDF functionality via window.print(). This approach:
+ * Save as PDF functionality via globalThis.print(). This approach:
  * - Produces pixel-perfect RTL Arabic output
  * - Has zero dependency on html2canvas or jsPDF for rendering
  * - Lets the browser handle PDF generation natively
  */
 export function exportSlipPDF(html: string, filename: string): void {
-  const printWindow = window.open('', '_blank');
+  const printWindow = globalThis.open('', '_blank');
   if (!printWindow) {
     // Fallback: download as HTML file
     downloadAsHTML(html, filename.replace('.pdf', '.html'));
@@ -134,7 +132,7 @@ export async function exportSlipToBlob(html: string, _filename: string): Promise
   return new Promise<Blob>((resolve, reject) => {
     const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
     if (!iframeDoc) {
-      document.body.removeChild(iframe);
+      iframe.remove();
       reject(new Error('Could not access iframe document'));
       return;
     }
@@ -165,7 +163,7 @@ export async function exportSlipToBlob(html: string, _filename: string): Promise
       } catch (e) {
         reject(e);
       } finally {
-        try { document.body.removeChild(iframe); } catch { /* ignore */ }
+        try { iframe.remove(); } catch { /* ignore */ }
       }
     });
   });

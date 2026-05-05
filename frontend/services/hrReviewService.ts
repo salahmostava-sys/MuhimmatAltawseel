@@ -29,7 +29,7 @@ export interface HrReviewPayload {
 }
 
 export const getOverallScore = (r: Pick<HrReview, 'attendance_score' | 'performance_score' | 'behavior_score' | 'commitment_score'>): number =>
-  parseFloat(((r.attendance_score + r.performance_score + r.behavior_score + r.commitment_score) / 4).toFixed(1));
+  Number.parseFloat(((r.attendance_score + r.performance_score + r.behavior_score + r.commitment_score) / 4).toFixed(1));
 
 export const getGrade = (overall: number): { label: string; color: string } => {
   if (overall >= 9)  return { label: 'ممتاز',    color: 'text-emerald-600' };

@@ -197,7 +197,7 @@ const LeavesPage = () => {
                           <>
                             <button
                               disabled={actioningId === leave.id}
-                              onClick={() => void handleAction(leave.id, 'approved')}
+                              onClick={() => { handleAction(leave.id, 'approved'); }}
                               className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors disabled:opacity-40"
                               title="موافقة"
                             >
@@ -205,7 +205,7 @@ const LeavesPage = () => {
                             </button>
                             <button
                               disabled={actioningId === leave.id}
-                              onClick={() => void handleAction(leave.id, 'rejected')}
+                              onClick={() => { handleAction(leave.id, 'rejected'); }}
                               className="p-1.5 rounded-lg bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors disabled:opacity-40"
                               title="رفض"
                             >
@@ -215,7 +215,7 @@ const LeavesPage = () => {
                         )}
                         {permissions.can_delete && (
                           <button
-                            onClick={() => void handleDelete(leave.id)}
+                            onClick={() => { handleDelete(leave.id); }}
                             className="p-1.5 rounded-lg bg-muted text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                             title="حذف"
                           >

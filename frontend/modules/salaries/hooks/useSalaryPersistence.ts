@@ -1,4 +1,4 @@
-﻿import { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { isEmployeeIdUuid, isValidSalaryMonthYear } from '@shared/lib/salaryValidation';
 import { salaryDataService } from '@services/salaryDataService';
 import { employeeService } from '@services/employeeService';
@@ -60,7 +60,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
   );
 
   const refreshMonthSnapshot = useCallback(() => {
-    void salaryDataService.captureMonthSnapshot(selectedMonth).catch((error) => {
+    salaryDataService.captureMonthSnapshot(selectedMonth).catch((error) => {
       logError('[Salaries] Failed to refresh salary month snapshot', error, { level: 'warn' });
     });
   }, [selectedMonth]);
@@ -241,7 +241,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
 
       refreshMonthSnapshot();
 
-      void salaryDraftService.deleteDraft(selectedMonth, row.employeeId).catch((e) => {
+      salaryDraftService.deleteDraft(selectedMonth, row.employeeId).catch((e) => {
         logError('[Salaries] Failed to clear draft after approve', e, { level: 'warn' });
       });
 
@@ -301,7 +301,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
 
           await settleAdvanceInstallments(row, nowStr);
 
-          void salaryDraftService.deleteDraft(selectedMonth, row.employeeId).catch((e) => {
+          salaryDraftService.deleteDraft(selectedMonth, row.employeeId).catch((e) => {
             logError('[Salaries] Failed to clear draft after payment', e, { level: 'warn' });
           });
 
@@ -412,13 +412,15 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
 
     refreshMonthSnapshot();
 
-    const approvedIds = records.map((r) => r.employee_id);
-    const approvedRowIds = approvalRows
-      .filter((r) => approvedIds.includes(r.employeeId))
-      .map((r) => r.id);
+    const approvedIds = new Set(records.map((r) => r.employee_id));
+    const approvedRowIds = new Set(
+      approvalRows
+        .filter((r) => approvedIds.has(r.employeeId))
+        .map((r) => r.id)
+    );
     await Promise.all(
       approvalRows
-        .filter((r) => approvedIds.includes(r.employeeId))
+        .filter((r) => approvedIds.has(r.employeeId))
         .map((r) =>
           salaryDraftService.deleteDraft(selectedMonth, r.employeeId).catch((e) => {
             logError('[Salaries] Failed to clear draft after bulk approve', e, { level: 'warn' });
@@ -427,7 +429,7 @@ export function useSalaryPersistence(params: UseSalaryPersistenceParams) {
     );
     setRows((prev) =>
       prev.map((r) => (
-        approvedRowIds.includes(r.id)
+        approvedRowIds.has(r.id)
           ? { ...r, status: 'approved' as const, isDirty: false }
           : r
       )),

@@ -89,7 +89,7 @@ export function InlineSelectEditor({
                 key={option.value}
                 type="button"
                 disabled={saving}
-                onClick={() => void handleSelect(option.value)}
+                onClick={() => { handleSelect(option.value); }}
                 className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <span>{option.label}</span>
@@ -168,7 +168,7 @@ export function InlineInputEditor({
             onKeyDown={(event) => {
               if (event.key === 'Enter') {
                 event.preventDefault();
-                void handleSave();
+                handleSave();
               }
             }}
             autoFocus
@@ -204,7 +204,7 @@ export function InlineInputEditor({
                 type="button"
                 size="sm"
                 className="h-8 px-3"
-                onClick={() => void handleSave()}
+                onClick={() => { handleSave(); }}
                 disabled={saving}
               >
                 {saving ? <Loader2 size={13} className="animate-spin" /> : 'حفظ'}
@@ -310,7 +310,7 @@ export function InlineMultiSelectEditor({
               type="button"
               size="sm"
               className="h-8 px-3"
-              onClick={() => void handleSave()}
+              onClick={() => { handleSave(); }}
               disabled={saving}
             >
               {saving ? <Loader2 size={13} className="animate-spin" /> : 'حفظ'}

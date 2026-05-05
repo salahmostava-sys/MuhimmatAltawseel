@@ -34,7 +34,7 @@ const PRESENCE_COLORS = [
 function pickColor(userId: string): string {
   let hash = 0;
   for (let i = 0; i < userId.length; i++) {
-    hash = ((hash << 5) - hash + userId.charCodeAt(i)) | 0;
+    hash = Math.trunc((hash << 5) - hash + userId.codePointAt(i)!);
   }
   return PRESENCE_COLORS[Math.abs(hash) % PRESENCE_COLORS.length];
 }
@@ -100,7 +100,7 @@ export function usePagePresence(pageKey: string) {
     channelRef.current = channel;
 
     return () => {
-      void supabase.removeChannel(channel);
+      supabase.removeChannel(channel).catch(() => {});
       channelRef.current = null;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps -- re-subscribe only when user.id or page changes, not on metadata updates

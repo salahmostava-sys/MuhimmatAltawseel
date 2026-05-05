@@ -74,9 +74,9 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
       return;
     }
     let cancelled = false;
-    void maintenanceService.getCurrentDriverNameForVehicle(vehicleId).then((n) => {
+    maintenanceService.getCurrentDriverNameForVehicle(vehicleId).then((n) => {
       if (!cancelled) setDriverName(n);
-    });
+    }).catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -309,7 +309,7 @@ export function AddMaintenanceModal({ open, onOpenChange, vehicles, spareParts }
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               إلغاء
             </Button>
-            <Button type="button" disabled={saving || blocked} onClick={() => void handleSave()}>
+            <Button type="button" disabled={saving || blocked} onClick={() => { handleSave(); }}>
               حفظ الصيانة
             </Button>
           </div>

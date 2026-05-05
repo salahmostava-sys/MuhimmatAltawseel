@@ -262,7 +262,7 @@ export const usePlatformAccountsPage = () => {
     setSavingAccount(false);
     toast.success(editingAccount ? TOAST_SUCCESS_EDIT : TOAST_SUCCESS_ADD);
     setAccountDialog(false);
-    void refetchPageData();
+    refetchPageData();
   }, [accountForm, editingAccount, refetchPageData]);
 
   const openAssign = useCallback((account: PlatformAccountView) => {
@@ -314,7 +314,7 @@ export const usePlatformAccountsPage = () => {
 
       toast.success(TOAST_SUCCESS_ACTION);
       setAssignDialog(false);
-      void refetchPageData();
+      refetchPageData();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : TOAST_ERROR_GENERIC;
       toast.error(TOAST_ERROR_GENERIC, { description: message });

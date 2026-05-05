@@ -53,12 +53,12 @@ export function PrintReport({
     document.head.appendChild(meta);
 
     return () => {
-      document.head.removeChild(meta);
+      meta.remove();
     };
   }, []);
 
   const handlePrint = () => {
-    window.print();
+    globalThis.print();
   };
 
   return (

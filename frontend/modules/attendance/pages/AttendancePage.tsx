@@ -128,7 +128,7 @@ const Attendance = () => {
       for (const emp of employees) {
         nameToId.set(emp.name.trim(), emp.id);
         // Also index without extra whitespace for fuzzy matching
-        nameToId.set(emp.name.trim().replace(/\s+/g, ' '), emp.id);
+        nameToId.set(emp.name.trim().replaceAll(/\s+/g, ' '), emp.id);
       }
 
       let imported = 0;
@@ -141,7 +141,7 @@ const Attendance = () => {
           if (!employeeName || !date || !status) {
             throw new Error('missing-fields');
           }
-          const normalizedName = employeeName.trim().replace(/\s+/g, ' ');
+          const normalizedName = employeeName.trim().replaceAll(/\s+/g, ' ');
           const employeeId = nameToId.get(normalizedName) ?? nameToId.get(employeeName.trim());
           if (!employeeId) {
             unmatchedNames.push(normalizedName);

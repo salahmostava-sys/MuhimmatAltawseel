@@ -172,7 +172,7 @@ export function useSalaryData({ selectedMonth, salariesDraftKey }: UseSalaryData
   // useEffect on dataUpdatedAt (a number) — stable dep, fires exactly once per phase2 result
   useEffect(() => {
     if (phase2.isSuccess) {
-      void queryClient.invalidateQueries({ queryKey: fullDataKey });
+      queryClient.invalidateQueries({ queryKey: fullDataKey });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase2.dataUpdatedAt]);
@@ -186,8 +186,8 @@ export function useSalaryData({ selectedMonth, salariesDraftKey }: UseSalaryData
     () => {
       if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
       realtimeDebounceRef.current = setTimeout(() => {
-        void queryClient.invalidateQueries({ queryKey: phase1Key });
-        void queryClient.invalidateQueries({ queryKey: phase2Key });
+        queryClient.invalidateQueries({ queryKey: phase1Key });
+        queryClient.invalidateQueries({ queryKey: phase2Key });
       }, 2_000);
     },
   );

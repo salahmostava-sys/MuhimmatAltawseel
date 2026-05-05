@@ -12,7 +12,7 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
     if (loading || session) return;
     let mounted = true;
     setCheckingRecovery(true);
-    void recoverSessionSilently().finally(() => {
+    recoverSessionSilently().catch(() => {}).finally(() => {
       if (mounted) setCheckingRecovery(false);
     });
     return () => {

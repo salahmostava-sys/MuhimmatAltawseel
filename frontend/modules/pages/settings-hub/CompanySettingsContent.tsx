@@ -98,7 +98,7 @@ export default function CompanySettingsContent() {
   if (error) return (
     <QueryErrorRetry
       error={error}
-      onRetry={() => void refetch()}
+      onRetry={() => { refetch(); }}
       title="تعذر تحميل بيانات المنشأة"
     />
   );

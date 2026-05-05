@@ -191,7 +191,7 @@ export default function ProfileSettingsContent({ omitPageHeading = false }: Read
   if (profileError) return (
     <QueryErrorRetry
       error={profileError}
-      onRetry={() => void refetchProfile()}
+      onRetry={() => { refetchProfile(); }}
       title="تعذر تحميل الملف الشخصي"
     />
   );

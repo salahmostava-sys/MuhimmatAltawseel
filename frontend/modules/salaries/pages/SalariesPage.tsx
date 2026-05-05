@@ -278,7 +278,7 @@ const Salaries = () => {
             type="button"
             className="flex-shrink-0 text-xs font-medium text-destructive hover:underline px-3 py-1.5 rounded-lg border border-destructive/30 hover:bg-destructive/10 transition-colors"
             onClick={() => {
-              void queryClient.invalidateQueries({ queryKey: ['salaries', uid, 'context', selectedMonth] });
+              queryClient.invalidateQueries({ queryKey: ['salaries', uid, 'context', selectedMonth] });
             }}
           >
             إعادة المحاولة
@@ -329,7 +329,7 @@ const Salaries = () => {
             type="button"
             className="flex-shrink-0 text-xs font-medium text-destructive hover:underline px-3 py-1.5 rounded-lg border border-destructive/30 hover:bg-destructive/10 transition-colors"
             onClick={() => {
-              void queryClient.invalidateQueries({
+              queryClient.invalidateQueries({
                 queryKey: ['salaries', uid, 'preview', selectedMonth],
               });
             }}

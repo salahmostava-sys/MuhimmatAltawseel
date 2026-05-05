@@ -244,7 +244,7 @@ export const PlatformAccountDialog = ({
           </Button>
           <Button
             type="button"
-            onClick={() => void onSave()}
+            onClick={() => { onSave(); }}
             disabled={savingAccount}
             className="gap-2"
           >

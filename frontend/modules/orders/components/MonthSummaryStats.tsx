@@ -79,8 +79,8 @@ export function MonthSummaryStats(props: Props) {
                   placeholder="هدف"
                   value={targets[app.id] ?? ''}
                   onChange={(e) => setTargets((prev) => ({ ...prev, [app.id]: e.target.value }))}
-                  onBlur={(e) => void saveTarget(app.id, e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') void saveTarget(app.id, targets[app.id] || '0'); }}
+                  onBlur={(e) => { saveTarget(app.id, e.target.value); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { saveTarget(app.id, targets[app.id] || '0'); } }}
                   disabled={!canEdit || isMonthLocked}
                   className="w-16 h-6 text-[10px] rounded border border-border bg-muted/30 px-1 focus:outline-none focus:border-primary text-center"
                 />

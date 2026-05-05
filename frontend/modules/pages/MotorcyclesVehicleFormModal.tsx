@@ -275,7 +275,7 @@ export function VehicleFormModal({ open, onClose, onSaved, editVehicle }: Vehicl
         </div>
         <DialogFooter className="mt-4 gap-2">
           <Button variant="outline" onClick={onClose}>إلغاء</Button>
-          <Button onClick={() => { void handleSave(); }} disabled={saving}>{saveButtonLabel}</Button>
+          <Button onClick={() => { handleSave(); }} disabled={saving}>{saveButtonLabel}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -172,7 +172,7 @@ export function useSalaryActions(params: UseSalaryActionsParams) {
     // the preview query so RPC values replace optimistic local calculations.
     if (previewInvalidateTimer.current) clearTimeout(previewInvalidateTimer.current);
     previewInvalidateTimer.current = setTimeout(() => {
-      void queryClient.invalidateQueries({
+      queryClient.invalidateQueries({
         queryKey: ['salaries', uid, 'preview', selectedMonth],
       });
     }, 3_000);

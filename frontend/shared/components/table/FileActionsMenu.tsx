@@ -91,7 +91,7 @@ export function FileActionsMenu({
       });
       return;
     }
-    void run(() => onImportFile(file));
+    run(() => onImportFile(file)).catch(() => {});
   };
 
   return (
@@ -130,10 +130,10 @@ export function FileActionsMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => void run(onExport)}>
+          <DropdownMenuItem onClick={() => { run(onExport); }}>
             📊 {labels.export}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => void run(onDownloadTemplate)}>
+          <DropdownMenuItem onClick={() => { run(onDownloadTemplate); }}>
             📋 {labels.template}
           </DropdownMenuItem>
           {!hideImport && (
@@ -142,7 +142,7 @@ export function FileActionsMenu({
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => void run(onPrint)}>
+          <DropdownMenuItem onClick={() => { run(onPrint); }}>
             🖨️ {labels.print}
           </DropdownMenuItem>
         </DropdownMenuContent>

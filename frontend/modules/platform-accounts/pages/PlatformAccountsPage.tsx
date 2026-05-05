@@ -68,7 +68,7 @@ const PlatformAccounts = () => {
       <div className="space-y-4" dir="rtl">
         <QueryErrorRetry
           error={pageError}
-          onRetry={() => void refetchPage()}
+          onRetry={() => { refetchPage(); }}
           title="تعذر تحميل حسابات المنصات"
         />
       </div>

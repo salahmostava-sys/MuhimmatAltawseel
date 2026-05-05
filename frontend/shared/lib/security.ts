@@ -6,13 +6,13 @@
  * manual HTML template literals written to document.write() or similar APIs.
  */
 export function escapeHtml(value: unknown): string {
-  const str = value === null || value === undefined ? '' : String(value);
+  const str = (value === null || value === undefined) ? '' : (typeof value === 'object' ? JSON.stringify(value) : String(value));
   return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    .replaceAll(/&/g, '&amp;')
+    .replaceAll(/</g, '&lt;')
+    .replaceAll(/>/g, '&gt;')
+    .replaceAll(/"/g, '&quot;')
+    .replaceAll(/'/g, '&#39;');
 }
 
 /**
@@ -22,9 +22,9 @@ export function escapeHtml(value: unknown): string {
 export function sanitizeLikeQuery(input: string): string {
   if (!input) return '';
   return input
-    .replace(/\\/g, '\\\\')
-    .replace(/%/g, '\\%')
-    .replace(/_/g, '\\_');
+    .replaceAll(/\\/g, '\\\\')
+    .replaceAll(/%/g, '\\%')
+    .replaceAll(/_/g, '\\_');
 }
 
 /**

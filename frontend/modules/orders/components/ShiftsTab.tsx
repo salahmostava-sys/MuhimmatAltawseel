@@ -62,7 +62,7 @@ function buildNameMap(employees: Employee[]): Map<string, string> {
   const nameMap = new Map<string, string>();
   employees.forEach((emp) => {
     nameMap.set(emp.name.trim(), emp.id);
-    nameMap.set(emp.name.trim().replace(/\s+/g, ' '), emp.id);
+    nameMap.set(emp.name.trim().replaceAll(/\s+/g, ' '), emp.id);
   });
   return nameMap;
 }
@@ -76,7 +76,7 @@ function parseCellToAttendance(cellValue: string): number | null {
 }
 
 function resolveEmployeeId(empName: string, nameMap: Map<string, string>): string | null {
-  return nameMap.get(empName) ?? nameMap.get(empName.replace(/\s+/g, ' ')) ?? null;
+  return nameMap.get(empName) ?? nameMap.get(empName.replaceAll(/\s+/g, ' ')) ?? null;
 }
 
 function processImportRows(
@@ -143,8 +143,8 @@ function buildGridFromShifts(shifts: ShiftRow[]): ShiftGrid {
   const grid: ShiftGrid = {};
   for (const s of shifts) {
     if (!s.date || !s.employee_id) continue;
-    const day = parseInt(s.date.slice(8, 10), 10);
-    if (isNaN(day)) continue;
+    const day = Number.parseInt(s.date.slice(8, 10), 10);
+    if (Number.isNaN(day)) continue;
     const key = `${s.employee_id}::${day}`;
     // Include all non-zero values: present (>0) and leave statuses (<0)
     // hours_worked === 0 should never be saved to DB, but skip it for safety
@@ -166,8 +166,8 @@ function gridToShiftRows(
     // Skip absent (0) — only save present (1) and leave types (-1, -2)
     if (hours === 0) continue;
     const [empId, dayStr] = key.split('::');
-    const day = parseInt(dayStr, 10);
-    if (!empId || isNaN(day)) continue;
+    const day = Number.parseInt(dayStr, 10);
+    if (!empId || Number.isNaN(day)) continue;
     rows.push({
       employee_id: empId,
       app_id: shiftAppId,
@@ -421,10 +421,10 @@ export function ShiftsTab({
         </div>
 
         <div className="flex items-center gap-1.5">
-          <Button size="sm" variant="outline" onClick={() => void exportExcel()} className="gap-1.5 h-8 text-xs">
+          <Button size="sm" variant="outline" onClick={() => { exportExcel(); }} className="gap-1.5 h-8 text-xs">
             <Download size={13} /> تصدير
           </Button>
-          <Button size="sm" variant="outline" onClick={() => void downloadTemplate()} className="gap-1.5 h-8 text-xs">
+          <Button size="sm" variant="outline" onClick={() => { downloadTemplate(); }} className="gap-1.5 h-8 text-xs">
             <Download size={13} /> قالب
           </Button>
           {canEdit && (
@@ -540,7 +540,7 @@ export function ShiftsTab({
                                   if (v === '') {
                                     commitAttendance(cellKey, null);
                                   } else {
-                                    commitAttendance(cellKey, parseInt(v, 10));
+                                    commitAttendance(cellKey, Number.parseInt(v, 10));
                                   }
                                 }}
                                 onBlur={() => setEditingCell(null)}

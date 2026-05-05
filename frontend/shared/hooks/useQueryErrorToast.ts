@@ -21,6 +21,6 @@ export function useQueryErrorToast(
     const msg = getErrorMessage(error);
     if (lastMsg.current === msg) return;
     lastMsg.current = msg;
-    toastQueryError(error, title, refetch ? { onRetry: () => void refetch() } : undefined);
+    toastQueryError(error, title, refetch ? { onRetry: () => { refetch(); } } : undefined);
   }, [isError, error, title, refetch]);
 }

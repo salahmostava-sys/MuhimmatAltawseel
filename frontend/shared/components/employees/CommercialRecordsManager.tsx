@@ -246,7 +246,7 @@ export function CommercialRecordsManager({
                                 className="gap-1.5"
                                 onClick={() => {
                                     if (record.id) {
-                                        void handleDelete(record.id, record.name);
+                                        handleDelete(record.id, record.name).catch(() => {});
                                     }
                                 }}
                                 disabled={!canMutate}

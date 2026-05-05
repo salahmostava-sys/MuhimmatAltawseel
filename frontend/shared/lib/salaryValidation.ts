@@ -27,7 +27,7 @@ export function parseSalaryAmount(value: unknown): number {
       return i >= 0 ? WD[i] : ch;
     })
     .join('')
-    .replace(/,/g, '')
+    .replaceAll(/,/g, '')
     .trim();
   const n = Number.parseFloat(s);
   return Number.isFinite(n) ? n : 0;
