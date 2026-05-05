@@ -56,6 +56,99 @@ const typeIcons: Record<string, string> = {
   residency: '🪪', insurance: '🛡️', authorization: '📋', probation: '⏳', platform_account: '📱',
 };
 
+/** Compute severity for residency alert based on days left. */
+function residencySeverity(daysLeft: number): Alert['severity'] {
+  if (daysLeft < 0 || daysLeft <= 7) return 'urgent';
+  if (daysLeft <= 14) return 'warning';
+  return 'info';
+}
+
+/** Compute severity for probation alert based on days left. */
+function probationSeverity(daysLeft: number): Alert['severity'] {
+  if (daysLeft < 0) return 'info';
+  if (daysLeft <= 7) return 'urgent';
+  return 'warning';
+}
+
+/** Compute severity for vehicle alert based on days left. */
+function vehicleSeverity(days: number): Alert['severity'] {
+  if (days < 0 || days <= 7) return 'urgent';
+  return 'warning';
+}
+
+/** Compute severity for platform account iqama alert. */
+function iqamaSeverity(days: number): Alert['severity'] {
+  if (days < 0 || days <= 7) return 'urgent';
+  if (days <= 14) return 'warning';
+  return 'info';
+}
+
+function buildEmployeeAlerts(
+  emp: Record<string, unknown>,
+  today: Date,
+  threshold: string,
+): Alert[] {
+  const alerts: Alert[] = [];
+  const empDisplay = empAlertName(emp);
+  const resExpiry = emp.residency_expiry as string | null;
+  const probEnd = emp.probation_end_date as string | null;
+  if (resExpiry && resExpiry <= threshold) {
+    const daysLeft = differenceInDays(parseISO(resExpiry), today);
+    alerts.push({
+      id: `res-${emp.id}`, type: 'residency', entityName: empDisplay,
+      dueDate: resExpiry, daysLeft, severity: residencySeverity(daysLeft), resolved: false,
+    });
+  }
+  if (probEnd && probEnd <= threshold) {
+    const daysLeft = differenceInDays(parseISO(probEnd), today);
+    alerts.push({
+      id: `prob-${emp.id}`, type: 'probation', entityName: empDisplay,
+      dueDate: probEnd, daysLeft, severity: probationSeverity(daysLeft), resolved: false,
+    });
+  }
+  return alerts;
+}
+
+function buildVehicleAlerts(
+  v: Record<string, string | null>,
+  today: Date,
+  threshold: string,
+): Alert[] {
+  const alerts: Alert[] = [];
+  if (v.insurance_expiry && v.insurance_expiry <= threshold) {
+    const days = differenceInDays(parseISO(v.insurance_expiry), today);
+    alerts.push({
+      id: `ins-${v.id}`, type: 'insurance', entityName: `مركبة ${v.plate_number}`,
+      dueDate: v.insurance_expiry, daysLeft: days, severity: vehicleSeverity(days), resolved: false,
+    });
+  }
+  if (v.authorization_expiry && v.authorization_expiry <= threshold) {
+    const days = differenceInDays(parseISO(v.authorization_expiry), today);
+    alerts.push({
+      id: `auth-${v.id}`, type: 'authorization', entityName: `مركبة ${v.plate_number}`,
+      dueDate: v.authorization_expiry, daysLeft: days, severity: vehicleSeverity(days), resolved: false,
+    });
+  }
+  return alerts;
+}
+
+function buildPlatformAccountAlerts(
+  acc: Record<string, unknown>,
+  today: Date,
+  iqamaThreshold: string,
+): Alert | null {
+  const iqamaDate = acc.iqama_expiry_date as string | null;
+  if (!iqamaDate || iqamaDate > iqamaThreshold) return null;
+  const days = differenceInDays(parseISO(iqamaDate), today);
+  const appName = (acc.apps as { name?: string } | null)?.name ?? 'منصة';
+  const expiryFormatted = format(parseISO(iqamaDate), 'dd/MM/yyyy');
+  return {
+    id: `pla-${acc.id}`, type: 'platform_account',
+    entityName: `إقامة الحساب ${acc.account_username} على منصة ${appName} ستنتهي في ${expiryFormatted} ولن يتجدد الحساب.`,
+    dueDate: iqamaDate, daysLeft: days, severity: iqamaSeverity(days), resolved: false,
+  };
+}
+
 /** Pure function — builds Alert[] from raw Supabase results. No side effects. */
 function buildAlerts(
   employeesData: Record<string, unknown>[],
@@ -69,79 +162,11 @@ function buildAlerts(
   const iqamaThreshold = format(addDays(today, iqamaAlertDays), 'yyyy-MM-dd');
 
   const alerts: Alert[] = [];
-
-  employeesData.forEach((emp) => {
-    const empDisplay = empAlertName(emp);
-    const resExpiry = emp.residency_expiry as string | null;
-    const probEnd = emp.probation_end_date as string | null;
-    if (resExpiry && resExpiry <= threshold) {
-      const daysLeft = differenceInDays(parseISO(resExpiry), today);
-      alerts.push({
-        id: `res-${emp.id}`,
-        type: 'residency',
-        entityName: empDisplay,
-        dueDate: resExpiry,
-        daysLeft,
-        severity: daysLeft < 0 ? 'urgent' : daysLeft <= 7 ? 'urgent' : daysLeft <= 14 ? 'warning' : 'info',
-        resolved: false,
-      });
-    }
-    if (probEnd && probEnd <= threshold) {
-      const daysLeft = differenceInDays(parseISO(probEnd), today);
-      alerts.push({
-        id: `prob-${emp.id}`,
-        type: 'probation',
-        entityName: empDisplay,
-        dueDate: probEnd,
-        daysLeft,
-        severity: daysLeft < 0 ? 'info' : daysLeft <= 7 ? 'urgent' : 'warning',
-        resolved: false,
-      });
-    }
-  });
-
-  vehiclesData.forEach((v) => {
-    if (v.insurance_expiry && v.insurance_expiry <= threshold) {
-      const days = differenceInDays(parseISO(v.insurance_expiry), today);
-      alerts.push({
-        id: `ins-${v.id}`,
-        type: 'insurance',
-        entityName: `مركبة ${v.plate_number}`,
-        dueDate: v.insurance_expiry,
-        daysLeft: days,
-        severity: days < 0 ? 'urgent' : days <= 7 ? 'urgent' : 'warning',
-        resolved: false,
-      });
-    }
-    if (v.authorization_expiry && v.authorization_expiry <= threshold) {
-      const days = differenceInDays(parseISO(v.authorization_expiry), today);
-      alerts.push({
-        id: `auth-${v.id}`,
-        type: 'authorization',
-        entityName: `مركبة ${v.plate_number}`,
-        dueDate: v.authorization_expiry,
-        daysLeft: days,
-        severity: days < 0 ? 'urgent' : days <= 7 ? 'urgent' : 'warning',
-        resolved: false,
-      });
-    }
-  });
-
+  employeesData.forEach((emp) => alerts.push(...buildEmployeeAlerts(emp, today, threshold)));
+  vehiclesData.forEach((v) => alerts.push(...buildVehicleAlerts(v, today, threshold)));
   platformAccountsData.forEach((acc) => {
-    const iqamaDate = acc.iqama_expiry_date as string | null;
-    if (!iqamaDate || iqamaDate > iqamaThreshold) return;
-    const days = differenceInDays(parseISO(iqamaDate), today);
-    const appName = (acc.apps as { name?: string } | null)?.name ?? 'منصة';
-    const expiryFormatted = format(parseISO(iqamaDate), 'dd/MM/yyyy');
-    alerts.push({
-      id: `pla-${acc.id}`,
-      type: 'platform_account',
-      entityName: `إقامة الحساب ${acc.account_username} على منصة ${appName} ستنتهي في ${expiryFormatted} ولن يتجدد الحساب.`,
-      dueDate: iqamaDate,
-      daysLeft: days,
-      severity: days < 0 ? 'urgent' : days <= 7 ? 'urgent' : days <= 14 ? 'warning' : 'info',
-      resolved: false,
-    });
+    const alert = buildPlatformAccountAlerts(acc, today, iqamaThreshold);
+    if (alert) alerts.push(alert);
   });
 
   return alerts.sort((a, b) => a.daysLeft - b.daysLeft);
@@ -259,7 +284,7 @@ const Alerts = () => {
 
   const handleDefer = () => {
     if (!deferDialog) return;
-    const days = parseInt(deferDays) || 7;
+    const days = Number.parseInt(deferDays) || 7;
     const newDate = new Date(deferDialog.dueDate);
     newDate.setDate(newDate.getDate() + days);
     setLocalOverrides(prev => ({
@@ -279,7 +304,7 @@ const Alerts = () => {
     const rows = filtered.map(a => `<tr><td>${escapeHtml(alertTypeLabels[a.type] || a.type)}</td><td>${escapeHtml(a.entityName)}</td><td>${escapeHtml(a.dueDate || '—')}</td><td style="text-align:center">${escapeHtml(String(a.daysLeft ?? '—'))}</td><td style="text-align:center;font-weight:700;color:${a.severity === 'urgent' ? '#dc2626' : a.severity === 'warning' ? '#d97706' : '#2563eb'}">${escapeHtml(severityLabels2[a.severity] || a.severity)}</td></tr>`).join('');
     const printWindow = globalThis.open('', '_blank');
     if (!printWindow) return;
-    printWindow.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"/><title>تقرير التنبيهات</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;direction:rtl;color:#111;background:#fff}h2{text-align:center;margin-bottom:8px;font-size:15px}p.sub{text-align:center;color:#666;font-size:11px;margin-bottom:12px}table{width:100%;border-collapse:collapse}th{background:#1e3a5f;color:#fff;padding:6px 8px;text-align:right;font-size:10px}td{padding:5px 8px;border-bottom:1px solid #e0e0e0;text-align:right}tr:nth-child(even) td{background:#f9f9f9}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><h2>تقرير التنبيهات التلقائية</h2><p class="sub">المجموع: ${filtered.length} تنبيه — ${new Date().toLocaleDateString('ar-SA')}</p><table><thead><tr><th>النوع</th><th>الكيان</th><th>تاريخ الاستحقاق</th><th>المتبقي (يوم)</th><th>الأولوية</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}<` + `/script></body></html>`);
+    printWindow.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"/><title>تقرير التنبيهات</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;direction:rtl;color:#111;background:#fff}h2{text-align:center;margin-bottom:8px;font-size:15px}p.sub{text-align:center;color:#666;font-size:11px;margin-bottom:12px}table{width:100%;border-collapse:collapse}th{background:#1e3a5f;color:#fff;padding:6px 8px;text-align:right;font-size:10px}td{padding:5px 8px;border-bottom:1px solid #e0e0e0;text-align:right}tr:nth-child(even) td{background:#f9f9f9}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><h2>تقرير التنبيهات التلقائية</h2><p class="sub">المجموع: ${filtered.length} تنبيه — ${new Date().toLocaleDateString('ar-SA')}</p><table><thead><tr><th>النوع</th><th>الكيان</th><th>تاريخ الاستحقاق</th><th>المتبقي (يوم)</th><th>الأولوية</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=()=>{globalThis.print();window.onafterprint=()=>globalThis.close()}<` + `/script></body></html>`);
     printWindow.document.close();
   };
 
@@ -340,13 +365,13 @@ const Alerts = () => {
                 <Button variant="outline" size="sm" className="gap-1.5 h-9"><Download size={14} /> البيانات ▾</Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => void handleExport()}>📊 تصدير Excel (مرتب حسب الأولوية)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { handleExport(); }}>📊 تصدير Excel (مرتب حسب الأولوية)</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => void handleDownloadTemplate()}>📥 تحميل القالب</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { handleDownloadTemplate(); }}>📥 تحميل القالب</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handlePrint}>🖨️ طباعة التقرير</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => void queryClient.invalidateQueries({ queryKey: ['alerts', uid, iqamaAlertDays] })}>
+                <DropdownMenuItem onClick={() => { queryClient.invalidateQueries({ queryKey: ['alerts', uid, iqamaAlertDays] }); }}>
                   🔄 تحديث الآن
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -359,7 +384,7 @@ const Alerts = () => {
       {alertsQuery.isError && !alertsQuery.isLoading && (
         <QueryErrorRetry
           error={alertsQuery.error}
-          onRetry={() => void alertsQuery.refetch()}
+          onRetry={() => { alertsQuery.refetch(); }}
           title="تعذر تحميل بيانات التنبيهات"
           hint="تحقق من الاتصال بالإنترنت أو أعد المحاولة."
         />

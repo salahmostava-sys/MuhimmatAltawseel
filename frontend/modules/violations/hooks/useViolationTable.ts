@@ -104,7 +104,7 @@ export function useViolationTable() {
   );
 
   const fetchViolations = useCallback(() => {
-    void refetchViolations();
+    refetchViolations();
   }, [refetchViolations]);
 
   useEffect(() => {
@@ -327,7 +327,7 @@ export function useViolationTable() {
       toast({ title: 'صلاحية غير كافية', description: 'ليس لديك صلاحية الحذف', variant: 'destructive' });
       return;
     }
-    if (!window.confirm(`حذف مخالفة ${row.employee_name} من السجل؟ لا يمكن التراجع.`)) return;
+    if (!globalThis.confirm(`حذف مخالفة ${row.employee_name} من السجل؟ لا يمكن التراجع.`)) return;
     setDeletingSearchDeductionId(row.external_deduction_id);
     try {
       await violationService.deleteViolation(row.external_deduction_id);

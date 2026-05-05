@@ -43,12 +43,12 @@ function sendToMonitoring(entry: LogMeta) {
       navigator.sendBeacon(MONITORING_ENDPOINT, blob);
       return;
     }
-    void fetch(MONITORING_ENDPOINT, {
+    fetch(MONITORING_ENDPOINT, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body,
       keepalive: true,
-    });
+    }).catch(() => {});
   } catch {
     // Never throw from logging.
   }

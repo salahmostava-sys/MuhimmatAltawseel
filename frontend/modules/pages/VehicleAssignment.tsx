@@ -534,14 +534,14 @@ const VehicleAssignment = () => {
       <AssignmentFormModal
         open={showAssignModal}
         onClose={() => setShowAssignModal(false)}
-        onSaved={() => { void refetchAssignmentData(); }}
+        onSaved={() => { refetchAssignmentData(); }}
         freeVehicles={freeVehicles}
         employees={employees}
       />
       <ReturnModal
         open={!!returnAssignment}
         onClose={() => setReturnAssignment(null)}
-        onSaved={() => { void refetchAssignmentData(); }}
+        onSaved={() => { refetchAssignmentData(); }}
         assignment={returnAssignment}
       />
     </div>

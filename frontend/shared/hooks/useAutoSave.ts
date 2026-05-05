@@ -79,7 +79,7 @@ export function useAutoSave<T>({
   // Also save on unmount — use ref so we always call the latest closure
   useEffect(() => {
     return () => {
-      void saveRef.current?.();
+      saveRef.current?.().catch(() => {});
     };
   }, []);
 

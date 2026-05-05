@@ -155,7 +155,7 @@ export function useSalaryIO(params: UseSalaryIOParams) {
         toast.error('خطأ', { description: 'صيغة الملف غير مدعومة — استخدم xlsx أو xls' });
         return;
       }
-      void handleSalaryImportFile(file);
+      handleSalaryImportFile(file);
     },
     [handleSalaryImportFile, toast],
   );

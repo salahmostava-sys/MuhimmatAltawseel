@@ -65,8 +65,8 @@ export function useBatchPdfExport(params: {
       // unmount (ref) and on normal completion (closure).
       let iframe: HTMLIFrameElement | null = null;
       const safeRemoveIframe = () => {
-        if (iframe && iframe.parentNode) {
-          try { iframe.parentNode.removeChild(iframe); } catch { /* ignore */ }
+        if (iframe) {
+          try { iframe.remove(); } catch { /* ignore */ }
           iframe = null;
           activeIframeRef.current = null;
         }
@@ -107,7 +107,7 @@ export function useBatchPdfExport(params: {
 
         if (batchAbortRef.current) return;
         const pdfBlob = pdf.output('blob');
-        const safeName = row.employeeName.replace(/\s+/g, '_');
+        const safeName = row.employeeName.replaceAll(/\s+/g, '_');
         const [y, m] = selectedMonth.split('-');
         batchZip.file(`كشف_راتب_${safeName}_${m}_${y}.pdf`, pdfBlob);
         setBatchIndex(i => i + 1);
@@ -121,8 +121,8 @@ export function useBatchPdfExport(params: {
       batchAbortRef.current = true;
       clearTimeout(timer);
       // FIX W8: remove any lingering iframe left from an in-progress render
-      if (activeIframeRef.current?.parentNode) {
-        try { activeIframeRef.current.parentNode.removeChild(activeIframeRef.current); } catch { /* ignore */ }
+      if (activeIframeRef.current) {
+        try { activeIframeRef.current.remove(); } catch { /* ignore */ }
         activeIframeRef.current = null;
       }
     };

@@ -332,7 +332,7 @@ const EmployeeTiers = () => {
       toast({ title: 'خطأ', description: message, variant: 'destructive' });
     }
     setSavingId(null);
-    void refetchTiersData();
+    refetchTiersData();
   };
 
   const cancelRow = (id: string) =>
@@ -364,7 +364,7 @@ const EmployeeTiers = () => {
       toast({ title: 'خطأ', description: message, variant: 'destructive' });
     }
     setSavingNew(false);
-    void refetchTiersData();
+    refetchTiersData();
   };
 
   /* ── Absconded confirmation ── */
@@ -383,7 +383,7 @@ const EmployeeTiers = () => {
         await employeeTierService.updateTier(tierId, { delivery_status: STATUS_NOT_DELIVERED });
       }
       toast({ title: 'تم التحديث', description: `تم تغيير حالة ${abscondedAlert.tierIds.length} شريحة إلى "غير مسلّمة"` });
-      void refetchTiersData();
+      refetchTiersData();
     } catch (e) {
       logError('[EmployeeTiers] failed to update absconded tiers', e);
       toast({ title: 'خطأ', description: 'فشل تحديث حالة الشرائح', variant: 'destructive' });
@@ -404,7 +404,7 @@ const EmployeeTiers = () => {
       await employeeTierService.deleteTier(deleteId);
       toast({ title: 'تم الحذف' });
       setDeleteId(null);
-      void refetchTiersData();
+      refetchTiersData();
     } catch (err: unknown) {
       const message = getErrorMessage(err, 'تعذر حذف الشريحة');
       toast({ title: 'خطأ في الحذف', description: message, variant: 'destructive' });

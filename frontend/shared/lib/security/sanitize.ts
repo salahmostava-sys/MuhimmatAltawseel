@@ -34,7 +34,7 @@ export function sanitizeForLog(input: unknown): string {
   if (input === null || input === undefined) return '';
 
   const str = String(input);
-  const stripped = stripControlCharacters(str.replace(/[\r\n\t]/g, ' '));
+  const stripped = stripControlCharacters(str.replaceAll(/[\r\n\t]/g, ' '));
   return maskSensitiveData(stripped).trim().slice(0, 1000);
 }
 
@@ -77,11 +77,11 @@ export function sanitizeObjectForLog(obj: unknown, _depth = 0): unknown {
  */
 export function sanitizeHTML(input: string): string {
   return input
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
+    .replaceAll(/&/g, '&amp;')
+    .replaceAll(/</g, '&lt;')
+    .replaceAll(/>/g, '&gt;')
+    .replaceAll(/"/g, '&quot;')
+    .replaceAll(/'/g, '&#x27;')
     .replace(/\//g, '&#x2F;');
 }
 

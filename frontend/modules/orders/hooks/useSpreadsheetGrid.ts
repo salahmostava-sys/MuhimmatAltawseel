@@ -237,7 +237,7 @@ export function useSpreadsheetGrid() {
   }, []);
 
   const exportExcel = () =>
-    void exportSpreadsheetExcel({
+    exportSpreadsheetExcel({
       year,
       month,
       dayArr,
@@ -245,7 +245,6 @@ export function useSpreadsheetGrid() {
       empDayTotal,
       empMonthTotal,
     });
-
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -333,7 +332,7 @@ export function useSpreadsheetGrid() {
     setPendingImportFile(null);
   };
 
-  const handleTemplate = () => void downloadSpreadsheetTemplate(dayArr);
+  const handleTemplate = () => { downloadSpreadsheetTemplate(dayArr); };
 
   const handlePrint = () =>
     printSpreadsheetTable({

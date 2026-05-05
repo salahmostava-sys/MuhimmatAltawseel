@@ -95,7 +95,7 @@ export function useSessionManager({ session, signOut, queryClient }: UseSessionM
     // Session exists → create and start the manager
     const manager = new SessionManager({
       onWarning: handleWarning,
-      onTimeout: () => { void handleTimeout(); },
+      onTimeout: () => { handleTimeout(); },
       onActivityFromOtherTab: handleOtherTabActivity,
     });
     managerRef.current = manager;

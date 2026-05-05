@@ -87,13 +87,13 @@ const EMPLOYEE_CITY_DEFINITIONS: readonly EmployeeCityDefinition[] = [
 function normalizeCityAlias(value: string): string {
   return String(value)
     .replaceAll('\u0640', '')
-    .replace(/[أإآ]/g, 'ا')
-    .replace(/[ؤ]/g, 'و')
-    .replace(/[ئ]/g, 'ي')
-    .replace(/[ة]/g, 'ه')
-    .replace(/[ى]/g, 'ي')
-    .replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ')
+    .replaceAll(/[أإآ]/g, 'ا')
+    .replaceAll(/[ؤ]/g, 'و')
+    .replaceAll(/[ئ]/g, 'ي')
+    .replaceAll(/[ة]/g, 'ه')
+    .replaceAll(/[ى]/g, 'ي')
+    .replaceAll(/[_-]+/g, ' ')
+    .replaceAll(/\s+/g, ' ')
     .trim()
     .toLowerCase();
 }

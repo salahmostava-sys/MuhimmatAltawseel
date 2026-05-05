@@ -556,7 +556,7 @@ export const TransactionsModal = ({ employeeId, employeeName, nationalId, totalD
                               placeholder="اكتب ملاحظة..."
                               onKeyDown={e => {
                                 if (e.key === 'Enter') {
-                                  void saveNote(inst.id);
+                                  saveNote(inst.id);
                                   return;
                                 }
                                 if (e.key === 'Escape') setEditingNoteId(null);

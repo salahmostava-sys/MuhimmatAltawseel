@@ -143,7 +143,7 @@ export function SalarySlipTemplateEditor() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذا القالب؟')) return;
+    if (!globalThis.confirm('هل أنت متأكد من حذف هذا القالب؟')) return;
     try {
       await salarySlipTemplateService.delete(id);
       toast.success('تم حذف القالب');

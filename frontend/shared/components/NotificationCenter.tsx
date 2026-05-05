@@ -145,7 +145,7 @@ export default function NotificationCenter() {
         type="button"
         onClick={() => {
           setOpen(v => !v);
-          if (!open) void refetch();
+          if (!open) refetch().catch(() => {});
         }}
         className="relative h-9 w-9 flex items-center justify-center rounded-full border border-border/60 bg-card/80 hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
         title={isRTL ? 'الإشعارات' : 'Notifications'}

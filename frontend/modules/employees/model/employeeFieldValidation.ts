@@ -3,7 +3,7 @@ export const EMPLOYEE_LOCAL_PHONE_DIGITS = 10;
 export const EMPLOYEE_INTL_PHONE_DIGITS = 12;
 
 function digitsOnly(value: string | null | undefined): string {
-  return String(value ?? '').replace(/\D/g, '');
+  return String(value ?? '').replaceAll(/\D/g, '');
 }
 
 export function clampEmployeePhoneInput(value: string | null | undefined): string {

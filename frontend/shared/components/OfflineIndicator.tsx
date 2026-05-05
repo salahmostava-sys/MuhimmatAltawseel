@@ -31,19 +31,19 @@ export function OfflineIndicator() {
       }
     };
 
-    window.addEventListener('offline', goOffline);
-    window.addEventListener('online', goOnline);
+    globalThis.addEventListener('offline', goOffline);
+    globalThis.addEventListener('online', goOnline);
 
     return () => {
-      window.removeEventListener('offline', goOffline);
-      window.removeEventListener('online', goOnline);
+      globalThis.removeEventListener('offline', goOffline);
+      globalThis.removeEventListener('online', goOnline);
       clearTimeout(dismissTimerRef.current);
     };
   }, []);
 
   const handleRetry = () => {
     // محاولة إعادة الاتصال عن طريق إعادة تحميل الصفحة
-    window.location.reload();
+    globalThis.location.reload();
   };
 
   if (state === 'online') return null;

@@ -145,7 +145,7 @@ export const PlatformAssignDialog = ({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             إلغاء
           </Button>
-          <Button onClick={() => void onSave()} disabled={savingAssign} className="gap-2">
+          <Button onClick={() => { onSave(); }} disabled={savingAssign} className="gap-2">
             {savingAssign && <Loader2 size={14} className="animate-spin" />}
             تعيين المندوب
           </Button>

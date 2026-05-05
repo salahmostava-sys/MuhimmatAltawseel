@@ -99,7 +99,7 @@ export function EmployeePerformanceTab(props: Readonly<{ employeeId: string }>) 
             />
           </div>
           {permissions.can_edit ? (
-            <Button className="w-full mt-2" onClick={() => void handleSaveTargets()} disabled={savingTargets}>
+            <Button className="w-full mt-2" onClick={() => { handleSaveTargets(); }} disabled={savingTargets}>
               {savingTargets ? 'جارٍ الحفظ...' : 'حفظ الأهداف'}
             </Button>
           ) : null}

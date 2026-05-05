@@ -22,7 +22,7 @@ export const realtimeService = {
     channel.subscribe();
 
     return () => {
-      void supabase.removeChannel(channel);
+      supabase.removeChannel(channel);
     };
   },
 };

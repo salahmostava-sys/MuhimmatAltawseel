@@ -274,7 +274,7 @@ export function printSpreadsheetTable(params: {
   const subtitle = doc.createElement('p');
   subtitle.className = 'sub';
   subtitle.textContent = `المجموع: ${filteredEmployeeCount} مندوب - ${new Date().toLocaleDateString('ar-SA')}`;
-  while (body.firstChild) body.removeChild(body.firstChild);
+  body.replaceChildren();
   body.appendChild(title);
   body.appendChild(subtitle);
   body.appendChild(tableEl.cloneNode(true));

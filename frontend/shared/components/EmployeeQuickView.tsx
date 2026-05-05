@@ -69,7 +69,7 @@ export function EmployeeQuickView({ employeeId, open, onClose }: Props) {
 
   useEffect(() => {
     if (open && employeeId) {
-      void fetchEmployee();
+      fetchEmployee().catch(() => {});
     } else {
       setData(null);
     }

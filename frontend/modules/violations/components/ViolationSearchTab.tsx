@@ -267,7 +267,7 @@ export default function ViolationSearchTab({
                               variant="outline"
                               className="h-7 text-xs px-2 gap-1 text-destructive border-destructive/30 hover:bg-destructive/10"
                               disabled={!perms.can_delete || deletingSearchDeductionId === row.external_deduction_id}
-                              onClick={() => void handleDeleteSearchResultRow(row)}
+                              onClick={() => { handleDeleteSearchResultRow(row); }}
                             >
                               <Trash2 size={12} />
                               {deletingSearchDeductionId === row.external_deduction_id ? '...' : 'حذف'}

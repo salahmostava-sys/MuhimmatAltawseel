@@ -39,7 +39,7 @@ export function AlertsList() {
 
   useEffect(() => {
     if (refreshKey === 0) return;
-    void refetch();
+    refetch().catch(() => {});
   }, [refreshKey, refetch]);
 
   const alerts = [...alertsData]

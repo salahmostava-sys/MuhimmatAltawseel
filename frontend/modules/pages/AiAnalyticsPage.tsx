@@ -424,7 +424,7 @@ const AiAnalyticsPage = () => {
         ) : isError ? (
           <QueryErrorRetry
             error={error}
-            onRetry={() => void refetch()}
+            onRetry={() => { refetch(); }}
             isFetching={isFetching}
             title="تعذر تحميل بيانات التحليلات"
             hint="تحقق من الاتصال ثم أعد المحاولة."
@@ -455,7 +455,7 @@ const AiAnalyticsPage = () => {
           ) : isError ? (
             <QueryErrorRetry
               error={error}
-              onRetry={() => void refetch()}
+              onRetry={() => { refetch(); }}
               isFetching={isFetching}
               title="تعذر تحميل بيانات التحليلات"
               hint="تحقق من الاتصال ثم أعد المحاولة."

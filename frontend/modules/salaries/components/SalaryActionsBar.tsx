@@ -100,16 +100,16 @@ export function SalaryActionsBar(props: Readonly<SalaryActionsBarProps>) {
             <Button size="sm" variant="outline" className="gap-1.5 h-9"><FolderOpen size={14} /> ملفات</Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => void runExportExcel()} disabled={salaryActionLoading}>
+            <DropdownMenuItem onClick={() => { runExportExcel(); }} disabled={salaryActionLoading}>
               📊 تصدير Excel
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => void downloadSalaryTemplate()} disabled={salaryActionLoading}>
+            <DropdownMenuItem onClick={() => { downloadSalaryTemplate(); }} disabled={salaryActionLoading}>
               📋 تحميل قالب الاستيراد
             </DropdownMenuItem>
             <DropdownMenuItem onClick={openSalaryToolbarImport} disabled={salaryActionLoading || !canEdit}>
               ⬆️ استيراد Excel
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => void runPrintTable()} disabled={salaryActionLoading}>
+            <DropdownMenuItem onClick={() => { runPrintTable(); }} disabled={salaryActionLoading}>
               🖨️ طباعة الجدول
             </DropdownMenuItem>
             <DropdownMenuItem

@@ -70,14 +70,14 @@ function normalizeText(text: string): string {
     .normalize('NFKC') // Unicode normalization
     .trim()
     .toLowerCase()
-    .replace(/[\u200B-\u200F\u202A-\u202E\uFEFF\u00A0]/g, '') // zero-width + non-breaking spaces
-    .replace(/\s+/g, ' ') // توحيد المسافات
-    .replace(/[أإآٱ]/g, 'ا') // توحيد الألف
-    .replace(/[ىئي]/g, 'ي') // توحيد الياء
-    .replace(/ة/g, 'ه') // توحيد التاء المربوطة
-    .replace(/ؤ/g, 'و') // توحيد الهمزة على الواو
-    .replace(/[َُِّْـ]/g, '') // إزالة التشكيل
-    .replace(/[^\u0600-\u06FFa-zA-Z0-9\s]/g, ''); // إزالة الرموز
+    .replaceAll(/[\u200B-\u200F\u202A-\u202E\uFEFF\u00A0]/g, '') // zero-width + non-breaking spaces
+    .replaceAll(/\s+/g, ' ') // توحيد المسافات
+    .replaceAll(/[أإآٱ]/g, 'ا') // توحيد الألف
+    .replaceAll(/[ىئي]/g, 'ي') // توحيد الياء
+    .replaceAll(/ة/g, 'ه') // توحيد التاء المربوطة
+    .replaceAll(/ؤ/g, 'و') // توحيد الهمزة على الواو
+    .replaceAll(/[َُِّْـ]/g, '') // إزالة التشكيل
+    .replaceAll(/[^\u0600-\u06FFa-zA-Z0-9\s]/g, ''); // إزالة الرموز
 }
 
 /**

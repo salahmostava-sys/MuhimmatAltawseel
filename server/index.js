@@ -1,7 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import { createClient } from '@supabase/supabase-js';
-import { isUuid, isValidMonth, VALID_ROLES } from './lib/validation.js';
 import { salaryEngineHandler, adminUpdateUserHandler, groqChatHandler, aiChatHandler } from './lib/handlers.js';
 
 const app = express();

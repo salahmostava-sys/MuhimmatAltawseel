@@ -5,7 +5,7 @@
  * Handles input from date pickers on Arabic-locale devices.
  */
 export function normalizeArabicDigits(value: string): string {
-  return value.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  return value.replaceAll(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
 }
 
 /**
@@ -14,7 +14,7 @@ export function normalizeArabicDigits(value: string): string {
  * @returns Formatted date string.
  */
 export function formatDate(date: Date | null | undefined): string {
-    if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+    if (!date || !(date instanceof Date) || Number.isNaN(date.getTime())) {
         return '';
     }
     const year = date.getUTCFullYear();
@@ -30,7 +30,7 @@ export function formatDate(date: Date | null | undefined): string {
  * @returns Formatted currency string.
  */
 export function formatCurrency(amount: number | null | undefined, currencySymbol: string = '$'): string {
-    if (amount === null || amount === undefined || isNaN(amount)) {
+    if (amount === null || amount === undefined || Number.isNaN(amount)) {
         return `${currencySymbol}0.00`;
     }
     return `${currencySymbol}${amount.toFixed(2)}`;
@@ -55,7 +55,7 @@ export function todayISO(): string {
  * @returns Formatted number string.
  */
 export function formatNumber(num: number | null | undefined): string {
-    if (num === null || num === undefined || isNaN(num)) {
+    if (num === null || num === undefined || Number.isNaN(num)) {
         return '0';
     }
     return new Intl.NumberFormat('en-US').format(num);

@@ -37,7 +37,7 @@ const DeleteAllEmployeeAdvancesDialog = lazy(() =>
 );
 
 const prefetchAdvanceDialogs = () => {
-  void loadAdvanceDialogs();
+  loadAdvanceDialogs();
 };
 const Advances = () => {
   const { toast } = useToast();

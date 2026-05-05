@@ -42,12 +42,12 @@ const normalizeSalaryJobTitle = (value?: string | null) =>
   String(value || '')
     .toLowerCase()
     .normalize('NFKD')
-    .replace(/[\u064B-\u065F\u0670]/g, '')
-    .replace(/[إأآٱ]/g, 'ا')
-    .replace(/ى/g, 'ي')
-    .replace(/ة/g, 'ه')
+    .replaceAll(/[\u064B-\u065F\u0670]/g, '')
+    .replaceAll(/[إأآٱ]/g, 'ا')
+    .replaceAll(/ى/g, 'ي')
+    .replaceAll(/ة/g, 'ه')
     .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
-    .replace(/\s+/g, ' ')
+    .replaceAll(/\s+/g, ' ')
     .trim();
 
 /** Returns true when the job title belongs to a delivery / field rider. */

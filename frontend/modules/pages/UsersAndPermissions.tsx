@@ -182,7 +182,7 @@ const UsersAndPermissions = ({ embedded = false }: UsersAndPermissionsProps) => 
     if (!permUserId || !isAdmin) return;
     const u = rows.find((r) => r.id === permUserId);
     if (!u) return;
-    void loadMatrix(u.id, u.role);
+    loadMatrix(u.id, u.role);
   }, [permUserId, rows, isAdmin, loadMatrix]);
 
   const updateRole = async (userId: string, role: AppRole) => {
@@ -384,7 +384,7 @@ const UsersAndPermissions = ({ embedded = false }: UsersAndPermissionsProps) => 
               إضافة مستخدم
             </Button>
           )}
-          <Button variant="outline" className="gap-2" onClick={() => void refetchUsersData()}>
+          <Button variant="outline" className="gap-2" onClick={() => { refetchUsersData(); }}>
             <RefreshCw size={14} className="me-1" />
             تحديث
           </Button>
@@ -492,7 +492,7 @@ const UsersAndPermissions = ({ embedded = false }: UsersAndPermissionsProps) => 
                   <Button
                     type="button"
                     size="sm"
-                    onClick={() => void saveMatrix()}
+                    onClick={() => { saveMatrix(); }}
                     disabled={savingMatrix || matrixLoading || !selectedUser}
                   >
                     {savingMatrix ? 'جاري الحفظ...' : 'حفظ الصلاحيات'}
@@ -641,7 +641,7 @@ const UsersAndPermissions = ({ embedded = false }: UsersAndPermissionsProps) => 
             >
               إلغاء
             </Button>
-            <Button type="button" onClick={() => void createUser()} disabled={creatingUser}>
+            <Button type="button" onClick={() => { createUser(); }} disabled={creatingUser}>
               {creatingUser ? 'جارٍ الإنشاء...' : 'إنشاء المستخدم'}
             </Button>
           </DialogFooter>
@@ -667,7 +667,7 @@ const UsersAndPermissions = ({ embedded = false }: UsersAndPermissionsProps) => 
             <AlertDialogCancel disabled={deletingUserId !== null}>إلغاء</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => void deleteUser()}
+              onClick={() => { deleteUser(); }}
               disabled={deletingUserId !== null}
             >
               {deletingUserId ? 'جارٍ الحذف...' : 'تأكيد الحذف'}

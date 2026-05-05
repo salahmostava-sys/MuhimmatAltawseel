@@ -32,7 +32,7 @@ export async function sendWhatsAppMessage(
     return false;
   }
 
-  const cleanPhone = to.replace(/[\s\-()]/g, '').replace(/^0+/, '');
+  const cleanPhone = to.replaceAll(/[\s\-()]/g, '').replace(/^0+/, '');
   
   // Accept local mobile numbers after trimming leading zeros as well as international formats.
   if (!/^\d{9,15}$/.test(cleanPhone)) {

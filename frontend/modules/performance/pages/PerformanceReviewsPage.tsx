@@ -15,11 +15,15 @@ const toDisplayMonth = (my: string) => {
   return format(d, 'MMMM yyyy');
 };
 
-const ScorePill = ({ value }: { value: number }) => {
-  const color = value >= 8 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-    : value >= 6 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-    : value >= 4 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+function getScoreColor(value: number): string {
+  if (value >= 8) return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
+  if (value >= 6) return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+  if (value >= 4) return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
+  return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+}
+
+const ScorePill = ({ value }: Readonly<{ value: number }>) => {
+  const color = getScoreColor(value);
   return <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${color}`}>{value}</span>;
 };
 
@@ -57,7 +61,7 @@ const PerformanceReviewsPage = () => {
   const reviewedIds = reviews.map(r => r.employee_id);
 
   const overalls = reviews.map(r => getOverallScore(r));
-  const avgScore = overalls.length ? parseFloat((overalls.reduce((a, b) => a + b, 0) / overalls.length).toFixed(1)) : 0;
+  const avgScore = overalls.length ? Number.parseFloat((overalls.reduce((a, b) => a + b, 0) / overalls.length).toFixed(1)) : 0;
   const excellent = overalls.filter(s => s >= 9).length;
   const weak      = overalls.filter(s => s < 5).length;
 
@@ -67,7 +71,7 @@ const PerformanceReviewsPage = () => {
     try {
       await hrReviewService.delete(id);
       toast({ title: 'تم حذف التقييم' });
-      void refetch();
+      refetch();
     } catch (err) {
       toast({ title: 'خطأ', description: err instanceof Error ? err.message : 'تعذر الحذف', variant: 'destructive' });
     } finally {
@@ -112,13 +116,15 @@ const PerformanceReviewsPage = () => {
       </div>
 
       {/* Table */}
-      {error ? (
+      {error && (
         <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-6 text-center text-sm text-destructive">
           تعذر تحميل البيانات — تأكد من تشغيل الـ SQL في Supabase أولاً
         </div>
-      ) : isLoading ? (
+      )}
+      {!error && isLoading && (
         <div className="bg-card rounded-xl border border-border/50 p-10 text-center text-muted-foreground text-sm animate-pulse">جارٍ التحميل...</div>
-      ) : reviews.length === 0 ? (
+      )}
+      {!error && !isLoading && reviews.length === 0 && (
         <div className="bg-card rounded-xl border border-border/50 p-10 text-center">
           <Star size={32} className="mx-auto text-muted-foreground mb-3 opacity-50" />
           <p className="text-sm text-muted-foreground mb-3">لا توجد تقييمات لهذا الشهر</p>
@@ -128,7 +134,8 @@ const PerformanceReviewsPage = () => {
             </Button>
           )}
         </div>
-      ) : (
+      )}
+      {!error && !isLoading && reviews.length > 0 && (
         <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -174,7 +181,7 @@ const PerformanceReviewsPage = () => {
                           {permissions.can_delete && (
                             <button
                               disabled={deletingId === review.id}
-                              onClick={() => void handleDelete(review.id)}
+                              onClick={() => { handleDelete(review.id); }}
                               className="p-1.5 rounded-lg bg-muted text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-40"
                               title="حذف"
                             >

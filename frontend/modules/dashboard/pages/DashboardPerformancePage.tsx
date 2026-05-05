@@ -63,13 +63,13 @@ export default function DashboardPerformancePage() {
 
   const handleTabChange = (tab: DashboardPerformanceTabKey) => {
     if (tab === 'analytics') {
-      void loadAnalyticsTab();
+      loadAnalyticsTab();
     }
     if (tab === 'ranking') {
-      void loadRankingTab();
+      loadRankingTab();
     }
     if (tab === 'platforms') {
-      void loadPlatformsTab();
+      loadPlatformsTab();
     }
 
     startTransition(() => {
@@ -83,9 +83,9 @@ export default function DashboardPerformancePage() {
         activeTab={activeTab}
         onTabChange={handleTabChange}
         onPrefetchIntent={() => {
-          void loadAnalyticsTab();
-          void loadRankingTab();
-          void loadPlatformsTab();
+          loadAnalyticsTab();
+          loadRankingTab();
+          loadPlatformsTab();
         }}
       />
 

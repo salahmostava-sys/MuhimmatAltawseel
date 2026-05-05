@@ -16,7 +16,7 @@ const ViolationResolverPage = () => {
       <div className="space-y-5" dir="rtl">
         <QueryErrorRetry
           error={v.violationsError}
-          onRetry={() => void v.refetchViolations()}
+          onRetry={() => { v.refetchViolations(); }}
           title="تعذر تحميل بيانات المخالفات"
         />
       </div>

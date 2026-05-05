@@ -306,7 +306,7 @@ export default function ActivityLogContent() {
           </p>
         </div>
         <div className="flex items-center gap-2 ms-auto">
-          <Button variant="outline" size="sm" className="gap-2 h-8" onClick={() => void refetchLogs()}>
+          <Button variant="outline" size="sm" className="gap-2 h-8" onClick={() => { refetchLogs(); }}>
             <RefreshCw size={13} /> تحديث
           </Button>
           <DropdownMenu>
